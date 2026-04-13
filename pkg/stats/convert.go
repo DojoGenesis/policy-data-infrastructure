@@ -22,6 +22,9 @@ func SafeFloat(v interface{}) *float64 {
 		if _, err := fmt.Sscanf(val, "%f", &f); err != nil {
 			return nil
 		}
+		if f == float64(NullSentinel) {
+			return nil
+		}
 		return &f
 	case float64:
 		if val == float64(NullSentinel) {

@@ -365,9 +365,47 @@ func (s *acsSource) Schema() []VariableDef {
 
 // FetchCounty fetches all tract-level ACS indicators for a single county.
 // stateFIPS is a 2-digit string; countyFIPS is a 3-digit string.
+// Splits variables into detail (B-prefix) and subject (S-prefix) groups,
+// issuing separate API calls since they use different Census dataset paths.
 func (s *acsSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS string) ([]store.Indicator, error) {
-	url := s.buildURL(stateFIPS, countyFIPS)
-	return s.fetch(ctx, url)
+	var detailVars, subjectVars []acsVariable
+	for _, v := range acsVariables {
+		if strings.HasPrefix(v.code, "S") {
+			subjectVars = append(subjectVars, v)
+		} else {
+			detailVars = append(detailVars, v)
+		}
+	}
+
+	var all []store.Indicator
+
+	// Detail variables via /acs/acs5
+	if len(detailVars) > 0 {
+		dCodes := varCodes(detailVars)
+		url := s.buildCountyURLWithVars(stateFIPS, countyFIPS, dCodes, false)
+		indicators, err := s.fetch(ctx, url)
+		if err != nil {
+			return nil, fmt.Errorf("acs detail fetch: %w", err)
+		}
+		all = append(all, indicators...)
+	}
+
+	// Subject variables via /acs/acs5/subject (one call per variable)
+	for _, sv := range subjectVars {
+		codes := sv.code
+		if sv.moeCode != "" {
+			codes += "," + sv.moeCode
+		}
+		url := s.buildCountyURLWithVars(stateFIPS, countyFIPS, codes, true)
+		indicators, err := s.fetch(ctx, url)
+		if err != nil {
+			fmt.Printf("  warning: subject table %s failed: %v\n", sv.code, err)
+			continue
+		}
+		all = append(all, indicators...)
+	}
+
+	return all, nil
 }
 
 // FetchState fetches all county-level ACS indicators for an entire state.
@@ -441,6 +479,23 @@ func varCodes(vars []acsVariable) string {
 		}
 	}
 	return strings.Join(codes, ",")
+}
+
+// buildCountyURLWithVars constructs a Census API URL for tracts in a county
+// with specific variables. subject=true uses /acs5/subject.
+func (s *acsSource) buildCountyURLWithVars(stateFIPS, countyFIPS, vars string, subject bool) string {
+	dataset := "acs5"
+	if subject {
+		dataset = "acs5/subject"
+	}
+	base := fmt.Sprintf(
+		"https://api.census.gov/data/%d/acs/%s?get=NAME,%s&for=tract:*&in=state:%s+county:%s",
+		s.cfg.Year, dataset, vars, stateFIPS, countyFIPS,
+	)
+	if s.cfg.APIKey != "" {
+		base += "&key=" + s.cfg.APIKey
+	}
+	return base
 }
 
 // buildURL constructs the Census API URL for a single county (all tracts).
@@ -662,6 +717,10 @@ func parseValue(raw string) (*float64, *float64) {
 	}
 	f, err := strconv.ParseFloat(trimmed, 64)
 	if err != nil {
+		return nil, nil
+	}
+	// Census API uses -666666666 as a sentinel for suppressed/missing data.
+	if f == -666666666 {
 		return nil, nil
 	}
 	return &f, nil
