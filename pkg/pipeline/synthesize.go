@@ -186,10 +186,11 @@ func (sy *SynthesizeStage) runOLS(
 		Vintage: cfg.Vintage,
 	}
 
-	if err := s.PutAnalysis(ctx, result); err != nil {
+	dbID, err := s.PutAnalysis(ctx, result)
+	if err != nil {
 		return fmt.Errorf("PutAnalysis OLS: %w", err)
 	}
-	log.Printf("synthesize: OLS complete — R²=%.4f, n=%d, analysis ID %q", res.RSquared, len(yVals), analysisID)
+	log.Printf("synthesize: OLS complete — R²=%.4f, n=%d, analysis ID %q", res.RSquared, len(yVals), dbID)
 	return nil
 }
 
@@ -245,7 +246,7 @@ func (sy *SynthesizeStage) runTippingPoints(
 			},
 			Vintage: cfg.Vintage,
 		}
-		if err := s.PutAnalysis(ctx, ar); err != nil {
+		if _, err := s.PutAnalysis(ctx, ar); err != nil {
 			log.Printf("synthesize: PutAnalysis tipping %s: %v", xVar, err)
 		} else {
 			log.Printf("synthesize: tipping point %q threshold=%.4f, F=%.4f", xVar, res.Threshold, res.FStatistic)
@@ -314,10 +315,11 @@ func (sy *SynthesizeStage) runCorrelations(
 		Vintage: cfg.Vintage,
 	}
 
-	if err := s.PutAnalysis(ctx, ar); err != nil {
+	dbID, err := s.PutAnalysis(ctx, ar)
+	if err != nil {
 		return fmt.Errorf("PutAnalysis correlations: %w", err)
 	}
-	log.Printf("synthesize: correlation matrix written (%d pairs), analysis ID %q", len(corrs), analysisID)
+	log.Printf("synthesize: correlation matrix written (%d pairs), analysis ID %q", len(corrs), dbID)
 	return nil
 }
 

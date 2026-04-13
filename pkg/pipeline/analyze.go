@@ -153,7 +153,8 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		Vintage: cfg.Vintage,
 	}
 
-	if err := s.PutAnalysis(ctx, result); err != nil {
+	dbID, err := s.PutAnalysis(ctx, result)
+	if err != nil {
 		return fmt.Errorf("analyze: PutAnalysis: %w", err)
 	}
 
@@ -169,7 +170,7 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		}
 
 		analysisScores = append(analysisScores, store.AnalysisScore{
-			AnalysisID: analysisID,
+			AnalysisID: dbID,
 			GEOID:      geoid,
 			Score:      scoreVal,
 			Rank:       i + 1, // placeholder rank; real rank requires sort by score
@@ -194,6 +195,6 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 	}
 
 	log.Printf("analyze: composite index complete — %d/%d tracts scored, analysis ID %q",
-		nonNilCount, nTracts, analysisID)
+		nonNilCount, nTracts, dbID)
 	return nil
 }

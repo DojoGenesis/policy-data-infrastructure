@@ -18,7 +18,8 @@ var migrationsFS embed.FS
 
 // PostgresStore is the PostgreSQL implementation of Store backed by a pgxpool.
 type PostgresStore struct {
-	pool *pgxpool.Pool
+	pool       *pgxpool.Pool
+	hasPostGIS bool // true when PostGIS extension is installed and centroid column exists
 }
 
 // NewPostgresStore creates a pgxpool from connString, runs all pending
@@ -39,6 +40,15 @@ func NewPostgresStore(ctx context.Context, connString string) (*PostgresStore, e
 		pool.Close()
 		return nil, fmt.Errorf("store: migrate: %w", err)
 	}
+
+	// Detect PostGIS: check if centroid column exists on geographies table.
+	var hasCentroid bool
+	_ = pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name = 'geographies' AND column_name = 'centroid'
+		)`).Scan(&hasCentroid)
+	s.hasPostGIS = hasCentroid
 
 	return s, nil
 }
@@ -117,7 +127,9 @@ func (s *PostgresStore) PutGeographies(ctx context.Context, geos []geo.Geography
 		return nil
 	}
 
-	const upsertSQL = `
+	var upsertSQL string
+	if s.hasPostGIS {
+		upsertSQL = `
 INSERT INTO geographies
     (geoid, level, parent_geoid, name, state_fips, county_fips, population, land_area_m2, boundary, centroid)
 VALUES (
@@ -141,20 +153,55 @@ ON CONFLICT (geoid) DO UPDATE SET
     boundary     = EXCLUDED.boundary,
     centroid     = EXCLUDED.centroid,
     updated_at   = now()`
+	} else {
+		upsertSQL = `
+INSERT INTO geographies
+    (geoid, level, parent_geoid, name, state_fips, county_fips, population, land_area_m2)
+VALUES (
+    $1, $2::geo_level,
+    NULLIF($3, ''),
+    $4,
+    NULLIF($5, ''),
+    NULLIF($6, ''),
+    $7, $8
+)
+ON CONFLICT (geoid) DO UPDATE SET
+    level        = EXCLUDED.level,
+    parent_geoid = EXCLUDED.parent_geoid,
+    name         = EXCLUDED.name,
+    state_fips   = EXCLUDED.state_fips,
+    county_fips  = EXCLUDED.county_fips,
+    population   = EXCLUDED.population,
+    land_area_m2 = EXCLUDED.land_area_m2,
+    updated_at   = now()`
+	}
 
 	batch := &pgx.Batch{}
 	for _, g := range geos {
-		batch.Queue(upsertSQL,
-			g.GEOID,
-			string(g.Level),
-			g.ParentGEOID,
-			g.Name,
-			g.StateFIPS,
-			g.CountyFIPS,
-			g.Population,
-			g.LandAreaM2,
-			"", // boundary GeoJSON — Geography struct has no Boundary field; callers use PutGeographies with extended types or leave empty
-		)
+		if s.hasPostGIS {
+			batch.Queue(upsertSQL,
+				g.GEOID,
+				string(g.Level),
+				g.ParentGEOID,
+				g.Name,
+				g.StateFIPS,
+				g.CountyFIPS,
+				g.Population,
+				g.LandAreaM2,
+				"", // boundary GeoJSON placeholder
+			)
+		} else {
+			batch.Queue(upsertSQL,
+				g.GEOID,
+				string(g.Level),
+				g.ParentGEOID,
+				g.Name,
+				g.StateFIPS,
+				g.CountyFIPS,
+				g.Population,
+				g.LandAreaM2,
+			)
+		}
 	}
 
 	br := s.pool.SendBatch(ctx, batch)
@@ -172,7 +219,9 @@ ON CONFLICT (geoid) DO UPDATE SET
 // as a GeoJSON string in the BoundaryGeoJSON field of the returned record.
 // The Lat/Lon fields are populated from the stored centroid.
 func (s *PostgresStore) GetGeography(ctx context.Context, geoid string) (*geo.Geography, error) {
-	const q = `
+	var q string
+	if s.hasPostGIS {
+		q = `
 SELECT
     geoid, level, COALESCE(parent_geoid,''), name,
     COALESCE(state_fips,''), COALESCE(county_fips,''),
@@ -181,6 +230,16 @@ SELECT
     COALESCE(ST_X(centroid), 0)
 FROM geographies
 WHERE geoid = $1`
+	} else {
+		q = `
+SELECT
+    geoid, level, COALESCE(parent_geoid,''), name,
+    COALESCE(state_fips,''), COALESCE(county_fips,''),
+    COALESCE(population, 0), COALESCE(land_area_m2, 0),
+    0::float8, 0::float8
+FROM geographies
+WHERE geoid = $1`
+	}
 
 	row := s.pool.QueryRow(ctx, q, geoid)
 
@@ -247,17 +306,20 @@ func (s *PostgresStore) QueryGeographies(ctx context.Context, q GeoQuery) ([]geo
 	}
 	offset := q.Offset
 
+	latLonExpr := "0::float8, 0::float8"
+	if s.hasPostGIS {
+		latLonExpr = "COALESCE(ST_Y(centroid), 0), COALESCE(ST_X(centroid), 0)"
+	}
 	sql := fmt.Sprintf(`
 SELECT
     geoid, level, COALESCE(parent_geoid,''), name,
     COALESCE(state_fips,''), COALESCE(county_fips,''),
     COALESCE(population, 0), COALESCE(land_area_m2, 0),
-    COALESCE(ST_Y(centroid), 0),
-    COALESCE(ST_X(centroid), 0)
+    %s
 FROM geographies
 %s
 ORDER BY geoid
-LIMIT %d OFFSET %d`, whereClause, limit, offset)
+LIMIT %d OFFSET %d`, latLonExpr, whereClause, limit, offset)
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {
@@ -419,11 +481,15 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 		whereClause = "WHERE " + strings.Join(where, " AND ")
 	}
 
+	rawValueExpr := "COALESCE(raw_value, '')"
+	if q.LatestOnly {
+		rawValueExpr = "''" // indicators_latest materialized view has no raw_value column
+	}
 	sql := fmt.Sprintf(`
-SELECT geoid, variable_id, vintage, value, margin_of_error, COALESCE(raw_value, '')
+SELECT geoid, variable_id, vintage, value, margin_of_error, %s
 FROM %s
 %s
-ORDER BY geoid, variable_id, vintage`, table, whereClause)
+ORDER BY geoid, variable_id, vintage`, rawValueExpr, table, whereClause)
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {
@@ -504,24 +570,28 @@ WHERE il.variable_id = $1
 
 // --- Analysis operations ---
 
-// PutAnalysis persists an AnalysisResult record to the analyses table.
-// The ID field in result is populated with the database-generated UUID on
-// successful insert; callers should read result.ID after this call returns.
-func (s *PostgresStore) PutAnalysis(ctx context.Context, result AnalysisResult) error {
+// PutAnalysis persists an AnalysisResult record to the analyses table and
+// returns the database-generated UUID. Callers must use this UUID (not any
+// caller-generated ID) as the analysis_id in PutAnalysisScores.
+func (s *PostgresStore) PutAnalysis(ctx context.Context, result AnalysisResult) (string, error) {
 	const q = `
 INSERT INTO analyses (type, scope_geoid, scope_level, parameters, results, vintage)
-VALUES ($1, NULLIF($2,''), NULLIF($3,'')::geo_level, $4, $5, NULLIF($6,''))
+VALUES ($1, NULLIF($2,''), NULLIF($3,'')::geo_level, $4, $5, $6)
 RETURNING id`
 
-	row := s.pool.QueryRow(ctx, q,
+	var id string
+	err := s.pool.QueryRow(ctx, q,
 		result.Type,
 		result.ScopeGEOID,
 		result.ScopeLevel,
 		marshalJSONB(result.Parameters),
 		marshalJSONB(result.Results),
 		result.Vintage,
-	)
-	return row.Scan(&result.ID)
+	).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("store: PutAnalysis: %w", err)
+	}
+	return id, nil
 }
 
 // PutAnalysisScores bulk-upserts AnalysisScore records using a pgx Batch.

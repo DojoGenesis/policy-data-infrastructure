@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -75,8 +76,9 @@ func runAnalyze(scope, analysisType, weightsFlag, vintage string) error {
 	}
 	defer s.Close()
 
-	// Query indicators for this scope.
-	geoQ := store.GeoQuery{Level: geo.Level(level), Limit: 5000}
+	// Build the geo query. "county:55025" means "all tracts within Dane County",
+	// not "the county row itself". We use FIPS filters derived from the scope GEOID.
+	geoQ := scopeToGeoQuery(level, scopeGEOID)
 	geos, err := s.QueryGeographies(ctx, geoQ)
 	if err != nil {
 		return fmt.Errorf("analyze: query geographies: %w", err)
@@ -101,6 +103,11 @@ func runAnalyze(scope, analysisType, weightsFlag, vintage string) error {
 	}
 	if len(indicators) == 0 {
 		return fmt.Errorf("analyze: no indicators found for scope %q", scope)
+	}
+
+	// Auto-detect vintage from indicators if not specified.
+	if vintage == "" && len(indicators) > 0 {
+		vintage = indicators[0].Vintage
 	}
 
 	// Collect unique variable IDs present in the result set.
@@ -218,7 +225,8 @@ func runCompositeAnalysis(
 		},
 		Vintage: vintage,
 	}
-	if err := s.PutAnalysis(ctx, result); err != nil {
+	dbID, err := s.PutAnalysis(ctx, result)
+	if err != nil {
 		return "", fmt.Errorf("composite: PutAnalysis: %w", err)
 	}
 
@@ -230,7 +238,7 @@ func runCompositeAnalysis(
 			scoreVal = *sc
 		}
 		analysisScores = append(analysisScores, store.AnalysisScore{
-			AnalysisID: analysisID,
+			AnalysisID: dbID,
 			GEOID:      geoid,
 			Score:      scoreVal,
 			Rank:       i + 1,
@@ -238,11 +246,19 @@ func runCompositeAnalysis(
 			Tier:       tierAssign[i],
 		})
 	}
+	// Sort descending by score so rank 1 = highest deprivation.
+	sort.Slice(analysisScores, func(i, j int) bool {
+		return analysisScores[i].Score > analysisScores[j].Score
+	})
+	for i := range analysisScores {
+		analysisScores[i].Rank = i + 1
+	}
+
 	if err := s.PutAnalysisScores(ctx, analysisScores); err != nil {
 		return "", fmt.Errorf("composite: PutAnalysisScores: %w", err)
 	}
 
-	return analysisID, nil
+	return dbID, nil
 }
 
 // runOLSAnalysis runs OLS regression using the first variable as the outcome
@@ -326,10 +342,11 @@ func runOLSAnalysis(
 		},
 		Vintage: vintage,
 	}
-	if err := s.PutAnalysis(ctx, result); err != nil {
+	dbID, err := s.PutAnalysis(ctx, result)
+	if err != nil {
 		return "", fmt.Errorf("OLS: PutAnalysis: %w", err)
 	}
-	return analysisID, nil
+	return dbID, nil
 }
 
 // runCorrelationAnalysis computes pairwise Pearson correlations.
@@ -379,10 +396,11 @@ func runCorrelationAnalysis(
 		},
 		Vintage: vintage,
 	}
-	if err := s.PutAnalysis(ctx, result); err != nil {
+	dbID, err := s.PutAnalysis(ctx, result)
+	if err != nil {
 		return "", fmt.Errorf("correlation: PutAnalysis: %w", err)
 	}
-	return analysisID, nil
+	return dbID, nil
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -433,3 +451,32 @@ func sortedKeys(m map[string]bool) []string {
 
 // geoLevel wraps a string to satisfy store.GeoQuery.Level (which is geo.Level / string).
 type geoLevel = string
+
+// scopeToGeoQuery converts a scope level+geoid into a GeoQuery that finds the
+// finest-grain geographies WITHIN that scope. For example, "county:55025" finds
+// all tracts (level=tract, state=55, county=025). "state:55" finds all tracts
+// in Wisconsin. "tract:55025000100" finds that one tract directly.
+func scopeToGeoQuery(level, geoid string) store.GeoQuery {
+	q := store.GeoQuery{Limit: 10000}
+	switch level {
+	case "nation":
+		q.Level = geo.Tract
+	case "state":
+		// geoid is 2-digit state FIPS
+		q.Level = geo.Tract
+		q.StateFIPS = geoid
+	case "county":
+		// geoid is 5-digit: 2-state + 3-county
+		q.Level = geo.Tract
+		if len(geoid) >= 2 {
+			q.StateFIPS = geoid[:2]
+		}
+		if len(geoid) >= 5 {
+			q.CountyFIPS = geoid[2:5]
+		}
+	default:
+		// tract or block_group — query directly
+		q.Level = geo.Level(level)
+	}
+	return q
+}

@@ -91,7 +91,8 @@ func severityClass(tier string) string {
 }
 
 // tierColor maps a tier to its CSS variable name (for inline style use).
-func tierColor(tier string) string {
+// Returns template.CSS so html/template does not escape it as ZgotmplZ.
+func tierColor(tier string) template.CSS {
 	switch strings.ToLower(tier) {
 	case "very_high", "critical":
 		return "var(--red)"

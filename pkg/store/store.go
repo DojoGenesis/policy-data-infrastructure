@@ -89,7 +89,8 @@ type Store interface {
 	Aggregate(ctx context.Context, q AggregateQuery) (*AggregateResult, error)
 
 	// Analysis operations
-	PutAnalysis(ctx context.Context, result AnalysisResult) error
+	// PutAnalysis persists an AnalysisResult and returns the database-generated UUID.
+	PutAnalysis(ctx context.Context, result AnalysisResult) (string, error)
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 

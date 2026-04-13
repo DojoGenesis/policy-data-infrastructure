@@ -231,7 +231,9 @@ func (m *mockStore) QueryIndicators(_ context.Context, q store.IndicatorQuery) (
 func (m *mockStore) Aggregate(_ context.Context, _ store.AggregateQuery) (*store.AggregateResult, error) {
 	return &store.AggregateResult{Value: 0, Count: 0}, nil
 }
-func (m *mockStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) error { return nil }
+func (m *mockStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (string, error) {
+	return "mock-analysis-id", nil
+}
 func (m *mockStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier string) ([]store.AnalysisScore, error) {
 	var out []store.AnalysisScore
