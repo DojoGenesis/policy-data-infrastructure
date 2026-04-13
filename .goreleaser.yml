@@ -1,0 +1,12 @@
+version: 2
+builds:
+  - main: ./cmd/pdi
+    binary: pdi
+    env: [CGO_ENABLED=0]
+    ldflags:
+      - -s -w
+      - -X github.com/DojoGenesis/policy-data-infrastructure/internal/version.Version={{.Version}}
+      - -X github.com/DojoGenesis/policy-data-infrastructure/internal/version.Commit={{.Commit}}
+      - -X github.com/DojoGenesis/policy-data-infrastructure/internal/version.Date={{.Date}}
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]

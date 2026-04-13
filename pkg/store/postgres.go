@@ -357,6 +357,32 @@ ON CONFLICT (geoid, variable_id, vintage) DO UPDATE SET
 	return nil
 }
 
+// PutIndicatorsBatch handles large national-scale inserts by splitting indicators
+// into chunks of batchSize and calling PutIndicators for each chunk. This keeps
+// per-transaction memory bounded during national fetches that may produce
+// hundreds of thousands of rows.
+//
+// batchSize <= 0 defaults to 10,000 rows per transaction.
+func (s *PostgresStore) PutIndicatorsBatch(ctx context.Context, indicators []Indicator, batchSize int) error {
+	if len(indicators) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 10_000
+	}
+
+	for start := 0; start < len(indicators); start += batchSize {
+		end := start + batchSize
+		if end > len(indicators) {
+			end = len(indicators)
+		}
+		if err := s.PutIndicators(ctx, indicators[start:end]); err != nil {
+			return fmt.Errorf("store: PutIndicatorsBatch chunk [%d:%d]: %w", start, end, err)
+		}
+	}
+	return nil
+}
+
 // QueryIndicators returns indicators matching the given filter. When LatestOnly
 // is set, the query reads from the indicators_latest materialized view which
 // holds only the most recent vintage per (geoid, variable_id) pair.

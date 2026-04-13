@@ -10,19 +10,30 @@ import (
 )
 
 // FetchStage is Stage 01: it iterates all registered datasources, calls the
-// appropriate fetch method based on scope (county vs state), and writes
-// indicators to the store. Sources that return errors are logged and skipped
-// so a single bad source does not abort the entire fetch.
+// appropriate fetch method based on scope (county, state, or national), and
+// writes indicators to the store. Sources that return errors are logged and
+// skipped so a single bad source does not abort the entire fetch.
+//
+// Scope detection:
+//   - CountyFIPS != ""  → county scope (requires StateFIPS too)
+//   - StateFIPS  != ""  → state scope
+//   - Both empty        → national scope (calls datasource.FetchNational for each source)
 type FetchStage struct {
-	registry *datasource.Registry
+	registry    *datasource.Registry
+	maxParallel int // concurrency for national fetch; 0 → DefaultNationalParallelism
 }
 
 // NewFetchStage constructs a FetchStage backed by the given Registry.
-func NewFetchStage(registry *datasource.Registry) *FetchStage {
-	return &FetchStage{registry: registry}
+// maxParallel controls state-level concurrency during national fetches (0 = default 5).
+func NewFetchStage(registry *datasource.Registry, maxParallel ...int) *FetchStage {
+	p := 0
+	if len(maxParallel) > 0 {
+		p = maxParallel[0]
+	}
+	return &FetchStage{registry: registry, maxParallel: p}
 }
 
-func (f *FetchStage) Name() string         { return "fetch" }
+func (f *FetchStage) Name() string          { return "fetch" }
 func (f *FetchStage) Dependencies() []string { return nil }
 
 func (f *FetchStage) Run(ctx context.Context, s store.Store, cfg *Config) error {
@@ -37,6 +48,12 @@ func (f *FetchStage) Run(ctx context.Context, s store.Store, cfg *Config) error 
 		return nil
 	}
 
+	// National scope: both StateFIPS and CountyFIPS are empty.
+	if cfg.StateFIPS == "" && cfg.CountyFIPS == "" {
+		return f.runNational(ctx, s, sources, cfg)
+	}
+
+	// County or state scope.
 	var totalWritten int
 	for _, src := range sources {
 		select {
@@ -64,6 +81,51 @@ func (f *FetchStage) Run(ctx context.Context, s store.Store, cfg *Config) error 
 	}
 
 	log.Printf("fetch: total indicators written: %d", totalWritten)
+
+	// Refresh materialized views once all sources have written.
+	if err := s.RefreshViews(ctx); err != nil {
+		log.Printf("fetch: RefreshViews error (non-fatal): %v", err)
+	}
+	return nil
+}
+
+// runNational runs a national-scope fetch across all 51 state FIPS codes for
+// each registered source. Per-state errors are tracked inside FetchReport.
+func (f *FetchStage) runNational(ctx context.Context, s store.Store, sources []datasource.DataSource, cfg *Config) error {
+	log.Printf("fetch: national scope — fetching %d source(s) across %d states",
+		len(sources), len(datasource.AllStateFIPS))
+
+	var totalWritten int
+	for _, src := range sources {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		report, err := datasource.FetchNational(ctx, src, s, f.maxParallel)
+		if err != nil {
+			// Context cancellation or catastrophic failure.
+			return fmt.Errorf("fetch: national fetch for source %q: %w", src.Name(), err)
+		}
+
+		log.Printf("fetch: source %q national complete — states: %d ok / %d failed, records: %d, duration: %s",
+			src.Name(), report.Completed, report.Failed, report.TotalRecords, report.Duration)
+
+		for _, se := range report.Errors {
+			log.Printf("fetch: source %q state %s (%s) error: %s",
+				src.Name(), se.StateFIPS, datasource.StateName(se.StateFIPS), se.Error)
+		}
+
+		totalWritten += report.TotalRecords
+	}
+
+	log.Printf("fetch: national total indicators written: %d", totalWritten)
+
+	// Refresh materialized views after all national fetches.
+	if err := s.RefreshViews(ctx); err != nil {
+		log.Printf("fetch: RefreshViews error (non-fatal): %v", err)
+	}
 	return nil
 }
 
@@ -75,9 +137,6 @@ func (f *FetchStage) fetchSource(ctx context.Context, src datasource.DataSource,
 			return nil, fmt.Errorf("CountyFIPS set but StateFIPS is empty")
 		}
 		return src.FetchCounty(ctx, cfg.StateFIPS, cfg.CountyFIPS)
-	}
-	if cfg.StateFIPS == "" {
-		return nil, fmt.Errorf("neither CountyFIPS nor StateFIPS is set in config")
 	}
 	return src.FetchState(ctx, cfg.StateFIPS)
 }

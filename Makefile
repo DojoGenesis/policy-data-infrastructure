@@ -51,5 +51,21 @@ docker-down:
 serve:
 	go run ./cmd/pdi serve
 
+## docker-build: build the production Docker image
+docker-build:
+	docker compose build
+
+## deploy: start all services in production mode (detached)
+deploy:
+	docker compose up -d
+
+## deploy-logs: tail pdi service logs
+deploy-logs:
+	docker compose logs -f pdi
+
+## backup: dump and compress the PostgreSQL database
+backup:
+	bash deploy/backup.sh
+
 # Default goal: build all packages
 .DEFAULT_GOAL := build

@@ -4,11 +4,30 @@ services:
     environment:
       POSTGRES_DB: pdi
       POSTGRES_USER: pdi
-      POSTGRES_PASSWORD: pdi
+      POSTGRES_PASSWORD: ${PDI_DB_PASSWORD:-pdi}
     ports:
-      - "5432:5432"
+      - "${PDI_DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pdi -d pdi"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  pdi:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PDI_DATABASE_URL: postgres://pdi:${PDI_DB_PASSWORD:-pdi}@postgres:5432/pdi?sslmode=disable
+      CENSUS_API_KEY: ${CENSUS_API_KEY:-}
+    ports:
+      - "${PDI_PORT:-8340}:8340"
+    command: ["serve", "--port", "8340"]
+    restart: unless-stopped
 
 volumes:
   pgdata:
