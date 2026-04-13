@@ -34,6 +34,8 @@ from typing import Optional
 _REPO_ROOT = os.path.join(os.path.dirname(__file__), "..")
 POLICIES_CSV = os.path.join(_REPO_ROOT, "data", "policies", "francesca_hong_2026.csv")
 ACS_CSV = os.path.join(os.path.dirname(__file__), "output", "wi_counties_acs.csv")
+CDC_PLACES_CSV = os.path.join(os.path.dirname(__file__), "output", "wi_health_cdc_places.csv")
+USDA_FOOD_CSV = os.path.join(os.path.dirname(__file__), "output", "wi_food_access.csv")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 CARDS_JSON = os.path.join(OUTPUT_DIR, "evidence_cards.json")
 SUMMARY_MD = os.path.join(OUTPUT_DIR, "evidence_summary.md")
@@ -46,10 +48,10 @@ SUMMARY_MD = os.path.join(OUTPUT_DIR, "evidence_summary.md")
 # metric_fn_name references a function in METRIC_FUNCTIONS below.
 DIMENSION_CONFIG: dict[str, dict] = {
     "food_access": {
-        "metric": "poverty_rate",
-        "ascending": False,  # higher poverty = more need = top of list
-        "data_quality": "moderate",
-        "quality_note": "poverty rate as food insecurity proxy",
+        "metric": "usda_lila_pct",
+        "ascending": False,  # higher % food desert tracts = more need
+        "data_quality": "strong",
+        "quality_note": "USDA 2019 low-income + low-access tract percentage (direct food desert measure)",
     },
     "childcare_access": {
         "metric": "poverty_rate",
@@ -94,10 +96,10 @@ DIMENSION_CONFIG: dict[str, dict] = {
         "quality_note": "poverty rate as transit dependency proxy",
     },
     "health_access": {
-        "metric": "uninsured_rate",
+        "metric": "health_vulnerability_composite",
         "ascending": False,
         "data_quality": "strong",
-        "quality_note": "direct ACS uninsured rate indicator",
+        "quality_note": "ACS uninsured rate + CDC PLACES no-healthcare-access composite",
     },
     "income_equity": {
         "metric": "median_hh_income_inverse",
@@ -118,10 +120,10 @@ DIMENSION_CONFIG: dict[str, dict] = {
         "quality_note": "median household income (inverse) as wage vulnerability proxy",
     },
     "environmental_health": {
-        "metric": "pct_poc",
+        "metric": "cdc_physical_health_composite",
         "ascending": False,
-        "data_quality": "weak",
-        "quality_note": "pct_poc as environmental justice proxy (indirect)",
+        "data_quality": "moderate",
+        "quality_note": "CDC PLACES mean of obesity + diabetes + physical health burden rates",
     },
     "criminal_justice": {
         "metric": "race_poverty_interaction",
@@ -219,6 +221,46 @@ def _metric_poverty_burden_composite(row: dict) -> Optional[float]:
     return (pov or 0.0) + (burden or 0.0)
 
 
+def _metric_usda_lila_pct(row: dict) -> Optional[float]:
+    """% of tracts in county that are low-income + low-access (food deserts)."""
+    return _safe_float(row.get("usda_lila_pct"))
+
+
+def _metric_cdc_obesity_rate(row: dict) -> Optional[float]:
+    return _safe_float(row.get("cdc_obesity_rate"))
+
+
+def _metric_cdc_diabetes_rate(row: dict) -> Optional[float]:
+    return _safe_float(row.get("cdc_diabetes_rate"))
+
+
+def _metric_cdc_mental_health_rate(row: dict) -> Optional[float]:
+    return _safe_float(row.get("cdc_mental_health_rate"))
+
+
+def _metric_cdc_no_healthcare_access(row: dict) -> Optional[float]:
+    """% adults with no healthcare access (no doctor visit in past year)."""
+    return _safe_float(row.get("cdc_no_healthcare_access"))
+
+
+def _metric_health_vulnerability_composite(row: dict) -> Optional[float]:
+    """Composite of uninsured rate + no-healthcare-access CDC measure."""
+    uninsured = _safe_float(row.get("uninsured_rate"))
+    no_access = _safe_float(row.get("cdc_no_healthcare_access"))
+    if uninsured is None and no_access is None:
+        return None
+    return (uninsured or 0.0) + (no_access or 0.0)
+
+
+def _metric_cdc_physical_health_composite(row: dict) -> Optional[float]:
+    """Sum of obesity + diabetes + physical health not good rates (CDC PLACES)."""
+    obesity = _safe_float(row.get("cdc_obesity_rate"))
+    diabetes = _safe_float(row.get("cdc_diabetes_rate"))
+    phlth = _safe_float(row.get("cdc_physical_health_rate"))
+    vals = [v for v in [obesity, diabetes, phlth] if v is not None]
+    return round(sum(vals) / len(vals), 2) if vals else None
+
+
 METRIC_FUNCTIONS = {
     "poverty_rate": _metric_poverty_rate,
     "pct_cost_burdened": _metric_pct_cost_burdened,
@@ -229,6 +271,14 @@ METRIC_FUNCTIONS = {
     "race_poverty_interaction": _metric_race_poverty_interaction,
     "burden_poverty_interaction": _metric_burden_poverty_interaction,
     "poverty_burden_composite": _metric_poverty_burden_composite,
+    # CDC PLACES metrics
+    "usda_lila_pct": _metric_usda_lila_pct,
+    "cdc_obesity_rate": _metric_cdc_obesity_rate,
+    "cdc_diabetes_rate": _metric_cdc_diabetes_rate,
+    "cdc_mental_health_rate": _metric_cdc_mental_health_rate,
+    "cdc_no_healthcare_access": _metric_cdc_no_healthcare_access,
+    "health_vulnerability_composite": _metric_health_vulnerability_composite,
+    "cdc_physical_health_composite": _metric_cdc_physical_health_composite,
 }
 
 # ---------------------------------------------------------------------------
@@ -397,6 +447,156 @@ def load_acs(path: str) -> list[dict]:
         for row in reader:
             rows.append(row)
     return rows
+
+
+def load_cdc_places_by_county(path: str) -> dict[str, dict]:
+    """
+    Load CDC PLACES tract-level CSV and aggregate to county level.
+
+    Returns dict keyed by 5-digit county GEOID:
+    {
+        "55025": {
+            "cdc_obesity_rate": 28.4,   # mean crude prevalence across tracts
+            "cdc_diabetes_rate": 8.7,
+            "cdc_mental_health_rate": 14.2,
+            "cdc_physical_health_rate": 11.1,
+            "cdc_no_healthcare_access": 10.3,
+            "cdc_asthma_rate": 9.1,
+        },
+        ...
+    }
+    """
+    if not os.path.exists(path):
+        return {}
+
+    # Accumulate sum + count per county × measure
+    county_data: dict[str, dict[str, list[float]]] = {}
+
+    MEASURE_TO_FIELD = {
+        "OBESITY":   "cdc_obesity_rate",
+        "DIABETES":  "cdc_diabetes_rate",
+        "MHLTH":     "cdc_mental_health_rate",
+        "PHLTH":     "cdc_physical_health_rate",
+        "ACCESS2":   "cdc_no_healthcare_access",
+        "CASTHMA":   "cdc_asthma_rate",
+        "CSMOKING":  "cdc_smoking_rate",
+        "BPHIGH":    "cdc_hypertension_rate",
+    }
+
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            geoid = str(row.get("geoid", "")).strip()
+            if len(geoid) < 5:
+                continue
+            county_geoid = geoid[:5]
+            measure = str(row.get("measure", "")).strip()
+            field = MEASURE_TO_FIELD.get(measure)
+            if not field:
+                continue
+            val = _safe_float(row.get("data_value"))
+            if val is None:
+                continue
+            if county_geoid not in county_data:
+                county_data[county_geoid] = {}
+            if field not in county_data[county_geoid]:
+                county_data[county_geoid][field] = []
+            county_data[county_geoid][field].append(val)
+
+    # Average tracts within each county
+    result: dict[str, dict] = {}
+    for county_geoid, measures in county_data.items():
+        result[county_geoid] = {
+            field: round(statistics.mean(vals), 2)
+            for field, vals in measures.items()
+            if vals
+        }
+    return result
+
+
+def load_usda_food_by_county(path: str) -> dict[str, dict]:
+    """
+    Load USDA Food Access tract-level CSV and aggregate to county level.
+
+    Returns dict keyed by 5-digit county GEOID:
+    {
+        "55025": {
+            "usda_lila_pct":     12.3,  # % tracts with low income + low access
+            "usda_low_access_1mi": 8.1, # avg population share with low access at 1 mi
+            "usda_urban_pct":    85.0,  # % urban tracts
+        },
+        ...
+    }
+    """
+    if not os.path.exists(path):
+        return {}
+
+    county_buckets: dict[str, dict[str, list]] = {}
+
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            geoid = str(row.get("geoid", "")).strip()
+            if len(geoid) < 5:
+                continue
+            county_geoid = geoid[:5]
+            if county_geoid not in county_buckets:
+                county_buckets[county_geoid] = {
+                    "lila": [], "low_access_1mi": [], "urban": [],
+                    "snap_flag": [],
+                }
+            lila = _safe_float(row.get("low_income_low_access"))
+            la1 = _safe_float(row.get("low_access_1mi"))
+            urban = _safe_float(row.get("urban_flag"))
+            snap = _safe_float(row.get("snap_flag"))
+
+            if lila is not None:
+                county_buckets[county_geoid]["lila"].append(lila)
+            if la1 is not None:
+                county_buckets[county_geoid]["low_access_1mi"].append(la1)
+            if urban is not None:
+                county_buckets[county_geoid]["urban"].append(urban)
+            if snap is not None:
+                county_buckets[county_geoid]["snap_flag"].append(snap)
+
+    result: dict[str, dict] = {}
+    for county_geoid, buckets in county_buckets.items():
+        n = len(buckets["lila"]) if buckets["lila"] else 0
+        lila_count = sum(1 for v in buckets["lila"] if v == 1)
+        result[county_geoid] = {}
+        if n > 0:
+            result[county_geoid]["usda_lila_pct"] = round(lila_count / n * 100, 1)
+        if buckets["low_access_1mi"]:
+            result[county_geoid]["usda_low_access_1mi"] = round(
+                statistics.mean(buckets["low_access_1mi"]), 2
+            )
+        if buckets["urban"]:
+            urban_count = sum(1 for v in buckets["urban"] if v == 1)
+            result[county_geoid]["usda_urban_pct"] = round(urban_count / len(buckets["urban"]) * 100, 1)
+    return result
+
+
+def merge_supplemental_data(
+    acs_rows: list[dict],
+    cdc_by_county: dict[str, dict],
+    usda_by_county: dict[str, dict],
+) -> list[dict]:
+    """
+    Merge CDC PLACES and USDA food access county aggregates into ACS county rows.
+    Returns a new list of enriched dicts (original rows unchanged).
+    """
+    enriched = []
+    for row in acs_rows:
+        geoid = str(row.get("geoid", "")).strip()
+        new_row = dict(row)
+        # CDC PLACES fields
+        if geoid in cdc_by_county:
+            new_row.update(cdc_by_county[geoid])
+        # USDA food access fields
+        if geoid in usda_by_county:
+            new_row.update(usda_by_county[geoid])
+        enriched.append(new_row)
+    return enriched
 
 
 # ---------------------------------------------------------------------------
@@ -621,10 +821,12 @@ def render_markdown(
     lines.append("# Policy Evidence Summary: Francesca Hong for Governor (2026)")
     lines.append("")
     lines.append(
-        f"Generated from ACS 2023 5-Year estimates for all 72 Wisconsin counties."
+        "Generated from multi-source Wisconsin county data: "
+        "ACS 2023 5-Year estimates, CDC PLACES 2023 health indicators (tract-level aggregated), "
+        "and USDA 2019 Food Access Research Atlas (tract-level aggregated)."
     )
     lines.append(
-        f"Policies with ACS-analyzable equity dimensions: {len(cards)} of {len(policies)}."
+        f"Policies with analyzable equity dimensions: {len(cards)} of {len(policies)}."
     )
     lines.append("")
 
@@ -765,11 +967,41 @@ def main() -> None:
     acs_rows = load_acs(ACS_CSV)
     print(f"Loaded {len(acs_rows)} county rows from {ACS_CSV}")
 
+    # Load supplemental data sources (optional — enriches metrics when present)
+    cdc_by_county = load_cdc_places_by_county(CDC_PLACES_CSV)
+    if cdc_by_county:
+        print(f"Loaded CDC PLACES data for {len(cdc_by_county)} counties from {CDC_PLACES_CSV}")
+    else:
+        print("CDC PLACES data not found — health_access will use ACS uninsured rate only")
+
+    usda_by_county = load_usda_food_by_county(USDA_FOOD_CSV)
+    if usda_by_county:
+        print(f"Loaded USDA food access data for {len(usda_by_county)} counties from {USDA_FOOD_CSV}")
+    else:
+        print("USDA food access data not found — food_access will fall back to poverty rate proxy")
+
+    # Merge supplemental data into ACS rows
+    enriched_rows = merge_supplemental_data(acs_rows, cdc_by_county, usda_by_county)
+
+    # Fall back to poverty_rate for food_access if no USDA data available
+    if not usda_by_county:
+        DIMENSION_CONFIG["food_access"]["metric"] = "poverty_rate"
+        DIMENSION_CONFIG["food_access"]["data_quality"] = "moderate"
+        DIMENSION_CONFIG["food_access"]["quality_note"] = "poverty rate as food insecurity proxy (USDA data not found)"
+
+    # Fall back to uninsured_rate if no CDC data available
+    if not cdc_by_county:
+        DIMENSION_CONFIG["health_access"]["metric"] = "uninsured_rate"
+        DIMENSION_CONFIG["health_access"]["quality_note"] = "ACS uninsured rate (CDC PLACES not found)"
+        DIMENSION_CONFIG["environmental_health"]["metric"] = "pct_poc"
+        DIMENSION_CONFIG["environmental_health"]["data_quality"] = "weak"
+        DIMENSION_CONFIG["environmental_health"]["quality_note"] = "pct_poc as proxy (CDC PLACES not found)"
+
     # Analyze each policy
     cards: list[EvidenceCard] = []
     skipped = 0
     for policy in policies:
-        card = analyze_policy(policy, acs_rows)
+        card = analyze_policy(policy, enriched_rows)
         if card is not None:
             cards.append(card)
         else:

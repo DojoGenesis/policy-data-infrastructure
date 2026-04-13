@@ -25,70 +25,70 @@
     },
     "top_need_counties": [
       {
-        "geoid": "55078",
-        "county_name": "Menominee County",
-        "metric_value": 21.2,
-        "display_value": 21.2
-      },
-      {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 17.5,
-        "display_value": 17.5
-      },
-      {
-        "geoid": "55003",
-        "county_name": "Ashland County",
-        "metric_value": 16.4,
-        "display_value": 16.4
+        "geoid": "55107",
+        "county_name": "Rusk County",
+        "metric_value": 80.0,
+        "display_value": 80.0
       },
       {
         "geoid": "55041",
         "county_name": "Forest County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "metric_value": 50.0,
+        "display_value": 50.0
       },
       {
-        "geoid": "55113",
-        "county_name": "Sawyer County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "geoid": "55067",
+        "county_name": "Langlade County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55078",
+        "county_name": "Menominee County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55105",
+        "county_name": "Rock County",
+        "metric_value": 44.7,
+        "display_value": 44.7
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55089",
-        "county_name": "Ozaukee County",
-        "metric_value": 4.6,
-        "display_value": 4.6
-      },
-      {
-        "geoid": "55133",
-        "county_name": "Waukesha County",
-        "metric_value": 5.2,
-        "display_value": 5.2
-      },
-      {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 5.3,
-        "display_value": 5.3
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55129",
+        "county_name": "Washburn County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55087",
-        "county_name": "Outagamie County",
-        "metric_value": 6.4,
-        "display_value": 6.4
+        "geoid": "55125",
+        "county_name": "Vilas County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55121",
+        "county_name": "Trempealeau County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       }
     ],
-    "key_finding": "Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
-    "data_quality": "moderate"
+    "key_finding": "Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
+    "data_quality": "strong"
   },
   {
     "policy_id": "FH-EDU-002",
@@ -748,21 +748,21 @@
     "category": "Healthcare",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -770,67 +770,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -839,21 +839,21 @@
     "category": "Healthcare",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -861,67 +861,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -930,21 +930,21 @@
     "category": "Healthcare",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -952,67 +952,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -1127,21 +1127,21 @@
     "category": "Healthcare",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -1149,67 +1149,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -1748,21 +1748,21 @@
     "category": "Care Economy",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -1770,67 +1770,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -2112,21 +2112,21 @@
     "category": "Cities Towns Transit",
     "equity_dimension": "health_access",
     "statewide_context": {
-      "uninsured_rate": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 6.15,
-        "median": 5.7,
-        "min": 2.4,
-        "max": 22.5,
-        "std": 3.32
+        "mean": 10.46,
+        "median": 10.25,
+        "min": 4.6,
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "uninsured_rate": {
-        "min": 2.4,
-        "max": 22.5,
-        "range": 20.1,
-        "std": 3.32,
+      "poverty_rate": {
+        "min": 4.6,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -2134,67 +2134,67 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 22.5,
-        "display_value": 22.5
+        "metric_value": 32.5,
+        "display_value": null
       },
       {
         "geoid": "55019",
         "county_name": "Clark County",
-        "metric_value": 21.3,
-        "display_value": 21.3
+        "metric_value": 32.42,
+        "display_value": null
       },
       {
         "geoid": "55123",
         "county_name": "Vernon County",
-        "metric_value": 14.7,
-        "display_value": 14.7
+        "metric_value": 22.91,
+        "display_value": null
       },
       {
         "geoid": "55065",
         "county_name": "Lafayette County",
-        "metric_value": 10.7,
-        "display_value": 10.7
+        "metric_value": 19.56,
+        "display_value": null
       },
       {
-        "geoid": "55047",
-        "county_name": "Green Lake County",
-        "metric_value": 9.0,
-        "display_value": 9.0
+        "geoid": "55079",
+        "county_name": "Milwaukee County",
+        "metric_value": 19.23,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
         "geoid": "55089",
         "county_name": "Ozaukee County",
-        "metric_value": 2.4,
-        "display_value": 2.4
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 2.7,
-        "display_value": 2.7
+        "metric_value": 7.76,
+        "display_value": null
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 3.0,
-        "display_value": 3.0
+        "metric_value": 8.780000000000001,
+        "display_value": null
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 3.1,
-        "display_value": 3.1
+        "metric_value": 9.38,
+        "display_value": null
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 3.2,
-        "display_value": 3.2
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 9.73,
+        "display_value": null
+      },
+      {
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 9.92,
+        "display_value": null
       }
     ],
-    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).",
+    "key_finding": "Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).",
     "data_quality": "strong"
   },
   {
@@ -2314,70 +2314,70 @@
     },
     "top_need_counties": [
       {
-        "geoid": "55078",
-        "county_name": "Menominee County",
-        "metric_value": 21.2,
-        "display_value": 21.2
-      },
-      {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 17.5,
-        "display_value": 17.5
-      },
-      {
-        "geoid": "55003",
-        "county_name": "Ashland County",
-        "metric_value": 16.4,
-        "display_value": 16.4
+        "geoid": "55107",
+        "county_name": "Rusk County",
+        "metric_value": 80.0,
+        "display_value": 80.0
       },
       {
         "geoid": "55041",
         "county_name": "Forest County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "metric_value": 50.0,
+        "display_value": 50.0
       },
       {
-        "geoid": "55113",
-        "county_name": "Sawyer County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "geoid": "55067",
+        "county_name": "Langlade County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55078",
+        "county_name": "Menominee County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55105",
+        "county_name": "Rock County",
+        "metric_value": 44.7,
+        "display_value": 44.7
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55089",
-        "county_name": "Ozaukee County",
-        "metric_value": 4.6,
-        "display_value": 4.6
-      },
-      {
-        "geoid": "55133",
-        "county_name": "Waukesha County",
-        "metric_value": 5.2,
-        "display_value": 5.2
-      },
-      {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 5.3,
-        "display_value": 5.3
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55129",
+        "county_name": "Washburn County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55087",
-        "county_name": "Outagamie County",
-        "metric_value": 6.4,
-        "display_value": 6.4
+        "geoid": "55125",
+        "county_name": "Vilas County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55121",
+        "county_name": "Trempealeau County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       }
     ],
-    "key_finding": "Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
-    "data_quality": "moderate"
+    "key_finding": "Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
+    "data_quality": "strong"
   },
   {
     "policy_id": "FH-ENV-003",
@@ -2385,51 +2385,21 @@
     "category": "Environment",
     "equity_dimension": "environmental_health",
     "statewide_context": {
-      "pct_poc": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 12.98,
-        "median": 9.9,
+        "mean": 10.46,
+        "median": 10.25,
         "min": 4.6,
-        "max": 88.2,
-        "std": 11.51
-      },
-      "pct_non_hispanic_black": {
-        "count": 72,
-        "mean": 1.6,
-        "median": 0.8,
-        "min": 0.0,
-        "max": 25.6,
-        "std": 3.25
-      },
-      "pct_hispanic": {
-        "count": 72,
-        "mean": 4.51,
-        "median": 3.45,
-        "min": 0.6,
-        "max": 16.6,
-        "std": 3.32
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "pct_poc": {
+      "poverty_rate": {
         "min": 4.6,
-        "max": 88.2,
-        "range": 83.6,
-        "std": 11.51,
-        "counties_with_data": 72
-      },
-      "pct_non_hispanic_black": {
-        "min": 0.0,
-        "max": 25.6,
-        "range": 25.6,
-        "std": 3.25,
-        "counties_with_data": 72
-      },
-      "pct_hispanic": {
-        "min": 0.6,
-        "max": 16.6,
-        "range": 16.0,
-        "std": 3.32,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -2437,68 +2407,68 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 88.2,
-        "display_value": 88.2
+        "metric_value": 27.54,
+        "display_value": null
       },
       {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 51.4,
-        "display_value": 51.4
+        "geoid": "55041",
+        "county_name": "Forest County",
+        "metric_value": 24.82,
+        "display_value": null
       },
       {
-        "geoid": "55101",
-        "county_name": "Racine County",
-        "metric_value": 30.5,
-        "display_value": 30.5
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 24.78,
+        "display_value": null
       },
       {
-        "geoid": "55059",
-        "county_name": "Kenosha County",
-        "metric_value": 27.8,
-        "display_value": 27.8
+        "geoid": "55077",
+        "county_name": "Marquette County",
+        "metric_value": 24.61,
+        "display_value": null
       },
       {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 23.3,
-        "display_value": 23.3
+        "geoid": "55099",
+        "county_name": "Price County",
+        "metric_value": 24.39,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 4.6,
-        "display_value": 4.6
+        "geoid": "55035",
+        "county_name": "Eau Claire County",
+        "metric_value": 17.2,
+        "display_value": null
       },
       {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 5.2,
-        "display_value": 5.2
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 17.29,
+        "display_value": null
       },
       {
-        "geoid": "55123",
-        "county_name": "Vernon County",
-        "metric_value": 5.4,
-        "display_value": 5.4
+        "geoid": "55089",
+        "county_name": "Ozaukee County",
+        "metric_value": 17.41,
+        "display_value": null
       },
       {
-        "geoid": "55119",
-        "county_name": "Taylor County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55133",
+        "county_name": "Waukesha County",
+        "metric_value": 18.68,
+        "display_value": null
       },
       {
-        "geoid": "55011",
-        "county_name": "Buffalo County",
-        "metric_value": 5.8,
-        "display_value": 5.8
+        "geoid": "55093",
+        "county_name": "Pierce County",
+        "metric_value": 18.74,
+        "display_value": null
       }
     ],
-    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
-    "data_quality": "weak"
+    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
+    "data_quality": "moderate"
   },
   {
     "policy_id": "FH-LABOR-001",
@@ -3511,70 +3481,70 @@
     },
     "top_need_counties": [
       {
-        "geoid": "55078",
-        "county_name": "Menominee County",
-        "metric_value": 21.2,
-        "display_value": 21.2
-      },
-      {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 17.5,
-        "display_value": 17.5
-      },
-      {
-        "geoid": "55003",
-        "county_name": "Ashland County",
-        "metric_value": 16.4,
-        "display_value": 16.4
+        "geoid": "55107",
+        "county_name": "Rusk County",
+        "metric_value": 80.0,
+        "display_value": 80.0
       },
       {
         "geoid": "55041",
         "county_name": "Forest County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "metric_value": 50.0,
+        "display_value": 50.0
       },
       {
-        "geoid": "55113",
-        "county_name": "Sawyer County",
-        "metric_value": 15.0,
-        "display_value": 15.0
+        "geoid": "55067",
+        "county_name": "Langlade County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55078",
+        "county_name": "Menominee County",
+        "metric_value": 50.0,
+        "display_value": 50.0
+      },
+      {
+        "geoid": "55105",
+        "county_name": "Rock County",
+        "metric_value": 44.7,
+        "display_value": 44.7
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55089",
-        "county_name": "Ozaukee County",
-        "metric_value": 4.6,
-        "display_value": 4.6
-      },
-      {
-        "geoid": "55133",
-        "county_name": "Waukesha County",
-        "metric_value": 5.2,
-        "display_value": 5.2
-      },
-      {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 5.3,
-        "display_value": 5.3
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55129",
+        "county_name": "Washburn County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       },
       {
-        "geoid": "55087",
-        "county_name": "Outagamie County",
-        "metric_value": 6.4,
-        "display_value": 6.4
+        "geoid": "55125",
+        "county_name": "Vilas County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55121",
+        "county_name": "Trempealeau County",
+        "metric_value": 0.0,
+        "display_value": 0.0
+      },
+      {
+        "geoid": "55109",
+        "county_name": "St. Croix County",
+        "metric_value": 0.0,
+        "display_value": 0.0
       }
     ],
-    "key_finding": "Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
-    "data_quality": "moderate"
+    "key_finding": "Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).",
+    "data_quality": "strong"
   },
   {
     "policy_id": "FH-AG-004",
@@ -3673,51 +3643,21 @@
     "category": "Agriculture",
     "equity_dimension": "environmental_health",
     "statewide_context": {
-      "pct_poc": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 12.98,
-        "median": 9.9,
+        "mean": 10.46,
+        "median": 10.25,
         "min": 4.6,
-        "max": 88.2,
-        "std": 11.51
-      },
-      "pct_non_hispanic_black": {
-        "count": 72,
-        "mean": 1.6,
-        "median": 0.8,
-        "min": 0.0,
-        "max": 25.6,
-        "std": 3.25
-      },
-      "pct_hispanic": {
-        "count": 72,
-        "mean": 4.51,
-        "median": 3.45,
-        "min": 0.6,
-        "max": 16.6,
-        "std": 3.32
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "pct_poc": {
+      "poverty_rate": {
         "min": 4.6,
-        "max": 88.2,
-        "range": 83.6,
-        "std": 11.51,
-        "counties_with_data": 72
-      },
-      "pct_non_hispanic_black": {
-        "min": 0.0,
-        "max": 25.6,
-        "range": 25.6,
-        "std": 3.25,
-        "counties_with_data": 72
-      },
-      "pct_hispanic": {
-        "min": 0.6,
-        "max": 16.6,
-        "range": 16.0,
-        "std": 3.32,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -3725,68 +3665,68 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 88.2,
-        "display_value": 88.2
+        "metric_value": 27.54,
+        "display_value": null
       },
       {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 51.4,
-        "display_value": 51.4
+        "geoid": "55041",
+        "county_name": "Forest County",
+        "metric_value": 24.82,
+        "display_value": null
       },
       {
-        "geoid": "55101",
-        "county_name": "Racine County",
-        "metric_value": 30.5,
-        "display_value": 30.5
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 24.78,
+        "display_value": null
       },
       {
-        "geoid": "55059",
-        "county_name": "Kenosha County",
-        "metric_value": 27.8,
-        "display_value": 27.8
+        "geoid": "55077",
+        "county_name": "Marquette County",
+        "metric_value": 24.61,
+        "display_value": null
       },
       {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 23.3,
-        "display_value": 23.3
+        "geoid": "55099",
+        "county_name": "Price County",
+        "metric_value": 24.39,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 4.6,
-        "display_value": 4.6
+        "geoid": "55035",
+        "county_name": "Eau Claire County",
+        "metric_value": 17.2,
+        "display_value": null
       },
       {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 5.2,
-        "display_value": 5.2
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 17.29,
+        "display_value": null
       },
       {
-        "geoid": "55123",
-        "county_name": "Vernon County",
-        "metric_value": 5.4,
-        "display_value": 5.4
+        "geoid": "55089",
+        "county_name": "Ozaukee County",
+        "metric_value": 17.41,
+        "display_value": null
       },
       {
-        "geoid": "55119",
-        "county_name": "Taylor County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55133",
+        "county_name": "Waukesha County",
+        "metric_value": 18.68,
+        "display_value": null
       },
       {
-        "geoid": "55011",
-        "county_name": "Buffalo County",
-        "metric_value": 5.8,
-        "display_value": 5.8
+        "geoid": "55093",
+        "county_name": "Pierce County",
+        "metric_value": 18.74,
+        "display_value": null
       }
     ],
-    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
-    "data_quality": "weak"
+    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
+    "data_quality": "moderate"
   },
   {
     "policy_id": "FH-AG-007",
@@ -3794,51 +3734,21 @@
     "category": "Agriculture",
     "equity_dimension": "environmental_health",
     "statewide_context": {
-      "pct_poc": {
+      "poverty_rate": {
         "count": 72,
-        "mean": 12.98,
-        "median": 9.9,
+        "mean": 10.46,
+        "median": 10.25,
         "min": 4.6,
-        "max": 88.2,
-        "std": 11.51
-      },
-      "pct_non_hispanic_black": {
-        "count": 72,
-        "mean": 1.6,
-        "median": 0.8,
-        "min": 0.0,
-        "max": 25.6,
-        "std": 3.25
-      },
-      "pct_hispanic": {
-        "count": 72,
-        "mean": 4.51,
-        "median": 3.45,
-        "min": 0.6,
-        "max": 16.6,
-        "std": 3.32
+        "max": 21.2,
+        "std": 2.93
       }
     },
     "county_variation": {
-      "pct_poc": {
+      "poverty_rate": {
         "min": 4.6,
-        "max": 88.2,
-        "range": 83.6,
-        "std": 11.51,
-        "counties_with_data": 72
-      },
-      "pct_non_hispanic_black": {
-        "min": 0.0,
-        "max": 25.6,
-        "range": 25.6,
-        "std": 3.25,
-        "counties_with_data": 72
-      },
-      "pct_hispanic": {
-        "min": 0.6,
-        "max": 16.6,
-        "range": 16.0,
-        "std": 3.32,
+        "max": 21.2,
+        "range": 16.6,
+        "std": 2.93,
         "counties_with_data": 72
       }
     },
@@ -3846,68 +3756,68 @@
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 88.2,
-        "display_value": 88.2
+        "metric_value": 27.54,
+        "display_value": null
       },
       {
-        "geoid": "55079",
-        "county_name": "Milwaukee County",
-        "metric_value": 51.4,
-        "display_value": 51.4
+        "geoid": "55041",
+        "county_name": "Forest County",
+        "metric_value": 24.82,
+        "display_value": null
       },
       {
-        "geoid": "55101",
-        "county_name": "Racine County",
-        "metric_value": 30.5,
-        "display_value": 30.5
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 24.78,
+        "display_value": null
       },
       {
-        "geoid": "55059",
-        "county_name": "Kenosha County",
-        "metric_value": 27.8,
-        "display_value": 27.8
+        "geoid": "55077",
+        "county_name": "Marquette County",
+        "metric_value": 24.61,
+        "display_value": null
       },
       {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 23.3,
-        "display_value": 23.3
+        "geoid": "55099",
+        "county_name": "Price County",
+        "metric_value": 24.39,
+        "display_value": null
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 4.6,
-        "display_value": 4.6
+        "geoid": "55035",
+        "county_name": "Eau Claire County",
+        "metric_value": 17.2,
+        "display_value": null
       },
       {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 5.2,
-        "display_value": 5.2
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 17.29,
+        "display_value": null
       },
       {
-        "geoid": "55123",
-        "county_name": "Vernon County",
-        "metric_value": 5.4,
-        "display_value": 5.4
+        "geoid": "55089",
+        "county_name": "Ozaukee County",
+        "metric_value": 17.41,
+        "display_value": null
       },
       {
-        "geoid": "55119",
-        "county_name": "Taylor County",
-        "metric_value": 5.7,
-        "display_value": 5.7
+        "geoid": "55133",
+        "county_name": "Waukesha County",
+        "metric_value": 18.68,
+        "display_value": null
       },
       {
-        "geoid": "55011",
-        "county_name": "Buffalo County",
-        "metric_value": 5.8,
-        "display_value": 5.8
+        "geoid": "55093",
+        "county_name": "Pierce County",
+        "metric_value": 18.74,
+        "display_value": null
       }
     ],
-    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
-    "data_quality": "weak"
+    "key_finding": "Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.",
+    "data_quality": "moderate"
   },
   {
     "policy_id": "FH-SMBUS-002",

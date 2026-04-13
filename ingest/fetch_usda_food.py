@@ -79,21 +79,26 @@ COLUMN_ALIASES: dict[str, str] = {
     "lapop1_10":          "low_access_1mi",
     "LowAccess1Mi":       "low_access_1mi",
     "LAPOP1":             "low_access_1mi",
-    # low access 10 mile
+    # low access 10 mile — population share with low access at 10-mile threshold
     "LAPOP10_10":         "low_access_10mi",
     "lapop10_10":         "low_access_10mi",
     "LowAccess10Mi":      "low_access_10mi",
     "LAPOP10":            "low_access_10mi",
+    "lapop10":            "low_access_10mi",    # 2019 column name
+    "lapop10share":       "low_access_10mi",    # share version (2019)
     # low income low access
     "LILATracts_1And10":  "low_income_low_access",
     "lilatracts_1and10":  "low_income_low_access",
     "LILATracts_halfAnd10": "low_income_low_access",
     "LowIncomeLowAccess": "low_income_low_access",
-    # SNAP flag
+    # SNAP households with low access — share of SNAP-participant households
+    # with low access at 1-mile threshold; useful proxy for food-desert severity
     "SNAP_1":             "snap_flag",
     "snap_1":             "snap_flag",
     "SNAPFlag":           "snap_flag",
     "SNAP":               "snap_flag",
+    "lasnap1share":       "snap_flag",          # 2019 column name
+    "TractSNAP":          "snap_flag",          # SNAP store count (fallback)
     # population
     "Pop2010":            "population",
     "pop2010":            "population",

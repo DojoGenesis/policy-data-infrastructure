@@ -1,31 +1,31 @@
 # Policy Evidence Summary: Francesca Hong for Governor (2026)
 
-Generated from ACS 2023 5-Year estimates for all 72 Wisconsin counties.
-Policies with ACS-analyzable equity dimensions: 41 of 70.
+Generated from multi-source Wisconsin county data: ACS 2023 5-Year estimates, CDC PLACES 2023 health indicators (tract-level aggregated), and USDA 2019 Food Access Research Atlas (tract-level aggregated).
+Policies with analyzable equity dimensions: 41 of 70.
 
 ## Agriculture
 
 ### FH-AG-003: WI farmers feeding WI
 **Equity dimension:** food_access
-**Data quality:** moderate (poverty rate as food insecurity proxy)
-**Key finding:** Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
+**Data quality:** strong (USDA 2019 low-income + low-access tract percentage (direct food desert measure))
+**Key finding:** Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
 
 **Statewide context:**
 - **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 21.2% poverty rate
-  - Milwaukee County: 17.5% poverty rate
-  - Ashland County: 16.4% poverty rate
-  - Forest County: 15.0% poverty rate
-  - Sawyer County: 15.0% poverty rate
+  - Rusk County: 80.0% value
+  - Forest County: 50.0% value
+  - Langlade County: 50.0% value
+  - Menominee County: 50.0% value
+  - Rock County: 44.7% value
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 4.6% poverty rate
-  - Waukesha County: 5.2% poverty rate
-  - Washington County: 5.3% poverty rate
-  - Calumet County: 5.7% poverty rate
-  - Outagamie County: 6.4% poverty rate
+  - Washington County: 0.0% value
+  - Washburn County: 0.0% value
+  - Vilas County: 0.0% value
+  - Trempealeau County: 0.0% value
+  - St. Croix County: 0.0% value
 
 ---
 
@@ -55,53 +55,49 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-AG-006: Regenerative agriculture
 **Equity dimension:** environmental_health
-**Data quality:** weak (pct_poc as environmental justice proxy (indirect))
-**Key finding:** Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
+**Data quality:** moderate (CDC PLACES mean of obesity + diabetes + physical health burden rates)
+**Key finding:** Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
 
 **Statewide context:**
-- **People of color**: mean 13.0% | range 4.6%–88.2% (72 counties)
-- **Non-Hispanic Black**: mean 1.6% | range 0.0%–25.6% (72 counties)
-- **Hispanic/Latino**: mean 4.5% | range 0.6%–16.6% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 88.2% POC
-  - Milwaukee County: 51.4% POC
-  - Racine County: 30.5% POC
-  - Kenosha County: 27.8% POC
-  - Dane County: 23.3% POC
+  - Menominee County
+  - Forest County
+  - Adams County
+  - Marquette County
+  - Price County
 
 **Least impacted counties (bottom 5 by need):**
-  - Florence County: 4.6% POC
-  - Pepin County: 5.2% POC
-  - Vernon County: 5.4% POC
-  - Taylor County: 5.7% POC
-  - Buffalo County: 5.8% POC
+  - Eau Claire County
+  - Dane County
+  - Ozaukee County
+  - Waukesha County
+  - Pierce County
 
 ---
 
 ### FH-AG-007: CAFO regulation
 **Equity dimension:** environmental_health
-**Data quality:** weak (pct_poc as environmental justice proxy (indirect))
-**Key finding:** Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
+**Data quality:** moderate (CDC PLACES mean of obesity + diabetes + physical health burden rates)
+**Key finding:** Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
 
 **Statewide context:**
-- **People of color**: mean 13.0% | range 4.6%–88.2% (72 counties)
-- **Non-Hispanic Black**: mean 1.6% | range 0.0%–25.6% (72 counties)
-- **Hispanic/Latino**: mean 4.5% | range 0.6%–16.6% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 88.2% POC
-  - Milwaukee County: 51.4% POC
-  - Racine County: 30.5% POC
-  - Kenosha County: 27.8% POC
-  - Dane County: 23.3% POC
+  - Menominee County
+  - Forest County
+  - Adams County
+  - Marquette County
+  - Price County
 
 **Least impacted counties (bottom 5 by need):**
-  - Florence County: 4.6% POC
-  - Pepin County: 5.2% POC
-  - Vernon County: 5.4% POC
-  - Taylor County: 5.7% POC
-  - Buffalo County: 5.8% POC
+  - Eau Claire County
+  - Dane County
+  - Ozaukee County
+  - Waukesha County
+  - Pierce County
 
 ---
 
@@ -136,25 +132,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-CARE-001: Medicaid payments
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
@@ -234,25 +230,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-TRANSIT-006: Paratransit and medical transport
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
@@ -282,25 +278,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-TRANSIT-008: Public groceries
 **Equity dimension:** food_access
-**Data quality:** moderate (poverty rate as food insecurity proxy)
-**Key finding:** Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
+**Data quality:** strong (USDA 2019 low-income + low-access tract percentage (direct food desert measure))
+**Key finding:** Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
 
 **Statewide context:**
 - **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 21.2% poverty rate
-  - Milwaukee County: 17.5% poverty rate
-  - Ashland County: 16.4% poverty rate
-  - Forest County: 15.0% poverty rate
-  - Sawyer County: 15.0% poverty rate
+  - Rusk County: 80.0% value
+  - Forest County: 50.0% value
+  - Langlade County: 50.0% value
+  - Menominee County: 50.0% value
+  - Rock County: 44.7% value
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 4.6% poverty rate
-  - Waukesha County: 5.2% poverty rate
-  - Washington County: 5.3% poverty rate
-  - Calumet County: 5.7% poverty rate
-  - Outagamie County: 6.4% poverty rate
+  - Washington County: 0.0% value
+  - Washburn County: 0.0% value
+  - Vilas County: 0.0% value
+  - Trempealeau County: 0.0% value
+  - St. Croix County: 0.0% value
 
 ---
 
@@ -438,27 +434,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-ENV-003: PFAS
 **Equity dimension:** environmental_health
-**Data quality:** weak (pct_poc as environmental justice proxy (indirect))
-**Key finding:** Counties with the highest concentrations of people of color — Menominee, Milwaukee (88.2% POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
+**Data quality:** moderate (CDC PLACES mean of obesity + diabetes + physical health burden rates)
+**Key finding:** Counties with the highest concentrations of people of color — Menominee, Forest (highest need POC) — face disproportionate environmental health burdens and are the primary beneficiaries of environmental justice policies.
 
 **Statewide context:**
-- **People of color**: mean 13.0% | range 4.6%–88.2% (72 counties)
-- **Non-Hispanic Black**: mean 1.6% | range 0.0%–25.6% (72 counties)
-- **Hispanic/Latino**: mean 4.5% | range 0.6%–16.6% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 88.2% POC
-  - Milwaukee County: 51.4% POC
-  - Racine County: 30.5% POC
-  - Kenosha County: 27.8% POC
-  - Dane County: 23.3% POC
+  - Menominee County
+  - Forest County
+  - Adams County
+  - Marquette County
+  - Price County
 
 **Least impacted counties (bottom 5 by need):**
-  - Florence County: 4.6% POC
-  - Pepin County: 5.2% POC
-  - Vernon County: 5.4% POC
-  - Taylor County: 5.7% POC
-  - Buffalo County: 5.8% POC
+  - Eau Claire County
+  - Dane County
+  - Ozaukee County
+  - Waukesha County
+  - Pierce County
 
 ---
 
@@ -466,73 +460,73 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-HC-001: Expanded BadgerCare for all
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
 ### FH-HC-002: Pulling down healthcare costs
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
 ### FH-HC-003: Insurance claim denial reform
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
@@ -563,25 +557,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-HC-005: Lowering prescription drug costs
 **Equity dimension:** health_access
-**Data quality:** strong (direct ACS uninsured rate indicator)
-**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (22.5%), making them the strongest candidates for BadgerCare expansion (statewide mean: 6.2%).
+**Data quality:** strong (ACS uninsured rate + CDC PLACES no-healthcare-access composite)
+**Key finding:** Menominee, Clark have the highest uninsured rates in Wisconsin (highest need), making them the strongest candidates for BadgerCare expansion (statewide mean: 10.5%).
 
 **Statewide context:**
-- **Uninsured rate**: mean 6.2% | range 2.4%–22.5% (72 counties)
+- **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 22.5% uninsured
-  - Clark County: 21.3% uninsured
-  - Vernon County: 14.7% uninsured
-  - Lafayette County: 10.7% uninsured
-  - Green Lake County: 9.0% uninsured
+  - Menominee County
+  - Clark County
+  - Vernon County
+  - Lafayette County
+  - Milwaukee County
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 2.4% uninsured
-  - Calumet County: 2.7% uninsured
-  - Waukesha County: 3.0% uninsured
-  - Washington County: 3.1% uninsured
-  - Pierce County: 3.2% uninsured
+  - Ozaukee County
+  - Waukesha County
+  - Washington County
+  - St. Croix County
+  - Door County
 
 ---
 
@@ -789,25 +783,25 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 
 ### FH-EDU-001: Free school meals
 **Equity dimension:** food_access
-**Data quality:** moderate (poverty rate as food insecurity proxy)
-**Key finding:** Wisconsin's highest-poverty counties (Menominee, Milwaukee at 21.2%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
+**Data quality:** strong (USDA 2019 low-income + low-access tract percentage (direct food desert measure))
+**Key finding:** Wisconsin's highest-poverty counties (Rusk, Forest at 80.0%) would benefit most from this food access policy (statewide mean poverty rate: 10.5%).
 
 **Statewide context:**
 - **Poverty rate**: mean 10.5% | range 4.6%–21.2% (72 counties)
 
 **Most impacted counties (top 5 by need):**
-  - Menominee County: 21.2% poverty rate
-  - Milwaukee County: 17.5% poverty rate
-  - Ashland County: 16.4% poverty rate
-  - Forest County: 15.0% poverty rate
-  - Sawyer County: 15.0% poverty rate
+  - Rusk County: 80.0% value
+  - Forest County: 50.0% value
+  - Langlade County: 50.0% value
+  - Menominee County: 50.0% value
+  - Rock County: 44.7% value
 
 **Least impacted counties (bottom 5 by need):**
-  - Ozaukee County: 4.6% poverty rate
-  - Waukesha County: 5.2% poverty rate
-  - Washington County: 5.3% poverty rate
-  - Calumet County: 5.7% poverty rate
-  - Outagamie County: 6.4% poverty rate
+  - Washington County: 0.0% value
+  - Washburn County: 0.0% value
+  - Vilas County: 0.0% value
+  - Trempealeau County: 0.0% value
+  - St. Croix County: 0.0% value
 
 ---
 
@@ -1039,21 +1033,21 @@ Policies with ACS-analyzable equity dimensions: 41 of 70.
 ## Summary
 
 - **Total policies analyzed:** 41
-- **Direct indicators (strong):** 11
+- **Direct indicators (strong):** 14
 - **Proxy indicators (moderate):** 27
-- **Indirect indicators (weak):** 3
+- **Indirect indicators (weak):** 0
 
 ### Top 10 Most-Cited High-Need Counties (across all policies)
 
 These counties appear most frequently in the top-5 need rankings across all analyzed policies.
 
 1. **Milwaukee County** — cited in 24 policy evidence cards
-2. **Ashland County** — cited in 24 policy evidence cards
+2. **Ashland County** — cited in 21 policy evidence cards
 3. **Menominee County** — cited in 19 policy evidence cards
-4. **Sawyer County** — cited in 19 policy evidence cards
-5. **Dane County** — cited in 15 policy evidence cards
-6. **Rusk County** — cited in 12 policy evidence cards
-7. **Langlade County** — cited in 11 policy evidence cards
-8. **Price County** — cited in 11 policy evidence cards
-9. **Forest County** — cited in 9 policy evidence cards
-10. **Racine County** — cited in 8 policy evidence cards
+4. **Sawyer County** — cited in 16 policy evidence cards
+5. **Rusk County** — cited in 15 policy evidence cards
+6. **Langlade County** — cited in 14 policy evidence cards
+7. **Price County** — cited in 14 policy evidence cards
+8. **Forest County** — cited in 12 policy evidence cards
+9. **Dane County** — cited in 12 policy evidence cards
+10. **Rock County** — cited in 8 policy evidence cards
