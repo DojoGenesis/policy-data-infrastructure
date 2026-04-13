@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap');
+
+  :root {
+    --navy: #1a2744;
+    --navy-light: #243456;
+    --cream: #faf8f4;
+    --warm-white: #fffefa;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --green: #15803d;
+    --green-light: #f0fdf4;
+    --purple: #6d28d9;
+    --purple-light: #f5f3ff;
+    --teal: #0e7490;
+    --teal-light: #ecfeff;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --serif: 'Merriweather', Georgia, 'Times New Roman', serif;
+    --sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--cream);
+  }
+
+  /* ─── COVER ─── */
+  .cover {
+    min-height: 100vh;
+    background: var(--navy);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 30% 60%, rgba(217,119,6,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(14,116,144,0.06) 0%, transparent 50%);
+  }
+  .cover > * { position: relative; z-index: 1; }
+  .cover-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 700;
+    line-height: 1.15;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+  .cover .subtitle {
+    font-size: clamp(18px, 2.5vw, 22px);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 640px;
+    opacity: 0.85;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    font-family: var(--sans);
+    font-size: 14px;
+    opacity: 0.5;
+  }
+  .cover-scroll {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.4;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* ─── INTRO ─── */
+  .intro {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 80px 24px 60px;
+  }
+  .intro p {
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    font-size: 18px;
+    line-height: 1.8;
+  }
+  .intro .lead {
+    font-size: 21px;
+    color: var(--text);
+    font-weight: 400;
+  }
+  .scope-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 32px 0;
+  }
+
+  /* ─── TABLE OF CONTENTS ─── */
+  .toc {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+    font-family: var(--sans);
+  }
+  .toc-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .toc a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    font-size: 15px;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--teal); }
+  .toc .toc-num {
+    font-weight: 700;
+    color: var(--navy);
+    width: 40px;
+    flex-shrink: 0;
+  }
+  .toc .toc-title { flex: 1; }
+  .toc .toc-tier {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: right;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  /* ─── CHAPTER / HOUSEHOLD ─── */
+  .chapter {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+    border-top: 1px solid var(--border);
+  }
+  .chapter-header {
+    margin-bottom: 36px;
+  }
+  .chapter-number {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .chapter h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .chapter-location {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .tier-badge {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tier-badge.critical { background: var(--red-light); color: var(--red); }
+  .tier-badge.warning  { background: var(--amber-light); color: var(--amber); }
+  .tier-badge.neutral  { background: var(--teal-light); color: var(--teal); }
+  .tier-badge.positive { background: var(--green-light); color: var(--green); }
+
+  /* ─── NARRATIVE PROSE ─── */
+  .narrative {
+    margin-bottom: 28px;
+  }
+  .narrative p {
+    margin-bottom: 18px;
+  }
+
+  /* ─── STAT CALLOUT ROW ─── */
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 24px 0 32px;
+  }
+  .stat-block {
+    flex: 1;
+    min-width: 140px;
+    background: var(--slate-light);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-block.critical { background: var(--red-light); }
+  .stat-block.warning  { background: var(--amber-light); }
+  .stat-block.neutral  { background: var(--teal-light); }
+  .stat-block.positive { background: var(--green-light); }
+  .stat-big {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--navy);
+  }
+  .stat-block.critical .stat-big { color: var(--red); }
+  .stat-block.warning  .stat-big { color: var(--amber); }
+  .stat-block.neutral  .stat-big { color: var(--teal); }
+  .stat-block.positive .stat-big { color: var(--green); }
+  .stat-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .stat-context {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  /* ─── INDICATOR TABLE ─── */
+  .indicator-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--sans);
+    font-size: 14px;
+    margin: 28px 0;
+  }
+  .indicator-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 700;
+    color: var(--navy);
+    border-bottom: 2px solid var(--border);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .indicator-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .indicator-table tr:last-child td { border-bottom: none; }
+  .indicator-table .val-cell {
+    font-weight: 700;
+    text-align: right;
+  }
+
+  /* ─── POLICY LEVER BOX ─── */
+  .policy-lever {
+    background: var(--amber-light);
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--amber);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .policy-lever-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #92400e;
+    margin-bottom: 8px;
+  }
+  .policy-lever-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .policy-lever p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #78350f;
+    margin-bottom: 10px;
+  }
+  .policy-lever p:last-child { margin-bottom: 0; }
+  .policy-lever .evidence-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: #78350f;
+  }
+  .policy-lever .evidence-list li {
+    padding: 6px 0 6px 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .policy-lever .evidence-list li::before {
+    content: '\2192';
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+    font-weight: 700;
+  }
+
+  /* ─── DIVIDER ─── */
+  .section-divider {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-secondary);
+    font-size: 24px;
+    letter-spacing: 12px;
+  }
+
+  /* ─── METHODOLOGY ─── */
+  .methodology {
+    background: var(--navy);
+    color: white;
+    padding: 80px 24px;
+  }
+  .methodology-inner {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .methodology h2 {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 20px;
+  }
+  .methodology p {
+    font-size: 16px;
+    line-height: 1.8;
+    opacity: 0.85;
+    margin-bottom: 14px;
+  }
+  .methodology p:last-child { margin-bottom: 0; }
+
+  /* ─── DATA SOURCES / FOOTNOTES ─── */
+  .footnotes {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .footnotes h3 {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 20px;
+  }
+  .footnotes ol, .footnotes ul {
+    padding-left: 24px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    font-family: var(--sans);
+  }
+  .footnotes li { margin-bottom: 6px; }
+
+  /* ─── GENERATED STAMP ─── */
+  .generated-stamp {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .cover h1 { font-size: 32px; }
+    .chapter h2 { font-size: 26px; }
+    .stat-row { flex-direction: column; }
+  }
+
+  /* ─── PRINT ─── */
+  @media print {
+    .cover { min-height: auto; padding: 40px 24px; page-break-after: always; }
+    .chapter { page-break-inside: avoid; }
+    .policy-lever { break-inside: avoid; }
+    .stat-row { break-inside: avoid; }
+    body { font-size: 11pt; }
+    .cover-scroll { display: none; }
+    @page { margin: 1in; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- COVER                                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="cover">
+  <div class="cover-label">{{.ScopeName}}</div>
+  <h1>{{.Title}}</h1>
+  {{if .Subtitle}}<p class="subtitle">{{.Subtitle}}</p>{{end}}
+  <div class="cover-meta">
+    Policy Data Infrastructure &middot; {{.ScopeName}} &middot; {{.GeneratedAt.Format "2006"}}
+  </div>
+  <div class="cover-scroll">Scroll</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- INTRODUCTION                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="intro">
+  <p class="lead">
+    This document profiles {{len .Chapters}} neighborhoods in {{.ScopeName}},
+    selected by structural risk tier using the Neighborhood Attendance Risk Index (NARI).
+    Each chapter represents a distinct archetype of structural conditions that shape
+    daily life for families in that community.
+  </p>
+  <p>
+    The <strong>Neighborhood Attendance Risk Index (NARI)</strong> is a composite score
+    synthesizing eight structural indicators&mdash;poverty, racial composition, youth
+    population, transit access, housing cost burden, uninsured rate, eviction filings,
+    and health care access&mdash;into a single 0&ndash;100 percentile ranking. Tracts
+    scoring in the 80th&ndash;100th percentile are classified &ldquo;Critical&rdquo;;
+    those below the 20th percentile are &ldquo;On Track.&rdquo;
+  </p>
+  {{if .ScopeStats}}
+  <div class="scope-stats">
+    {{range .ScopeStats}}
+    <div class="stat-block {{.Severity}}">
+      <div class="stat-big">{{.Value}}</div>
+      <div class="stat-label">{{.Label}}</div>
+      {{if .Context}}<div class="stat-context">{{.Context}}</div>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<nav class="toc">
+  <div class="toc-label">{{len .Chapters}} Neighborhoods &middot; {{len .Chapters}} Profiles</div>
+  {{range .Chapters}}
+  <a href="#chapter-{{.Number}}">
+    <span class="toc-num">{{printf "%02d" .Number}}</span>
+    <span class="toc-title">{{.Geography.Name}}</span>
+    <span class="toc-tier" style="color:{{tierColor .Geography.NARITier}};">
+      {{tierLabel .Geography.NARITier}}
+      {{if hasData .Geography.NARIPercentile}}&nbsp;&middot;&nbsp;{{formatOrdinal .Geography.NARIPercentile}} pct.{{end}}
+    </span>
+  </a>
+  {{end}}
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CHAPTERS                                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+{{range .Chapters}}
+<section class="chapter" id="chapter-{{.Number}}">
+  <div class="chapter-header">
+    <div class="chapter-number" style="color:{{tierColor .Geography.NARITier}};">
+      Chapter {{.Number}}
+    </div>
+    <h2>
+      {{.Geography.Name}}
+      <span class="tier-badge {{severity .Geography.NARITier}}">{{tierLabel .Geography.NARITier}}</span>
+    </h2>
+    <div class="chapter-location">
+      {{.Geography.ScopeName}}
+      {{if hasData .Geography.NARIPercentile}}&nbsp;&middot;&nbsp;NARI {{formatOrdinal .Geography.NARIPercentile}} percentile{{end}}
+      {{if .Geography.NARITier}}&nbsp;&middot;&nbsp;{{tierLabel .Geography.NARITier}} tier{{end}}
+    </div>
+  </div>
+
+  {{if .Narrative}}
+  <div class="narrative">
+    <p>{{.Narrative}}</p>
+  </div>
+  {{end}}
+
+  <!-- Stat callout row -->
+  {{if .StatCallouts}}
+  <div class="stat-row">
+    {{range .StatCallouts}}
+    <div class="stat-block {{.Severity}}">
+      <div class="stat-big">{{.Value}}</div>
+      <div class="stat-label">{{.Label}}</div>
+      {{if .Context}}<div class="stat-context">{{.Context}}</div>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+  <!-- Indicator table -->
+  {{if .Indicators}}
+  <table class="indicator-table">
+    <thead>
+      <tr>
+        <th>Indicator</th>
+        <th style="text-align:right;">Value</th>
+        <th>Direction</th>
+        <th>Benchmark</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Indicators}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td class="val-cell">{{.Formatted}}</td>
+        <td style="font-size:12px;color:var(--text-secondary);">
+          {{if eq .Direction "higher_better"}}&#x25B2; higher is better{{else if eq .Direction "lower_better"}}&#x25BC; lower is better{{else}}&mdash;{{end}}
+        </td>
+        <td style="font-size:12px;color:var(--text-secondary);">{{if .Benchmark}}{{.Benchmark}}{{else}}&mdash;{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <!-- Policy levers -->
+  {{range .PolicyLevers}}
+  <div class="policy-lever">
+    <div class="policy-lever-label">Policy Lever &middot; {{upper .Category}}</div>
+    <div class="policy-lever-title">{{.Title}}</div>
+    <p>{{.Description}}</p>
+    {{if .Evidence}}
+    <ul class="evidence-list">
+      {{range .Evidence}}
+      <li>{{.}}</li>
+      {{end}}
+    </ul>
+    {{end}}
+  </div>
+  {{end}}
+
+</section>
+<div class="section-divider">&middot; &middot; &middot;</div>
+{{end}}
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- METHODOLOGY                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+{{if .Methodology}}
+<section class="methodology">
+  <div class="methodology-inner">
+    <h2>Methodology</h2>
+    <p>{{.Methodology}}</p>
+  </div>
+</section>
+{{end}}
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- DATA SOURCES                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+{{if .DataSources}}
+<section class="footnotes">
+  <h3>Data Sources</h3>
+  <ul>
+    {{range .DataSources}}
+    <li>{{.}}</li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
+
+<div class="generated-stamp">
+  Generated {{.GeneratedAt.Format "January 2, 2006 at 15:04 UTC"}} &middot; Policy Data Infrastructure
+</div>
+
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap');
+
+  :root {
+    --navy: #1a2744;
+    --cream: #faf8f4;
+    --warm-white: #fffefa;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --green: #15803d;
+    --green-light: #f0fdf4;
+    --teal: #0e7490;
+    --teal-light: #ecfeff;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --serif: 'Merriweather', Georgia, 'Times New Roman', serif;
+    --sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--cream);
+  }
+
+  /* ─── HEADER ─── */
+  .ep-header {
+    background: var(--navy);
+    color: white;
+    padding: 56px 32px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ep-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 80% 50%, rgba(217,119,6,0.07) 0%, transparent 55%);
+  }
+  .ep-header > * { position: relative; z-index: 1; }
+  .ep-header-inner { max-width: 860px; margin: 0 auto; }
+  .ep-eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 16px;
+  }
+  .ep-header h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .ep-header .subtitle {
+    font-size: 17px;
+    opacity: 0.75;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* ─── PROFILE BODY ─── */
+  .ep-body {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 32px;
+  }
+
+  /* ─── NARI SCORE BANNER ─── */
+  .nari-banner {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+  .nari-score-block {
+    text-align: center;
+    min-width: 120px;
+  }
+  .nari-score-num {
+    font-family: var(--serif);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .nari-score-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-top: 6px;
+  }
+  .nari-tier-block {
+    flex: 1;
+    min-width: 200px;
+  }
+  .nari-tier-name {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .nari-tier-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .nari-banner.critical { border-left: 6px solid var(--red); }
+  .nari-banner.critical .nari-score-num { color: var(--red); }
+  .nari-banner.critical .nari-tier-name { color: var(--red); }
+  .nari-banner.warning  { border-left: 6px solid var(--amber); }
+  .nari-banner.warning  .nari-score-num { color: var(--amber); }
+  .nari-banner.warning  .nari-tier-name { color: var(--amber); }
+  .nari-banner.neutral  { border-left: 6px solid var(--teal); }
+  .nari-banner.neutral  .nari-score-num { color: var(--teal); }
+  .nari-banner.neutral  .nari-tier-name { color: var(--teal); }
+  .nari-banner.positive { border-left: 6px solid var(--green); }
+  .nari-banner.positive .nari-score-num { color: var(--green); }
+  .nari-banner.positive .nari-tier-name { color: var(--green); }
+
+  /* ─── SECTION HEADING ─── */
+  .section-heading {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    border-bottom: 2px solid var(--navy);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    margin-top: 40px;
+  }
+
+  /* ─── INDICATOR GRID ─── */
+  .indicator-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .indicator-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .indicator-card.critical { border-top: 3px solid var(--red); }
+  .indicator-card.warning  { border-top: 3px solid var(--amber); }
+  .indicator-card.neutral  { border-top: 3px solid var(--teal); }
+  .indicator-card.positive { border-top: 3px solid var(--green); }
+  .ind-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .ind-value {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+  }
+  .indicator-card.critical .ind-value { color: var(--red); }
+  .indicator-card.warning  .ind-value { color: var(--amber); }
+  .indicator-card.positive .ind-value { color: var(--green); }
+  .ind-benchmark {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .ind-direction {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ─── POLICY LEVERS ─── */
+  .policy-lever {
+    background: var(--amber-light);
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--amber);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .policy-lever-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #92400e;
+    margin-bottom: 6px;
+  }
+  .policy-lever-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .policy-lever p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #78350f;
+    margin-bottom: 8px;
+  }
+  .policy-lever p:last-child { margin-bottom: 0; }
+  .policy-lever .evidence-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: #78350f;
+  }
+  .policy-lever .evidence-list li {
+    padding: 5px 0 5px 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .policy-lever .evidence-list li::before {
+    content: '\2192';
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+    font-weight: 700;
+  }
+
+  /* ─── DATA SOURCES ─── */
+  .footnotes {
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+    margin-top: 48px;
+  }
+  .footnotes h3 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 14px;
+  }
+  .footnotes ul {
+    padding-left: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+  }
+  .footnotes li { margin-bottom: 4px; }
+
+  .generated-stamp {
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    margin-top: 16px;
+  }
+
+  @media print {
+    .ep-header { page-break-after: always; }
+    .indicator-card { break-inside: avoid; }
+    .policy-lever { break-inside: avoid; }
+    body { font-size: 11pt; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+{{with index .Chapters 0}}
+<header class="ep-header">
+  <div class="ep-header-inner">
+    <div class="ep-eyebrow">Equity Profile &middot; {{$.ScopeName}}</div>
+    <h1>{{.Geography.Name}}</h1>
+    <p class="subtitle">
+      A structural data profile. GEOID: {{.Geography.GEOID}}
+      {{if .Geography.Level}}&nbsp;&middot;&nbsp;Level: {{.Geography.Level}}{{end}}
+    </p>
+  </div>
+</header>
+
+<main class="ep-body">
+
+  <!-- NARI banner -->
+  <div class="nari-banner {{severity .Geography.NARITier}}">
+    <div class="nari-score-block">
+      {{if hasData .Geography.NARIPercentile}}
+      <div class="nari-score-num">{{formatOrdinal .Geography.NARIPercentile}}</div>
+      {{else}}
+      <div class="nari-score-num">—</div>
+      {{end}}
+      <div class="nari-score-label">NARI Percentile</div>
+    </div>
+    <div class="nari-tier-block">
+      <div class="nari-tier-name">{{tierLabel .Geography.NARITier}}</div>
+      <div class="nari-tier-desc">
+        This community sits at the {{formatOrdinal .Geography.NARIPercentile}} percentile
+        on the Neighborhood Attendance Risk Index, placing it in the
+        &ldquo;{{tierLabel .Geography.NARITier}}&rdquo; tier for structural risk.
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicator grid -->
+  {{if .Indicators}}
+  <div class="section-heading">Structural Indicators</div>
+  <div class="indicator-grid">
+    {{range .Indicators}}
+    <div class="indicator-card">
+      <div class="ind-name">{{.Name}}</div>
+      <div class="ind-value">{{.Formatted}}</div>
+      {{if .Benchmark}}<div class="ind-benchmark">{{.Benchmark}}</div>{{end}}
+      <div class="ind-direction">
+        {{if eq .Direction "higher_better"}}&#x25B2; higher is better
+        {{else if eq .Direction "lower_better"}}&#x25BC; lower is better
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+  <!-- Stat callouts -->
+  {{if .StatCallouts}}
+  <div class="section-heading">Key Statistics</div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;">
+    {{range .StatCallouts}}
+    <div style="flex:1;min-width:140px;background:var(--warm-white);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-family:var(--serif);font-size:30px;font-weight:700;color:var(--navy);">{{.Value}}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">{{.Label}}</div>
+      {{if .Context}}<div style="font-size:11px;color:var(--text-secondary);font-style:italic;">{{.Context}}</div>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+  <!-- Policy levers -->
+  {{if .PolicyLevers}}
+  <div class="section-heading">Policy Levers</div>
+  {{range .PolicyLevers}}
+  <div class="policy-lever">
+    <div class="policy-lever-label">{{upper .Category}} Intervention &middot; Impact: {{upper .Impact}}</div>
+    <div class="policy-lever-title">{{.Title}}</div>
+    <p>{{.Description}}</p>
+    {{if .Evidence}}
+    <ul class="evidence-list">
+      {{range .Evidence}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+  </div>
+  {{end}}
+  {{end}}
+
+  <!-- Methodology -->
+  {{if $.Methodology}}
+  <div class="section-heading">Methodology</div>
+  <p style="font-size:15px;line-height:1.8;color:var(--text-secondary);margin-bottom:24px;">{{$.Methodology}}</p>
+  {{end}}
+
+  <!-- Data sources -->
+  {{if $.DataSources}}
+  <div class="footnotes">
+    <h3>Data Sources</h3>
+    <ul>{{range $.DataSources}}<li>{{.}}</li>{{end}}</ul>
+  </div>
+  {{end}}
+
+  <p class="generated-stamp">
+    Generated {{$.GeneratedAt.Format "January 2, 2006 at 15:04 UTC"}} &middot; Policy Data Infrastructure
+  </p>
+
+</main>
+{{end}}
+</body>
+</html>
