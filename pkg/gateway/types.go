@@ -1,7 +1,5 @@
 package gateway
 
-import "github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
-
 // ── Request types ───────────────────────────────────────────────────────────
 
 // QueryRequest is the body for POST /query.
@@ -155,50 +153,3 @@ type PipelineEvent struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// ── Conversion helpers ──────────────────────────────────────────────────────
-
-// geoToResponse converts a store Geography and optional indicators/scores into
-// the HTTP response shape.
-func geoToResponse(g interface{ getFields() geoFields }, inds []store.Indicator, scores []store.AnalysisScore) GeographyResponse {
-	f := g.getFields()
-	resp := GeographyResponse{
-		GEOID:       f.GEOID,
-		Level:       f.Level,
-		ParentGEOID: f.ParentGEOID,
-		Name:        f.Name,
-		StateFIPS:   f.StateFIPS,
-		CountyFIPS:  f.CountyFIPS,
-		Population:  f.Population,
-		LandAreaM2:  f.LandAreaM2,
-		Lat:         f.Lat,
-		Lon:         f.Lon,
-	}
-	for _, ind := range inds {
-		resp.Indicators = append(resp.Indicators, IndicatorResponse{
-			VariableID:    ind.VariableID,
-			Vintage:       ind.Vintage,
-			Value:         ind.Value,
-			MarginOfError: ind.MarginOfError,
-			RawValue:      ind.RawValue,
-		})
-	}
-	for _, s := range scores {
-		resp.Scores = append(resp.Scores, ScoreResponse{
-			AnalysisID: s.AnalysisID,
-			Score:      s.Score,
-			Rank:       s.Rank,
-			Percentile: s.Percentile,
-			Tier:       s.Tier,
-			Details:    s.Details,
-		})
-	}
-	return resp
-}
-
-// geoFields is a flat struct used by geoToResponse to avoid importing geo
-// package types directly in this file.
-type geoFields struct {
-	GEOID, Level, ParentGEOID, Name, StateFIPS, CountyFIPS string
-	Population                                               int
-	LandAreaM2, Lat, Lon                                     float64
-}

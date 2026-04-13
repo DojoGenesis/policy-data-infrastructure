@@ -127,20 +127,6 @@ func topoSort(stages []Stage) ([]Stage, error) {
 
 	inDegree := make(map[string]int, len(stages))
 	for _, st := range stages {
-		if _, exists := inDegree[st.Name()]; !exists {
-			inDegree[st.Name()] = 0
-		}
-		for _, dep := range st.Dependencies() {
-			inDegree[st.Name()]++
-			_ = dep
-		}
-	}
-
-	// Re-compute in-degree correctly: inDegree[name] = number of dependencies.
-	for k := range inDegree {
-		delete(inDegree, k)
-	}
-	for _, st := range stages {
 		inDegree[st.Name()] = len(st.Dependencies())
 	}
 

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -753,6 +752,3 @@ func formatInt(n int) string {
 	parts = append([]string{s}, parts...)
 	return strings.Join(parts, ",")
 }
-
-// ── ensure time import is used (via PipelineEvent timestamp if added) ───────
-var _ = time.Now

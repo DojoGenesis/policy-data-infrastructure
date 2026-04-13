@@ -4,13 +4,16 @@ import "encoding/json"
 
 // marshalJSONB converts a map to a raw JSON byte slice suitable for a pgx
 // JSONB parameter. Returns nil (SQL NULL) when the map is nil or empty.
+// Returns a JSON-encoded error object if marshaling fails, so the caller never
+// silently stores NULL for a non-empty input.
 func marshalJSONB(m map[string]interface{}) []byte {
 	if len(m) == 0 {
 		return nil
 	}
 	b, err := json.Marshal(m)
 	if err != nil {
-		return nil
+		// Return a diagnostic object so we don't silently lose data.
+		return []byte(`{"_marshal_error":"` + err.Error() + `"}`)
 	}
 	return b
 }

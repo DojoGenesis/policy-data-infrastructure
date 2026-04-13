@@ -159,7 +159,7 @@ func (s *cdcPlacesSource) Schema() []VariableDef {
 // FetchCounty fetches CDC PLACES tract-level data for a single county.
 // It filters the SODA API by a GEOID prefix match (state+county = first 5 chars).
 func (s *cdcPlacesSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS string) ([]store.Indicator, error) {
-	prefix := stateFIPS + countyFIPS // 5-digit prefix
+	prefix := sanitizeFIPS(stateFIPS + countyFIPS) // 5-digit prefix
 	return s.fetch(ctx, fmt.Sprintf("starts_with(locationname,'%s')", prefix))
 }
 
@@ -170,7 +170,29 @@ func (s *cdcPlacesSource) FetchState(ctx context.Context, stateFIPS string) ([]s
 	if abbr == "" {
 		return nil, fmt.Errorf("cdc-places: unknown state FIPS %q", stateFIPS)
 	}
-	return s.fetch(ctx, fmt.Sprintf("stateabbr='%s'", abbr))
+	return s.fetch(ctx, fmt.Sprintf("stateabbr='%s'", sanitizeAlpha(abbr)))
+}
+
+// sanitizeFIPS strips non-digit characters from a FIPS code to prevent SODA injection.
+func sanitizeFIPS(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' {
+			out = append(out, s[i])
+		}
+	}
+	return string(out)
+}
+
+// sanitizeAlpha strips non-letter characters from a string to prevent SODA injection.
+func sanitizeAlpha(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
+			out = append(out, s[i])
+		}
+	}
+	return string(out)
 }
 
 // fetch issues paginated SODA requests using whereClause and assembles all rows.

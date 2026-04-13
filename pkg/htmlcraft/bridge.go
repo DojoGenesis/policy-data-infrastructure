@@ -2,7 +2,6 @@ package htmlcraft
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -246,9 +245,6 @@ func (b *Bridge) buildMapScript(opts DeliverableOpts, scope *geo.Geography) stri
 		tileURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 		tileAttrib = `Tiles &copy; Esri`
 	}
-
-	geojsonJSON, _ := json.Marshal((map[string]interface{}{"key": "geojson"}))
-	_ = geojsonJSON
 
 	return fmt.Sprintf(`<script>
 (function() {

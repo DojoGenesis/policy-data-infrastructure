@@ -284,5 +284,8 @@ func printJSON(v interface{}) error {
 // geoLevel is used by parseScope in analyze.go; define toString helper here
 // since this file is the natural home for geo-related output.
 func geoLevelDisplay(level string) string {
+	if level == "" {
+		return ""
+	}
 	return strings.ToUpper(level[:1]) + level[1:]
 }

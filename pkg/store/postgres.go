@@ -43,11 +43,14 @@ func NewPostgresStore(ctx context.Context, connString string) (*PostgresStore, e
 
 	// Detect PostGIS: check if centroid column exists on geographies table.
 	var hasCentroid bool
-	_ = pool.QueryRow(ctx, `
+	if err := pool.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'geographies' AND column_name = 'centroid'
-		)`).Scan(&hasCentroid)
+		)`).Scan(&hasCentroid); err != nil {
+		// Non-fatal: default to false (no spatial queries).
+		hasCentroid = false
+	}
 	s.hasPostGIS = hasCentroid
 
 	return s, nil
@@ -119,9 +122,9 @@ func (s *PostgresStore) RefreshViews(ctx context.Context) error {
 // --- Geography operations ---
 
 // PutGeographies upserts a batch of Geography records using a pgx Batch.
-// Each row is upserted via ON CONFLICT (geoid) DO UPDATE. The boundary column
-// is populated from a GeoJSON string when present; centroid is derived from
-// the boundary geometry using ST_Centroid.
+// Each row is upserted via ON CONFLICT (geoid) DO UPDATE. Boundary and centroid
+// columns are only written when PostGIS is available; to load boundaries, use
+// ogr2ogr or the TIGER loader which writes geometry directly via SQL.
 func (s *PostgresStore) PutGeographies(ctx context.Context, geos []geo.Geography) error {
 	if len(geos) == 0 {
 		return nil
