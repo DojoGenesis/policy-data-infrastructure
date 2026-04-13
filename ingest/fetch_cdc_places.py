@@ -91,7 +91,7 @@ def print_plan(args: argparse.Namespace) -> None:
 
 def _build_url(measure: str, offset: int) -> str:
     params = {
-        "$where": f"stateabbr='{WI_STATE_ABBR}' AND measureid='{measure}' AND data_value_type='CrudePrev'",
+        "$where": f"stateabbr='{WI_STATE_ABBR}' AND measureid='{measure}' AND datavaluetypeid='CrdPrv'",
         "$limit": str(PAGE_SIZE),
         "$offset": str(offset),
         "$select": "locationid,measureid,data_value,low_confidence_limit,high_confidence_limit",

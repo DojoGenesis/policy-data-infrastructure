@@ -74,8 +74,7 @@ def bulk_load_indicators(conn: psycopg.Connection, indicators: list[dict]) -> in
             ON CONFLICT (geoid, variable_id, vintage) DO UPDATE SET
                 value           = EXCLUDED.value,
                 margin_of_error = EXCLUDED.margin_of_error,
-                raw_value       = EXCLUDED.raw_value,
-                updated_at      = now()
+                raw_value       = EXCLUDED.raw_value
         """)
         count = cur.rowcount
 
@@ -179,21 +178,21 @@ def upsert_indicator_meta(conn: psycopg.Connection, variables: dict[str, dict]) 
     count = 0
     with conn.cursor() as cur:
         for variable_id, meta in variables.items():
+            # Schema: indicator_meta(variable_id, source_id, name, description, unit, direction)
             cur.execute("""
-                INSERT INTO indicator_meta (variable_id, label, source_id, source_table, unit, direction)
+                INSERT INTO indicator_meta (variable_id, source_id, name, description, unit, direction)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (variable_id) DO UPDATE SET
-                    label        = EXCLUDED.label,
-                    source_id    = EXCLUDED.source_id,
-                    source_table = EXCLUDED.source_table,
-                    unit         = EXCLUDED.unit,
-                    direction    = EXCLUDED.direction,
-                    updated_at   = now()
+                    source_id   = EXCLUDED.source_id,
+                    name        = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    unit        = EXCLUDED.unit,
+                    direction   = EXCLUDED.direction
             """, (
                 variable_id,
-                meta.get("label", variable_id.replace("_", " ").title()),
-                meta.get("source", ""),
-                meta.get("table"),
+                meta.get("source_id", meta.get("source", "")),
+                meta.get("name", meta.get("label", variable_id.replace("_", " ").title())),
+                meta.get("description"),
                 meta.get("unit", ""),
                 meta.get("direction", "neutral"),
             ))

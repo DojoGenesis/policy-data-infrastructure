@@ -46,7 +46,8 @@ BLS_API_KEY = os.environ.get("BLS_API_KEY", "")
 WI_STATE_FIPS = "55"
 
 # BLS API limits
-BATCH_SIZE_UNREGISTERED = 50
+# Unregistered users: 25 series per request (not 50 — BLS truncates silently)
+BATCH_SIZE_UNREGISTERED = 25
 BATCH_SIZE_REGISTERED = 500
 RATE_LIMIT_DELAY = 1.2  # seconds between requests
 
@@ -173,11 +174,11 @@ def print_plan(args: argparse.Namespace) -> None:
 
 
 def _post_bls(series_ids: list[str], year: int) -> dict:
+    # NOTE: BLS v2 batch API silently drops all data entries when
+    # startyear/endyear + annualaverage are combined without a registration key.
+    # Workaround: fetch without year restriction, then filter client-side.
     payload = json.dumps({
         "seriesid": series_ids,
-        "startyear": str(year),
-        "endyear":   str(year),
-        "annualaverage": True,
         **({"registrationkey": BLS_API_KEY} if BLS_API_KEY else {}),
     }).encode("utf-8")
 
@@ -205,14 +206,34 @@ def _post_bls(series_ids: list[str], year: int) -> dict:
 
 
 def _extract_annual(series_data: dict, year: int) -> float | None:
-    """Extract the annual average value from a BLS series result."""
+    """
+    Extract the annual average value for the given year from a BLS series result.
+
+    Tries M13 (BLS annual average) first. Falls back to computing the mean of
+    M01-M12 monthly values for the year if M13 is not present in the response.
+    """
+    year_str = str(year)
+    monthly_vals: list[float] = []
     for entry in series_data.get("data", []):
-        if entry.get("year") == str(year) and entry.get("period") == "M13":
-            val = entry.get("value", "")
-            try:
-                return float(val)
-            except (ValueError, TypeError):
-                return None
+        if entry.get("year") != year_str:
+            continue
+        period = entry.get("period", "")
+        val_str = entry.get("value", "")
+        try:
+            val = float(val_str)
+        except (ValueError, TypeError):
+            continue
+        if period == "M13":
+            return val  # Official annual average — use directly
+        if period.startswith("M") and period[1:].isdigit():
+            month = int(period[1:])
+            if 1 <= month <= 12:
+                monthly_vals.append(val)
+
+    if len(monthly_vals) == 12:
+        return round(sum(monthly_vals) / 12, 1)
+    if monthly_vals:  # Partial year — use what we have
+        return round(sum(monthly_vals) / len(monthly_vals), 1)
     return None
 
 

@@ -23,17 +23,19 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import zipfile
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "analysis", "output")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "wi_schools_dpi.csv")
 
-# URL template — year is substituted at runtime.
-# NOTE: DPI changes file naming conventions between releases.
+# URL template — DPI uses school year format (YYYY-YY) and ZIP archives.
+# The --year flag (e.g. 2023) is the school year END year, so 2023 → "2022-23".
+# NOTE: DPI changes file path and naming conventions between releases.
 # Fallback: visit https://dpi.wi.gov/wisedash/download-files
 URL_TEMPLATE = (
-    "https://dpi.wi.gov/sites/default/files/imce/wisedash/download/"
-    "enrollment_certified_{year}.csv"
+    "https://dpi.wi.gov/sites/default/files/wise/downloads/"
+    "enrollment_certified_{school_year}.zip"
 )
 
 RATE_LIMIT_DELAY = 2.0  # seconds between requests
@@ -115,13 +117,21 @@ COLUMN_ALIASES: dict[str, str] = {
 }
 
 
+def _school_year(year: int) -> str:
+    """Convert end-year integer to DPI school-year string. 2023 → '2022-23'."""
+    short = str(year)[-2:]
+    return f"{year - 1}-{short}"
+
+
 def print_plan(args: argparse.Namespace) -> None:
-    url = URL_TEMPLATE.format(year=args.year)
+    sy = _school_year(args.year)
+    url = URL_TEMPLATE.format(school_year=sy)
     print(f"[dry-run] WI DPI WISEdash fetch plan")
-    print(f"  Year    : {args.year}")
-    print(f"  URL     : {url}")
-    print(f"  Output  : {OUTPUT_FILE}")
-    print(f"  Columns : {', '.join(OUTPUT_COLUMNS)}")
+    print(f"  Year        : {args.year} (school year {sy})")
+    print(f"  URL         : {url}")
+    print(f"  Format      : ZIP archive containing CSV")
+    print(f"  Output      : {OUTPUT_FILE}")
+    print(f"  Columns     : {', '.join(OUTPUT_COLUMNS)}")
     print()
     print("  NOTE: If the URL returns 404, visit:")
     print("        https://dpi.wi.gov/wisedash/download-files")
@@ -129,8 +139,9 @@ def print_plan(args: argparse.Namespace) -> None:
 
 
 def fetch_data(args: argparse.Namespace) -> list[dict]:
-    url = URL_TEMPLATE.format(year=args.year)
-    print(f"Fetching WI DPI WISEdash {args.year}...")
+    sy = _school_year(args.year)
+    url = URL_TEMPLATE.format(school_year=sy)
+    print(f"Fetching WI DPI WISEdash {args.year} (school year {sy})...")
     print(f"  URL: {url}")
 
     req = urllib.request.Request(
@@ -163,6 +174,21 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
     print(f"  Received {len(raw_bytes):,} bytes")
     time.sleep(RATE_LIMIT_DELAY)
 
+    # DPI distributes as ZIP archives — extract the largest CSV inside
+    if url.endswith(".zip"):
+        try:
+            zf = zipfile.ZipFile(io.BytesIO(raw_bytes))
+            csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+            if not csv_names:
+                print(f"  ERROR: ZIP contains no CSV. Members: {zf.namelist()}", file=sys.stderr)
+                sys.exit(1)
+            csv_name = sorted(csv_names, key=lambda n: zf.getinfo(n).file_size, reverse=True)[0]
+            print(f"  Extracting {csv_name} from ZIP...")
+            raw_bytes = zf.read(csv_name)
+        except zipfile.BadZipFile as exc:
+            print(f"  ERROR: Not a valid ZIP: {exc}", file=sys.stderr)
+            sys.exit(1)
+
     # Parse CSV — try UTF-8 first, fall back to latin-1
     try:
         text = raw_bytes.decode("utf-8-sig")
@@ -170,33 +196,83 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
         text = raw_bytes.decode("latin-1")
 
     reader = csv.DictReader(io.StringIO(text))
-    source_cols = reader.fieldnames or []
 
-    # Build mapping from source column name → output column name
-    col_map: dict[str, str] = {}
-    for src_col in source_cols:
-        if src_col in COLUMN_ALIASES:
-            col_map[src_col] = COLUMN_ALIASES[src_col]
+    # DPI enrollment files use a LONG (group-by) format.
+    # Each row is: school × GROUP_BY × GROUP_BY_VALUE → STUDENT_COUNT / PERCENT_OF_GROUP
+    # We pivot to WIDE format: one row per (district_code, school_code) with all indicators.
 
-    mapped_targets = set(col_map.values())
-    missing = [c for c in OUTPUT_COLUMNS if c not in mapped_targets]
-    if missing:
-        print(
-            f"  WARNING: Could not map source columns for: {missing}\n"
-            f"  Source columns found: {source_cols}\n"
-            f"  Add entries to COLUMN_ALIASES if the DPI format changed.",
-            file=sys.stderr,
+    # Keyed by (district_code, school_code): wide dict
+    schools: dict[tuple, dict] = {}
+
+    def _safe_pct(val_str: str) -> str | None:
+        """Clean and return percentage string, or None for suppressed/missing values."""
+        v = val_str.strip()
+        return v if v not in ("", "N/A", "*", "-", "null") else None
+
+    def _school_key(row: dict) -> tuple:
+        return (
+            row.get("DISTRICT_CODE", "").strip(),
+            row.get("SCHOOL_CODE", "").strip(),
         )
 
-    records: list[dict] = []
     for row in reader:
-        out: dict = {col: None for col in OUTPUT_COLUMNS}
-        for src_col, target_col in col_map.items():
-            raw = row.get(src_col, "").strip()
-            out[target_col] = raw if raw not in ("", "N/A", "*", "-") else None
-        records.append(out)
+        # Skip statewide/district rollup rows (empty SCHOOL_CODE for school-level only)
+        # Keep both district (empty school_code) and school level records
+        key = _school_key(row)
+        district_code = key[0]
+        school_code = key[1]
 
-    print(f"  Parsed {len(records):,} school records")
+        # Skip the synthetic [Statewide] row
+        if district_code == "0000":
+            continue
+
+        grade_group = row.get("GRADE_GROUP", "").strip()
+        if grade_group not in ("[All]", "All Grades"):
+            continue  # Only aggregate [All] grade rows
+
+        group_by = row.get("GROUP_BY", "").strip()
+        group_val = row.get("GROUP_BY_VALUE", "").strip()
+        pct = _safe_pct(row.get("PERCENT_OF_GROUP", ""))
+        count = _safe_pct(row.get("STUDENT_COUNT", ""))
+
+        if key not in schools:
+            schools[key] = {
+                "district_code": district_code,
+                "school_code":   school_code or None,
+                "school_name":   row.get("SCHOOL_NAME", "").strip() or row.get("DISTRICT_NAME", "").strip(),
+                "enrollment":    None,
+                "chronic_absence_rate":         None,
+                "pct_econ_disadvantaged":        None,
+                "pct_students_with_disabilities": None,
+                "pct_ell":       None,
+                "pct_white":     None,
+                "pct_black":     None,
+                "pct_hispanic":  None,
+            }
+
+        rec = schools[key]
+
+        if group_by == "All Students" and group_val == "All Students":
+            rec["enrollment"] = count
+        elif group_by == "Race/Ethnicity":
+            if group_val == "White":
+                rec["pct_white"] = pct
+            elif group_val == "Black":
+                rec["pct_black"] = pct
+            elif group_val == "Hispanic":
+                rec["pct_hispanic"] = pct
+        elif group_by == "Economic Status":
+            if group_val == "Econ Disadv":
+                rec["pct_econ_disadvantaged"] = pct
+        elif group_by == "Disability Status":
+            if group_val == "SwD":  # Students with Disability
+                rec["pct_students_with_disabilities"] = pct
+        elif group_by == "EL Status":
+            if group_val == "EL":  # English Learner
+                rec["pct_ell"] = pct
+
+    records = list(schools.values())
+    print(f"  Pivoted to {len(records):,} school/district records")
     return records
 
 

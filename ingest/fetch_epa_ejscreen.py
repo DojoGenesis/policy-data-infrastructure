@@ -41,14 +41,28 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, "wi_ejscreen.csv")
 
 WI_STATE_FIPS = "55"
 
-# EPA has changed the filename pattern between releases.
-# We try each candidate URL in order; the first successful download is used.
+# NOTE: EPA removed EJScreen from their servers in February 2025 (gaftp.epa.gov is offline).
+# A community preservation mirror is available on Zenodo (record 14767363) for years 2015-2024.
+# Warning: the Zenodo full-year ZIP is ~5.9 GB. The script will warn before downloading.
+#
+# EPA gaftp URLs (kept for documentation; all return 404 as of 2025):
+#   https://gaftp.epa.gov/EJSCREEN/{year}/EJSCREEN_{year}_StatePctile.csv.zip
+#
+# Zenodo mirror (block-group level, US + PR, state percentiles):
+#   https://zenodo.org/records/14767363/files/{year}.zip?download=1
+#
+# We try the Zenodo mirror first for 2023 and earlier; for 2024+ update manually.
 URL_CANDIDATES_TEMPLATE = [
+    # Zenodo preservation mirror — confirmed live (2023 only; ~5.9 GB)
+    "https://zenodo.org/records/14767363/files/{year}.zip?download=1",
+    # EPA gaftp (offline as of Feb 2025 — kept for future recovery)
     "https://gaftp.epa.gov/EJSCREEN/{year}/EJSCREEN_{year}_StatePctile.csv.zip",
     "https://gaftp.epa.gov/EJSCREEN/{year}/EJSCREEN_{year}_USPR_StatePctile.csv.zip",
     "https://gaftp.epa.gov/EJSCREEN/{year}/EJSCREEN_{year}_BG_StatePctile.csv.zip",
     "https://gaftp.epa.gov/EJSCREEN/{year}/EJSCREEN_{year}_with_AS_CNMI_GU_VI.zip",
 ]
+# Warn before downloading large Zenodo files
+LARGE_DOWNLOAD_THRESHOLD_GB = 1.0
 
 RATE_LIMIT_DELAY = 3.0  # EPA FTP: ~20 req/min courtesy limit
 

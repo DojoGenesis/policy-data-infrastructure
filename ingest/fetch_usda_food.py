@@ -24,19 +24,23 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import zipfile
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "analysis", "output")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "wi_food_access.csv")
 
-# Primary download URL (2019 vintage, as of 2024).
-# NOTE: USDA ERS updates this file with each new release; URL will change.
-# If you receive a 404, visit the USDA ERS Food Access Research Atlas page
-# linked above to locate the updated file.
+# USDA ERS Food Access Research Atlas — 2019 vintage (current as of 2025).
+# The ERS now distributes this as a ZIP archive containing a CSV.
+# If this URL returns 404, visit:
+#   https://www.ers.usda.gov/data-products/food-access-research-atlas/
+# to find the updated download link.
 DATA_URL = (
-    "https://www.ers.usda.gov/webdocs/DataFiles/80591/"
-    "FoodAccessResearchAtlasData2019.csv"
+    "https://www.ers.usda.gov/media/5627/"
+    "food-access-research-atlas-data-download-2019.zip"
 )
+# Whether the URL points to a ZIP archive (auto-detected by extension)
+_IS_ZIP = DATA_URL.endswith(".zip")
 
 WI_STATE_FIPS = "55"
 RATE_LIMIT_DELAY = 2.0  # seconds; ERS rate limit: ~10 req/min
@@ -167,6 +171,22 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
 
     print(f"  Received {len(raw_bytes):,} bytes")
     time.sleep(RATE_LIMIT_DELAY)
+
+    # If the download is a ZIP, extract the first CSV inside it
+    if _IS_ZIP:
+        try:
+            zf = zipfile.ZipFile(io.BytesIO(raw_bytes))
+            csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+            if not csv_names:
+                print(f"  ERROR: ZIP archive contains no CSV files. Members: {zf.namelist()}", file=sys.stderr)
+                sys.exit(1)
+            # Use the largest CSV (main data table)
+            csv_name = sorted(csv_names, key=lambda n: zf.getinfo(n).file_size, reverse=True)[0]
+            print(f"  Extracting {csv_name} from ZIP...")
+            raw_bytes = zf.read(csv_name)
+        except zipfile.BadZipFile as exc:
+            print(f"  ERROR: Downloaded file is not a valid ZIP: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     try:
         text = raw_bytes.decode("utf-8-sig")
