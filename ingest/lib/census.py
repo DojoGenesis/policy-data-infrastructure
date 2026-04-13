@@ -107,6 +107,9 @@ def fetch_acs_table(
     for row in raw[1:]:
         geoid = build_geoid(row, header, geo_level)
         record: dict = {"geoid": geoid}
+        # Include NAME field if present in response
+        if "NAME" in header:
+            record["NAME"] = row[header.index("NAME")]
         for var in variables:
             if var in header:
                 raw_val = row[header.index(var)]
