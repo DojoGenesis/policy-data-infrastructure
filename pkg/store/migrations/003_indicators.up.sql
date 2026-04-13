@@ -1,4 +1,4 @@
-CREATE TABLE indicator_sources (
+CREATE TABLE IF NOT EXISTS indicator_sources (
     source_id   TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
     category    TEXT NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE indicator_sources (
     description TEXT
 );
 
-CREATE TABLE indicator_meta (
+CREATE TABLE IF NOT EXISTS indicator_meta (
     variable_id TEXT PRIMARY KEY,
     source_id   TEXT NOT NULL REFERENCES indicator_sources(source_id),
     name        TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE indicator_meta (
     direction   TEXT
 );
 
-CREATE TABLE indicators (
+CREATE TABLE IF NOT EXISTS indicators (
     id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     geoid          TEXT NOT NULL REFERENCES geographies(geoid),
     variable_id    TEXT NOT NULL REFERENCES indicator_meta(variable_id),
@@ -27,12 +27,12 @@ CREATE TABLE indicators (
     UNIQUE (geoid, variable_id, vintage)
 );
 
-CREATE INDEX idx_indicators_geoid       ON indicators(geoid);
-CREATE INDEX idx_indicators_variable    ON indicators(variable_id);
-CREATE INDEX idx_indicators_vintage     ON indicators(vintage);
-CREATE INDEX idx_indicators_geo_var     ON indicators(geoid, variable_id);
+CREATE INDEX IF NOT EXISTS idx_indicators_geoid       ON indicators(geoid);
+CREATE INDEX IF NOT EXISTS idx_indicators_variable    ON indicators(variable_id);
+CREATE INDEX IF NOT EXISTS idx_indicators_vintage     ON indicators(vintage);
+CREATE INDEX IF NOT EXISTS idx_indicators_geo_var     ON indicators(geoid, variable_id);
 
-CREATE MATERIALIZED VIEW indicators_latest AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS indicators_latest AS
 SELECT DISTINCT ON (geoid, variable_id)
     id,
     geoid,
@@ -45,5 +45,5 @@ SELECT DISTINCT ON (geoid, variable_id)
 FROM indicators
 ORDER BY geoid, variable_id, vintage DESC;
 
-CREATE UNIQUE INDEX idx_indicators_latest_geo_var
+CREATE UNIQUE INDEX IF NOT EXISTS idx_indicators_latest_geo_var
     ON indicators_latest(geoid, variable_id);

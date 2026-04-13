@@ -370,15 +370,77 @@ func (s *acsSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS strin
 	return s.fetch(ctx, url)
 }
 
-// FetchState fetches all tract-level ACS indicators for an entire state.
-// Because the Census API limits a single call to one county at a time for
-// some variables, this issues one request with for=tract:*&in=state:{fips}
-// which is supported for B-table variables. Subject table (S-table) variables
-// may not support state-wide tract calls; callers should iterate counties
-// when S-table failures are encountered.
+// FetchState fetches all county-level ACS indicators for an entire state.
+// It splits variables into detail (B-prefix) and subject (S-prefix) tables,
+// issuing separate API calls for each since they use different dataset paths.
 func (s *acsSource) FetchState(ctx context.Context, stateFIPS string) ([]store.Indicator, error) {
-	url := s.buildStateURL(stateFIPS)
-	return s.fetch(ctx, url)
+	// Split variables into detail and subject groups.
+	var detailVars, subjectVars []acsVariable
+	for _, v := range acsVariables {
+		if strings.HasPrefix(v.code, "S") {
+			subjectVars = append(subjectVars, v)
+		} else {
+			detailVars = append(detailVars, v)
+		}
+	}
+
+	// Fetch detail variables (acs5 dataset).
+	var all []store.Indicator
+	if len(detailVars) > 0 {
+		dCodes := varCodes(detailVars)
+		url := s.buildStateURLWithVars(stateFIPS, dCodes, false)
+		indicators, err := s.fetch(ctx, url)
+		if err != nil {
+			return nil, fmt.Errorf("acs detail fetch: %w", err)
+		}
+		all = append(all, indicators...)
+	}
+
+	// Fetch subject variables (acs5/subject dataset).
+	for _, sv := range subjectVars {
+		codes := sv.code
+		if sv.moeCode != "" {
+			codes += "," + sv.moeCode
+		}
+		url := s.buildStateURLWithVars(stateFIPS, codes, true)
+		indicators, err := s.fetch(ctx, url)
+		if err != nil {
+			// Subject tables may not support state-wide tract calls; log and continue.
+			fmt.Printf("  warning: subject table %s failed: %v\n", sv.code, err)
+			continue
+		}
+		all = append(all, indicators...)
+	}
+
+	return all, nil
+}
+
+// buildStateURLWithVars constructs a Census API URL with specific variables.
+func (s *acsSource) buildStateURLWithVars(stateFIPS, vars string, subject bool) string {
+	dataset := "acs5"
+	if subject {
+		dataset = "acs5/subject"
+	}
+	base := fmt.Sprintf(
+		"https://api.census.gov/data/%d/acs/%s?get=NAME,%s&for=county:*&in=state:%s",
+		s.cfg.Year, dataset, vars, stateFIPS,
+	)
+	if s.cfg.APIKey != "" {
+		base += "&key=" + s.cfg.APIKey
+	}
+	return base
+}
+
+// varCodes extracts comma-separated variable codes from a slice of acsVariable.
+func varCodes(vars []acsVariable) string {
+	var codes []string
+	for _, v := range vars {
+		codes = append(codes, v.code)
+		if v.moeCode != "" {
+			codes = append(codes, v.moeCode)
+		}
+	}
+	return strings.Join(codes, ",")
 }
 
 // buildURL constructs the Census API URL for a single county (all tracts).
@@ -479,8 +541,8 @@ func (s *acsSource) parseResponse(r io.Reader) ([]store.Indicator, error) {
 		colIdx[h] = i
 	}
 
-	// Verify geography columns are present.
-	for _, required := range []string{"state", "county", "tract"} {
+	// Verify geography columns are present. Tract is optional (county-level fetches omit it).
+	for _, required := range []string{"state", "county"} {
 		if _, ok := colIdx[required]; !ok {
 			return nil, fmt.Errorf("acs: response missing column %q", required)
 		}
@@ -504,15 +566,17 @@ func (s *acsSource) parseResponse(r io.Reader) ([]store.Indicator, error) {
 	var indicators []store.Indicator
 	geoState := colIdx["state"]
 	geoCounty := colIdx["county"]
-	geoTract := colIdx["tract"]
 
 	for rowNum, row := range raw[1:] {
 		if len(row) != len(headers) {
 			return nil, fmt.Errorf("acs: row %d has %d columns, header has %d", rowNum+1, len(row), len(headers))
 		}
 
-		// Construct the 11-digit tract GEOID.
-		geoid := row[geoState] + row[geoCounty] + row[geoTract]
+		// Construct GEOID: 5-digit county or 11-digit tract depending on what's available.
+		geoid := row[geoState] + row[geoCounty]
+		if tractIdx, ok := colIdx["tract"]; ok {
+			geoid += row[tractIdx]
+		}
 
 		// Emit one Indicator per requested variable column.
 		for code, meta := range codeMeta {
@@ -551,7 +615,10 @@ func (s *acsSource) parseResponse(r io.Reader) ([]store.Indicator, error) {
 
 	// Re-parse MOE columns and attach to estimate Indicators.
 	for _, row := range raw[1:] {
-		geoid := row[geoState] + row[geoCounty] + row[geoTract]
+		geoid := row[geoState] + row[geoCounty]
+		if tractIdx, ok := colIdx["tract"]; ok {
+			geoid += row[tractIdx]
+		}
 		for _, v := range acsVariables {
 			if v.moeCode == "" {
 				continue

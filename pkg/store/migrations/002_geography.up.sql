@@ -1,6 +1,10 @@
-CREATE TYPE geo_level AS ENUM ('nation', 'state', 'county', 'tract', 'block_group', 'ward');
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'geo_level') THEN
+        CREATE TYPE geo_level AS ENUM ('nation', 'state', 'county', 'tract', 'block_group', 'ward');
+    END IF;
+END $$;
 
-CREATE TABLE geographies (
+CREATE TABLE IF NOT EXISTS geographies (
     geoid        TEXT PRIMARY KEY,
     level        geo_level NOT NULL,
     parent_geoid TEXT REFERENCES geographies(geoid),
@@ -15,10 +19,10 @@ CREATE TABLE geographies (
     updated_at   TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_geo_level    ON geographies(level);
-CREATE INDEX idx_geo_parent   ON geographies(parent_geoid);
-CREATE INDEX idx_geo_state    ON geographies(state_fips);
-CREATE INDEX idx_geo_county   ON geographies(state_fips, county_fips);
-CREATE INDEX idx_geo_boundary ON geographies USING GIST(boundary);
-CREATE INDEX idx_geo_centroid ON geographies USING GIST(centroid);
-CREATE INDEX idx_geo_name_trgm ON geographies USING GIN(name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_geo_level    ON geographies(level);
+CREATE INDEX IF NOT EXISTS idx_geo_parent   ON geographies(parent_geoid);
+CREATE INDEX IF NOT EXISTS idx_geo_state    ON geographies(state_fips);
+CREATE INDEX IF NOT EXISTS idx_geo_county   ON geographies(state_fips, county_fips);
+CREATE INDEX IF NOT EXISTS idx_geo_boundary ON geographies USING GIST(boundary);
+CREATE INDEX IF NOT EXISTS idx_geo_centroid ON geographies USING GIST(centroid);
+CREATE INDEX IF NOT EXISTS idx_geo_name_trgm ON geographies USING GIN(name gin_trgm_ops);

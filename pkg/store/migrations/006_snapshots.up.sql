@@ -1,4 +1,4 @@
-CREATE TABLE snapshots (
+CREATE TABLE IF NOT EXISTS snapshots (
     id          TEXT PRIMARY KEY,
     tag         TEXT UNIQUE,
     description TEXT,
