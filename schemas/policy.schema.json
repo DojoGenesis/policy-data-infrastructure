@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PolicyRecord",
+  "description": "A structured policy position from a candidate or platform",
+  "type": "object",
+  "required": ["id", "candidate", "state", "category", "policy_title", "description", "equity_dimension"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,4}-[A-Z]{2,8}-\\d{3}$",
+      "description": "Unique ID: INITIALS-CATEGORY-NUMBER (e.g., FH-EDU-001)"
+    },
+    "candidate": {
+      "type": "string",
+      "description": "Full name of the candidate or author of the policy"
+    },
+    "office": {
+      "type": "string",
+      "enum": ["Governor", "Senator", "Representative", "Attorney General", "Secretary of State", "Other"],
+      "description": "Office sought or held"
+    },
+    "state": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "Two-letter state code"
+    },
+    "category": {
+      "type": "string",
+      "description": "Policy category (e.g., Schools, Healthcare, Housing)"
+    },
+    "policy_title": {
+      "type": "string",
+      "description": "Short title of the policy position"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the policy"
+    },
+    "bill_references": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Legislative bill references (e.g., AB48, SB21)"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": { "type": "string" },
+          "type": { "type": "string", "enum": ["normative", "empirical"] },
+          "testable": { "type": "boolean" }
+        }
+      },
+      "description": "Specific claims made in the policy, classified as normative or empirical"
+    },
+    "data_sources_needed": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Data sources required to evaluate this policy's claims"
+    },
+    "equity_dimension": {
+      "type": "string",
+      "description": "Primary equity dimension (e.g., food_access, health_access, income_equity)"
+    },
+    "geographic_scope": {
+      "type": "string",
+      "enum": ["statewide", "statewide_rural", "statewide_urban", "regional", "county", "municipal"],
+      "description": "Geographic scope of the policy"
+    }
+  }
+}
