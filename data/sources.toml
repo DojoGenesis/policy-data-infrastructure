@@ -1,0 +1,210 @@
+# data/sources.toml
+# Manifest of all upstream data sources for policy-data-infrastructure.
+# Fields:
+#   name             - Human-readable source name
+#   category         - Data category (demographic, geographic, housing, environment, health, economic, flood, food)
+#   url              - Base URL or URL template ({year} substituted at fetch time)
+#   api_key_env      - Environment variable name holding the API key (omit if no key needed)
+#   rate_limit_per_min - Requests per minute (with API key where noted)
+#   format           - Response format: json, shapefile, csv, geojson, gdb
+#   geo_levels       - List of supported geography levels
+#   notes            - Any important usage notes
+
+[sources.acs-5yr]
+name               = "American Community Survey 5-Year Estimates"
+category           = "demographic"
+url                = "https://api.census.gov/data/{year}/acs/acs5"
+api_key_env        = "CENSUS_API_KEY"
+rate_limit_per_min = 500   # 500 req/min with key; 45 req/min without
+format             = "json"
+geo_levels         = ["state", "county", "tract", "block_group"]
+notes              = """
+Key ACS tables used:
+  B19013 - Median household income
+  B03002 - Race and Hispanic or Latino origin
+  S1701  - Poverty status in the past 12 months
+  B01001 - Sex by age
+  B15003 - Educational attainment (population 25+)
+  S2701  - Health insurance coverage
+  B25106 - Tenure by housing costs as a percentage of income
+  B25070 - Gross rent as a percentage of household income
+  B16001 - Language spoken at home by ability to speak English
+Earliest available 5-year: 2009 (covering 2005–2009).
+"""
+
+[sources.tiger]
+name               = "TIGER/Line Shapefiles"
+category           = "geographic"
+url                = "https://www2.census.gov/geo/tiger/TIGER{year}"
+api_key_env        = ""
+rate_limit_per_min = 60
+format             = "shapefile"
+geo_levels         = ["state", "county", "tract", "block_group", "place", "zcta"]
+notes              = """
+Bulk downloads via FTP/HTTPS. Large files (state tract files ~50–200 MB each).
+Use ingest/fetch_tiger.py for parallel downloads with retry logic.
+Load with ogr2ogr or shp2pgsql into PostGIS geography columns.
+Key layers: TRACT, BG, COUNTY, STATE, PLACE, ZCTA5.
+"""
+
+[sources.hud-chas]
+name               = "HUD Comprehensive Housing Affordability Strategy (CHAS)"
+category           = "housing"
+url                = "https://www.huduser.gov/portal/datasets/cp.html"
+api_key_env        = ""
+rate_limit_per_min = 30
+format             = "csv"
+geo_levels         = ["state", "county", "tract"]
+notes              = """
+Custom tabulations of ACS data for affordable housing analysis.
+Datasets released with a 2–3 year lag relative to ACS vintage.
+Key tables: housing cost burden by income category, tenure, and race/ethnicity.
+Download via HUD User data portal; no API key required.
+"""
+
+[sources.epa-ejscreen]
+name               = "EPA EJScreen Environmental Justice Screening Tool"
+category           = "environment"
+url                = "https://gaftp.epa.gov/EJSCREEN"
+api_key_env        = ""
+rate_limit_per_min = 20
+format             = "csv"
+geo_levels         = ["tract", "block_group"]
+notes              = """
+Annual release; block-group level EJ indices.
+Includes percentile ranks for: PM2.5, ozone, DSLPM, cancer risk,
+respiratory hazard, traffic proximity, lead paint, proximity to RMP/NPL/TSDF facilities,
+wastewater discharge, drinking water non-compliance, underground storage tanks.
+National percentile ranks relative to all US block groups.
+"""
+
+[sources.hmda]
+name               = "Home Mortgage Disclosure Act Data"
+category           = "housing"
+url                = "https://ffiec.cfpb.gov/v2/data-browser-api/view/csv"
+api_key_env        = ""
+rate_limit_per_min = 60
+format             = "csv"
+geo_levels         = ["state", "county", "tract"]
+notes              = """
+Loan-level data on mortgage applications, originations, and denials.
+Filter by: action_taken, derived_race, loan_purpose, census_tract.
+Used for: denial rate disparities by race/ethnicity, loan-to-income ratios,
+manufactured housing, refinance activity.
+Large files: national file ~20–40 GB/year. Use tract-level aggregation at ingest.
+"""
+
+[sources.bls-laus]
+name               = "Bureau of Labor Statistics Local Area Unemployment Statistics (LAUS)"
+category           = "economic"
+url                = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
+api_key_env        = "BLS_API_KEY"
+rate_limit_per_min = 50   # 500 series/day unregistered; higher with key
+format             = "json"
+geo_levels         = ["state", "county", "metropolitan_area"]
+notes              = """
+Monthly unemployment rates and labor force estimates by county and state.
+Series ID format: LAUCNssssss03 (unemployment rate), 04 (unemployed), 06 (labor force).
+County FIPS embedded in series ID.
+Registered key raises daily series limit to 500; unregistered 25/day.
+"""
+
+[sources.fema-nfhl]
+name               = "FEMA National Flood Hazard Layer (NFHL)"
+category           = "flood"
+url                = "https://msc.fema.gov/portal/downloadProduct?productTypeID=NFHL"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "gdb"
+geo_levels         = ["county", "tract"]  # intersected at tract level after load
+notes              = """
+FIRM (Flood Insurance Rate Map) data in File Geodatabase format.
+Key layers: S_FLD_HAZ_AR (flood hazard areas), S_FIRM_PAN (map panels).
+Zone codes: A/AE (100-yr floodplain), X (500-yr or outside), VE (coastal).
+Use ingest/fetch_nfhl.py for county-by-county downloads.
+Large: national GDB ~10 GB. Load with ogr2ogr into PostGIS.
+Intersect with census tracts to compute percent area in floodplain per tract.
+"""
+
+[sources.cdc-places]
+name               = "CDC PLACES: Local Data for Better Health"
+category           = "health"
+url                = "https://data.cdc.gov/resource/cwsq-ngmh.json"
+api_key_env        = "SOCRATA_APP_TOKEN"
+rate_limit_per_min = 100   # higher with Socrata app token
+format             = "json"
+geo_levels         = ["county", "tract", "zcta"]
+notes              = """
+Model-based estimates of chronic disease prevalence and risk behaviors.
+Key measures: OBESITY, DIABETES, BPHIGH, MHLTH, PHLTH, CASTHMA,
+SMOKING, CSMOKING, BINGE, LPA (leisure-time physical inactivity),
+CHECKUP, DENTAL, COLON_SCREEN, MAMMOUSE, ACCESS2.
+Census tract estimates available from PLACES 2020 onward.
+Socrata SODA API; app token recommended for production use.
+"""
+
+[sources.usda-foodaccess]
+name               = "USDA Food Access Research Atlas"
+category           = "food"
+url                = "https://www.ers.usda.gov/data-products/food-access-research-atlas/"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "csv"
+geo_levels         = ["tract"]
+notes              = """
+Tract-level food access indicators: LAPOP1 (low access at 1 mile, urban),
+LAPOP10 (low access at 10 miles, rural), LILATracts_1And10, SNAP access flags.
+Updated with each decennial Census / ACS revision cycle.
+Manual download from ERS website; no API. Check for updated vintage annually.
+"""
+
+[sources.osm]
+name               = "OpenStreetMap"
+category           = "geographic"
+url                = "https://download.geofabrik.de"
+api_key_env        = ""
+rate_limit_per_min = 5   # Geofabrik: courtesy limits apply; use Overpass sparingly
+format             = "geojson"  # via Overpass API; PBF for full extracts
+geo_levels         = ["city", "neighborhood", "point_of_interest"]
+notes              = """
+Two use patterns:
+  1. Overpass API (https://overpass-api.de/api/interpreter) for targeted POI queries.
+     Rate-limit aggressively: max 2 req/min, prefer off-peak hours.
+  2. Geofabrik regional extracts (PBF) for bulk import via osmium + osm2pgsql.
+Key extracts: parks, transit stops, grocery stores, pharmacies, hospitals,
+schools, community centers.
+Use osmium-tool for PBF → GeoJSON conversion.
+"""
+
+[sources.hud-pit]
+name               = "HUD Point-in-Time Homelessness Count"
+category           = "housing"
+url                = "https://www.hudexchange.info/resource/3031/pit-and-hic-data-since-2007/"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "csv"
+geo_levels         = ["coc"]   # Continuum of Care geography
+notes              = """
+Annual (January) count of sheltered and unsheltered persons experiencing homelessness.
+Reported by Continuum of Care (CoC) — not census geography.
+CoC boundaries overlap counties; use crosswalk table to apportion to counties.
+Key fields: TotalHomeless, Sheltered_ES, Sheltered_TH, Unsheltered,
+Chronically_Homeless, Veterans, Youth.
+Crosswalk from CoC to county: HUD CoC-to-County shapefile (data/crosswalks/).
+"""
+
+[sources.epa-tri]
+name               = "EPA Toxics Release Inventory (TRI)"
+category           = "environment"
+url                = "https://data.epa.gov/efservice/tri_facility/json"
+api_key_env        = ""
+rate_limit_per_min = 30
+format             = "json"
+geo_levels         = ["facility"]   # geocoded to tract at ingest
+notes              = """
+Annual facility-level toxic release data.
+Geocode facility lat/lon to census tract via PostGIS ST_Within.
+Key fields: FIPS_CD, LATITUDE, LONGITUDE, CHEMICAL, TOTAL_RELEASES,
+RELEASES_TO_AIR, RELEASES_TO_WATER, RELEASES_TO_LAND.
+Used for: proximity-to-TRI-facility indicator (count within 1 mile of tract centroid).
+"""

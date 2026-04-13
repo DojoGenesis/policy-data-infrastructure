@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/DojoGenesis/policy-data-infrastructure/schemas/analysis.schema.json",
+  "title": "Analysis",
+  "description": "Output of an analysis run: ranked indicators, peer comparisons, change detection, and narrative summary for a target geography.",
+  "type": "object",
+  "required": ["analysis_id", "target_geoid", "geo_level", "year", "created_at", "indicators"],
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique UUID for this analysis result."
+    },
+    "target_geoid": {
+      "type": "string",
+      "description": "FIPS GEOID of the primary geography being analyzed."
+    },
+    "geo_level": {
+      "type": "string",
+      "enum": ["state", "county", "tract", "block_group", "place", "zcta", "coc", "msa"],
+      "description": "Geographic level of the target geography."
+    },
+    "year": {
+      "type": "integer",
+      "description": "Primary data vintage year for this analysis.",
+      "minimum": 1990,
+      "maximum": 2100
+    },
+    "comparison_year": {
+      "type": ["integer", "null"],
+      "description": "Earlier vintage year used for change-over-time calculations. Null if no temporal comparison."
+    },
+    "peer_group": {
+      "type": "string",
+      "enum": [
+        "national",
+        "state",
+        "metro",
+        "rural_urban_class",
+        "custom"
+      ],
+      "description": "Peer group used for percentile rank and z-score calculations.",
+      "default": "national"
+    },
+    "peer_count": {
+      "type": "integer",
+      "description": "Number of peer geographies in the comparison pool.",
+      "minimum": 0
+    },
+    "indicators": {
+      "type": "array",
+      "description": "Analyzed indicator values for the target geography.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["indicator_id", "value", "unit"],
+        "additionalProperties": false,
+        "properties": {
+          "indicator_id": {
+            "type": "string",
+            "description": "Snake_case indicator identifier.",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label for display."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["demographic", "economic", "housing", "health", "environment", "education", "food", "flood", "geographic"],
+            "description": "Thematic category grouping."
+          },
+          "value": {
+            "type": ["number", "null"],
+            "description": "Current value. null = missing/suppressed."
+          },
+          "prior_value": {
+            "type": ["number", "null"],
+            "description": "Value in comparison_year. null if no comparison year or data unavailable."
+          },
+          "change": {
+            "type": ["number", "null"],
+            "description": "Absolute change: value - prior_value. Null if either is null."
+          },
+          "pct_change": {
+            "type": ["number", "null"],
+            "description": "Percent change: (value - prior_value) / prior_value * 100. Null if either is null or prior_value is 0."
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unit of measurement.",
+            "examples": ["dollars", "percent", "rate_per_1000", "count", "index"]
+          },
+          "moe": {
+            "type": ["number", "null"],
+            "description": "Margin of error at 90% confidence. Null if not applicable."
+          },
+          "percentile_rank": {
+            "type": ["number", "null"],
+            "description": "Rank within peer group (0 = lowest, 100 = highest). Null if peer_count < 5.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "z_score": {
+            "type": ["number", "null"],
+            "description": "Z-score within peer group. Null if peer_count < 5."
+          },
+          "direction": {
+            "type": ["string", "null"],
+            "enum": ["higher_is_better", "lower_is_better", "neutral", null],
+            "description": "Policy direction: whether a higher value is desirable. Null if contextual."
+          },
+          "alert": {
+            "type": ["string", "null"],
+            "enum": ["critical", "warning", "watch", null],
+            "description": "Alert level based on percentile threshold rules. null = no alert."
+          },
+          "source_id": {
+            "type": "string",
+            "description": "Key into data/sources.toml for the upstream source."
+          },
+          "flags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Data quality flags inherited from the underlying indicator record."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "High-level summary statistics across all indicators in this analysis.",
+      "additionalProperties": false,
+      "properties": {
+        "alert_count": {
+          "type": "integer",
+          "description": "Number of indicators with a non-null alert level.",
+          "minimum": 0
+        },
+        "critical_count": {
+          "type": "integer",
+          "description": "Number of indicators at 'critical' alert level.",
+          "minimum": 0
+        },
+        "suppressed_count": {
+          "type": "integer",
+          "description": "Number of indicators with null values due to suppression or missing data.",
+          "minimum": 0
+        },
+        "top_strengths": {
+          "type": "array",
+          "description": "Top 3 indicator_ids where percentile_rank is highest relative to peers (favorable direction only).",
+          "items": { "type": "string" },
+          "maxItems": 3
+        },
+        "top_concerns": {
+          "type": "array",
+          "description": "Top 3 indicator_ids at highest alert severity or worst percentile rank (unfavorable direction only).",
+          "items": { "type": "string" },
+          "maxItems": 3
+        }
+      }
+    },
+    "narrative": {
+      "type": "object",
+      "description": "Generated narrative text for policy audiences.",
+      "additionalProperties": false,
+      "properties": {
+        "headline": {
+          "type": "string",
+          "description": "One-sentence headline summarizing the most significant finding."
+        },
+        "overview": {
+          "type": "string",
+          "description": "2–4 sentence overview suitable for an executive summary."
+        },
+        "sections": {
+          "type": "array",
+          "description": "Thematic narrative sections, one per category with findings.",
+          "items": {
+            "type": "object",
+            "required": ["category", "body"],
+            "properties": {
+              "category": { "type": "string" },
+              "title": { "type": "string" },
+              "body": { "type": "string" }
+            }
+          }
+        },
+        "model": {
+          "type": "string",
+          "description": "LLM model identifier used to generate this narrative.",
+          "examples": ["claude-sonnet-4-6", "claude-opus-4-6"]
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the narrative was generated."
+        }
+      }
+    },
+    "htmlcraft_export": {
+      "type": ["object", "null"],
+      "description": "Metadata about the HTMLCraft deliverable generated from this analysis. Null if not yet exported.",
+      "additionalProperties": false,
+      "properties": {
+        "export_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "filename": {
+          "type": "string",
+          "description": "Suggested filename for the HTML deliverable.",
+          "examples": ["dane-county-equity-brief-2023.html"]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exported_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this analysis was created."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this analysis was last updated."
+    }
+  }
+}

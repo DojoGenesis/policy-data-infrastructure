@@ -1,0 +1,71 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.test
+*.out
+
+# Go module cache
+vendor/
+
+# Test coverage output
+coverage.html
+coverage.out
+
+# Database files
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Large geospatial files — do not commit; fetch via ingest scripts
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.gdb/
+*.gpkg
+*.pbf
+*.osm
+*.zip
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python ingest
+__pycache__/
+*.py[cod]
+*.pyo
+ingest/.venv/
+ingest/venv/
+ingest/*.egg-info/
+dist/
+build/
+
+# Temporary / scratch files
+tmp/
+scratch/
+*.tmp
+*.bak

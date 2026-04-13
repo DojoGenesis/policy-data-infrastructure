@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS geographies;
+DROP TYPE IF EXISTS geo_level;

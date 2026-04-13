@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/DojoGenesis/policy-data-infrastructure/schemas/indicator.schema.json",
+  "title": "Indicator",
+  "description": "A single policy indicator value for a specific geography and time period.",
+  "type": "object",
+  "required": ["geoid", "geo_level", "indicator_id", "year"],
+  "additionalProperties": false,
+  "properties": {
+    "geoid": {
+      "type": "string",
+      "description": "FIPS code for the geography. Zero-padded: 2-digit state, 5-digit county, 11-digit tract, 12-digit block group.",
+      "examples": ["55", "55025", "55025000100", "550250001001"]
+    },
+    "geo_level": {
+      "type": "string",
+      "enum": ["state", "county", "tract", "block_group", "place", "zcta", "coc", "msa"],
+      "description": "Geographic level of the observation."
+    },
+    "indicator_id": {
+      "type": "string",
+      "description": "Unique snake_case identifier for the indicator.",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "examples": ["median_household_income", "poverty_rate", "pct_uninsured", "unemployment_rate"]
+    },
+    "year": {
+      "type": "integer",
+      "description": "Data vintage year (or end year for multi-year ACS estimates).",
+      "minimum": 1990,
+      "maximum": 2100
+    },
+    "value": {
+      "type": ["number", "null"],
+      "description": "The indicator value. null indicates missing or suppressed data — never use sentinel values."
+    },
+    "moe": {
+      "type": ["number", "null"],
+      "description": "Margin of error at 90% confidence level (ACS estimates). null if not applicable or unavailable."
+    },
+    "cv": {
+      "type": ["number", "null"],
+      "description": "Coefficient of variation (moe / 1.645 / value * 100). Measures estimate reliability. null if not applicable."
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit of measurement.",
+      "examples": ["dollars", "percent", "rate_per_1000", "count", "index", "years"]
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Key into data/sources.toml identifying the upstream data source.",
+      "examples": ["acs-5yr", "bls-laus", "cdc-places", "epa-ejscreen"]
+    },
+    "source_table": {
+      "type": ["string", "null"],
+      "description": "Source-specific table, series, or measure identifier.",
+      "examples": ["B19013_001E", "LALSUBN1", "OBESITY"]
+    },
+    "percentile_rank": {
+      "type": ["number", "null"],
+      "description": "Percentile rank relative to all geographies at the same level and year (0–100). null if fewer than 5 peers exist.",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "z_score": {
+      "type": ["number", "null"],
+      "description": "Z-score relative to peer geographies at the same level and year. null if peers < 5."
+    },
+    "suppressed": {
+      "type": "boolean",
+      "description": "True if the source agency suppressed this value for privacy (e.g., small sample size). value will be null when true.",
+      "default": false
+    },
+    "flags": {
+      "type": "array",
+      "description": "Data quality flags from the source or ingest pipeline.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "high_cv",
+          "small_sample",
+          "boundary_change",
+          "methodology_change",
+          "imputed",
+          "preliminary"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this record was fetched from the upstream source."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this record was last updated in the database."
+    }
+  }
+}
