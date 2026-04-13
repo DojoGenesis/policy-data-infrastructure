@@ -22,16 +22,13 @@ var nariTiers = []stats.TierDef{
 }
 
 // compositeVariables is the ordered list of indicator variable IDs used to
-// build the NARI composite index. Order determines column assignment.
+// build the NARI composite index. These MUST match the IDs produced by the
+// data sources (e.g., acs.go, cdc_places.go). Order determines column assignment.
 var compositeVariables = []string{
-	"pct_poverty",
-	"median_household_income",
-	"pct_poc",
-	"pct_no_hs_diploma",
-	"pct_unemployment",
-	"pct_uninsured",
-	"pct_renter_occupied",
-	"pct_housing_cost_burdened",
+	"poverty_rate",            // ACS B17001: poverty rate
+	"median_household_income", // ACS B19013: median HH income
+	"pct_poc",                 // Derived: 1 - (pop_white_non_hispanic / total_population_race)
+	"uninsured_rate",          // ACS S2701: % without health insurance
 }
 
 // AnalyzeStage is Stage 04: it queries indicators for all tracts in scope,
@@ -165,16 +162,18 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		tier := tiers[i]
 
 		scoreVal := 0.0
+		pctVal := -1.0 // sentinel for nil scores; 0.0 is a valid percentile
 		if sc != nil {
 			scoreVal = *sc
+			pctVal = scoreVal
 		}
 
 		analysisScores = append(analysisScores, store.AnalysisScore{
 			AnalysisID: dbID,
 			GEOID:      geoid,
 			Score:      scoreVal,
-			Rank:       i + 1, // placeholder rank; real rank requires sort by score
-			Percentile: scoreVal, // for equal_percentile method score IS the percentile
+			Rank:       i + 1,
+			Percentile: pctVal,
 			Tier:       tier,
 			Details: map[string]interface{}{
 				"method": "equal_percentile",

@@ -12,18 +12,17 @@ import (
 )
 
 // olsPredictors are the independent variables used to predict chronic_absence.
+// These MUST match the IDs produced by datasources (acs.go, cdc_places.go).
 var olsPredictors = []string{
-	"pct_poverty",
+	"poverty_rate",
 	"median_household_income",
-	"pct_transit_access",
-	"pct_unemployment",
-	"pct_uninsured",
+	"uninsured_rate",
 }
 
 // tippingVariables are the variables on which tipping-point detection is run,
 // using chronic_absence as the outcome.
 var tippingVariables = []string{
-	"pct_poverty",
+	"poverty_rate",
 	"median_household_income",
 }
 

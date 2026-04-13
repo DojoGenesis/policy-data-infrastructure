@@ -24,6 +24,9 @@ func SafeFloat(v interface{}) *float64 {
 		}
 		return &f
 	case float64:
+		if val == float64(NullSentinel) {
+			return nil
+		}
 		return &val
 	case float32:
 		f := float64(val)

@@ -78,6 +78,9 @@ func Bootstrap(fn func([]float64) float64, data []float64, nBoot int, alpha floa
 	if hiIdx >= nBoot {
 		hiIdx = nBoot - 1
 	}
+	if loIdx > hiIdx {
+		loIdx, hiIdx = hiIdx, loIdx
+	}
 
 	return ConfidenceInterval{
 		Lower:         bootStats[loIdx],

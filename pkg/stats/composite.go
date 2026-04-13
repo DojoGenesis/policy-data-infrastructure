@@ -63,15 +63,15 @@ func CompositeIndex(indicators [][]*float64, weights []float64, method string) (
 		result := make([]*float64, nTracts)
 		for i := 0; i < nTracts; i++ {
 			sum := 0.0
-			count := 0
+			wSum := 0.0
 			for k := 0; k < nIndicators; k++ {
 				if scored[k][i] != nil {
 					sum += weights[k] * *scored[k][i]
-					count++
+					wSum += weights[k]
 				}
 			}
-			if count > 0 {
-				v := sum
+			if wSum > 0 {
+				v := sum / wSum
 				result[i] = &v
 			}
 		}

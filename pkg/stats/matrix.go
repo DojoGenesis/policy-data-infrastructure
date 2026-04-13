@@ -85,10 +85,11 @@ func GaussJordanInvert(M [][]float64) ([][]float64, error) {
 		}
 	}
 
-	// extract right half
+	// extract right half — copy to avoid sharing memory with aug workspace
 	inv := make([][]float64, n)
 	for i := range inv {
-		inv[i] = aug[i][n:]
+		inv[i] = make([]float64, n)
+		copy(inv[i], aug[i][n:])
 	}
 	return inv, nil
 }

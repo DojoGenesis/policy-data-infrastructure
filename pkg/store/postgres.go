@@ -457,7 +457,7 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 	var where []string
 
 	table := "indicators"
-	if q.LatestOnly {
+	if q.LatestOnly && q.Vintage == "" {
 		table = "indicators_latest"
 	}
 
@@ -485,7 +485,7 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 	}
 
 	rawValueExpr := "COALESCE(raw_value, '')"
-	if q.LatestOnly {
+	if table == "indicators_latest" {
 		rawValueExpr = "''" // indicators_latest materialized view has no raw_value column
 	}
 	sql := fmt.Sprintf(`

@@ -94,8 +94,8 @@ func computeDerivedIndicators(
 
 	var out []store.Indicator
 	for geoid := range knownGEOIDs {
-		totalPop := idx[key{geoid, "total_pop"}]
-		whiteAlone := idx[key{geoid, "white_alone"}]
+		totalPop := idx[key{geoid, "total_population_race"}]
+		whiteAlone := idx[key{geoid, "pop_white_non_hispanic"}]
 
 		if totalPop != nil && whiteAlone != nil && *totalPop > 0 {
 			v := 1.0 - (*whiteAlone / *totalPop)

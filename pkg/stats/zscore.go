@@ -28,9 +28,23 @@ func PercentileRank(values []*float64) []*float64 {
 
 	denom := float64(max1(n-1, 1))
 	ranks := make([]*float64, len(values))
-	for rank, item := range valid {
-		r := float64(rank) / denom
-		ranks[item.origIdx] = &r
+	// Assign mean rank to tied values.
+	for i := 0; i < n; {
+		j := i + 1
+		for j < n && valid[j].val == valid[i].val {
+			j++
+		}
+		// valid[i..j) have the same value — assign mean of their positions.
+		meanRank := 0.0
+		for k := i; k < j; k++ {
+			meanRank += float64(k)
+		}
+		meanRank /= float64(j - i)
+		r := meanRank / denom
+		for k := i; k < j; k++ {
+			ranks[valid[k].origIdx] = &r
+		}
+		i = j
 	}
 	return ranks
 }

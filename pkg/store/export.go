@@ -143,11 +143,15 @@ func ExportCSV(ctx context.Context, pool *pgxpool.Pool, q IndicatorQuery, w io.W
 		whereClause = "WHERE " + joinStrings(where, " AND ")
 	}
 
+	rawValueExpr := "COALESCE(raw_value, '')"
+	if q.LatestOnly {
+		rawValueExpr = "''" // indicators_latest has no raw_value column
+	}
 	sql := fmt.Sprintf(`
-SELECT geoid, variable_id, vintage, value, margin_of_error, COALESCE(raw_value, '')
+SELECT geoid, variable_id, vintage, value, margin_of_error, %s
 FROM %s
 %s
-ORDER BY geoid, variable_id, vintage`, table, whereClause)
+ORDER BY geoid, variable_id, vintage`, rawValueExpr, table, whereClause)
 
 	rows, err := pool.Query(ctx, sql, args...)
 	if err != nil {
