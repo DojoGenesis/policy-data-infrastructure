@@ -126,7 +126,7 @@ def _clean_sentinel(val: str | None):
     if val is None:
         return None
     try:
-        if int(val) == NULL_SENTINEL:
+        if int(float(val)) == NULL_SENTINEL:
             return None
     except (ValueError, TypeError):
         pass

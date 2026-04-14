@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/geo"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/htmlcraft"
@@ -440,7 +443,9 @@ func (p *PolicyPlugin) handleGenerateNarrative(c *gin.Context) {
 	}
 
 	eng := narrative.NewEngine(p.store)
-	_ = eng.LoadEmbeddedTemplates()
+	if err := eng.LoadEmbeddedTemplates(); err != nil {
+		log.Printf("gateway: LoadEmbeddedTemplates: %v", err)
+	}
 
 	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
 		Template:     tmplName,
@@ -485,7 +490,9 @@ func (p *PolicyPlugin) handleServeNarrative(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	eng := narrative.NewEngine(p.store)
-	_ = eng.LoadEmbeddedTemplates()
+	if err := eng.LoadEmbeddedTemplates(); err != nil {
+		log.Printf("gateway: LoadEmbeddedTemplates: %v", err)
+	}
 
 	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
 		Template:     tmpl,
@@ -705,8 +712,8 @@ func (p *PolicyPlugin) handleListSources(c *gin.Context) {
 func generateNarrativeHTML(g *geo.Geography, inds []store.Indicator, vintage string) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf(`<h2>%s</h2>`, g.Name))
-	sb.WriteString(fmt.Sprintf(`<p><strong>Level:</strong> %s &nbsp;|&nbsp; <strong>GEOID:</strong> %s</p>`, string(g.Level), g.GEOID))
+	sb.WriteString(fmt.Sprintf(`<h2>%s</h2>`, html.EscapeString(g.Name)))
+	sb.WriteString(fmt.Sprintf(`<p><strong>Level:</strong> %s &nbsp;|&nbsp; <strong>GEOID:</strong> %s</p>`, html.EscapeString(string(g.Level)), html.EscapeString(g.GEOID)))
 	if g.Population > 0 {
 		sb.WriteString(fmt.Sprintf(`<p><strong>Population:</strong> %s</p>`, formatInt(g.Population)))
 	}
@@ -765,14 +772,13 @@ func geoFromStore(g geo.Geography, inds []store.Indicator, scores []store.Analys
 	return resp
 }
 
-// isNotFound returns true when the error indicates a missing row. pgx does not
-// export a specific not-found error type; we test the error string.
+// isNotFound returns true when the error indicates a missing row.
 func isNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
 	// pgx/v5 returns pgx.ErrNoRows for single-row scans.
-	return errors.Is(err, io.EOF) || strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found")
+	return errors.Is(err, pgx.ErrNoRows) || errors.Is(err, io.EOF) || strings.Contains(err.Error(), "not found")
 }
 
 // sanitiseFilename replaces characters that are unsafe in filenames with

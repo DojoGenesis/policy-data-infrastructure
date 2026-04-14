@@ -32,9 +32,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
+
+const cdcPlacesRateDelay = 650 * time.Millisecond // ~90 req/min with margin
 
 const (
 	cdcPlacesBaseURL   = "https://data.cdc.gov/resource/cwsq-ngmh.json"
@@ -210,6 +213,7 @@ func (s *cdcPlacesSource) fetch(ctx context.Context, whereClause string) ([]stor
 			break // last page
 		}
 		offset += cdcPlacesPageLimit
+		time.Sleep(cdcPlacesRateDelay)
 	}
 
 	return s.rowsToIndicators(allRows), nil

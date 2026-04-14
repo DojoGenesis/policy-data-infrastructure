@@ -57,14 +57,14 @@ go run ./cmd/pdi serve --port 8340
 | TIGER/Line | Geographic | Boundaries at all levels | All |
 | CDC PLACES | Health | 8 measures: BP, diabetes, obesity, mental health | Tract |
 | EPA EJScreen | Environment | 12 EJ indicators: PM2.5, lead, superfund | Tract |
-| HUD CHAS | Housing | Cost burden, crowding by income/race | Tract |
-| USDA Food Access | Food | Food desert flags, supermarket distance | Tract |
-| HOLC Redlining | Historical | Grades A-D for ~200 cities | Custom polygons |
-| HRSA HPSA | Health | Health professional shortage areas | County |
-| Eviction Lab | Housing | Filing rates, eviction rates | Tract |
-| BLS LAUS | Employment | Unemployment, labor force | County |
-| GTFS | Transit | Frequency, stop density | Point/Route |
-| NCES | Education | School characteristics, Title I, FRL | School |
+| HUD CHAS (planned) | Housing | Cost burden, crowding by income/race | Tract |
+| USDA Food Access (planned) | Food | Food desert flags, supermarket distance | Tract |
+| HOLC Redlining (planned) | Historical | Grades A-D for ~200 cities | Custom polygons |
+| HRSA HPSA (planned) | Health | Health professional shortage areas | County |
+| Eviction Lab (planned) | Housing | Filing rates, eviction rates | Tract |
+| BLS LAUS (planned) | Employment | Unemployment, labor force | County |
+| GTFS (planned) | Transit | Frequency, stop density | Point/Route |
+| NCES (planned) | Education | School characteristics, Title I, FRL | School |
 
 ## Statistical Engine
 
@@ -147,7 +147,7 @@ ingest/           Python scripts for data acquisition + Postgres bulk loading
 
 ## Requirements
 
-- Go 1.22+
+- Go 1.25+
 - PostgreSQL 16 with PostGIS 3.4
 - Python 3.10+ (for ingest scripts, optional)
 - Census API key (optional, increases rate limit from 45 to 500 req/min)

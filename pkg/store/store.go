@@ -85,6 +85,7 @@ type Store interface {
 
 	// Indicator operations
 	PutIndicators(ctx context.Context, indicators []Indicator) error
+	PutIndicatorsBatch(ctx context.Context, indicators []Indicator, batchSize int) error
 	QueryIndicators(ctx context.Context, q IndicatorQuery) ([]Indicator, error)
 	Aggregate(ctx context.Context, q AggregateQuery) (*AggregateResult, error)
 

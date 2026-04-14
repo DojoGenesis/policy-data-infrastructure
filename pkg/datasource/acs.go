@@ -498,32 +498,6 @@ func (s *acsSource) buildCountyURLWithVars(stateFIPS, countyFIPS, vars string, s
 	return base
 }
 
-// buildURL constructs the Census API URL for a single county (all tracts).
-func (s *acsSource) buildURL(stateFIPS, countyFIPS string) string {
-	vars := s.variableList()
-	base := fmt.Sprintf(
-		"https://api.census.gov/data/%d/acs/acs5?get=%s&for=tract:*&in=state:%s+county:%s",
-		s.cfg.Year, vars, stateFIPS, countyFIPS,
-	)
-	if s.cfg.APIKey != "" {
-		base += "&key=" + s.cfg.APIKey
-	}
-	return base
-}
-
-// buildStateURL constructs the Census API URL for all tracts in a state.
-func (s *acsSource) buildStateURL(stateFIPS string) string {
-	vars := s.variableList()
-	base := fmt.Sprintf(
-		"https://api.census.gov/data/%d/acs/acs5?get=%s&for=tract:*&in=state:%s",
-		s.cfg.Year, vars, stateFIPS,
-	)
-	if s.cfg.APIKey != "" {
-		base += "&key=" + s.cfg.APIKey
-	}
-	return base
-}
-
 // variableList builds the comma-separated list of variable codes to request,
 // including MOE companions where defined.
 func (s *acsSource) variableList() string {

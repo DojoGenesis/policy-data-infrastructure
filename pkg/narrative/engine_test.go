@@ -248,6 +248,9 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier stri
 	}
 	return out, nil
 }
+func (m *mockStore) PutIndicatorsBatch(_ context.Context, _ []store.Indicator, _ int) error {
+	return nil
+}
 func (m *mockStore) Migrate(_ context.Context) error       { return nil }
 func (m *mockStore) RefreshViews(_ context.Context) error  { return nil }
 func (m *mockStore) Close() error                          { return nil }
