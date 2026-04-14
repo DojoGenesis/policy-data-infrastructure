@@ -24,10 +24,11 @@ type CompareRequest struct {
 
 // NarrativeRequest is the body for POST /generate/narrative.
 type NarrativeRequest struct {
-	GEOID   string `json:"geoid" binding:"required"`
-	Vintage string `json:"vintage"`
-	// TemplateID selects a narrative template; defaults to "summary".
-	TemplateID string `json:"template_id"`
+	GEOID      string `json:"geoid" binding:"required"`
+	AnalysisID string `json:"analysis_id" binding:"required"`
+	Vintage    string `json:"vintage"`
+	Template   string `json:"template"`   // template name (default: "five_mornings")
+	Count      int    `json:"count"`      // number of profiles (default: 5)
 }
 
 // DeliverableRequest is the body for POST /generate/deliverable.

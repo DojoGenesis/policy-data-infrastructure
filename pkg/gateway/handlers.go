@@ -13,6 +13,7 @@ import (
 
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/geo"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/htmlcraft"
+	"github.com/DojoGenesis/policy-data-infrastructure/pkg/narrative"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
 
@@ -414,9 +415,8 @@ func (p *PolicyPlugin) handleCompare(c *gin.Context) {
 
 // ── POST /generate/narrative ────────────────────────────────────────────────
 
-// handleGenerateNarrative generates an HTML narrative summary for a geography.
-// The narrative engine is a stub; production callers should replace the inline
-// template with the pkg/narrative engine.
+// handleGenerateNarrative generates a full HTML narrative using pkg/narrative
+// engine with analysis scores for tier-based profile selection.
 func (p *PolicyPlugin) handleGenerateNarrative(c *gin.Context) {
 	var req NarrativeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -424,36 +424,87 @@ func (p *PolicyPlugin) handleGenerateNarrative(c *gin.Context) {
 		return
 	}
 
+	if req.AnalysisID == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "analysis_id is required"})
+		return
+	}
+
 	ctx := c.Request.Context()
+	tmplName := req.Template
+	if tmplName == "" {
+		tmplName = "five_mornings"
+	}
+	count := req.Count
+	if count <= 0 {
+		count = 5
+	}
 
-	g, err := p.store.GetGeography(ctx, req.GEOID)
+	eng := narrative.NewEngine(p.store)
+	_ = eng.LoadEmbeddedTemplates()
+
+	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
+		Template:     tmplName,
+		ScopeGEOID:   req.GEOID,
+		AnalysisID:   req.AnalysisID,
+		ChapterCount: count,
+	})
 	if err != nil {
-		status := http.StatusInternalServerError
-		if isNotFound(err) {
-			status = http.StatusNotFound
-		}
-		c.JSON(status, ErrorResponse{Error: "geography not found", Detail: err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "narrative generation failed", Detail: err.Error()})
 		return
 	}
 
-	indQ := store.IndicatorQuery{
-		GEOIDs:     []string{req.GEOID},
-		Vintage:    req.Vintage,
-		LatestOnly: req.Vintage == "",
-	}
-	inds, err := p.store.QueryIndicators(ctx, indQ)
+	html, err := eng.RenderHTML(doc)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "indicator query failed", Detail: err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "narrative render failed", Detail: err.Error()})
 		return
 	}
 
-	html := generateNarrativeHTML(g, inds, req.Vintage)
+	// If Accept header wants HTML, return it directly.
+	if c.GetHeader("Accept") == "text/html" {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+		return
+	}
 
 	c.JSON(http.StatusOK, NarrativeResponse{
 		GEOID:   req.GEOID,
 		HTML:    html,
 		Vintage: req.Vintage,
 	})
+}
+
+// ── GET /generate/narrative/:analysis_id ────────────────────────────────────
+
+// handleServeNarrative serves a Five Mornings narrative as a standalone HTML
+// page. Any browser can view it at /v1/policy/generate/narrative/:analysis_id.
+func (p *PolicyPlugin) handleServeNarrative(c *gin.Context) {
+	analysisID := c.Param("analysis_id")
+
+	scope := c.DefaultQuery("scope", "")
+	tmpl := c.DefaultQuery("template", "five_mornings")
+	count := 5
+
+	ctx := c.Request.Context()
+	eng := narrative.NewEngine(p.store)
+	_ = eng.LoadEmbeddedTemplates()
+
+	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
+		Template:     tmpl,
+		ScopeGEOID:   scope,
+		AnalysisID:   analysisID,
+		ChapterCount: count,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "narrative generation failed", Detail: err.Error()})
+		return
+	}
+
+	html, err := eng.RenderHTML(doc)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "narrative render failed", Detail: err.Error()})
+		return
+	}
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
 // ── POST /generate/deliverable ──────────────────────────────────────────────

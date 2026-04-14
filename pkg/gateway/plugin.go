@@ -51,6 +51,7 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 
 	// Generation.
 	group.POST("/generate/narrative", p.handleGenerateNarrative)
+	group.GET("/generate/narrative/:analysis_id", p.handleServeNarrative)
 	group.POST("/generate/deliverable", p.handleGenerateDeliverable)
 
 	// Pipeline.
