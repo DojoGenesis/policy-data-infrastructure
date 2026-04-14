@@ -9,10 +9,55 @@
 - First comprehensive health audit completed — overall grade B-
 - Rescued 6 research files from stale `policy-data-infrastructure/` clone
 - Deleted stale clone — canonical directory is `policy-data-infra/`
-- Created CLAUDE.md (rewritten from scratch, optimized for Sonnet agents)
-- Created TODO.md (38 items across P0-P3 from health audit findings)
-- Created CHANGELOG.md (this file)
-- Identified 7 P0 critical issues, 9 P1 high issues, 9 P2 medium issues
+- Created CLAUDE.md (300 lines, rewritten for Sonnet agents)
+- Created TODO.md + CHANGELOG.md
+- Added `.github/workflows/ci.yml` — go build + go vet + go test on push/PR
+
+### P0 Fixes (all 7 resolved)
+- `.gitignore`: added root `.venv/` and `analysis/output/` — `4b17097`
+- Untracked 8 committed analysis output artifacts — `9fada5c`
+- Makefile: ldflags PKG → `internal/version` (was `cmd/pdi`, silently broken) — `9fada5c`
+- `go.mod`: version corrected via `go mod tidy` — `9fada5c`
+- Pipeline: replaced deprecated NARI composite with ICE metric (Krieger et al. 2016) — `9fada5c`
+- `analyze.go`: Percentile now uses `stats.PercentileRank()` instead of raw score — `9fada5c`
+- `analyze.go`: removed `-1.0` sentinel, uses proper `*float64` nil — `9fada5c`
+
+### P1 Fixes (8 of 9 resolved, 1 deferred)
+- Gateway XSS: escape geography names with `html.EscapeString` — `f67d4dc`
+- Gateway: log `LoadEmbeddedTemplates` errors instead of silent discard — `f67d4dc`
+- Gateway: `errors.Is(err, pgx.ErrNoRows)` replaces string matching — `f67d4dc`
+- Python `census.py`: `_clean_sentinel` handles float-string sentinel — `f67d4dc`
+- `sources.toml`: cdc-places `api_key_env` → `CDC_PLACES_APP_TOKEN` — `9fada5c`
+- `schemas/geography.schema.json`: county_fips 3-digit, `geo_level` → `level` — `9fada5c`
+- Store: deleted dead `export.go`/`import.go`, promoted `PutIndicatorsBatch` to interface — `f67d4dc`
+- **DEFERRED**: BLS LAUS re-run (rate limit, wait for UTC midnight reset)
+
+### P2 Fixes (all 9 resolved)
+- Gateway tests: 23 httptest handler tests (coverage: 0% → 23 tests) — `fc3a3e9`
+- HTMLCraft tests: 41 tests across 6 groups (coverage: 0% → 41 tests) — `fc3a3e9`
+- CI workflow: `.github/workflows/ci.yml` (build + vet + test) — `f67d4dc`
+- Dead code: removed `buildURL()`, `buildStateURL()` from acs.go — `f67d4dc`
+- Dead code: removed `geoLevelDisplay()` from query.go — `f67d4dc`
+- CDC PLACES: 650ms rate limiting between paginated requests — `f67d4dc`
+- README: marked 8 unimplemented sources as (planned), fixed Go version — `f67d4dc`
+- `PutIndicatorsBatch` promoted to Store interface — `f67d4dc`
+
+### P3 Fixes (2 of 5 resolved)
+- Narrative: 12 magic numbers extracted to named consts with cited sources — `fc3a3e9`
+- Narrative tests: 16 new tests (17 → 33 total) with table-driven + boundary — `fc3a3e9`
+
+### New Features (from parallel orchestrator)
+- `pkg/stats/features.go`: ICEIncomeRace + CoefficientOfVariation + ReliabilityLevel
+- `pkg/stats/features_test.go`: test coverage for new stat functions
+- `pkg/store/migrations/007`: cv, reliability columns + factor_scores + validated_features tables
+- `pkg/narrative/slot.go`: FactorScores, FactorPercentiles, ICE, Reliability fields
+- `pkg/narrative/template.go`: factor-based template helpers (factorLabel, factorColor, etc.)
+
+### Session Stats
+- 9 Sonnet agents dispatched across 2 waves (3+3+3)
+- Total test count: 17 → 97 (+80 new tests across 3 packages)
+- TODO items closed: 25 of 29 P0-P2 items (86%)
+- Seed planted: Orchestrator Blindspot — stash don't revert parallel session work
 
 ### Data Pipeline
 - Expanded evidence cards to 70 (all 70 policies, 0 skipped) — `32f5032`
