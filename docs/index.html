@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Policy Data Infrastructure</title>
+<meta name="description" content="Open-source national policy data platform. Census tract-level analysis across 85,000+ tracts with validated statistical methods.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --navy: #0f172a;
+    --navy-light: #1e293b;
+    --slate: #334155;
+    --slate-light: #94a3b8;
+    --cream: #f8fafc;
+    --white: #ffffff;
+    --teal: #0d9488;
+    --teal-dark: #0f766e;
+    --teal-light: #ccfbf1;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --green: #16a34a;
+    --border: #e2e8f0;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); color: var(--navy); background: var(--white); line-height: 1.6; }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 90vh;
+    background: linear-gradient(160deg, var(--navy) 0%, #0c4a6e 50%, var(--teal-dark) 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 70%, rgba(13,148,136,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 20%, rgba(217,119,6,0.08) 0%, transparent 40%);
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--teal-light);
+    margin-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+  .hero .sub {
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 300;
+    max-width: 640px;
+    opacity: 0.85;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+  .hero-cta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--teal); color: white; }
+  .btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
+  .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    margin-top: 60px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hero-stat { text-align: center; }
+  .hero-stat .num { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero-stat .label { font-size: 13px; opacity: 0.6; margin-top: 4px; }
+
+  /* ─── SECTIONS ─── */
+  section { padding: 80px 24px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 12px;
+  }
+  section h2 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  section .lead {
+    font-size: 18px;
+    color: var(--slate);
+    max-width: 700px;
+    margin-bottom: 40px;
+  }
+
+  /* ─── PRINCIPLE ─── */
+  .principle {
+    background: var(--navy);
+    color: white;
+    text-align: center;
+    padding: 60px 24px;
+  }
+  .principle blockquote {
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 300;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  .principle blockquote strong { color: var(--teal-light); font-weight: 600; }
+  .principle .cite {
+    margin-top: 16px;
+    font-size: 14px;
+    opacity: 0.5;
+  }
+
+  /* ─── LAYERS ─── */
+  .layers {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .layer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .layer:last-child { border-bottom: none; }
+  .layer-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .l1 .layer-num { background: var(--teal); }
+  .l2 .layer-num { background: #6366f1; }
+  .l3 .layer-num { background: var(--amber); }
+  .l4 .layer-num { background: var(--green); }
+  .l5 .layer-num { background: var(--slate); }
+  .layer-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .layer-content p { font-size: 14px; color: var(--slate-light); }
+
+  /* ─── SOURCE TABLE ─── */
+  .source-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .source-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--slate-light);
+    border-bottom: 2px solid var(--border);
+  }
+  .source-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .source-table tr:last-child td { border-bottom: none; }
+  .status-live { color: var(--green); font-weight: 600; }
+  .status-planned { color: var(--slate-light); }
+
+  /* ─── FEATURE GRID ─── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 32px;
+  }
+  .feature-card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .feature-card p { font-size: 14px; color: var(--slate); line-height: 1.6; }
+  .feature-card .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 12px;
+  }
+  .tag-method { background: var(--teal-light); color: var(--teal-dark); }
+  .tag-source { background: var(--amber-light); color: #92400e; }
+
+  /* ─── COMPARISON TABLE ─── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 24px;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--slate-light);
+    border-bottom: 2px solid var(--border);
+  }
+  .compare-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .yes { color: var(--green); font-weight: 600; }
+  .no { color: var(--slate-light); }
+  .partial { color: var(--amber); font-weight: 500; }
+  .compare-table tr.highlight { background: var(--teal-light); }
+
+  /* ─── PIPELINE ─── */
+  .pipeline-flow {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    padding: 20px 0;
+    margin-top: 24px;
+  }
+  .pipe-stage {
+    flex: 1;
+    min-width: 140px;
+    text-align: center;
+    padding: 16px 12px;
+    position: relative;
+  }
+  .pipe-stage::after {
+    content: '\2192';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: var(--border);
+  }
+  .pipe-stage:last-child::after { display: none; }
+  .pipe-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 auto 10px;
+  }
+  .pipe-stage h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .pipe-stage p { font-size: 11px; color: var(--slate-light); }
+
+  /* ─── ORIGIN ─── */
+  .origin {
+    background: var(--cream);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--navy);
+    color: rgba(255,255,255,0.5);
+    padding: 40px 24px;
+    text-align: center;
+    font-size: 13px;
+  }
+  footer a { color: var(--teal-light); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .hero-stats { gap: 24px; }
+    .layer { flex-direction: column; align-items: flex-start; }
+    .pipeline-flow { flex-direction: column; }
+    .pipe-stage::after { display: none; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="hero">
+  <div class="hero-badge">Open Source &middot; Apache-2.0</div>
+  <h1>Policy Data Infrastructure</h1>
+  <p class="sub">National-scale policy data platform. Census tract-level analysis across 85,000+ US tracts with validated statistical methods. From raw public data to policy-ready deliverables.</p>
+  <div class="hero-cta">
+    <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary">View on GitHub</a>
+    <a href="#architecture" class="btn btn-secondary">How it works</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="num">85K+</div>
+      <div class="label">Census tracts</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">12</div>
+      <div class="label">Data sources</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">30</div>
+      <div class="label">Peer-reviewed sources</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">12</div>
+      <div class="label">API endpoints</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ PRINCIPLE ═══════════ -->
+<section class="principle">
+  <blockquote><strong>Raw data is the foundation.</strong> Composites are derived views, never stored truth. Every indicator carries a reliability flag. Any composite is computed at query time with mandatory sensitivity analysis.</blockquote>
+  <div class="cite">Grounded in 30 peer-reviewed sources including Stiglitz-Sen-Fitoussi (2009), Krieger et al. (2016), Kolak et al. (2020)</div>
+</section>
+
+<!-- ═══════════ ARCHITECTURE ═══════════ -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2>Five-Layer Statistical Architecture</h2>
+    <p class="lead">Each layer builds on the one below. Composites exist only at the top, computed at query time, never stored as truth.</p>
+
+    <div class="layers">
+      <div class="layer l1">
+        <div class="layer-num">1</div>
+        <div class="layer-content">
+          <h3>Raw Indicators</h3>
+          <p>Stored in PostgreSQL + PostGIS. Every value carries its GEOID, source metadata, vintage year, and a CV reliability flag (Census Bureau thresholds: high/moderate/low).</p>
+        </div>
+      </div>
+      <div class="layer l2">
+        <div class="layer-num">2</div>
+        <div class="layer-content">
+          <h3>Validated Features</h3>
+          <p>ICE (Krieger 2016), Dissimilarity Index (Massey &amp; Denton 1988), Isolation Index (Lieberson 1981), Housing Cost Burden (HUD). Literature-grounded, not invented.</p>
+        </div>
+      </div>
+      <div class="layer l3">
+        <div class="layer-num">3</div>
+        <div class="layer-content">
+          <h3>Factor Scores</h3>
+          <p>Exploratory Factor Analysis with oblimin rotation. Named by loading profile (e.g., "Economic Distress," "Housing Burden"), not by number. Expect 5-8 factors from 50+ indicators.</p>
+        </div>
+      </div>
+      <div class="layer l4">
+        <div class="layer-num">4</div>
+        <div class="layer-content">
+          <h3>Spatial Analysis</h3>
+          <p>LISA cluster maps, Geographically Weighted Regression, multilevel variance partitioning (tract / county / state), SKATER regionalization.</p>
+        </div>
+      </div>
+      <div class="layer l5">
+        <div class="layer-num">5</div>
+        <div class="layer-content">
+          <h3>Composite Views (Query-Time Only)</h3>
+          <p>Users can compute custom composites via the API, but the system never imposes them. Geometric mean aggregation with sensitivity analysis under &plusmn;20% weight perturbation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ PIPELINE ═══════════ -->
+<section style="background: var(--cream); border-top: 1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">Pipeline</div>
+    <h2>Six-Stage DAG</h2>
+    <p class="lead">Data moves from public sources to policy-ready deliverables. Stages run in concurrent waves using topological sort.</p>
+
+    <div class="pipeline-flow">
+      <div class="pipe-stage">
+        <div class="pipe-num">1</div>
+        <h4>Fetch</h4>
+        <p>Census ACS, TIGER, CDC, EPA, BLS, USDA</p>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-num">2</div>
+        <h4>Process</h4>
+        <p>Clean, normalize, join to geography</p>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-num">3</div>
+        <h4>Enrich</h4>
+        <p>Cross-source joins, derived indicators</p>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-num">4</div>
+        <h4>Analyze</h4>
+        <p>ICE, OLS, Blinder-Oaxaca, tipping points</p>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-num">5</div>
+        <h4>Synthesize</h4>
+        <p>Correlations, narratives, factor profiles</p>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-num">6</div>
+        <h4>Deliver</h4>
+        <p>HTMLCraft single-file deliverables</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ METHODS ═══════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Methods</div>
+    <h2>Research-Grounded Statistical Methods</h2>
+    <p class="lead">Every method traces to published validation. No unvalidated composites.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>ICE (Index of Concentration at the Extremes)</h3>
+        <p>Measures spatial polarization between privileged and deprived populations without collapsing race and income into a dimensionless score.</p>
+        <span class="tag tag-source">Krieger et al. 2016</span>
+      </div>
+      <div class="feature-card">
+        <h3>Dissimilarity Index</h3>
+        <p>D = 0.5 &times; &Sigma;|bi/B - wi/W|. The canonical measure of residential segregation, validated across 35+ years of research.</p>
+        <span class="tag tag-source">Massey &amp; Denton 1988</span>
+      </div>
+      <div class="feature-card">
+        <h3>Exploratory Factor Analysis</h3>
+        <p>EFA with oblimin rotation discovers which indicators belong together. Kolak et al. found 4 SDOH factors explaining 71% variance at 72K tracts.</p>
+        <span class="tag tag-source">Kolak et al. 2020</span>
+      </div>
+      <div class="feature-card">
+        <h3>OLS Regression</h3>
+        <p>Ordinary least squares with standard errors, t-statistics, and p-values. Implemented in pure Go with Gauss-Jordan matrix inversion.</p>
+        <span class="tag tag-method">Pure Go</span>
+      </div>
+      <div class="feature-card">
+        <h3>Blinder-Oaxaca Decomposition</h3>
+        <p>Generalized two-group decomposition for equity gap analysis. Separates explained vs. unexplained components of outcome disparities.</p>
+        <span class="tag tag-method">Pure Go</span>
+      </div>
+      <div class="feature-card">
+        <h3>Threshold Detection</h3>
+        <p>Piecewise linear breakpoint detection identifies where outcomes change. Policy-interpretable: "above 35% poverty, diabetes prevalence increases 4x faster."</p>
+        <span class="tag tag-method">Segmented regression</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ DATA SOURCES ═══════════ -->
+<section style="background: var(--cream); border-top: 1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">Data</div>
+    <h2>12 Public Data Sources</h2>
+    <p class="lead">All open. All at census tract level or finer. Rate-limit-aware parallel ingestion.</p>
+
+    <table class="source-table">
+      <thead><tr><th>Source</th><th>Category</th><th>Status</th><th>Geo Level</th></tr></thead>
+      <tbody>
+        <tr><td>Census ACS 5-Year</td><td>Demographic</td><td class="status-live">Live</td><td>Tract, Block Group</td></tr>
+        <tr><td>TIGER/Line</td><td>Geographic</td><td class="status-live">Live</td><td>All levels</td></tr>
+        <tr><td>CDC PLACES</td><td>Health</td><td class="status-live">Live</td><td>Tract</td></tr>
+        <tr><td>EPA EJScreen</td><td>Environment</td><td class="status-live">Live</td><td>Tract</td></tr>
+        <tr><td>USDA Food Access</td><td>Food</td><td class="status-live">Live</td><td>Tract</td></tr>
+        <tr><td>BLS LAUS</td><td>Employment</td><td class="status-live">Live</td><td>County</td></tr>
+        <tr><td>WI DPI</td><td>Education</td><td class="status-live">Live</td><td>District</td></tr>
+        <tr><td>HUD CHAS</td><td>Housing</td><td class="status-planned">Planned</td><td>Tract</td></tr>
+        <tr><td>HRSA HPSA</td><td>Health</td><td class="status-planned">Planned</td><td>County</td></tr>
+        <tr><td>Eviction Lab</td><td>Housing</td><td class="status-planned">Planned</td><td>Tract</td></tr>
+        <tr><td>GTFS</td><td>Transit</td><td class="status-planned">Planned</td><td>Point/Route</td></tr>
+        <tr><td>NCES</td><td>Education</td><td class="status-planned">Planned</td><td>School</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════ LANDSCAPE ═══════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Landscape</div>
+    <h2>Where PDI Fits</h2>
+    <p class="lead">No open-source platform offers the full stack: ingestion + statistical computation + API + narrative generation + visualization in one deployable package.</p>
+
+    <table class="compare-table">
+      <thead><tr><th>Platform</th><th>Open Source</th><th>National</th><th>API</th><th>Narrative</th><th>Raw-First</th></tr></thead>
+      <tbody>
+        <tr><td>Census Reporter</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>COI 3.0</td><td class="partial">Docs only</td><td class="yes">Yes</td><td class="no">Download</td><td class="no">No</td><td class="no">Composite</td></tr>
+        <tr><td>National Equity Atlas</td><td class="no">No</td><td class="partial">Metro/city</td><td class="no">No</td><td class="no">No</td><td class="partial">Dashboard</td></tr>
+        <tr><td>Opportunity Insights</td><td class="partial">Code only</td><td class="yes">Yes</td><td class="no">Download</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>PolicyMap</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="partial">Mixed</td></tr>
+        <tr class="highlight"><td><strong>PDI</strong></td><td class="yes"><strong>Yes</strong></td><td class="yes"><strong>Yes</strong></td><td class="yes"><strong>REST + SSE</strong></td><td class="yes"><strong>Go templates</strong></td><td class="yes"><strong>Yes</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════ ORIGIN ═══════════ -->
+<section class="origin">
+  <div class="container">
+    <div class="section-label">Origin</div>
+    <h2>From Madison to National</h2>
+    <p class="lead">PDI began as the Madison Equity Atlas &mdash; a 22-layer GIS platform analyzing 125 census tracts in Dane County, WI for Common Wealth Development.</p>
+    <p style="font-size: 15px; color: var(--slate); max-width: 700px; margin-bottom: 16px;">The Atlas produced <em>Five Mornings in Madison</em> (a narrative document profiling five households shaped by structural conditions), a founding partnership proposal for a 12-organization coalition, and 70 evidence cards mapping policy positions to tract-level data.</p>
+    <p style="font-size: 15px; color: var(--slate); max-width: 700px;">PDI generalizes the Atlas methodology to national scale. The same pipeline that told the story of five Madison families can now tell the story of any county in America, grounded in that county's actual tract-level data.</p>
+  </div>
+</section>
+
+<!-- ═══════════ QUICK START ═══════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Get Started</div>
+    <h2>Quick Start</h2>
+    <pre style="background: var(--navy); color: #e2e8f0; padding: 24px; border-radius: 12px; overflow-x: auto; font-size: 14px; line-height: 1.7;"><code><span style="color: #94a3b8;"># Start PostgreSQL + PostGIS</span>
+docker compose up -d
+
+<span style="color: #94a3b8;"># Run migrations</span>
+go run ./cmd/pdi migrate up
+
+<span style="color: #94a3b8;"># Fetch Dane County, WI data</span>
+go run ./cmd/pdi fetch --state 55 --county 025 --year 2023
+
+<span style="color: #94a3b8;"># Run the full pipeline</span>
+go run ./cmd/pdi pipeline run --state 55 --county 025
+
+<span style="color: #94a3b8;"># Start the API server</span>
+go run ./cmd/pdi serve --port 8340</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+  <p><a href="https://github.com/DojoGenesis/policy-data-infrastructure">DojoGenesis/policy-data-infrastructure</a> &middot; Apache-2.0 &middot; Built with Go + PostGIS + Python</p>
+  <p style="margin-top: 8px;">A <a href="https://github.com/DojoGenesis">DojoGenesis</a> project</p>
+</footer>
+
+</body>
+</html>
