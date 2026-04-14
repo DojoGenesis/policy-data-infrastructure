@@ -4,7 +4,7 @@
   "title": "Geography",
   "description": "A geographic unit with its FIPS/GEOID, human-readable name, level, and optional geometry.",
   "type": "object",
-  "required": ["geoid", "geo_level", "name"],
+  "required": ["geoid", "level", "name"],
   "additionalProperties": false,
   "properties": {
     "geoid": {
@@ -12,7 +12,7 @@
       "description": "FIPS code, zero-padded to canonical length for the geo_level. Never truncate or parse as integer.",
       "examples": ["55", "55025", "55025000100", "550250001001", "5548000", "53600"]
     },
-    "geo_level": {
+    "level": {
       "type": "string",
       "enum": ["state", "county", "tract", "block_group", "place", "zcta", "coc", "msa"],
       "description": "Geographic level. Determines expected GEOID length and available data sources."
@@ -29,8 +29,8 @@
     },
     "county_fips": {
       "type": ["string", "null"],
-      "description": "5-digit county FIPS code (state + county). Null for state-level and above.",
-      "pattern": "^[0-9]{5}$"
+      "description": "3-digit county FIPS code (county portion only, e.g. '025' for Dane County WI). Null for state-level and above.",
+      "pattern": "^[0-9]{3}$"
     },
     "state_name": {
       "type": ["string", "null"],

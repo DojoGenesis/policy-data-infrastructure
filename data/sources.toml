@@ -130,7 +130,7 @@ Intersect with census tracts to compute percent area in floodplain per tract.
 name               = "CDC PLACES: Local Data for Better Health"
 category           = "health"
 url                = "https://data.cdc.gov/resource/cwsq-ngmh.json"
-api_key_env        = "SOCRATA_APP_TOKEN"
+api_key_env        = "CDC_PLACES_APP_TOKEN"
 rate_limit_per_min = 100   # higher with Socrata app token
 format             = "json"
 geo_levels         = ["county", "tract", "zcta"]

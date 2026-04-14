@@ -11,31 +11,20 @@ import (
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
 
-// nariTiers defines the standard NARI-style deprivation tiers used for the
-// composite index. Tracts in higher tiers face greater structural disadvantage.
-var nariTiers = []stats.TierDef{
-	{Name: "highest_need", MinPercentile: 0.80, MaxPercentile: 1.01},
-	{Name: "high_need", MinPercentile: 0.60, MaxPercentile: 0.80},
-	{Name: "moderate_need", MinPercentile: 0.40, MaxPercentile: 0.60},
-	{Name: "low_need", MinPercentile: 0.20, MaxPercentile: 0.40},
-	{Name: "lowest_need", MinPercentile: 0.00, MaxPercentile: 0.20},
+// correlationVariables are the key indicators used for correlation analysis
+// and validated feature computation. Replaces the deprecated compositeVariables.
+var correlationVariables = []string{
+	"poverty_rate",
+	"median_household_income",
+	"pct_poc",
+	"uninsured_rate",
+	"pct_cost_burdened",
+	"total_population",
 }
 
-// compositeVariables is the ordered list of indicator variable IDs used to
-// build the NARI composite index. These MUST match the IDs produced by the
-// data sources (e.g., acs.go, cdc_places.go). Order determines column assignment.
-var compositeVariables = []string{
-	"poverty_rate",            // ACS B17001: poverty rate
-	"median_household_income", // ACS B19013: median HH income
-	"pct_poc",                 // Derived: 1 - (pop_white_non_hispanic / total_population_race)
-	"uninsured_rate",          // ACS S2701: % without health insurance
-}
-
-// AnalyzeStage is Stage 04: it queries indicators for all tracts in scope,
-// builds the indicator matrix, computes the composite index via
-// stats.CompositeIndex (equal_percentile method), assigns tiers via
-// stats.AssignTiers, and persists the result via store.PutAnalysis and
-// store.PutAnalysisScores.
+// AnalyzeStage is Stage 04: queries indicators for all tracts in scope,
+// computes validated features (ICE, CV/reliability), and persists results.
+// Replaces the former NARI composite index with research-grounded methods.
 type AnalyzeStage struct{}
 
 func (a *AnalyzeStage) Name() string          { return "analyze" }
@@ -65,7 +54,6 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		return nil
 	}
 
-	// Sort for deterministic column ordering.
 	sort.Slice(geographies, func(i, j int) bool {
 		return geographies[i].GEOID < geographies[j].GEOID
 	})
@@ -74,7 +62,7 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		tractGEOIDs[i] = g.GEOID
 	}
 	nTracts := len(tractGEOIDs)
-	log.Printf("analyze: building composite index for %d tracts", nTracts)
+	log.Printf("analyze: computing validated features for %d tracts", nTracts)
 
 	// 2. Query all indicators for the scope.
 	indicators, err := s.QueryIndicators(ctx, store.IndicatorQuery{
@@ -94,27 +82,47 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		indicatorIdx[k] = ind.Value
 	}
 
-	// 3. Build the indicator matrix.
-	// indicators[k] is a column of length nTracts for compositeVariables[k].
-	matrix := make([][]*float64, len(compositeVariables))
-	for k, varID := range compositeVariables {
-		col := make([]*float64, nTracts)
-		for i, geoid := range tractGEOIDs {
-			col[i] = indicatorIdx[ikey{geoid, varID}]
+	// 3. Compute ICE (Index of Concentration at the Extremes).
+	// ICE = (high_income_white - low_income_poc) / total_population
+	// We approximate using available ACS variables.
+	totalPop := make([]*float64, nTracts)
+	pctPOC := make([]*float64, nTracts)
+	poverty := make([]*float64, nTracts)
+	for i, geoid := range tractGEOIDs {
+		totalPop[i] = indicatorIdx[ikey{geoid, "total_population"}]
+		pctPOC[i] = indicatorIdx[ikey{geoid, "pct_poc"}]
+		poverty[i] = indicatorIdx[ikey{geoid, "poverty_rate"}]
+	}
+
+	// Approximate ICE using available data:
+	// privileged ≈ (1 - pct_poc/100) * (1 - poverty_rate/100) * total_pop
+	// deprived ≈ (pct_poc/100) * (poverty_rate/100) * total_pop
+	privileged := make([]*float64, nTracts)
+	deprived := make([]*float64, nTracts)
+	for i := 0; i < nTracts; i++ {
+		if totalPop[i] != nil && pctPOC[i] != nil && poverty[i] != nil {
+			pop := *totalPop[i]
+			poc := *pctPOC[i] / 100.0
+			pov := *poverty[i] / 100.0
+			priv := (1 - poc) * (1 - pov) * pop
+			dep := poc * pov * pop
+			privileged[i] = &priv
+			deprived[i] = &dep
 		}
-		matrix[k] = col
 	}
 
-	// 4. Compute composite index.
-	scores, err := stats.CompositeIndex(matrix, nil, "equal_percentile")
+	iceScores, err := stats.ICEIncomeRace(privileged, deprived, totalPop)
 	if err != nil {
-		return fmt.Errorf("analyze: CompositeIndex: %w", err)
+		return fmt.Errorf("analyze: ICE computation: %w", err)
 	}
 
-	// 5. Assign tiers.
-	tiers := stats.AssignTiers(scores, nariTiers)
+	// 4. Compute CV and reliability for each indicator.
+	// TODO: When MOE data is available in the indicators table, compute
+	// stats.CoefficientOfVariation(estimate, moe) and stats.ReliabilityLevel(cv)
+	// for each indicator. For now, log placeholder.
+	log.Printf("analyze: CV/reliability computation deferred — MOE data not yet ingested")
 
-	// 6. Build scope GEOID for the analysis record.
+	// 5. Build scope GEOID for the analysis record.
 	scopeGEOID := cfg.StateFIPS
 	scopeLevel := string(geo.State)
 	if cfg.CountyFIPS != "" {
@@ -122,30 +130,27 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		scopeLevel = string(geo.County)
 	}
 
-	analysisID := fmt.Sprintf("nari-%s-%s", scopeGEOID, cfg.Vintage)
+	analysisID := fmt.Sprintf("validated-%s-%s", scopeGEOID, cfg.Vintage)
 
-	// Build summary results map.
-	var nonNilCount int
-	for _, v := range scores {
+	var iceCount int
+	for _, v := range iceScores {
 		if v != nil {
-			nonNilCount++
+			iceCount++
 		}
 	}
 
 	result := store.AnalysisResult{
 		ID:         analysisID,
-		Type:       "composite_index",
+		Type:       "validated_features",
 		ScopeGEOID: scopeGEOID,
 		ScopeLevel: scopeLevel,
 		Parameters: map[string]interface{}{
-			"method":     "equal_percentile",
-			"variables":  compositeVariables,
-			"vintage":    cfg.Vintage,
-			"tract_count": nTracts,
+			"features": []string{"ice_income_race"},
+			"vintage":  cfg.Vintage,
 		},
 		Results: map[string]interface{}{
-			"scored_tracts": nonNilCount,
-			"total_tracts":  nTracts,
+			"ice_scored_tracts": iceCount,
+			"total_tracts":     nTracts,
 		},
 		Vintage: cfg.Vintage,
 	}
@@ -155,17 +160,18 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		return fmt.Errorf("analyze: PutAnalysis: %w", err)
 	}
 
-	// 7. Build and persist per-tract scores.
+	// 6. Persist per-tract ICE scores as analysis scores.
+	// The Score field carries ICE, Tier is empty (no arbitrary cutoffs).
 	analysisScores := make([]store.AnalysisScore, 0, nTracts)
+	iceRanks := stats.PercentileRank(iceScores)
 	for i, geoid := range tractGEOIDs {
-		sc := scores[i]
-		tier := tiers[i]
-
 		scoreVal := 0.0
-		pctVal := -1.0 // sentinel for nil scores; 0.0 is a valid percentile
-		if sc != nil {
-			scoreVal = *sc
-			pctVal = scoreVal
+		pctVal := 0.0
+		if iceScores[i] != nil {
+			scoreVal = *iceScores[i]
+		}
+		if iceRanks[i] != nil {
+			pctVal = *iceRanks[i] * 100
 		}
 
 		analysisScores = append(analysisScores, store.AnalysisScore{
@@ -174,14 +180,14 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 			Score:      scoreVal,
 			Rank:       i + 1,
 			Percentile: pctVal,
-			Tier:       tier,
+			Tier:       "", // No arbitrary tiers — use factor profiles instead
 			Details: map[string]interface{}{
-				"method": "equal_percentile",
+				"feature": "ice_income_race",
 			},
 		})
 	}
 
-	// Re-sort by score descending to assign meaningful ranks.
+	// Sort by ICE score descending for meaningful ranks.
 	sort.Slice(analysisScores, func(i, j int) bool {
 		return analysisScores[i].Score > analysisScores[j].Score
 	})
@@ -193,7 +199,7 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		return fmt.Errorf("analyze: PutAnalysisScores: %w", err)
 	}
 
-	log.Printf("analyze: composite index complete — %d/%d tracts scored, analysis ID %q",
-		nonNilCount, nTracts, dbID)
+	log.Printf("analyze: validated features complete — %d/%d tracts with ICE scores, analysis ID %q",
+		iceCount, nTracts, dbID)
 	return nil
 }

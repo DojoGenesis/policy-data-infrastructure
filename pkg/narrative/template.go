@@ -15,8 +15,8 @@ var FuncMap = template.FuncMap{
 	"formatRate":     formatRate,
 	"formatInt":      formatInt,
 	"severity":       severityClass,
-	"tierColor":      tierColor,
-	"tierLabel":      tierLabel,
+	"tierColor":      tierColor,     // Deprecated: use factorColor
+	"tierLabel":      tierLabel,     // Deprecated: use factorLabel
 	"hasData":        hasData,
 	"upper":          strings.ToUpper,
 	"lower":          strings.ToLower,
@@ -24,6 +24,12 @@ var FuncMap = template.FuncMap{
 	"add":            func(a, b int) int { return a + b },
 	"sub":            func(a, b int) int { return a - b },
 	"safeHTML":       func(s string) template.HTML { return template.HTML(s) }, //nolint:gosec
+	// Factor-based helpers (replace tier-based)
+	"factorLabel":         factorLabel,
+	"factorColor":         factorColor,
+	"factorSeverityClass": factorSeverityClass,
+	"derefFloat":          derefFloat,
+	"formatOrdinalFloat":  formatOrdinalFloat,
 }
 
 // formatCurrency renders a *float64 as a US dollar amount, e.g. "$52,000".
@@ -174,4 +180,59 @@ func ordinal(n int) string {
 		}
 	}
 	return fmt.Sprintf("%d%s", n, suffix)
+}
+
+// ─── Factor-based helpers ─────────────────────────────────────────────────────
+
+// factorLabel converts a snake_case factor name to a display label.
+// e.g. "economic_distress" → "Economic Distress"
+func factorLabel(name string) string {
+	parts := strings.Split(name, "_")
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = strings.ToUpper(p[:1]) + p[1:]
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+// factorColor maps a factor percentile to a CSS color variable.
+func factorColor(_ string, percentile float64) template.CSS {
+	switch {
+	case percentile >= 80:
+		return "var(--red)"
+	case percentile >= 60:
+		return "var(--amber)"
+	case percentile >= 40:
+		return "var(--teal)"
+	default:
+		return "var(--green)"
+	}
+}
+
+// factorSeverityClass maps a factor percentile to a CSS severity class.
+func factorSeverityClass(percentile float64) string {
+	switch {
+	case percentile >= 80:
+		return "critical"
+	case percentile >= 60:
+		return "warning"
+	case percentile >= 40:
+		return "neutral"
+	default:
+		return "positive"
+	}
+}
+
+// derefFloat safely dereferences a *float64 for template use. Returns 0 if nil.
+func derefFloat(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+// formatOrdinalFloat formats a float64 percentile as an ordinal string.
+func formatOrdinalFloat(v float64) string {
+	return ordinal(int(math.Round(v)))
 }

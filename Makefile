@@ -1,10 +1,10 @@
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-PKG         := github.com/DojoGenesis/policy-data-infrastructure/cmd/pdi
+PKG         := github.com/DojoGenesis/policy-data-infrastructure/internal/version
 LDFLAGS     := -X '$(PKG).Version=$(VERSION)' \
                -X '$(PKG).Commit=$(COMMIT)' \
-               -X '$(PKG).BuildTime=$(BUILD_TIME)'
+               -X '$(PKG).Date=$(BUILD_TIME)'
 
 BIN         := bin/pdi
 

@@ -23,6 +23,13 @@ type GeographyProfile struct {
 	GEOID          string
 	Name           string
 	Level          string
+	// Factor-based profile (replaces NARI composite)
+	FactorScores      map[string]float64 // factor_name → score
+	FactorPercentiles map[string]float64 // factor_name → percentile [0,100]
+	ICE               *float64           // Index of Concentration at the Extremes
+	Reliability       string             // "high", "moderate", "low"
+
+	// Deprecated: NARI fields kept for backward compatibility during migration
 	NARIScore      *float64
 	NARIPercentile *float64
 	NARITier       string

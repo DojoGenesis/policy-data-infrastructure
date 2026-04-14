@@ -264,8 +264,8 @@ func (sy *SynthesizeStage) runCorrelations(
 ) error {
 	// Build column vectors for all composite variables.
 	nTracts := len(tractGEOIDs)
-	cols := make(map[string][]*float64, len(compositeVariables))
-	for _, varID := range compositeVariables {
+	cols := make(map[string][]*float64, len(correlationVariables))
+	for _, varID := range correlationVariables {
 		col := make([]*float64, nTracts)
 		for i, geoid := range tractGEOIDs {
 			col[i] = idx[synthKey{geoid, varID}]
@@ -279,15 +279,15 @@ func (sy *SynthesizeStage) runCorrelations(
 		R    float64
 	}
 	var corrs []corrEntry
-	for i, a := range compositeVariables {
-		for _, b := range compositeVariables[i+1:] {
+	for i, a := range correlationVariables {
+		for _, b := range correlationVariables[i+1:] {
 			r := stats.PearsonR(cols[a], cols[b])
 			corrs = append(corrs, corrEntry{a, b, r})
 		}
 	}
 
 	// Serialize correlation matrix as map of maps.
-	matrix := make(map[string]interface{}, len(compositeVariables))
+	matrix := make(map[string]interface{}, len(correlationVariables))
 	for _, c := range corrs {
 		row, ok := matrix[c.A].(map[string]interface{})
 		if !ok {
@@ -304,7 +304,7 @@ func (sy *SynthesizeStage) runCorrelations(
 		ScopeGEOID: scopeGEOID,
 		ScopeLevel: scopeLevelStr(cfg),
 		Parameters: map[string]interface{}{
-			"variables": compositeVariables,
+			"variables": correlationVariables,
 			"vintage":   cfg.Vintage,
 			"n_tracts":  nTracts,
 		},
