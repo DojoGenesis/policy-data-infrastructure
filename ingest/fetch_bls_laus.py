@@ -48,7 +48,7 @@ WI_STATE_FIPS = "55"
 # BLS API limits
 # Unregistered users: 25 series per request (not 50 — BLS truncates silently)
 BATCH_SIZE_UNREGISTERED = 25
-BATCH_SIZE_REGISTERED = 500
+BATCH_SIZE_REGISTERED = 50
 RATE_LIMIT_DELAY = 1.2  # seconds between requests
 
 # Measure codes
@@ -146,7 +146,7 @@ WI_COUNTIES: list[tuple[str, str]] = [
 
 def _series_id(county_fips: str, measure: str) -> str:
     """Build a BLS LAUS series ID for a Wisconsin county."""
-    return f"LAUCN{WI_STATE_FIPS}{county_fips}0000000{measure}"
+    return f"LAUCN{WI_STATE_FIPS}{county_fips}00000000{measure}"
 
 
 def _batch_size() -> int:
