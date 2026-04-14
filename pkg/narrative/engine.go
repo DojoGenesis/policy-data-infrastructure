@@ -14,6 +14,76 @@ import (
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
 
+// ─── Policy & severity thresholds ─────────────────────────────────────────────
+//
+// Keep all numeric parameters here so they are visible, citable, and easy to
+// update when the underlying data vintage changes.
+
+const (
+	// evictionPolicyThreshold is the eviction filing rate above which Eviction
+	// Diversion is recommended. Set at the national average filing rate per the
+	// Princeton Eviction Lab (2018 data, most recent published national figure).
+	evictionPolicyThreshold = 3.0
+
+	// transitScorePolicyThreshold is the Walk Score transit index below which
+	// Transit Frequency Investment is recommended. A score < 30 indicates
+	// "minimal transit" per Walk Score's published methodology.
+	transitScorePolicyThreshold = 30.0
+
+	// chronicAbsencePolicyThreshold is the chronic absenteeism rate above which
+	// School-Based Wraparound Services are recommended. 25% is the federal
+	// threshold distinguishing "widespread chronic absence" per the U.S.
+	// Department of Education's Every Student Succeeds Act reporting guidance.
+	chronicAbsencePolicyThreshold = 25.0
+
+	// uninsuredPolicyThreshold is the uninsured rate above which targeted
+	// Medicaid outreach is recommended. 15% exceeds the pre-ACA national average
+	// and is used as the trigger for enrollment campaigns in Urban Institute
+	// impact analyses (2021).
+	uninsuredPolicyThreshold = 15.0
+
+	// absenceCriticalThreshold marks chronic absence rates that are "critical"
+	// (at or above 30%). The U.S. Dept. of Education flags ≥30% as the severe
+	// tier in ESSA state report cards.
+	absenceCriticalThreshold = 30.0
+
+	// absenceWarningThreshold marks chronic absence rates in the warning band
+	// (20–30%). This is the "high" tier in ESSA reporting guidance.
+	absenceWarningThreshold = 20.0
+
+	// absenceNeutralThreshold marks the lower bound of the neutral band
+	// (10–20%). Below 10% is considered on-track nationally.
+	absenceNeutralThreshold = 10.0
+
+	// incomeCriticalThreshold is the median household income below which a
+	// tract is classified "critical." $35,000 approximates 60% of the 2023
+	// U.S. median household income ($74,580, U.S. Census ACS 2023 1-year).
+	incomeCriticalThreshold = 35000.0
+
+	// incomeWarningThreshold is the income below which a tract is classified
+	// "warning." $50,000 ≈ 67% of the 2023 U.S. median household income.
+	incomeWarningThreshold = 50000.0
+
+	// incomeNeutralThreshold is the income below which a tract is classified
+	// "neutral." $75,000 ≈ the U.S. median household income (ACS 2023).
+	incomeNeutralThreshold = 75000.0
+
+	// evictionCriticalThreshold is the eviction filing rate above which a
+	// tract is classified "critical" (more than double the national average).
+	// Derived from Princeton Eviction Lab national mean of ~2.5 per 100 (2018).
+	evictionCriticalThreshold = 5.0
+
+	// evictionWarningThreshold is the eviction filing rate above which a tract
+	// is classified "warning" — at or above the national average filing rate
+	// (Princeton Eviction Lab, 2018).
+	evictionWarningThreshold = 3.0
+
+	// evictionNeutralThreshold is the eviction filing rate above which a tract
+	// is classified "neutral." Rates below this threshold are below the national
+	// median and are classified "positive."
+	evictionNeutralThreshold = 1.5
+)
+
 //go:embed templates/*.tmpl
 var embeddedTemplates embed.FS
 
@@ -287,7 +357,7 @@ func buildScopeStats(profiles []GeographyProfile) []StatCallout {
 func buildPolicyLevers(p GeographyProfile) []PolicyLever {
 	var levers []PolicyLever
 
-	if p.EvictionRate != nil && *p.EvictionRate > 3.0 {
+	if p.EvictionRate != nil && *p.EvictionRate > evictionPolicyThreshold {
 		levers = append(levers, PolicyLever{
 			Title:       "Eviction Diversion Program",
 			Description: "Expand eviction diversion and legal counsel to all high-risk tracts. Evidence shows eviction effects on school attendance persist for two years after the filing.",
@@ -296,7 +366,7 @@ func buildPolicyLevers(p GeographyProfile) []PolicyLever {
 			Category:    "housing",
 		})
 	}
-	if p.TransitScore != nil && *p.TransitScore < 30 {
+	if p.TransitScore != nil && *p.TransitScore < transitScorePolicyThreshold {
 		levers = append(levers, PolicyLever{
 			Title:       "Transit Frequency Investment",
 			Description: "Increase AM-peak bus frequency to 15-minute headways in transit-poor tracts. Free student transit passes address cost; frequency addresses availability.",
@@ -305,7 +375,7 @@ func buildPolicyLevers(p GeographyProfile) []PolicyLever {
 			Category:    "transit",
 		})
 	}
-	if p.ChronicAbsence != nil && *p.ChronicAbsence > 25 {
+	if p.ChronicAbsence != nil && *p.ChronicAbsence > chronicAbsencePolicyThreshold {
 		levers = append(levers, PolicyLever{
 			Title:       "School-Based Wraparound Services",
 			Description: "Co-locate childcare, health, and social services inside school buildings serving high-absence neighborhoods.",
@@ -314,7 +384,7 @@ func buildPolicyLevers(p GeographyProfile) []PolicyLever {
 			Category:    "education",
 		})
 	}
-	if p.UninsuredRate != nil && *p.UninsuredRate > 15 {
+	if p.UninsuredRate != nil && *p.UninsuredRate > uninsuredPolicyThreshold {
 		levers = append(levers, PolicyLever{
 			Title:       "Medicaid Outreach & Enrollment",
 			Description: "Targeted Medicaid and CHIP enrollment campaigns in tracts with high uninsured rates reduce health-related absences.",
@@ -347,11 +417,11 @@ func buildNarrative(i int, p GeographyProfile) string {
 
 func absenceSeverity(v float64) string {
 	switch {
-	case v >= 30:
+	case v >= absenceCriticalThreshold:
 		return "critical"
-	case v >= 20:
+	case v >= absenceWarningThreshold:
 		return "warning"
-	case v >= 10:
+	case v >= absenceNeutralThreshold:
 		return "neutral"
 	default:
 		return "positive"
@@ -360,11 +430,11 @@ func absenceSeverity(v float64) string {
 
 func incomeSeverity(v float64) string {
 	switch {
-	case v < 35000:
+	case v < incomeCriticalThreshold:
 		return "critical"
-	case v < 50000:
+	case v < incomeWarningThreshold:
 		return "warning"
-	case v < 75000:
+	case v < incomeNeutralThreshold:
 		return "neutral"
 	default:
 		return "positive"
@@ -373,11 +443,11 @@ func incomeSeverity(v float64) string {
 
 func evictionSeverity(v float64) string {
 	switch {
-	case v > 5:
+	case v > evictionCriticalThreshold:
 		return "critical"
-	case v > 3:
+	case v > evictionWarningThreshold:
 		return "warning"
-	case v > 1.5:
+	case v > evictionNeutralThreshold:
 		return "neutral"
 	default:
 		return "positive"

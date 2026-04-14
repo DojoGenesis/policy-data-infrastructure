@@ -502,6 +502,267 @@ func TestDefaultTitle(t *testing.T) {
 	}
 }
 
+// ─── Table-driven Generate tests ─────────────────────────────────────────────
+
+func TestGenerateTableDriven(t *testing.T) {
+	type tc struct {
+		name        string
+		req         GenerateRequest
+		wantChapMin int    // at least this many chapters expected
+		wantTitle   string // substring that must appear in doc.Title
+	}
+
+	cases := []tc{
+		{
+			name: "minimal — only required fields, no extra indicators",
+			req: GenerateRequest{
+				// Template and Selection intentionally omitted to exercise defaults.
+				ScopeGEOID:   "55025",
+				ScopeName:    "Dane County, WI",
+				AnalysisID:   "test-analysis",
+				ChapterCount: 1,
+			},
+			wantChapMin: 1,
+			wantTitle:   "Dane County",
+		},
+		{
+			name: "full — all optional fields populated",
+			req: GenerateRequest{
+				Template:     "equity_profile",
+				ScopeGEOID:   "55025",
+				ScopeName:    "Dane County, WI",
+				AnalysisID:   "test-analysis",
+				ChapterCount: 3,
+				Selection:    "by_tier",
+				Methodology:  "NARI composite using equal-weight percentile method.",
+				DataSources:  []string{"US Census ACS 2023", "Princeton Eviction Lab"},
+			},
+			wantChapMin: 1,
+			wantTitle:   "Equity Profile",
+		},
+		{
+			name: "all-nil indicator values — graceful handling, no panic",
+			req: GenerateRequest{
+				Template:     "five_mornings",
+				ScopeGEOID:   "55025",
+				ScopeName:    "Null County, WI",
+				AnalysisID:   "test-analysis",
+				ChapterCount: 1,
+				Selection:    "by_tier",
+			},
+			wantChapMin: 1,
+			wantTitle:   "Null County",
+		},
+	}
+
+	// For the all-nil case, stand up a store whose indicators are all nil-valued.
+	nullStore := newMockStore()
+	for i := range nullStore.indicators {
+		nullStore.indicators[i].Value = nil
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ms := newMockStore()
+			if tc.name == "all-nil indicator values — graceful handling, no panic" {
+				ms = nullStore
+			}
+
+			eng := NewEngine(ms)
+			if err := eng.LoadEmbeddedTemplates(); err != nil {
+				t.Fatalf("LoadEmbeddedTemplates: %v", err)
+			}
+
+			doc, err := eng.Generate(context.Background(), tc.req)
+			if err != nil {
+				t.Fatalf("Generate: %v", err)
+			}
+			if doc == nil {
+				t.Fatal("Generate returned nil Document")
+			}
+			if !strings.Contains(doc.Title, tc.wantTitle) {
+				t.Errorf("doc.Title = %q, want substring %q", doc.Title, tc.wantTitle)
+			}
+			if len(doc.Chapters) < tc.wantChapMin {
+				t.Errorf("got %d chapters, want at least %d", len(doc.Chapters), tc.wantChapMin)
+			}
+			if doc.GeneratedAt.IsZero() {
+				t.Error("doc.GeneratedAt should not be zero")
+			}
+			// Chapter numbers must be sequential starting at 1.
+			for i, ch := range doc.Chapters {
+				if ch.Number != i+1 {
+					t.Errorf("chapter index %d: Number = %d, want %d", i, ch.Number, i+1)
+				}
+			}
+		})
+	}
+}
+
+// ─── buildPolicyLevers focused tests ─────────────────────────────────────────
+
+func TestBuildPolicyLevers_NoLeversWhenAllNil(t *testing.T) {
+	p := GeographyProfile{} // all indicator pointers nil
+	levers := buildPolicyLevers(p)
+	if len(levers) != 0 {
+		t.Errorf("expected 0 levers for profile with all-nil indicators, got %d", len(levers))
+	}
+}
+
+func TestBuildPolicyLevers_EvictionTrigger(t *testing.T) {
+	// Rate just above threshold → eviction lever present.
+	above := evictionPolicyThreshold + 0.1
+	p := GeographyProfile{EvictionRate: &above}
+	levers := buildPolicyLevers(p)
+	if !containsCategory(levers, "housing") {
+		t.Errorf("expected housing lever for eviction rate %.1f, got %v", above, leverCategories(levers))
+	}
+
+	// Rate at or below threshold → no eviction lever.
+	at := evictionPolicyThreshold
+	p2 := GeographyProfile{EvictionRate: &at}
+	levers2 := buildPolicyLevers(p2)
+	if containsCategory(levers2, "housing") {
+		t.Errorf("expected no housing lever for eviction rate %.1f (at threshold), got one", at)
+	}
+}
+
+func TestBuildPolicyLevers_TransitTrigger(t *testing.T) {
+	// Score just below threshold → transit lever present.
+	below := transitScorePolicyThreshold - 1
+	p := GeographyProfile{TransitScore: &below}
+	levers := buildPolicyLevers(p)
+	if !containsCategory(levers, "transit") {
+		t.Errorf("expected transit lever for transit score %.1f, got %v", below, leverCategories(levers))
+	}
+
+	// Score at threshold → no transit lever.
+	at := transitScorePolicyThreshold
+	p2 := GeographyProfile{TransitScore: &at}
+	levers2 := buildPolicyLevers(p2)
+	if containsCategory(levers2, "transit") {
+		t.Errorf("expected no transit lever for transit score %.1f (at threshold), got one", at)
+	}
+}
+
+func TestBuildPolicyLevers_ChronicAbsenceTrigger(t *testing.T) {
+	above := chronicAbsencePolicyThreshold + 0.1
+	p := GeographyProfile{ChronicAbsence: &above}
+	levers := buildPolicyLevers(p)
+	if !containsCategory(levers, "education") {
+		t.Errorf("expected education lever for absence rate %.1f, got %v", above, leverCategories(levers))
+	}
+}
+
+func TestBuildPolicyLevers_UninsuredTrigger(t *testing.T) {
+	above := uninsuredPolicyThreshold + 0.1
+	p := GeographyProfile{UninsuredRate: &above}
+	levers := buildPolicyLevers(p)
+	if !containsCategory(levers, "health") {
+		t.Errorf("expected health lever for uninsured rate %.1f, got %v", above, leverCategories(levers))
+	}
+}
+
+func TestBuildPolicyLevers_AllLevers(t *testing.T) {
+	evict := evictionPolicyThreshold + 1
+	transit := transitScorePolicyThreshold - 5
+	absence := chronicAbsencePolicyThreshold + 1
+	uninsured := uninsuredPolicyThreshold + 1
+	p := GeographyProfile{
+		EvictionRate:  &evict,
+		TransitScore:  &transit,
+		ChronicAbsence: &absence,
+		UninsuredRate: &uninsured,
+	}
+	levers := buildPolicyLevers(p)
+	if len(levers) != 4 {
+		t.Errorf("expected 4 levers when all thresholds exceeded, got %d", len(levers))
+	}
+}
+
+// ─── Severity helper focused tests ───────────────────────────────────────────
+
+func TestAbsenceSeverity(t *testing.T) {
+	cases := []struct {
+		v    float64
+		want string
+	}{
+		{absenceCriticalThreshold, "critical"},
+		{absenceCriticalThreshold + 1, "critical"},
+		{absenceWarningThreshold, "warning"},
+		{absenceWarningThreshold + 1, "warning"},
+		{absenceNeutralThreshold, "neutral"},
+		{absenceNeutralThreshold + 1, "neutral"},
+		{absenceNeutralThreshold - 0.1, "positive"},
+		{0, "positive"},
+	}
+	for _, tc := range cases {
+		got := absenceSeverity(tc.v)
+		if got != tc.want {
+			t.Errorf("absenceSeverity(%.1f) = %q, want %q", tc.v, got, tc.want)
+		}
+	}
+}
+
+func TestIncomeSeverity(t *testing.T) {
+	cases := []struct {
+		v    float64
+		want string
+	}{
+		{incomeCriticalThreshold - 1, "critical"},
+		{incomeCriticalThreshold, "warning"}, // not < critical threshold
+		{incomeWarningThreshold - 1, "warning"},
+		{incomeWarningThreshold, "neutral"},
+		{incomeNeutralThreshold - 1, "neutral"},
+		{incomeNeutralThreshold, "positive"},
+		{incomeNeutralThreshold + 10000, "positive"},
+	}
+	for _, tc := range cases {
+		got := incomeSeverity(tc.v)
+		if got != tc.want {
+			t.Errorf("incomeSeverity(%.0f) = %q, want %q", tc.v, got, tc.want)
+		}
+	}
+}
+
+func TestEvictionSeverity(t *testing.T) {
+	cases := []struct {
+		v    float64
+		want string
+	}{
+		{evictionCriticalThreshold + 0.1, "critical"},
+		{evictionCriticalThreshold, "warning"}, // not > critical threshold
+		{evictionWarningThreshold + 0.1, "warning"},
+		{evictionWarningThreshold, "neutral"}, // not > warning threshold
+		{evictionNeutralThreshold + 0.1, "neutral"},
+		{evictionNeutralThreshold, "positive"}, // not > neutral threshold
+		{0, "positive"},
+	}
+	for _, tc := range cases {
+		got := evictionSeverity(tc.v)
+		if got != tc.want {
+			t.Errorf("evictionSeverity(%.1f) = %q, want %q", tc.v, got, tc.want)
+		}
+	}
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func ptr(v float64) *float64 { return &v }
+
+func containsCategory(levers []PolicyLever, cat string) bool {
+	for _, l := range levers {
+		if l.Category == cat {
+			return true
+		}
+	}
+	return false
+}
+
+func leverCategories(levers []PolicyLever) []string {
+	cats := make([]string, len(levers))
+	for i, l := range levers {
+		cats[i] = l.Category
+	}
+	return cats
+}
