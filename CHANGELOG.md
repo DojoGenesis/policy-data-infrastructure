@@ -5,6 +5,13 @@
 
 ## 2026-04-14
 
+### Narrative Chain Fix
+- Fixed 4 NARI→ICE rendering bugs blocking document generation — `d732c2b`
+  - `selector.go`: now populates `p.ICE` field (was only setting deprecated NARI fields)
+  - `engine.go`: "NARI Percentile" → "Equity Index Percentile", prose references ICE
+  - 3 templates (`five_mornings`, `equity_profile`, `comparison_brief`): all user-facing NARI text replaced
+  - Root cause: statistical refactor replaced NARI with ICE in pipeline but never updated narrative layer
+
 ### Health Audit & Infrastructure
 - First comprehensive health audit completed — overall grade B-
 - Rescued 6 research files from stale `policy-data-infrastructure/` clone
