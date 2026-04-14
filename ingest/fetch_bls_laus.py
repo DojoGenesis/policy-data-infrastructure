@@ -174,11 +174,16 @@ def print_plan(args: argparse.Namespace) -> None:
 
 
 def _post_bls(series_ids: list[str], year: int) -> dict:
-    # NOTE: BLS v2 batch API silently drops all data entries when
-    # startyear/endyear + annualaverage are combined without a registration key.
-    # Workaround: fetch without year restriction, then filter client-side.
+    # Include startyear/endyear so the API returns data for the target year.
+    # Without year range the default window is ~3 most-recent years and may
+    # exclude historical years (e.g. 2023 was not in the 2025 default window).
+    # Do NOT include annualaverage=true — the BLS API silently drops all data
+    # entries when that flag is combined with year range without a registration
+    # key. We compute the annual average client-side from M01-M12 instead.
     payload = json.dumps({
-        "seriesid": series_ids,
+        "seriesid":  series_ids,
+        "startyear": str(year),
+        "endyear":   str(year),
         **({"registrationkey": BLS_API_KEY} if BLS_API_KEY else {}),
     }).encode("utf-8")
 
