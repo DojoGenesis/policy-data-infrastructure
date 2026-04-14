@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Policy Data Infrastructure — Project Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap');
+
+  :root {
+    --navy: #1a2744;
+    --navy-light: #243456;
+    --cream: #faf8f4;
+    --warm-white: #fffefa;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --green: #15803d;
+    --green-light: #f0fdf4;
+    --teal: #0e7490;
+    --teal-light: #ecfeff;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --serif: 'Merriweather', Georgia, 'Times New Roman', serif;
+    --sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--cream);
+  }
+
+  /* ─── COVER ─── */
+  .cover {
+    min-height: 100vh;
+    background: var(--navy);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 30% 60%, rgba(217,119,6,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(14,116,144,0.06) 0%, transparent 50%);
+  }
+  .cover > * { position: relative; z-index: 1; }
+  .cover-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 700;
+    line-height: 1.15;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+  .cover .subtitle {
+    font-size: clamp(16px, 2.2vw, 20px);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 640px;
+    opacity: 0.85;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    font-family: var(--sans);
+    font-size: 14px;
+    opacity: 0.5;
+  }
+  .cover-scroll {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.4;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .section + .section { border-top: 1px solid var(--border); }
+  .section-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 12px;
+  }
+  .section h2 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--navy);
+    margin-bottom: 20px;
+  }
+  .section p {
+    margin-bottom: 18px;
+  }
+  .section p.lead {
+    font-size: 19px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* ─── PIPELINE DIAGRAM ─── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 32px 0;
+  }
+  .stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    position: relative;
+    padding: 20px 0;
+  }
+  .stage::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 44px;
+    bottom: -4px;
+    width: 2px;
+    background: var(--border);
+  }
+  .stage:last-child::before { display: none; }
+  .stage-num {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    position: relative;
+    z-index: 1;
+  }
+  .stage-num.s1 { background: var(--teal); }
+  .stage-num.s2 { background: #6366f1; }
+  .stage-num.s3 { background: var(--amber); }
+  .stage-num.s4 { background: var(--green); }
+  .stage-num.s5 { background: var(--red); }
+  .stage-content { flex: 1; }
+  .stage-content h3 {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .stage-content p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+  }
+  .stage-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .tag {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--slate-light);
+    color: var(--slate);
+  }
+
+  /* ─── STAT GRID ─── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+  }
+  .stat-card .big {
+    font-family: var(--sans);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+  }
+  .stat-card .label {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+  }
+
+  /* ─── CALLOUT BOX ─── */
+  .callout {
+    background: var(--amber-light);
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--amber);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .callout.teal {
+    background: var(--teal-light);
+    border-color: #a5f3fc;
+    border-left-color: var(--teal);
+  }
+  .callout.red {
+    background: var(--red-light);
+    border-color: #fecaca;
+    border-left-color: var(--red);
+  }
+  .callout-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .callout.teal .callout-label { color: #0e7490; }
+  .callout.red .callout-label { color: var(--red); }
+  .callout p {
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 8px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ─── COMPARISON TABLE ─── */
+  .comparison {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--sans);
+    font-size: 13px;
+    margin: 28px 0;
+  }
+  .comparison th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 700;
+    color: var(--navy);
+    border-bottom: 2px solid var(--border);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .comparison td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+  .comparison tr:last-child td { border-bottom: none; }
+  .badge-yes { color: var(--green); font-weight: 700; }
+  .badge-no { color: var(--text-secondary); }
+  .badge-partial { color: var(--amber); font-weight: 600; }
+
+  /* ─── LAYER DIAGRAM ─── */
+  .layers {
+    margin: 32px 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .layer {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 14px;
+    gap: 12px;
+  }
+  .layer:last-child { border-bottom: none; }
+  .layer-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .layer-name { font-weight: 700; color: var(--navy); flex-shrink: 0; width: 160px; }
+  .layer-desc { color: var(--text-secondary); flex: 1; }
+  .l1 .layer-num { background: var(--teal); }
+  .l2 .layer-num { background: #6366f1; }
+  .l3 .layer-num { background: var(--amber); }
+  .l4 .layer-num { background: var(--green); }
+  .l5 .layer-num { background: var(--slate); }
+
+  /* ─── METHOD CARDS ─── */
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 28px 0;
+  }
+  .method-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .method-card h4 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .method-card p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .method-card .interpret {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .interpret.high { background: var(--green-light); color: var(--green); }
+  .interpret.med { background: var(--amber-light); color: #92400e; }
+
+  /* ─── METHODOLOGY ─── */
+  .methodology {
+    background: var(--navy);
+    color: white;
+    padding: 60px 24px;
+  }
+  .methodology-inner {
+    max-width: 740px;
+    margin: 0 auto;
+  }
+  .methodology h2 {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 20px;
+  }
+  .methodology p {
+    font-size: 16px;
+    line-height: 1.8;
+    opacity: 0.85;
+    margin-bottom: 14px;
+  }
+  .methodology ul {
+    list-style: none;
+    padding: 0;
+    font-family: var(--sans);
+    font-size: 14px;
+    opacity: 0.75;
+    line-height: 1.8;
+  }
+  .methodology li {
+    padding: 4px 0 4px 20px;
+    position: relative;
+  }
+  .methodology li::before {
+    content: '\2192';
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* ─── NAV ─── */
+  .toc {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 40px 24px 20px;
+    font-family: var(--sans);
+  }
+  .toc-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .toc a {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--teal); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .cover h1 { font-size: 28px; }
+    .section h2 { font-size: 22px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .method-grid { grid-template-columns: 1fr; }
+    .layer { flex-direction: column; align-items: flex-start; }
+    .layer-name { width: auto; }
+  }
+
+  @media print {
+    .cover { min-height: auto; padding: 40px 24px; page-break-after: always; }
+    .section { page-break-inside: avoid; }
+    .callout { break-inside: avoid; }
+    body { font-size: 11pt; }
+    .cover-scroll { display: none; }
+    @page { margin: 0.75in; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- COVER                                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="cover">
+  <div class="cover-label"><a href="index.html" style="color: rgba(255,255,255,0.5); text-decoration: none;">policydatainfrastructure.com</a> &middot; Project Report &middot; April 2026</div>
+  <h1>Policy Data Infrastructure</h1>
+  <p class="subtitle">An open-source pipeline from raw public data to policy-ready deliverables. National scale. Tract-level precision. Raw data first.</p>
+  <div class="cover-meta">
+    DojoGenesis/policy-data-infrastructure &middot; Apache-2.0 &middot; Cruz Morales
+  </div>
+  <div class="cover-scroll">Scroll</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<nav class="toc">
+  <div class="toc-label">Contents</div>
+  <a href="#origin">01 &mdash; Where This Comes From</a>
+  <a href="#pipeline">02 &mdash; The Five-Stage Pipeline</a>
+  <a href="#whats-live">03 &mdash; What&rsquo;s Already Working</a>
+  <a href="#refactor">04 &mdash; What Was Refactored</a>
+  <a href="#new-architecture">05 &mdash; The New Statistical Architecture</a>
+  <a href="#methods">06 &mdash; Methods That Replace Composites</a>
+  <a href="#landscape">07 &mdash; Where PDI Fits in the Landscape</a>
+  <a href="#vision">08 &mdash; The Purpose Behind This Work</a>
+  <a href="#progress">09 &mdash; What&rsquo;s Happened Since</a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 01 — ORIGIN                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="origin">
+  <div class="section-label">01 &mdash; Origin</div>
+  <h2>Where This Comes From</h2>
+  <p class="lead"><strong>Policy Data Infrastructure</strong> is an open-source data pipeline that operates at national scale and at the county, tract, block group, and ward level from day one.</p>
+  <p>The foundation is the Madison Equity Atlas&mdash;a 22-layer GIS platform analyzing 125 census tracts in Dane County, Wisconsin. The Atlas produced the statistical methodology, the Python data acquisition core, and the evidence-card framework that generated 70 policy analyses across all 72 Wisconsin counties. PDI builds a Go orchestration layer over that core&mdash;a compiled pipeline engine that runs the same analyses faster, at any geographic scope, with a proper API and narrative generation built in.</p>
+  <p>The Atlas proved what data infrastructure can do. <em>Five Mornings in Madison</em>&mdash;five households, five alarm clocks, the same city&mdash;proved that when the data is structured right, it produces stories that move people. The Partnership Proposal proved it can build coalitions. The Field Guide proved it can brief decision-makers. PDI generalizes all of this to any county in the country.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 02 — PIPELINE                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="pipeline">
+  <div class="section-label">02 &mdash; Pipeline</div>
+  <h2>The Five-Stage Pipeline</h2>
+  <p>Data moves from public sources to policy-ready deliverables through five stages. Each stage has a clear input contract and output format. The pipeline is a DAG&mdash;stages run in concurrent waves, bounded by parallelism settings.</p>
+
+  <div class="pipeline">
+    <div class="stage">
+      <div class="stage-num s1">1</div>
+      <div class="stage-content">
+        <h3>Source Acquisition</h3>
+        <p>External data pulled from public APIs into raw storage. The system knows 12 upstream sources, their rate limits, their geographic resolutions, and their update schedules.</p>
+        <div class="stage-tags">
+          <span class="tag">Census ACS</span>
+          <span class="tag">TIGER/Line</span>
+          <span class="tag">CDC PLACES</span>
+          <span class="tag">EPA EJScreen</span>
+          <span class="tag">BLS LAUS</span>
+          <span class="tag">USDA Food</span>
+          <span class="tag">HUD CHAS</span>
+          <span class="tag">HRSA HPSA</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num s2">2</div>
+      <div class="stage-content">
+        <h3>Processing &amp; Normalization</h3>
+        <p>Raw data cleaned, filtered to the target geography, joined to tract-level geometry via PostGIS, and output as standardized indicator records. Every value carries its GEOID, source metadata, and vintage year. Missing data is null, never a sentinel value&mdash;because a zero and an absence are two different truths.</p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num s3">3</div>
+      <div class="stage-content">
+        <h3>Analytical Computation</h3>
+        <p>The statistical engine reads processed indicators and computes derived metrics: z-score normalization, OLS regression, Blinder-Oaxaca decomposition, bootstrap confidence intervals, and piecewise tipping-point detection. The same methodology that produced the Atlas findings&mdash;now generalized to any county in the country.</p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num s4">4</div>
+      <div class="stage-content">
+        <h3>Visualization</h3>
+        <p>Single-file HTML applications consume the processed data. Leaflet for choropleth maps, Alpine.js for interactivity, Chart.js for statistical displays&mdash;all self-contained, no server required.</p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-num s5">5</div>
+      <div class="stage-content">
+        <h3>Communication Layer</h3>
+        <p>This is where the pipeline produces value. Research outputs, grant proposals, partnership materials, and narrative documents that reference real findings. A narrative engine with Go templates that can generate policy deliverables for any county in America, grounded in that county&rsquo;s actual tract-level data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 03 — WHAT'S LIVE                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="whats-live">
+  <div class="section-label">03 &mdash; Current State</div>
+  <h2>What&rsquo;s Already Working</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="big">70</div>
+      <div class="label">Evidence cards across 18 policy categories</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">1,542</div>
+      <div class="label">Census tracts with ICE scores</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">72</div>
+      <div class="label">Wisconsin counties analyzed</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">2</div>
+      <div class="label">SDOH factors discovered (66.5% variance)</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">48</div>
+      <div class="label">Go source files, 20 test files</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">9</div>
+      <div class="label">Python ingest scripts</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">12</div>
+      <div class="label">REST API endpoints + SSE</div>
+    </div>
+    <div class="stat-card">
+      <div class="big">30</div>
+      <div class="label">Peer-reviewed sources in research base</div>
+    </div>
+  </div>
+
+  <p>The VPS is running at <strong>pdi.trespies.dev</strong> with PostgreSQL + PostGIS. The project website is live at <strong><a href="https://policydatainfrastructure.com">policydatainfrastructure.com</a></strong>. The pipeline runs end to end. The narrative engine renders. The statistical architecture has been refactored from the ground up.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 04 — WHY REFACTOR                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="refactor">
+  <div class="section-label">04 &mdash; What We Refactored</div>
+  <h2>Composites Without Validation Were Not a Foundation</h2>
+
+  <p class="lead">The Madison Equity Atlas used the Neighborhood Attendance Risk Index (NARI)&mdash;a composite of 8 indicators averaged by percentile rank&mdash;to identify &ldquo;priority tracts.&rdquo; That approach was useful for a prototype at 125 tracts. PDI replaces it with a research-grounded statistical architecture.</p>
+
+  <div class="callout red">
+    <div class="callout-label">What the research shows</div>
+    <p><strong>Equal-weighted composites hide more than they reveal.</strong> The CDC Social Vulnerability Index&mdash;16 variables, equal weights&mdash;predicts only 38.9% of COVID case variability. Factor analysis shows 3&ndash;4 variables carry most of the variance; the other 12 are correlated noise that inflates apparent precision.</p>
+    <p><strong>Unstandardized composites collapse to proxies.</strong> The Area Deprivation Index, when computed without standardizing variables, is 98.8% explained by just 2 variables (income + home value). A &ldquo;17-variable index&rdquo; that is functionally a 2-variable proxy.</p>
+    <p><strong>Rankings are methodologically unstable.</strong> Environmental composite index rankings differ by an average of 45 places across alternative weight specifications. If rankings shift substantially under sensitivity analysis, the composite should not be presented as authoritative.</p>
+  </div>
+
+  <p>The prototype&rsquo;s NARI was never tested against an outcome it didn&rsquo;t contain. Its 8 indicators were selected by intuition, not factor analysis. Its tier cutoffs (80th percentile = &ldquo;Critical&rdquo;) were arbitrary. Copying it to national scale without re-validating against real research questions is how interpretability debt accumulates.</p>
+
+  <div class="callout teal">
+    <div class="callout-label">The Stiglitz-Sen-Fitoussi Rule</div>
+    <p>&ldquo;Weights embed hidden normative choices disguised as technical choices.&rdquo; The Commission recommended presenting composites alongside a dashboard of raw indicators&mdash;so the underlying dimensions remain visible and the composite cannot substitute for them.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 05 — NEW ARCHITECTURE                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="new-architecture">
+  <div class="section-label">05 &mdash; New Architecture</div>
+  <h2>Raw Data First, Composites Only When Earned</h2>
+
+  <p class="lead">The refactored architecture has five layers. Each builds on the one below. Composites exist only at the top&mdash;computed at query time, never stored as truth.</p>
+
+  <div class="layers">
+    <div class="layer l1">
+      <div class="layer-num">1</div>
+      <div class="layer-name">Raw Indicators</div>
+      <div class="layer-desc">Stored in PostgreSQL, every value carries a reliability flag (CV &lt; 0.15 = high, 0.15&ndash;0.30 = moderate, &gt; 0.30 = low)</div>
+    </div>
+    <div class="layer l2">
+      <div class="layer-num">2</div>
+      <div class="layer-name">Validated Features</div>
+      <div class="layer-desc">ICE (Krieger 2016), Dissimilarity Index (Massey &amp; Denton 1988), Housing Cost Burden (HUD)&mdash;literature-grounded, not invented</div>
+    </div>
+    <div class="layer l3">
+      <div class="layer-num">3</div>
+      <div class="layer-name">Factor Scores</div>
+      <div class="layer-desc">EFA-derived, named by loading profile. Wisconsin analysis found 2 factors (66.5% variance): Mental Health / Economic Deprivation and Cardiovascular / Metabolic.</div>
+    </div>
+    <div class="layer l4">
+      <div class="layer-num">4</div>
+      <div class="layer-name">Spatial Analysis</div>
+      <div class="layer-desc">LISA cluster maps, GWR local coefficients, multilevel variance partitioning, SKATER regionalization</div>
+    </div>
+    <div class="layer l5">
+      <div class="layer-num">5</div>
+      <div class="layer-name">Composite Views</div>
+      <div class="layer-desc">Query-time only. Geometric mean aggregation. Accompanied by sensitivity analysis showing ranking stability under &plusmn;20% weight perturbation.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">What gets replaced</div>
+    <p><strong>CompositeIndex()</strong> with equal weights &rarr; ValidatedFeatures() + query-time composites</p>
+    <p><strong>AssignTiers()</strong> with arbitrary cutoffs &rarr; LISA cluster classification from actual spatial patterns</p>
+    <p><strong>NARI as stored score</strong> &rarr; Named factor scores + ICE as first-class indicators</p>
+    <p><strong>Tier badges</strong> in narratives &rarr; Factor profile descriptions (&ldquo;Economic Distress: 92nd percentile&rdquo;)</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 06 — METHODS                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="methods">
+  <div class="section-label">06 &mdash; Methods</div>
+  <h2>What Replaces Composites</h2>
+
+  <p>Each method below is grounded in peer-reviewed literature and tested at the 85,000-tract scale the platform targets.</p>
+
+  <div class="method-grid">
+    <div class="method-card">
+      <h4>LISA Cluster Maps</h4>
+      <p>Local Indicators of Spatial Association. Classifies each tract as High-High (concentrated disadvantage), Low-Low, High-Low (outlier), or Not Significant. The core equity atlas visual.</p>
+      <span class="interpret high">Interpretability: 5/5</span>
+    </div>
+
+    <div class="method-card">
+      <h4>ICE (Index of Concentration at the Extremes)</h4>
+      <p>Krieger et al. 2016. Measures polarization: (high-income white &minus; low-income POC) / total population. Validated, directional, does not collapse race and income into a dimensionless score.</p>
+      <span class="interpret high">Interpretability: 5/5</span>
+    </div>
+
+    <div class="method-card">
+      <h4>Factor Analysis (EFA)</h4>
+      <p>Oblimin rotation on 50+ indicators. Parallel analysis for factor count. Names by loading profile, not number. Kolak et al. found 4 factors at 72K tracts explaining 71% variance.</p>
+      <span class="interpret high">Interpretability: 5/5</span>
+    </div>
+
+    <div class="method-card">
+      <h4>Threshold Detection</h4>
+      <p>Segmented regression identifies breakpoints: &ldquo;Above 35% poverty, diabetes prevalence increases 4x faster.&rdquo; County-level first, then validate at tract level.</p>
+      <span class="interpret high">Interpretability: 5/5</span>
+    </div>
+
+    <div class="method-card">
+      <h4>Quantile Regression</h4>
+      <p>For a given poverty rate, what is the 10th/50th/90th percentile of health outcomes? Identifies positive-deviance communities beating expectations&mdash;more actionable than cataloguing worst cases.</p>
+      <span class="interpret med">Interpretability: 4/5</span>
+    </div>
+
+    <div class="method-card">
+      <h4>Multilevel Variance Partitioning</h4>
+      <p>Tracts nested in counties nested in states. &ldquo;27% of variation in uninsurance is between states&mdash;state Medicaid policy matters as much as local poverty.&rdquo;</p>
+      <span class="interpret med">Interpretability: 4/5</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 07 — LANDSCAPE                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="landscape">
+  <div class="section-label">07 &mdash; Landscape</div>
+  <h2>Where PDI Fits</h2>
+
+  <table class="comparison">
+    <thead>
+      <tr>
+        <th>Platform</th>
+        <th>Open Source</th>
+        <th>National</th>
+        <th>API</th>
+        <th>Narrative</th>
+        <th>Raw-First</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Census Reporter</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-no">No</td>
+        <td class="badge-yes">Yes</td>
+      </tr>
+      <tr>
+        <td>COI 3.0</td>
+        <td class="badge-partial">Docs only</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-no">Download</td>
+        <td class="badge-no">No</td>
+        <td class="badge-no">Composite</td>
+      </tr>
+      <tr>
+        <td>National Equity Atlas</td>
+        <td class="badge-no">No</td>
+        <td class="badge-partial">Metro/city</td>
+        <td class="badge-no">No</td>
+        <td class="badge-no">No</td>
+        <td class="badge-partial">Dashboard</td>
+      </tr>
+      <tr>
+        <td>Opportunity Insights</td>
+        <td class="badge-partial">Code only</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-no">Download</td>
+        <td class="badge-no">No</td>
+        <td class="badge-yes">Yes</td>
+      </tr>
+      <tr>
+        <td>PolicyMap</td>
+        <td class="badge-no">No</td>
+        <td class="badge-yes">Yes</td>
+        <td class="badge-no">No</td>
+        <td class="badge-no">No</td>
+        <td class="badge-partial">Mixed</td>
+      </tr>
+      <tr style="background: var(--amber-light);">
+        <td><strong>PDI</strong></td>
+        <td class="badge-yes"><strong>Yes</strong></td>
+        <td class="badge-yes"><strong>Yes</strong></td>
+        <td class="badge-yes"><strong>REST + SSE</strong></td>
+        <td class="badge-yes"><strong>Go templates</strong></td>
+        <td class="badge-yes"><strong>Yes</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>No open-source platform currently offers the full stack: ingestion + statistical computation + API + narrative generation + visualization in one deployable package. PDI is the first to attempt it with a raw-data-first statistical architecture.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 08 — VISION                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section" id="vision">
+  <div class="section-label">08 &mdash; Vision</div>
+  <h2>The Purpose Behind This Work</h2>
+
+  <p class="lead">The purpose of PDI is to multiply knowledge and power&mdash;to boost policy proposals with statistics, raise awareness to issues using data, and connect achievable goals to the communities they would reach.</p>
+
+  <p>The vision is that this data infrastructure will produce stories and narratives backed by real facts and figures&mdash;not just charts that get filed, but documents that keep organizations in the room after the presentation is over. What <em>Five Mornings</em> did for Madison, PDI can do for any county in the country: turn tract-level indicators into stories that decision-makers cannot ignore.</p>
+
+  <p>The infrastructure exists now so that when a campaign asks &ldquo;what does the data say about food access in Rusk County?&rdquo; the answer is already computed, the map is already rendered, and the story is already waiting to be told.</p>
+
+  <div class="callout teal">
+    <div class="callout-label">What makes this different</div>
+    <p><strong>Open-source from day one.</strong> Apache-2.0. Fork it, deploy it, extend it.</p>
+    <p><strong>Raw data is the foundation.</strong> No unvalidated composites. Every indicator carries a reliability flag. Composites are query-time views, not stored truth.</p>
+    <p><strong>Research-grounded methods.</strong> 30 peer-reviewed sources inform the statistical architecture. Every method traces to published validation.</p>
+    <p><strong>Narrative generation.</strong> The only open-source platform that turns indicator data into policy-ready documents mechanically.</p>
+  </div>
+
+  <p>PDI is open to contributors, collaborators, and communities that want to build data infrastructure that serves policy, not just measures it.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- 09 — WHAT'S HAPPENED SINCE                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-label">09 &mdash; What&rsquo;s happened since</div>
+  <h2>Progress Since the Initial Build</h2>
+
+  <p class="lead">Since the rough draft shipped, the infrastructure has been audited, refactored, and extended. Here is what changed.</p>
+
+  <div class="callout teal">
+    <div class="callout-label">Factor Analysis &mdash; The Data Named Its Dimensions</div>
+    <p>Exploratory factor analysis on 1,265 Wisconsin tracts across 12 SDOH indicators produced two factors explaining <strong>66.5% of variance</strong> (KMO = 0.833):</p>
+    <p><strong>Factor 1: Mental Health / Economic Deprivation</strong> (38.4%) &mdash; poverty rate, mental health prevalence, ICE score, healthcare access. These move together across Wisconsin tracts.</p>
+    <p><strong>Factor 2: Cardiovascular / Metabolic</strong> (28.1%) &mdash; high blood pressure, diabetes, physical health, obesity. A separate dimension that does not reduce to poverty.</p>
+    <p>This confirms the refactor decision: averaging these two dimensions into a single composite would hide the fact that they are independent. A tract can score high on economic deprivation and low on metabolic risk, or vice versa. The composite would tell you neither.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">True ICE Scores &mdash; No More Approximation</div>
+    <p>ACS table B19001 (household income by race) now provides the cross-tabulated counts needed for the Index of Concentration at the Extremes&mdash;replacing the poverty&times;race approximation from the initial build. <strong>1,524 of 1,542 WI tracts</strong> (98.8%) have true ICE scores ranging from <strong>&minus;0.65</strong> (concentrated deprivation) to <strong>+0.82</strong> (concentrated privilege).</p>
+  </div>
+
+  <div class="callout teal">
+    <div class="callout-label">Narrative Engine Fixed</div>
+    <p>The narrative rendering chain &mdash; which generates Five Mornings documents from tract data &mdash; was broken after the refactor because it still referenced the old NARI fields. Fixed: the selector, engine, and all three templates now use ICE and factor profiles. 33 tests pass.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Website Live</div>
+    <p>The project website is deployed at <strong><a href="https://policydatainfrastructure.com">policydatainfrastructure.com</a></strong> via Cloudflare Pages. It includes a Five Mornings excerpt with sourced statistics, an interactive evidence card explorer, and a six-tab methodology section explaining the statistical architecture. Every number on the site has been audited against source material.</p>
+  </div>
+
+  <h3 style="font-family: var(--sans); font-size: 16px; font-weight: 700; color: var(--navy); margin-top: 28px;">What&rsquo;s Next</h3>
+  <ul style="font-family: var(--sans); font-size: 14px; color: var(--text-secondary); line-height: 1.8; padding-left: 20px;">
+    <li>Scale ingestion to all 50 states (parallel, rate-limit aware)</li>
+    <li>Run factor analysis on national data to validate whether Wisconsin patterns hold</li>
+    <li>Add HUD CHAS, Eviction Lab, and GTFS transit data</li>
+    <li>Build LISA spatial cluster maps from factor scores</li>
+    <li>Generate a Five Mornings narrative for a second county as proof of generalization</li>
+  </ul>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- METHODOLOGY                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="methodology">
+  <div class="methodology-inner">
+    <h2>Research Grounding</h2>
+    <p>This document is grounded in four research tracks conducted on April 14, 2026, reviewing 30 peer-reviewed and technical sources across validated composite index methodologies, disaggregated analysis methods, the open-source policy data platform landscape, and scalable spatial statistics. Full research documents and a structured reference list are available in the repository.</p>
+    <ul>
+      <li>CDC/ATSDR SVI Documentation (2024)</li>
+      <li>EPA EJScreen Technical Documentation v2.3 (2024)</li>
+      <li>Chetty, Hendren et al. &mdash; Opportunity Atlas, AER (2020)</li>
+      <li>Stiglitz-Sen-Fitoussi Commission Report (2009)</li>
+      <li>Kolak et al. &mdash; Quantifying Neighborhood SDOH, JAMA (2020)</li>
+      <li>Graetz et al. &mdash; Structural Racism and Causal Decomposition (2022)</li>
+      <li>Massey &amp; Denton &mdash; Segregation Measurement Framework (1988)</li>
+      <li>Krieger et al. &mdash; Index of Concentration at the Extremes (2016)</li>
+      <li>Murakami et al. &mdash; ScaGWR Linear-Time Algorithm (2020)</li>
+      <li>Census Bureau &mdash; ACS Margin of Error Handbook (2018)</li>
+      <li>Donegan et al. &mdash; Bayesian Community Health Models (2021)</li>
+      <li>OMB Race/Ethnicity Standards Revision (2024)</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  Policy Data Infrastructure &middot; DojoGenesis/policy-data-infrastructure &middot; Apache-2.0<br>
+  Updated April 14, 2026 &middot; Cruz Morales &middot; DojoGenesis
+</div>
+
+</body>
+</html>
