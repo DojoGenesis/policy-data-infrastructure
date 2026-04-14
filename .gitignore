@@ -58,11 +58,15 @@ data/*.sqlite3
 __pycache__/
 *.py[cod]
 *.pyo
+.venv/
 ingest/.venv/
 ingest/venv/
 ingest/*.egg-info/
 dist/
 build/
+
+# Generated analysis outputs — regenerable, do not commit
+analysis/output/
 
 # Temporary / scratch files
 tmp/
