@@ -83,37 +83,54 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 	}
 
 	// 3. Compute ICE (Index of Concentration at the Extremes).
-	// ICE = (high_income_white - low_income_poc) / total_population
-	// We approximate using available ACS variables.
+	// Prefer true cross-tabulated B19001 data (b19001_ice_score) when available.
+	// Fall back to poverty×race approximation when B19001 has not been ingested.
 	totalPop := make([]*float64, nTracts)
-	pctPOC := make([]*float64, nTracts)
-	poverty := make([]*float64, nTracts)
 	for i, geoid := range tractGEOIDs {
 		totalPop[i] = indicatorIdx[ikey{geoid, "total_population"}]
-		pctPOC[i] = indicatorIdx[ikey{geoid, "pct_poc"}]
-		poverty[i] = indicatorIdx[ikey{geoid, "poverty_rate"}]
 	}
 
-	// Approximate ICE using available data:
-	// privileged ≈ (1 - pct_poc/100) * (1 - poverty_rate/100) * total_pop
-	// deprived ≈ (pct_poc/100) * (poverty_rate/100) * total_pop
-	privileged := make([]*float64, nTracts)
-	deprived := make([]*float64, nTracts)
-	for i := 0; i < nTracts; i++ {
-		if totalPop[i] != nil && pctPOC[i] != nil && poverty[i] != nil {
-			pop := *totalPop[i]
-			poc := *pctPOC[i] / 100.0
-			pov := *poverty[i] / 100.0
-			priv := (1 - poc) * (1 - pov) * pop
-			dep := poc * pov * pop
-			privileged[i] = &priv
-			deprived[i] = &dep
+	// Check for true B19001 ICE scores first.
+	iceScores := make([]*float64, nTracts)
+	trueICECount := 0
+	for i, geoid := range tractGEOIDs {
+		if v := indicatorIdx[ikey{geoid, "b19001_ice_score"}]; v != nil {
+			iceScores[i] = v
+			trueICECount++
 		}
 	}
 
-	iceScores, err := stats.ICEIncomeRace(privileged, deprived, totalPop)
-	if err != nil {
-		return fmt.Errorf("analyze: ICE computation: %w", err)
+	if trueICECount > 0 {
+		log.Printf("analyze: using true B19001 ICE scores for %d/%d tracts", trueICECount, nTracts)
+	} else {
+		// Fall back to poverty×race approximation.
+		log.Printf("analyze: B19001 not available, using poverty×race ICE approximation")
+		pctPOC := make([]*float64, nTracts)
+		poverty := make([]*float64, nTracts)
+		for i, geoid := range tractGEOIDs {
+			pctPOC[i] = indicatorIdx[ikey{geoid, "pct_poc"}]
+			poverty[i] = indicatorIdx[ikey{geoid, "poverty_rate"}]
+		}
+
+		privileged := make([]*float64, nTracts)
+		deprived := make([]*float64, nTracts)
+		for i := 0; i < nTracts; i++ {
+			if totalPop[i] != nil && pctPOC[i] != nil && poverty[i] != nil {
+				pop := *totalPop[i]
+				poc := *pctPOC[i] / 100.0
+				pov := *poverty[i] / 100.0
+				priv := (1 - poc) * (1 - pov) * pop
+				dep := poc * pov * pop
+				privileged[i] = &priv
+				deprived[i] = &dep
+			}
+		}
+
+		var err error
+		iceScores, err = stats.ICEIncomeRace(privileged, deprived, totalPop)
+		if err != nil {
+			return fmt.Errorf("analyze: ICE computation: %w", err)
+		}
 	}
 
 	// 4. Compute CV and reliability for each indicator.
