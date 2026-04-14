@@ -5,6 +5,13 @@
 
 ## 2026-04-14
 
+### Factor Analysis
+- New `analysis/factor_analysis.py`: EFA on 1,265 WI tracts with 12 features — `7739423`
+  - 2 factors, 66.5% variance explained, KMO=0.833
+  - Factor 1: Mental Health / Economic Deprivation (38.4%) — poverty, MHLTH, ICE, ACCESS2
+  - Factor 2: Cardiovascular / Metabolic (28.1%) — BPHIGH, DIABETES, PHLTH, OBESITY
+  - Outputs: factor_loadings.csv, factor_scores.csv (1,265 tracts)
+
 ### ACS B19001 ICE Ingest
 - New `ingest/fetch_acs_b19001.py`: true ICE from cross-tabulated income-by-race data — `ba16b27`
   - 1,542 WI tracts, 1,524 with ICE scores (98.8%), range [-0.65, +0.82]
