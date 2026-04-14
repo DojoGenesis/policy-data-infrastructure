@@ -5,6 +5,13 @@
 
 ## 2026-04-14
 
+### BLS LAUS Fix
+- Fixed series ID format: 8 fill zeros, not 7 — root cause of all-null data since Apr 14 — `1976e97`
+  - LAUS county series IDs are 20 chars; script produced 19-char IDs
+  - BLS accepted requests but returned empty data for non-existent series (silent drop)
+  - Fixed registered batch size from 500 to 50 (actual BLS v2 limit)
+  - 72/72 WI counties now return data: unemployment rate [2.1%, 5.8%], 0% null
+
 ### Factor Analysis
 - New `analysis/factor_analysis.py`: EFA on 1,265 WI tracts with 12 features — `7739423`
   - 2 factors, 66.5% variance explained, KMO=0.833
