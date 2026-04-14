@@ -5,6 +5,12 @@
 
 ## 2026-04-14
 
+### ACS B19001 ICE Ingest
+- New `ingest/fetch_acs_b19001.py`: true ICE from cross-tabulated income-by-race data — `ba16b27`
+  - 1,542 WI tracts, 1,524 with ICE scores (98.8%), range [-0.65, +0.82]
+  - Replaces poverty×race approximation with Krieger 2016 methodology
+- `analyze.go`: prefers true B19001 ICE scores when available, falls back to approximation
+
 ### Narrative Chain Fix
 - Fixed 4 NARI→ICE rendering bugs blocking document generation — `d732c2b`
   - `selector.go`: now populates `p.ICE` field (was only setting deprecated NARI fields)
