@@ -271,7 +271,7 @@ func TestEngineGenerate(t *testing.T) {
 		AnalysisID:   "test-analysis",
 		ChapterCount: 3,
 		Selection:    "by_tier",
-		Methodology:  "NARI composite using equal-weight percentile method across 8 indicators.",
+		Methodology:  "ICE income-race metric (Krieger et al. 2016) with percentile ranking across 8 indicators.",
 		DataSources:  []string{"US Census ACS 2023", "Princeton Eviction Lab"},
 	})
 	if err != nil {
@@ -331,7 +331,7 @@ func TestEngineRenderHTML_FiveMornings(t *testing.T) {
 		"<html",
 		"Five Mornings in",
 		"Dane County, WI",
-		"NARI",
+		"Index of Concentration at the Extremes",
 		"chapter-1",
 	}
 	for _, want := range required {
@@ -534,7 +534,7 @@ func TestGenerateTableDriven(t *testing.T) {
 				AnalysisID:   "test-analysis",
 				ChapterCount: 3,
 				Selection:    "by_tier",
-				Methodology:  "NARI composite using equal-weight percentile method.",
+				Methodology:  "ICE income-race metric (Krieger et al. 2016) with percentile ranking.",
 				DataSources:  []string{"US Census ACS 2023", "Princeton Eviction Lab"},
 			},
 			wantChapMin: 1,

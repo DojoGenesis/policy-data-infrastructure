@@ -304,7 +304,7 @@ func buildStatCallouts(p GeographyProfile) []StatCallout {
 	if p.NARIPercentile != nil {
 		callouts = append(callouts, StatCallout{
 			Value:    formatOrdinal(p.NARIPercentile),
-			Label:    "NARI Percentile",
+			Label:    "Equity Index Percentile",
 			Context:  tierLabel(p.NARITier),
 			Severity: severityClass(p.NARITier),
 		})
@@ -406,9 +406,9 @@ func buildNarrative(i int, p GeographyProfile) string {
 		pctStr = formatOrdinal(p.NARIPercentile)
 	}
 	return fmt.Sprintf(
-		"%s is a %s community in the %s, sitting at the %s percentile on the Neighborhood "+
-			"Attendance Risk Index. Its structural profile shapes daily life for families here in "+
-			"ways the aggregate numbers cannot fully capture.",
+		"%s is a %s community in the %s, sitting at the %s percentile on the "+
+			"Index of Concentration at the Extremes. Its structural profile shapes daily life "+
+			"for families here in ways the aggregate numbers cannot fully capture.",
 		p.Name, strings.ToLower(tier), p.ScopeName, pctStr,
 	)
 }

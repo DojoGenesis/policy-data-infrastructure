@@ -82,7 +82,7 @@
     padding: 48px 32px;
   }
 
-  /* ─── NARI SCORE BANNER ─── */
+  /* ─── ICE SCORE BANNER ─── */
   .nari-banner {
     display: flex;
     align-items: center;
@@ -307,7 +307,7 @@
 
 <main class="ep-body">
 
-  <!-- NARI banner -->
+  <!-- ICE banner -->
   <div class="nari-banner {{severity .Geography.NARITier}}">
     <div class="nari-score-block">
       {{if hasData .Geography.NARIPercentile}}
@@ -315,13 +315,13 @@
       {{else}}
       <div class="nari-score-num">—</div>
       {{end}}
-      <div class="nari-score-label">NARI Percentile</div>
+      <div class="nari-score-label">Equity Index Percentile</div>
     </div>
     <div class="nari-tier-block">
       <div class="nari-tier-name">{{tierLabel .Geography.NARITier}}</div>
       <div class="nari-tier-desc">
         This community sits at the {{formatOrdinal .Geography.NARIPercentile}} percentile
-        on the Neighborhood Attendance Risk Index, placing it in the
+        on the Index of Concentration at the Extremes, placing it in the
         &ldquo;{{tierLabel .Geography.NARITier}}&rdquo; tier for structural risk.
       </div>
     </div>

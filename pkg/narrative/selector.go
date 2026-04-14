@@ -58,9 +58,15 @@ func buildProfile(
 
 	// Percentile is stored as 0–100 in AnalysisScore.
 	pct := score.Percentile
-	p.NARIPercentile = &pct
 	scoreVal := score.Score
+
+	// Populate ICE field (the validated metric replacing NARI).
+	p.ICE = &scoreVal
+
+	// Backward compat: keep NARI fields populated until all templates migrate.
+	p.NARIPercentile = &pct
 	p.NARIScore = &scoreVal
+	p.NARITier = score.Tier
 
 	// Pull indicator values for known variable IDs.
 	indicators, err := s.QueryIndicators(ctx, store.IndicatorQuery{

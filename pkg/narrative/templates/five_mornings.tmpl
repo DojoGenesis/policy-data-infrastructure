@@ -470,17 +470,17 @@
 <section class="intro">
   <p class="lead">
     This document profiles {{len .Chapters}} neighborhoods in {{.ScopeName}},
-    selected by structural risk tier using the Neighborhood Attendance Risk Index (NARI).
+    selected by structural risk tier using the Index of Concentration at the Extremes (ICE).
     Each chapter represents a distinct archetype of structural conditions that shape
     daily life for families in that community.
   </p>
   <p>
-    The <strong>Neighborhood Attendance Risk Index (NARI)</strong> is a composite score
-    synthesizing eight structural indicators&mdash;poverty, racial composition, youth
-    population, transit access, housing cost burden, uninsured rate, eviction filings,
-    and health care access&mdash;into a single 0&ndash;100 percentile ranking. Tracts
-    scoring in the 80th&ndash;100th percentile are classified &ldquo;Critical&rdquo;;
-    those below the 20th percentile are &ldquo;On Track.&rdquo;
+    The <strong>Index of Concentration at the Extremes (ICE)</strong> measures the
+    concentration of privilege versus deprivation in a community (Krieger et al., 2016).
+    Scores range from &minus;1 (entirely deprived) to +1 (entirely privileged), with
+    values near zero indicating mixed composition. Communities are ranked into percentile
+    tiers: those in the 80th&ndash;100th percentile for deprivation are classified
+    &ldquo;Critical&rdquo;; those below the 20th are &ldquo;On Track.&rdquo;
   </p>
   {{if .ScopeStats}}
   <div class="scope-stats">
@@ -527,7 +527,7 @@
     </h2>
     <div class="chapter-location">
       {{.Geography.ScopeName}}
-      {{if hasData .Geography.NARIPercentile}}&nbsp;&middot;&nbsp;NARI {{formatOrdinal .Geography.NARIPercentile}} percentile{{end}}
+      {{if hasData .Geography.NARIPercentile}}&nbsp;&middot;&nbsp;ICE {{formatOrdinal .Geography.NARIPercentile}} percentile{{end}}
       {{if .Geography.NARITier}}&nbsp;&middot;&nbsp;{{tierLabel .Geography.NARITier}} tier{{end}}
     </div>
   </div>
