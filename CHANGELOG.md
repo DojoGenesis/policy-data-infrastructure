@@ -5,6 +5,31 @@
 
 ## 2026-04-15
 
+### Datasource Adapter Expansion (9 new adapters)
+- Added 9 new Go DataSource adapters: HRSA, GTFS, WI DPI, HUD CHAS, HMDA, EPA TRI, HUD PIT, USDA Food, BLS LAUS — `8957bd8`, `dcec5db`
+  - Total adapter count: 13 (ACS, TIGER, CDC PLACES, EPA EJScreen + 9 new)
+  - 170 test functions across 10 test files, 67.4% coverage on datasource package
+  - 11,210 lines of Go across 16 adapter source files
+
+### Post-Build Audit Fix Pass — `15cc5f9`, `68c86ac`
+- Fixed 3 critical bugs found in audit:
+  - BLS LAUS: prefix `LAUST` → `LAUCN` (county not state series); fill zeros 9 → 8
+  - GTFS: geocoderResponse struct matched address endpoint, not coordinates endpoint
+  - HUD PIT: default URL pointed to HTML page, not CSV; added Content-Type guard
+- Fixed 2 medium bugs:
+  - WI DPI: race label matching ("Black" → `strings.Contains("black or african american")`)
+  - WI DPI: race-stratified variables never emitted; now emit as nil (data gap visible)
+- Fixed HMDA minority classification: "2 or more minority races" was excluded from minority denial rate
+- Fixed EPA TRI carcinogen semantics: renamed `epa_tri_carcinogen_releases` → `epa_tri_carcinogen_facility_count`
+  - Root cause: tri_facility endpoint only provides CARCINOGEN=YES/NO flag, not per-chemical lbs
+  - Prior approach summed all releases from flagged facilities (wrong units)
+- Normalized variable ID prefixes across 4 adapters (21 variables total):
+  - `bls_*` → `bls_laus_*` (4 vars), `dpi_*` → `wi_dpi_*` (7 vars)
+  - `hud_*` → `hud_chas_*` (5 vars), `usda_*` → `usda_food_*` (4 vars, `usda_food_desert` already correct)
+- Fixed USDA Food GEOID padding: `%011s` + byte loop → `ParseInt` + `%011d`
+- Added TIGER registration to pipeline.go (was in fetch.go only)
+- Updated sources.toml WI DPI variable names
+
 ### Scheduled Pipeline Verification
 - All Apr 14 handoff targets confirmed complete — no new data loads required:
   - BLS LAUS: 72/72 WI counties, 0% null on unemployment_rate (rate limit cleared)
