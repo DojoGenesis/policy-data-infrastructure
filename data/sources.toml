@@ -193,6 +193,59 @@ Chronically_Homeless, Veterans, Youth.
 Crosswalk from CoC to county: HUD CoC-to-County shapefile (data/crosswalks/).
 """
 
+[sources.hrsa]
+name               = "HRSA Health Professional Shortage Areas & Health Centers"
+category           = "health"
+url                = "https://data.hrsa.gov/data/download"
+api_key_env        = ""
+rate_limit_per_min = 30
+format             = "csv"
+geo_levels         = ["county"]
+notes              = """
+Four national CSV bulk downloads (no API key required):
+  1. BCD_HPSA_FCT_DET — Primary Care HPSA designations + scores (0–25)
+  2. BCD_HPSA_FCT_DET_DEN — Dental HPSA designations + scores
+  3. BCD_HPSA_FCT_DET_MH — Mental Health HPSA designations + scores
+  4. Health Center Service Delivery Sites — FQHC locations
+County-level FIPS GEOIDs. Max-score aggregation when multiple HPSAs per county.
+Variables: hrsa_hpsa_primary_care, hrsa_hpsa_dental, hrsa_hpsa_mental_health,
+hrsa_fqhc_count, hrsa_hpsa_designation.
+"""
+
+[sources.gtfs]
+name               = "General Transit Feed Specification (Static)"
+category           = "transit"
+url                = "https://transitdata.cityofmadison.com/GTFS/mmt_gtfs.zip"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "csv"
+geo_levels         = ["tract"]
+notes              = """
+GTFS static feeds (ZIP of CSVs: stops.txt, stop_times.txt, trips.txt, calendar.txt).
+Each transit agency publishes its own feed — FeedsByState config maps state FIPS to URLs.
+Default: Madison Metro Transit for WI. Stops geocoded to tract via Census geocoder.
+Variables: gtfs_stop_count, gtfs_daily_trips, gtfs_trips_per_hour.
+National-ready: add feed URLs per state; returns 501 for states with no configured feeds.
+"""
+
+[sources.wi-dpi]
+name               = "Wisconsin Department of Public Instruction (WISEdash)"
+category           = "education"
+url                = "https://wisedash.dpi.wi.gov/Dashboard/wkedp-download"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "csv"
+geo_levels         = ["district", "school"]
+notes              = """
+WI-specific education data from WISEdash certified downloads.
+Two ZIP files: enrollment (by district/race/gender) and attendance (by district).
+GEOID convention: wi-dist-XXXX (4-digit district code, not census FIPS).
+Variables: dpi_enrollment, dpi_chronic_absence_rate, dpi_attendance_rate,
+dpi_chronic_absence_black, dpi_chronic_absence_hispanic, dpi_chronic_absence_white,
+dpi_chronic_absence_econ_disadv.
+Non-WI states return empty (graceful no-op). Handles UTF-8 BOM and latin-1 fallback.
+"""
+
 [sources.epa-tri]
 name               = "EPA Toxics Release Inventory (TRI)"
 category           = "environment"

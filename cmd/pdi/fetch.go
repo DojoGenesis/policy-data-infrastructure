@@ -76,6 +76,12 @@ func runFetch(stateFIPS, countyFIPS, scope string, year int, sourcesFlag string,
 	reg.Register(datasource.NewTIGERSource(year))
 	reg.Register(datasource.NewCDCPlacesSource(datasource.CDCPlacesConfig{Year: year}))
 	reg.Register(datasource.NewEPAEJScreenSource(datasource.EPAEJScreenConfig{Year: year}))
+	reg.Register(datasource.NewHRSASource(datasource.HRSAConfig{Year: year}))
+	reg.Register(datasource.NewGTFSSource(datasource.GTFSConfig{Year: year}))
+	reg.Register(datasource.NewWIDPISource(datasource.WIDPIConfig{Year: year}))
+	reg.Register(datasource.NewHUDCHASSource(datasource.HUDCHASConfig{Year: year}))
+	reg.Register(datasource.NewHMDASource(datasource.HMDAConfig{Year: year}))
+	reg.Register(datasource.NewEPATRISource(datasource.EPATRIConfig{Year: year}))
 
 	// Filter to requested sources.
 	var toFetch []datasource.DataSource

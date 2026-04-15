@@ -90,6 +90,12 @@ func runPipeline(stateFIPS, countyFIPS, scope string, year, parallel int) error 
 	reg.Register(datasource.NewACSSource(datasource.ACSConfig{Year: year}))
 	reg.Register(datasource.NewCDCPlacesSource(datasource.CDCPlacesConfig{Year: year}))
 	reg.Register(datasource.NewEPAEJScreenSource(datasource.EPAEJScreenConfig{Year: year}))
+	reg.Register(datasource.NewHRSASource(datasource.HRSAConfig{Year: year}))
+	reg.Register(datasource.NewGTFSSource(datasource.GTFSConfig{Year: year}))
+	reg.Register(datasource.NewWIDPISource(datasource.WIDPIConfig{Year: year}))
+	reg.Register(datasource.NewHUDCHASSource(datasource.HUDCHASConfig{Year: year}))
+	reg.Register(datasource.NewHMDASource(datasource.HMDAConfig{Year: year}))
+	reg.Register(datasource.NewEPATRISource(datasource.EPATRIConfig{Year: year}))
 
 	// Pass the national parallelism budget into the FetchStage.
 	natParallel := parallel
