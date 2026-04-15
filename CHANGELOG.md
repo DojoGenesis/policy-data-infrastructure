@@ -3,6 +3,19 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-04-15
+
+### Scheduled Pipeline Verification
+- All Apr 14 handoff targets confirmed complete — no new data loads required:
+  - BLS LAUS: 72/72 WI counties, 0% null on unemployment_rate (rate limit cleared)
+  - WI DPI attendance: 449 district rows, 0% null on chronic_absence_rate
+  - Evidence cards: 70 cards generated (target was 50+; confirmed via `evidence_cards.json`)
+  - VPS PostGIS geographies: 72 counties + 1,652 tracts loaded
+  - VPS PostGIS indicators: 1,368 ACS, 12,200 CDC PLACES, 8,009 USDA (all above floor)
+  - Gateway: `dojo-gateway.service` active since 2026-04-14, `/v1/models` and `/chat` both return 200
+- Added `.wrangler/` to `.gitignore`
+- Removed completed P1 BLS re-fetch item from TODO.md
+
 ## 2026-04-14
 
 ### BLS LAUS Fix

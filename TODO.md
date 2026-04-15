@@ -1,11 +1,7 @@
 # TODO — policy-data-infrastructure
 
-> Updated: 2026-04-14 | Last audit: 2026-04-14 (first health audit)
+> Updated: 2026-04-15 | Last audit: 2026-04-14 (first health audit)
 > Update this file after every work session. Move completed items to CHANGELOG.md.
-
-## P1 — High (data integrity)
-
-- [ ] Re-run BLS LAUS fetch after daily rate limit reset: `python3 ingest/fetch_bls_laus.py --year 2023` [source: session]
 
 ## P2 — Medium (quality, testing)
 
