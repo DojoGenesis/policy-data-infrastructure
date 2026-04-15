@@ -82,6 +82,9 @@ func runFetch(stateFIPS, countyFIPS, scope string, year int, sourcesFlag string,
 	reg.Register(datasource.NewHUDCHASSource(datasource.HUDCHASConfig{Year: year}))
 	reg.Register(datasource.NewHMDASource(datasource.HMDAConfig{Year: year}))
 	reg.Register(datasource.NewEPATRISource(datasource.EPATRIConfig{Year: year}))
+	reg.Register(datasource.NewHUDPITSource(datasource.HUDPITConfig{Year: year}))
+	reg.Register(datasource.NewUSDAFoodSource(datasource.USDAFoodConfig{Year: year}))
+	reg.Register(datasource.NewBLSLAUSSource(datasource.BLSLAUSConfig{Year: year}))
 
 	// Filter to requested sources.
 	var toFetch []datasource.DataSource
