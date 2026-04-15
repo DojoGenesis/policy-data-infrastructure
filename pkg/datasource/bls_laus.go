@@ -7,7 +7,7 @@ package datasource
 //
 // Series ID format:
 //
-//	LAUST{SS}{CCC}000000000{MM}
+//	LAUCN{SS}{CCC}00000000{MM}
 //	  SS  = 2-digit state FIPS (e.g. 55 for Wisconsin)
 //	  CCC = 3-digit county FIPS (e.g. 025 for Dane County)
 //	  MM  = measure code:
@@ -18,9 +18,9 @@ package datasource
 //
 // CRITICAL GOTCHAS (documented from production use):
 //
-//  1. Fill zeros: series IDs use NINE fill zeros ("000000000"), not eight.
-//     Correct: LAUST5502500000000003
-//     Wrong:   LAUST550250000000003  (8 zeros — returns empty data)
+//  1. Fill zeros: series IDs use EIGHT fill zeros ("00000000"), not nine.
+//     Correct: LAUCN550250000000003
+//     Wrong:   LAUCN5502500000000003  (9 zeros — returns empty data)
 //
 //  2. Unregistered batch limit: BLS silently truncates at 25 series per request
 //     (HTTP 200 returned even when data is dropped). Do not send more than 25
@@ -230,14 +230,14 @@ func (s *blsLAUSSource) FetchState(ctx context.Context, stateFIPS string) ([]sto
 }
 
 // blsSeriesID constructs a single BLS LAUS series ID.
-// Format: LAUST{SS}{CCC}000000000{MM}
+// Format: LAUCN{SS}{CCC}00000000{MM}
 //
 //	SS  = 2-digit state FIPS
 //	CCC = 3-digit county FIPS
-//	9 fill zeros (not 8 — BLS is silent about truncating wrong-length IDs)
+//	8 fill zeros (not 9 — BLS is silent about truncating wrong-length IDs)
 //	MM  = 2-digit measure code
 func blsSeriesID(stateFIPS, countyFIPS, measure string) string {
-	return "LAUST" + stateFIPS + countyFIPS + "000000000" + measure
+	return "LAUCN" + stateFIPS + countyFIPS + "00000000" + measure
 }
 
 // blsSeriesIDs returns the 4 measure series IDs for one county.

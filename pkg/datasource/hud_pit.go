@@ -48,10 +48,18 @@ import (
 
 const hudPITRateDelay = 1000 * time.Millisecond
 
-// hudPITDefaultURL is the canonical national PIT CSV download.
-// HUD publishes the annual file at a stable path; the year is embedded in
-// the filename but callers pass a year parameter separately for the vintage string.
-const hudPITDefaultURL = "https://www.hudexchange.info/resource/3031/pit-and-hic-data-since-2007/"
+// hudPITDefaultURL is intentionally empty.
+//
+// The HUD Exchange does not provide a stable, version-agnostic direct CSV
+// download URL. The URL https://www.hudexchange.info/resource/3031/pit-and-hic-data-since-2007/
+// is an HTML landing page, not a CSV. Direct download URLs are year-specific
+// and change with each annual release (e.g. the 2023 national PIT CSV was at
+// https://www.huduser.gov/portal/sites/default/files/xls/2007-2023-PIT-Counts-by-CoC.xlsx).
+//
+// Callers MUST set HUDPITConfig.CSVURL to a direct CSV download link. The
+// csvRows method will return an error if the URL is empty or if the server
+// responds with HTML instead of CSV content.
+const hudPITDefaultURL = ""
 
 // cocCountyFIPS is the built-in CoC-to-county-FIPS crosswalk.
 // Keys are CoC codes (e.g. "WI-500"); values are all county FIPS codes the CoC covers.
@@ -143,13 +151,17 @@ type hudPITSource struct {
 }
 
 // NewHUDPITSource creates a hudPITSource from cfg.
+//
+// cfg.CSVURL must be set to a direct CSV download link. HUD does not provide
+// a stable version-agnostic URL; the default URL is empty and FetchCounty /
+// FetchState will return an error if CSVURL is not supplied.
 func NewHUDPITSource(cfg HUDPITConfig) *hudPITSource {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = http.DefaultClient
 	}
 	csvURL := cfg.CSVURL
 	if csvURL == "" {
-		csvURL = hudPITDefaultURL
+		csvURL = hudPITDefaultURL // empty — csvRows will return a clear error
 	}
 	vintage := "HUD-PIT"
 	if cfg.Year > 0 {
@@ -395,6 +407,14 @@ func (s *hudPITSource) csvRows(ctx context.Context) ([][]string, error) {
 	}
 	s.cacheMu.Unlock()
 
+	if s.csvURL == "" {
+		return nil, fmt.Errorf(
+			"hud-pit: CSVURL is required — HUD does not publish a stable direct CSV URL. " +
+				"Set HUDPITConfig.CSVURL to the direct download link for the desired vintage " +
+				"(e.g. the annual PIT/HIC file from https://www.hudexchange.info/resource/3031/)",
+		)
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.csvURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("hud-pit: build request: %w", err)
@@ -410,6 +430,16 @@ func (s *hudPITSource) csvRows(ctx context.Context) ([][]string, error) {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return nil, fmt.Errorf("hud-pit: api returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	// Guard against HTML landing pages masquerading as CSV downloads.
+	// HUD Exchange resource URLs return text/html, not the actual data file.
+	if ct := resp.Header.Get("Content-Type"); strings.Contains(ct, "text/html") {
+		return nil, fmt.Errorf(
+			"hud-pit: URL returned HTML, not CSV (Content-Type: %s) — "+
+				"set HUDPITConfig.CSVURL to the direct download link, not the HUD Exchange landing page",
+			ct,
+		)
 	}
 
 	// Rate-limit courtesy delay before returning.

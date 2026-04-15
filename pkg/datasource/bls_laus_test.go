@@ -234,14 +234,14 @@ func TestBLSLAUSSeriesID_FillZeros(t *testing.T) {
 		state, county, measure string
 		want                   string
 	}{
-		// Wisconsin Dane County unemployment rate: LAUST(5)+55(2)+025(3)+000000000(9)+03(2) = 21 chars
-		{"55", "025", "03", "LAUST5502500000000003"},
+		// Wisconsin Dane County unemployment rate: LAUCN(5)+55(2)+025(3)+00000000(8)+03(2) = 20 chars
+		{"55", "025", "03", "LAUCN550250000000003"},
 		// Wisconsin Dane County labor force
-		{"55", "025", "06", "LAUST5502500000000006"},
+		{"55", "025", "06", "LAUCN550250000000006"},
 		// Alabama Autauga County employed
-		{"01", "001", "05", "LAUST0100100000000005"},
+		{"01", "001", "05", "LAUCN010010000000005"},
 		// California Los Angeles County unemployed count
-		{"06", "037", "04", "LAUST0603700000000004"},
+		{"06", "037", "04", "LAUCN060370000000004"},
 	}
 
 	for _, tc := range cases {
@@ -249,14 +249,14 @@ func TestBLSLAUSSeriesID_FillZeros(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("blsSeriesID(%q,%q,%q) = %q; want %q", tc.state, tc.county, tc.measure, got, tc.want)
 		}
-		// Verify the length: LAUST(5) + state(2) + county(3) + zeros(9) + measure(2) = 21 chars
-		if len(got) != 21 {
-			t.Errorf("blsSeriesID %q has length %d (want 21)", got, len(got))
+		// Verify the length: LAUCN(5) + state(2) + county(3) + zeros(8) + measure(2) = 20 chars
+		if len(got) != 20 {
+			t.Errorf("blsSeriesID %q has length %d (want 20)", got, len(got))
 		}
-		// Verify the fill zeros are exactly 9 (positions 10-18 inclusive).
-		zeros := got[10:19] // characters at index 10,11,12,13,14,15,16,17,18
-		if zeros != "000000000" {
-			t.Errorf("blsSeriesID %q fill zeros %q at [10:19] want 000000000", got, zeros)
+		// Verify the fill zeros are exactly 8 (positions 10-17 inclusive).
+		zeros := got[10:18] // characters at index 10,11,12,13,14,15,16,17
+		if zeros != "00000000" {
+			t.Errorf("blsSeriesID %q fill zeros %q at [10:18] want 00000000", got, zeros)
 		}
 	}
 }
@@ -374,7 +374,7 @@ func TestBLSLAUSChunkStrings_WiFull(t *testing.T) {
 // is preferred over computed monthly average.
 func TestBLSLAUSExtractAnnual_M13(t *testing.T) {
 	sr := blsSeriesResult{
-		SeriesID: "LAUST5502500000000003",
+		SeriesID: "LAUCN550250000000003",
 		Data: []blsDataEntry{
 			{Year: "2023", Period: "M01", Value: "3.0"},
 			{Year: "2023", Period: "M02", Value: "3.2"},
@@ -396,7 +396,7 @@ func TestBLSLAUSExtractAnnual_M13(t *testing.T) {
 func TestBLSLAUSExtractAnnual_MonthlyComputed(t *testing.T) {
 	// All months equal 4.0 → annual average = 4.0
 	sr := blsSeriesResult{
-		SeriesID: "LAUST5502500000000003",
+		SeriesID: "LAUCN550250000000003",
 		Data:     monthlyEntries(2023, 4.0),
 	}
 
@@ -419,7 +419,7 @@ func TestBLSLAUSExtractAnnual_MonthlyRounding(t *testing.T) {
 		entries[i] = blsDataEntry{Year: yearStr, Period: fmt.Sprintf("M%02d", i+1), Value: fmt.Sprintf("%.1f", v)}
 	}
 	// sum = 10*3.0 + 2*4.0 = 38.0; avg = 38/12 = 3.1666...; rounded = 3.2
-	sr := blsSeriesResult{SeriesID: "LAUST5502500000000003", Data: entries}
+	sr := blsSeriesResult{SeriesID: "LAUCN550250000000003", Data: entries}
 	val := blsExtractAnnual(sr, 2023)
 	if val == nil {
 		t.Fatal("blsExtractAnnual: want non-nil, got nil")
@@ -432,7 +432,7 @@ func TestBLSLAUSExtractAnnual_MonthlyRounding(t *testing.T) {
 // TestBLSLAUSExtractAnnual_NoData verifies nil return when no data for the year.
 func TestBLSLAUSExtractAnnual_NoData(t *testing.T) {
 	sr := blsSeriesResult{
-		SeriesID: "LAUST5502500000000003",
+		SeriesID: "LAUCN550250000000003",
 		Data: []blsDataEntry{
 			// Data for a different year.
 			{Year: "2022", Period: "M01", Value: "3.0"},
@@ -449,7 +449,7 @@ func TestBLSLAUSExtractAnnual_NoData(t *testing.T) {
 func TestBLSLAUSExtractAnnual_PartialYear(t *testing.T) {
 	// Only 6 months available.
 	sr := blsSeriesResult{
-		SeriesID: "LAUST5502500000000003",
+		SeriesID: "LAUCN550250000000003",
 		Data: []blsDataEntry{
 			{Year: "2023", Period: "M01", Value: "4.0"},
 			{Year: "2023", Period: "M02", Value: "4.0"},
@@ -471,7 +471,7 @@ func TestBLSLAUSExtractAnnual_PartialYear(t *testing.T) {
 // TestBLSLAUSExtractAnnual_InvalidValue verifies graceful handling of non-numeric BLS values.
 func TestBLSLAUSExtractAnnual_InvalidValue(t *testing.T) {
 	sr := blsSeriesResult{
-		SeriesID: "LAUST5502500000000003",
+		SeriesID: "LAUCN550250000000003",
 		Data: []blsDataEntry{
 			{Year: "2023", Period: "M01", Value: "N.A."}, // BLS suppression marker
 			{Year: "2023", Period: "M02", Value: "3.0"},
@@ -519,10 +519,10 @@ func TestBLSLAUSFetchCounty(t *testing.T) {
 	// Build a response for Dane County WI (55025) with all 4 measures.
 	// Use M13 (official annual average) for clean values.
 	seriesData := map[string][]blsDataEntry{
-		"LAUST5502500000000003": {{Year: "2023", Period: "M13", Value: "3.2"}}, // rate
-		"LAUST5502500000000004": {{Year: "2023", Period: "M13", Value: "15000"}}, // unemployed
-		"LAUST5502500000000005": {{Year: "2023", Period: "M13", Value: "350000"}}, // employed
-		"LAUST5502500000000006": {{Year: "2023", Period: "M13", Value: "365000"}}, // labor force
+		"LAUCN550250000000003": {{Year: "2023", Period: "M13", Value: "3.2"}}, // rate
+		"LAUCN550250000000004": {{Year: "2023", Period: "M13", Value: "15000"}}, // unemployed
+		"LAUCN550250000000005": {{Year: "2023", Period: "M13", Value: "350000"}}, // employed
+		"LAUCN550250000000006": {{Year: "2023", Period: "M13", Value: "365000"}}, // labor force
 	}
 
 	ts := newBLSMockServer(t,
@@ -577,11 +577,11 @@ func TestBLSLAUSFetchCounty(t *testing.T) {
 func TestBLSLAUSFetchCounty_MonthlyComputed(t *testing.T) {
 	// Use 12 monthly entries for the rate series, no M13.
 	seriesData := map[string][]blsDataEntry{
-		"LAUST5502500000000003": monthlyEntries(2023, 4.0),
+		"LAUCN550250000000003": monthlyEntries(2023, 4.0),
 		// Other series have M13 for simplicity.
-		"LAUST5502500000000004": {{Year: "2023", Period: "M13", Value: "18000"}},
-		"LAUST5502500000000005": {{Year: "2023", Period: "M13", Value: "430000"}},
-		"LAUST5502500000000006": {{Year: "2023", Period: "M13", Value: "448000"}},
+		"LAUCN550250000000004": {{Year: "2023", Period: "M13", Value: "18000"}},
+		"LAUCN550250000000005": {{Year: "2023", Period: "M13", Value: "430000"}},
+		"LAUCN550250000000006": {{Year: "2023", Period: "M13", Value: "448000"}},
 	}
 
 	ts := newBLSMockServer(t,
@@ -615,7 +615,7 @@ func TestBLSLAUSFetchCounty_MonthlyComputed(t *testing.T) {
 func TestBLSLAUSFetchCounty_MissingData(t *testing.T) {
 	// Only the unemployment rate series has data — others return empty.
 	seriesData := map[string][]blsDataEntry{
-		"LAUST5502500000000003": {{Year: "2023", Period: "M13", Value: "5.0"}},
+		"LAUCN550250000000003": {{Year: "2023", Period: "M13", Value: "5.0"}},
 		// No data for 04, 05, 06.
 	}
 
@@ -661,7 +661,7 @@ func TestBLSLAUSFetchCounty_MissingData(t *testing.T) {
 // a value is present, and empty when nil.
 func TestBLSLAUSFetchCounty_RawValuePopulated(t *testing.T) {
 	seriesData := map[string][]blsDataEntry{
-		"LAUST5502500000000003": {{Year: "2023", Period: "M13", Value: "3.5"}},
+		"LAUCN550250000000003": {{Year: "2023", Period: "M13", Value: "3.5"}},
 		// Others missing.
 	}
 
@@ -716,15 +716,15 @@ func TestBLSLAUSFetchState(t *testing.T) {
 	// Build responses for both counties in the fixture.
 	seriesData := map[string][]blsDataEntry{
 		// County 55001 (Adams)
-		"LAUST5500100000000003": {{Year: "2023", Period: "M13", Value: "4.5"}},
-		"LAUST5500100000000004": {{Year: "2023", Period: "M13", Value: "800"}},
-		"LAUST5500100000000005": {{Year: "2023", Period: "M13", Value: "17000"}},
-		"LAUST5500100000000006": {{Year: "2023", Period: "M13", Value: "17800"}},
+		"LAUCN550010000000003": {{Year: "2023", Period: "M13", Value: "4.5"}},
+		"LAUCN550010000000004": {{Year: "2023", Period: "M13", Value: "800"}},
+		"LAUCN550010000000005": {{Year: "2023", Period: "M13", Value: "17000"}},
+		"LAUCN550010000000006": {{Year: "2023", Period: "M13", Value: "17800"}},
 		// County 55025 (Dane)
-		"LAUST5502500000000003": {{Year: "2023", Period: "M13", Value: "2.8"}},
-		"LAUST5502500000000004": {{Year: "2023", Period: "M13", Value: "15000"}},
-		"LAUST5502500000000005": {{Year: "2023", Period: "M13", Value: "520000"}},
-		"LAUST5502500000000006": {{Year: "2023", Period: "M13", Value: "535000"}},
+		"LAUCN550250000000003": {{Year: "2023", Period: "M13", Value: "2.8"}},
+		"LAUCN550250000000004": {{Year: "2023", Period: "M13", Value: "15000"}},
+		"LAUCN550250000000005": {{Year: "2023", Period: "M13", Value: "520000"}},
+		"LAUCN550250000000006": {{Year: "2023", Period: "M13", Value: "535000"}},
 	}
 
 	ts := newBLSMockServer(t,
@@ -770,10 +770,10 @@ func TestBLSLAUSFetchState(t *testing.T) {
 func TestBLSLAUSNoBatchDelay_SingleBatch(t *testing.T) {
 	// 4 series = 1 batch (well under the 25-series limit).
 	seriesData := map[string][]blsDataEntry{
-		"LAUST5502500000000003": {{Year: "2023", Period: "M13", Value: "3.0"}},
-		"LAUST5502500000000004": {{Year: "2023", Period: "M13", Value: "12000"}},
-		"LAUST5502500000000005": {{Year: "2023", Period: "M13", Value: "400000"}},
-		"LAUST5502500000000006": {{Year: "2023", Period: "M13", Value: "412000"}},
+		"LAUCN550250000000003": {{Year: "2023", Period: "M13", Value: "3.0"}},
+		"LAUCN550250000000004": {{Year: "2023", Period: "M13", Value: "12000"}},
+		"LAUCN550250000000005": {{Year: "2023", Period: "M13", Value: "400000"}},
+		"LAUCN550250000000006": {{Year: "2023", Period: "M13", Value: "412000"}},
 	}
 
 	ts := newBLSMockServer(t,

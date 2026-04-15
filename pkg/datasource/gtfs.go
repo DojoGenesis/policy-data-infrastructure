@@ -287,21 +287,34 @@ func (s *gtfsSource) downloadZIP(ctx context.Context, rawURL string) ([]byte, er
 	return data, nil
 }
 
-// geocoderResponse is the top-level JSON response from the Census geocoder API.
+// geocoderResponse is the top-level JSON response from the Census geocoder
+// COORDINATES endpoint (https://geocoding.geo.census.gov/geocoder/geographies/coordinates).
+//
+// The coordinates endpoint returns geographies directly under result.geographies —
+// there is NO addressMatches wrapper (that wrapper is only present on the ADDRESS
+// endpoint). Structure confirmed by the Census Geocoder API documentation:
+//
+//	{
+//	  "result": {
+//	    "geographies": {
+//	      "Census Tracts": [
+//	        { "GEOID": "55025000100", "STATE": "55", "COUNTY": "025", ... }
+//	      ]
+//	    }
+//	  }
+//	}
 type geocoderResponse struct {
 	Result struct {
-		AddressMatches []struct {
-			Geographies struct {
-				CensusTracts []struct {
-					GEOID string `json:"GEOID"`
-				} `json:"Census Tracts"`
-			} `json:"geographies"`
-		} `json:"addressMatches"`
+		Geographies struct {
+			CensusTracts []struct {
+				GEOID string `json:"GEOID"`
+			} `json:"Census Tracts"`
+		} `json:"geographies"`
 	} `json:"result"`
 }
 
-// geocodeToTract calls the Census Bureau geocoder to map a lat/lon to an
-// 11-digit census tract GEOID. Returns an error if no match is found.
+// geocodeToTract calls the Census Bureau geocoder coordinates endpoint to map a
+// lat/lon to an 11-digit census tract GEOID. Returns an error if no match is found.
 func (s *gtfsSource) geocodeToTract(ctx context.Context, lat, lon float64) (string, error) {
 	params := url.Values{}
 	params.Set("x", strconv.FormatFloat(lon, 'f', 6, 64))
@@ -333,11 +346,8 @@ func (s *gtfsSource) geocodeToTract(ctx context.Context, lat, lon float64) (stri
 		return "", fmt.Errorf("geocoder: decode: %w", err)
 	}
 
-	matches := gr.Result.AddressMatches
-	if len(matches) == 0 {
-		return "", fmt.Errorf("geocoder: no matches for %.6f,%.6f", lat, lon)
-	}
-	tracts := matches[0].Geographies.CensusTracts
+	// The coordinates endpoint places tracts directly under result.geographies.
+	tracts := gr.Result.Geographies.CensusTracts
 	if len(tracts) == 0 {
 		return "", fmt.Errorf("geocoder: no tract match for %.6f,%.6f", lat, lon)
 	}

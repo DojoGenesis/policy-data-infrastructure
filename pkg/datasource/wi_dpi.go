@@ -417,18 +417,22 @@ func parseWIDPIEnrollCSV(r io.Reader) (map[string]*wiDPIEnrollRecord, error) {
 			records[dc] = rec
 		}
 
+		groupValLower := strings.ToLower(groupVal)
 		switch groupBy {
 		case "All Students":
 			if groupVal == "All Students" {
 				rec.Enrollment = count
 			}
 		case "Race/Ethnicity":
-			switch groupVal {
-			case "White":
+			// Use case-insensitive contains matching to handle WISEdash label
+			// variations across releases (e.g. "Black or African American",
+			// "Hispanic or Latino") and any trimming/encoding differences.
+			switch {
+			case groupValLower == "white":
 				rec.PctWhite = pct
-			case "Black":
+			case strings.Contains(groupValLower, "black"):
 				rec.PctBlack = pct
-			case "Hispanic":
+			case strings.Contains(groupValLower, "hispanic"):
 				rec.PctHispanic = pct
 			}
 		case "Economic Status":
@@ -598,6 +602,31 @@ func (s *wiDPISource) buildIndicators(
 				Vintage:    s.vintage,
 				Value:      &chronic,
 				RawValue:   fmt.Sprintf("%.2f", chronic),
+			})
+		}
+
+		// Race-stratified and economic-status chronic absence variables.
+		// WISEdash attendance downloads provide only aggregate district-level
+		// attendance rates (All Students). Race-stratified attendance rates are
+		// NOT available in the certified attendance download, so these indicators
+		// are emitted with nil values to make the data gap visible in queries
+		// rather than silently omitting the variables from the output.
+		//
+		// If WI DPI publishes race-stratified attendance data in a future
+		// release, populate the values here from those records.
+		raceAbsenceVars := []string{
+			"dpi_chronic_absence_black",
+			"dpi_chronic_absence_hispanic",
+			"dpi_chronic_absence_white",
+			"dpi_chronic_absence_econ_disadv",
+		}
+		for _, varID := range raceAbsenceVars {
+			out = append(out, store.Indicator{
+				GEOID:      geoid,
+				VariableID: varID,
+				Vintage:    s.vintage,
+				Value:      nil, // not available in certified attendance download
+				RawValue:   "",
 			})
 		}
 	}

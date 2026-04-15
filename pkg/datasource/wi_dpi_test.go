@@ -16,13 +16,15 @@ import (
 // ---------------------------------------------------------------------------
 
 // wiDPIEnrollFixture is a minimal long-format enrollment CSV with two districts.
-// District 0378: all-student enrollment = 25000, White 42%, Black 22%, Hispanic 18%, EconDisadv 55%.
+// District 0378: all-student enrollment = 25000, White 42%, Black or African American 22%, Hispanic or Latino 18%, EconDisadv 55%.
 // District 0441: all-student enrollment = 5200.
+// Race/ethnicity labels use the full WISEdash encoding ("Black or African American",
+// "Hispanic or Latino") to match real WISEdash certified download format.
 const wiDPIEnrollFixture = `DISTRICT_CODE,SCHOOL_CODE,SCHOOL_NAME,DISTRICT_NAME,GRADE_GROUP,GROUP_BY,GROUP_BY_VALUE,STUDENT_COUNT,PERCENT_OF_GROUP
 0378,,,,  [All],All Students,All Students,25000,
 0378,,,,[All],Race/Ethnicity,White,,42.1
-0378,,,,[All],Race/Ethnicity,Black,,22.3
-0378,,,,[All],Race/Ethnicity,Hispanic,,18.5
+0378,,,,[All],Race/Ethnicity,Black or African American,,22.3
+0378,,,,[All],Race/Ethnicity,Hispanic or Latino,,18.5
 0378,,,,[All],Economic Status,Econ Disadv,,55.2
 0441,,,,[All],All Students,All Students,5200,
 `
@@ -269,11 +271,15 @@ func TestWIDPIBuildIndicators(t *testing.T) {
 		t.Fatal("buildIndicators: expected indicators, got none")
 	}
 
-	// Index by (GEOID, VariableID) for easy lookup.
+	// Index by (GEOID, VariableID) for easy lookup — value indicators.
 	idx := make(map[string]float64)
+	// Track which (GEOID, VariableID) pairs were emitted at all (including nil-value ones).
+	emitted := make(map[string]bool)
 	for _, ind := range indicators {
+		key := ind.GEOID + "|" + ind.VariableID
+		emitted[key] = true
 		if ind.Value != nil {
-			idx[ind.GEOID+"|"+ind.VariableID] = *ind.Value
+			idx[key] = *ind.Value
 		}
 	}
 
@@ -306,6 +312,29 @@ func TestWIDPIBuildIndicators(t *testing.T) {
 	key = "wi-dist-0441|dpi_chronic_absence_rate"
 	if v, ok := idx[key]; !ok || v != 6.0 {
 		t.Errorf("chronic_absence_rate for 0441: want 6.0, got %v (ok=%v)", v, ok)
+	}
+
+	// Race-stratified chronic absence variables must be emitted for every district,
+	// even though they have nil values (no race-stratified attendance data in the
+	// certified attendance download). Emitting nil makes the gap visible in queries.
+	raceAbsenceVars := []string{
+		"dpi_chronic_absence_black",
+		"dpi_chronic_absence_hispanic",
+		"dpi_chronic_absence_white",
+		"dpi_chronic_absence_econ_disadv",
+	}
+	for _, dc := range []string{"0378", "0441"} {
+		geoid := "wi-dist-" + dc
+		for _, varID := range raceAbsenceVars {
+			k := geoid + "|" + varID
+			if !emitted[k] {
+				t.Errorf("race-stratified var %q not emitted for district %s", varID, dc)
+			}
+			// Value must be nil — these are data-gap indicators.
+			if _, hasValue := idx[k]; hasValue {
+				t.Errorf("race-stratified var %q for %s: expected nil value, got non-nil", varID, dc)
+			}
+		}
 	}
 
 	// All indicators must have Vintage set.
