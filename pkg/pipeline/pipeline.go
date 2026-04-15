@@ -25,6 +25,10 @@ func New(stages ...Stage) *Pipeline {
 // Run executes all stages in topological order.
 // It returns the first error encountered and cancels any in-flight stages.
 func (p *Pipeline) Run(ctx context.Context, s store.Store, cfg *Config) error {
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
 	order, err := topoSort(p.stages)
 	if err != nil {
 		return fmt.Errorf("pipeline: dependency resolution failed: %w", err)

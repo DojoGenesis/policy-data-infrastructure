@@ -109,6 +109,7 @@ func runPipeline(stateFIPS, countyFIPS, scope string, year, parallel int) error 
 
 	p := pipeline.New(
 		pipeline.NewFetchStage(reg, natParallel),
+		&pipeline.ValidateStage{},
 		&pipeline.ProcessStage{},
 		&pipeline.EnrichStage{},
 		&pipeline.AnalyzeStage{},

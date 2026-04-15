@@ -142,7 +142,7 @@ func TestPipeline_RunOrder(t *testing.T) {
 	c := newMock("c", "b")
 
 	p := New(c, b, a)
-	cfg := &Config{Parallelism: 4}
+	cfg := &Config{Parallelism: 4, Year: 2023}
 
 	if err := p.Run(context.Background(), nil, cfg); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -165,7 +165,7 @@ func TestPipeline_ParallelStages(t *testing.T) {
 	c := &slowStage{name: "c", deps: []string{"a"}, started: &started, block: blockCh}
 
 	p := New(a, b, c)
-	cfg := &Config{Parallelism: 4}
+	cfg := &Config{Parallelism: 4, Year: 2023}
 
 	done := make(chan error, 1)
 	go func() {
@@ -217,7 +217,7 @@ func TestPipeline_ErrorPropagation(t *testing.T) {
 	c := newMock("c", "b")
 
 	p := New(a, b, c)
-	cfg := &Config{Parallelism: 4}
+	cfg := &Config{Parallelism: 4, Year: 2023}
 
 	err := p.Run(context.Background(), nil, cfg)
 	if err == nil {
@@ -242,7 +242,7 @@ func TestPipeline_ContextCancellation(t *testing.T) {
 	a := &contextStage{waiting: waiting, unblock: unblock}
 
 	p := New(a)
-	cfg := &Config{Parallelism: 2}
+	cfg := &Config{Parallelism: 2, Year: 2023}
 
 	done := make(chan error, 1)
 	go func() {
@@ -292,9 +292,10 @@ func (cs *contextStage) Run(ctx context.Context, _ store.Store, _ *Config) error
 // ---------------------------------------------------------------------------
 
 func TestDefaultPipeline_StageOrder(t *testing.T) {
-	// Verify the canonical 6-stage pipeline produces the expected topo order.
+	// Verify the canonical 7-stage pipeline produces the expected topo order.
 	stages := []Stage{
 		NewFetchStage(datasource.NewRegistry()),
+		&ValidateStage{},
 		&ProcessStage{},
 		&EnrichStage{},
 		&AnalyzeStage{},
@@ -307,7 +308,7 @@ func TestDefaultPipeline_StageOrder(t *testing.T) {
 		t.Fatalf("default pipeline topoSort: %v", err)
 	}
 
-	want := []string{"fetch", "process", "enrich", "analyze", "synthesize", "deliver"}
+	want := []string{"fetch", "validate", "process", "enrich", "analyze", "synthesize", "deliver"}
 	if len(order) != len(want) {
 		t.Fatalf("expected %d stages, got %d", len(want), len(order))
 	}

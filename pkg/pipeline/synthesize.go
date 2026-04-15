@@ -58,8 +58,7 @@ func (sy *SynthesizeStage) Run(ctx context.Context, s store.Store, cfg *Config) 
 		return fmt.Errorf("synthesize: query geographies: %w", err)
 	}
 	if len(geographies) == 0 {
-		log.Printf("synthesize: no tracts found for scope, skipping")
-		return nil
+		return fmt.Errorf("synthesize: no geographies found at tract level — seed geographies before running pipeline")
 	}
 
 	sort.Slice(geographies, func(i, j int) bool {

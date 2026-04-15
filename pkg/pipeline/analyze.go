@@ -50,8 +50,7 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 		return fmt.Errorf("analyze: query geographies: %w", err)
 	}
 	if len(geographies) == 0 {
-		log.Printf("analyze: no tracts found for scope, skipping")
-		return nil
+		return fmt.Errorf("analyze: no geographies found at tract level — seed geographies before running pipeline")
 	}
 
 	sort.Slice(geographies, func(i, j int) bool {

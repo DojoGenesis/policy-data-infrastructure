@@ -15,7 +15,7 @@ import (
 type ProcessStage struct{}
 
 func (p *ProcessStage) Name() string          { return "process" }
-func (p *ProcessStage) Dependencies() []string { return []string{"fetch"} }
+func (p *ProcessStage) Dependencies() []string { return []string{"validate"} }
 
 func (p *ProcessStage) Run(ctx context.Context, s store.Store, cfg *Config) error {
 	if cfg.DryRun {
