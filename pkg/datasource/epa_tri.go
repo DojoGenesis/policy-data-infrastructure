@@ -70,9 +70,9 @@ var epaTriVariables = []VariableDef{
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "epa_tri_carcinogen_releases",
-		Name:        "Carcinogen Releases (lbs)",
-		Description: "Total releases of chemicals classified as known or probable carcinogens in pounds from all TRI facilities in the county.",
+		ID:          "epa_tri_carcinogen_facility_count",
+		Name:        "Carcinogen-Handling Facility Count",
+		Description: "Number of TRI-reporting facilities in the county that handle or release any quantity of chemicals classified as known or probable carcinogens (CARCINOGEN=YES in TRI records). The TRI facility endpoint does not report per-chemical carcinogen pounds; use the tri_release endpoint for pound-level carcinogen attribution.",
 		Unit:        "count",
 		Direction:   "lower_better",
 	},
@@ -104,10 +104,10 @@ type triRecord struct {
 
 // countyTRIRecord holds accumulated TRI data for one county.
 type countyTRIRecord struct {
-	facilityCount      int
-	totalReleasesLbs   float64
-	airReleasesLbs     float64
-	carcinogenLbs      float64
+	facilityCount           int
+	totalReleasesLbs        float64
+	airReleasesLbs          float64
+	carcinogenFacilityCount int // facilities where CARCINOGEN=YES (not pound-level — use tri_release for that)
 }
 
 // epaTRISource implements DataSource for EPA TRI data.
@@ -225,7 +225,7 @@ func (s *epaTRISource) fetchState(ctx context.Context, stateFIPS string) (map[st
 			county.totalReleasesLbs += parseFloatOrZero(rec.TotalReleases)
 			county.airReleasesLbs += parseFloatOrZero(rec.FugitiveAir) + parseFloatOrZero(rec.StackAir)
 			if strings.EqualFold(strings.TrimSpace(rec.Carcinogen), "YES") {
-				county.carcinogenLbs += parseFloatOrZero(rec.TotalReleases)
+				county.carcinogenFacilityCount++
 			}
 		}
 
@@ -324,7 +324,7 @@ func (s *epaTRISource) countyRecordToIndicators(fips5 string, rec *countyTRIReco
 	out = append(out, makeInd("epa_tri_facility_count", float64(rec.facilityCount)))
 	out = append(out, makeInd("epa_tri_total_releases_lbs", rec.totalReleasesLbs))
 	out = append(out, makeInd("epa_tri_air_releases_lbs", rec.airReleasesLbs))
-	out = append(out, makeInd("epa_tri_carcinogen_releases", rec.carcinogenLbs))
+	out = append(out, makeInd("epa_tri_carcinogen_facility_count", float64(rec.carcinogenFacilityCount)))
 
 	return out
 }

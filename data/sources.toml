@@ -240,9 +240,9 @@ notes              = """
 WI-specific education data from WISEdash certified downloads.
 Two ZIP files: enrollment (by district/race/gender) and attendance (by district).
 GEOID convention: wi-dist-XXXX (4-digit district code, not census FIPS).
-Variables: dpi_enrollment, dpi_chronic_absence_rate, dpi_attendance_rate,
-dpi_chronic_absence_black, dpi_chronic_absence_hispanic, dpi_chronic_absence_white,
-dpi_chronic_absence_econ_disadv.
+Variables: wi_dpi_enrollment, wi_dpi_chronic_absence_rate, wi_dpi_attendance_rate,
+wi_dpi_chronic_absence_black, wi_dpi_chronic_absence_hispanic, wi_dpi_chronic_absence_white,
+wi_dpi_chronic_absence_econ_disadv.
 Non-WI states return empty (graceful no-op). Handles UTF-8 BOM and latin-1 fallback.
 """
 

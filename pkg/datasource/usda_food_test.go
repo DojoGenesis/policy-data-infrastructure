@@ -115,10 +115,10 @@ func TestUSDAFoodSchema(t *testing.T) {
 
 	expectedIDs := []string{
 		"usda_food_desert",
-		"usda_low_access_1mi",
-		"usda_low_access_10mi",
-		"usda_snap_count",
-		"usda_grocery_count",
+		"usda_food_low_access_1mi",
+		"usda_food_low_access_10mi",
+		"usda_food_snap_count",
+		"usda_food_grocery_count",
 	}
 
 	byID := make(map[string]VariableDef)
@@ -466,8 +466,8 @@ func TestUSDAFoodIndicatorValues(t *testing.T) {
 		t.Fatal("no indicators for 55025000100")
 	}
 	checkFloat(t, "55025000100", "usda_food_desert", t1, 1)
-	checkFloat(t, "55025000100", "usda_low_access_1mi", t1, 350)
-	checkFloat(t, "55025000100", "usda_grocery_count", t1, 2)
+	checkFloat(t, "55025000100", "usda_food_low_access_1mi", t1, 350)
+	checkFloat(t, "55025000100", "usda_food_grocery_count", t1, 2)
 
 	// Tract 55025000200: food desert = 0, no low access.
 	t2 := byVar["55025000200"]
@@ -475,7 +475,7 @@ func TestUSDAFoodIndicatorValues(t *testing.T) {
 		t.Fatal("no indicators for 55025000200")
 	}
 	checkFloat(t, "55025000200", "usda_food_desert", t2, 0)
-	checkFloat(t, "55025000200", "usda_grocery_count", t2, 1)
+	checkFloat(t, "55025000200", "usda_food_grocery_count", t2, 1)
 }
 
 // checkFloat is a helper that asserts a specific float value in the map.

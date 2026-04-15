@@ -14,11 +14,11 @@ package datasource
 // The adapter downloads the ZIP once per process invocation, extracts the
 // tract CSV in-memory, and derives five housing affordability indicators:
 //
-//	hud_cost_burden_30pct   — % households paying >30% income on housing
-//	hud_cost_burden_50pct   — % households paying >50% income on housing
-//	hud_housing_problems    — % households with 1+ housing problems
-//	hud_eli_renters         — % renters who are extremely low income (≤30% AMI)
-//	hud_overcrowded         — % households that are overcrowded (>1 person/room)
+//	hud_chas_cost_burden_30pct   — % households paying >30% income on housing
+//	hud_chas_cost_burden_50pct   — % households paying >50% income on housing
+//	hud_chas_housing_problems    — % households with 1+ housing problems
+//	hud_chas_eli_renters         — % renters who are extremely low income (≤30% AMI)
+//	hud_chas_overcrowded         — % households that are overcrowded (>1 person/room)
 //
 // Geographic level: census tract (11-digit FIPS GEOID). FetchCounty filters by
 // the 5-digit county FIPS prefix. FetchState filters by the 2-digit state FIPS
@@ -68,35 +68,35 @@ const chasBaseURL = "https://www.huduser.gov/portal/datasets/cp/%dthru%d-140-csv
 // chasVariables defines the schema produced by the CHAS source.
 var chasVariables = []VariableDef{
 	{
-		ID:          "hud_cost_burden_30pct",
+		ID:          "hud_chas_cost_burden_30pct",
 		Name:        "Cost Burden >30% (HUD CHAS)",
 		Description: "Percentage of households paying more than 30 percent of household income on housing costs (rent or mortgage plus utilities). Derived from HUD CHAS Tables 8 and 9.",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "hud_cost_burden_50pct",
+		ID:          "hud_chas_cost_burden_50pct",
 		Name:        "Severe Cost Burden >50% (HUD CHAS)",
 		Description: "Percentage of households paying more than 50 percent of household income on housing costs (severe cost burden). Derived from HUD CHAS Tables 8 and 9.",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "hud_housing_problems",
+		ID:          "hud_chas_housing_problems",
 		Name:        "1+ Housing Problems (HUD CHAS)",
 		Description: "Percentage of households experiencing at least one of the following housing problems: cost burden >30%, overcrowding, incomplete kitchen facilities, or incomplete plumbing. Derived from HUD CHAS Table 1.",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "hud_eli_renters",
+		ID:          "hud_chas_eli_renters",
 		Name:        "Extremely Low-Income Renters (HUD CHAS)",
 		Description: "Percentage of renter households with income at or below 30 percent of Area Median Income (extremely low income, ELI). Derived from HUD CHAS Table 4.",
 		Unit:        "percent",
 		Direction:   "neutral",
 	},
 	{
-		ID:          "hud_overcrowded",
+		ID:          "hud_chas_overcrowded",
 		Name:        "Overcrowded Households (HUD CHAS)",
 		Description: "Percentage of households that are overcrowded, defined as having more than 1.0 person per room. Derived from HUD CHAS Table 1.",
 		Unit:        "percent",
@@ -402,7 +402,7 @@ func (s *hudCHASSource) parseRows(rows [][]string, geoidPrefix string, byCounty 
 
 		// Derive indicators as percentages.
 
-		// hud_cost_burden_30pct: (renter CB30 + renter CB50 + owner CB30 + owner CB50) / totalHH
+		// hud_chas_cost_burden_30pct: (renter CB30 + renter CB50 + owner CB30 + owner CB50) / totalHH
 		var cb30Pct *float64
 		if totalHH != nil && *totalHH > 0 &&
 			renterCB30 != nil && renterCB50 != nil && ownerCB30 != nil && ownerCB50 != nil {
@@ -410,28 +410,28 @@ func (s *hudCHASSource) parseRows(rows [][]string, geoidPrefix string, byCounty 
 			cb30Pct = &v
 		}
 
-		// hud_cost_burden_50pct: (renter CB50 + owner CB50) / totalHH
+		// hud_chas_cost_burden_50pct: (renter CB50 + owner CB50) / totalHH
 		var cb50Pct *float64
 		if totalHH != nil && *totalHH > 0 && renterCB50 != nil && ownerCB50 != nil {
 			v := 100.0 * (*renterCB50 + *ownerCB50) / *totalHH
 			cb50Pct = &v
 		}
 
-		// hud_housing_problems: problemHH / totalHH
+		// hud_chas_housing_problems: problemHH / totalHH
 		var problemPct *float64
 		if totalHH != nil && *totalHH > 0 && problemHH != nil {
 			v := 100.0 * *problemHH / *totalHH
 			problemPct = &v
 		}
 
-		// hud_eli_renters: eliRenters / totalRenters
+		// hud_chas_eli_renters: eliRenters / totalRenters
 		var eliPct *float64
 		if totalRenters != nil && *totalRenters > 0 && eliRenters != nil {
 			v := 100.0 * *eliRenters / *totalRenters
 			eliPct = &v
 		}
 
-		// hud_overcrowded: overcrowdedHH / totalHH
+		// hud_chas_overcrowded: overcrowdedHH / totalHH
 		var overcrowdedPct *float64
 		if totalHH != nil && *totalHH > 0 && overcrowdedHH != nil {
 			v := 100.0 * *overcrowdedHH / *totalHH
@@ -453,11 +453,11 @@ func (s *hudCHASSource) parseRows(rows [][]string, geoidPrefix string, byCounty 
 		}
 
 		out = append(out,
-			makeInd("hud_cost_burden_30pct", cb30Pct),
-			makeInd("hud_cost_burden_50pct", cb50Pct),
-			makeInd("hud_housing_problems", problemPct),
-			makeInd("hud_eli_renters", eliPct),
-			makeInd("hud_overcrowded", overcrowdedPct),
+			makeInd("hud_chas_cost_burden_30pct", cb30Pct),
+			makeInd("hud_chas_cost_burden_50pct", cb50Pct),
+			makeInd("hud_chas_housing_problems", problemPct),
+			makeInd("hud_chas_eli_renters", eliPct),
+			makeInd("hud_chas_overcrowded", overcrowdedPct),
 		)
 	}
 

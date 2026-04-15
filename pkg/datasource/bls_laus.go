@@ -82,28 +82,28 @@ const (
 // blsVariables defines the schema produced by the BLS LAUS source.
 var blsVariables = []VariableDef{
 	{
-		ID:          "bls_unemployment_rate",
+		ID:          "bls_laus_unemployment_rate",
 		Name:        "Unemployment Rate",
 		Description: "Annual average unemployment rate (percent of civilian labor force that is unemployed). Computed as the mean of the 12 monthly BLS LAUS values for the vintage year.",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "bls_unemployment_count",
+		ID:          "bls_laus_unemployment_count",
 		Name:        "Unemployed Persons",
 		Description: "Annual average number of unemployed persons in the county. Computed as the mean of the 12 monthly BLS LAUS values for the vintage year.",
 		Unit:        "count",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "bls_employment_count",
+		ID:          "bls_laus_employment_count",
 		Name:        "Employed Persons",
 		Description: "Annual average number of employed persons in the county. Computed as the mean of the 12 monthly BLS LAUS values for the vintage year.",
 		Unit:        "count",
 		Direction:   "higher_better",
 	},
 	{
-		ID:          "bls_labor_force",
+		ID:          "bls_laus_labor_force",
 		Name:        "Civilian Labor Force",
 		Description: "Annual average civilian labor force size (employed + unemployed) in the county. Computed as the mean of the 12 monthly BLS LAUS values for the vintage year.",
 		Unit:        "count",
@@ -432,10 +432,10 @@ func (s *blsLAUSSource) seriesToIndicators(geoid, stateFIPS, countyFIPS string, 
 		varID string
 	}
 	measures := []measureDef{
-		{blsMeasureUnemploymentRate, "bls_unemployment_rate"},
-		{blsMeasureUnemployedCount, "bls_unemployment_count"},
-		{blsMeasureEmployedCount, "bls_employment_count"},
-		{blsMeasureLaborForce, "bls_labor_force"},
+		{blsMeasureUnemploymentRate, "bls_laus_unemployment_rate"},
+		{blsMeasureUnemployedCount, "bls_laus_unemployment_count"},
+		{blsMeasureEmployedCount, "bls_laus_employment_count"},
+		{blsMeasureLaborForce, "bls_laus_labor_force"},
 	}
 
 	out := make([]store.Indicator, 0, len(measures))

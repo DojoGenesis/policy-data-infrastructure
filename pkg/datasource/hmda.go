@@ -299,8 +299,7 @@ func isMinorityApplicant(idx hmdaColIdx, row []string) bool {
 	notAvail := strings.Contains(strings.ToLower(race), "not available") ||
 		strings.Contains(strings.ToLower(race), "not applicable") ||
 		race == "" ||
-		strings.EqualFold(race, "Free Form Text Only") ||
-		strings.EqualFold(race, "2 or more minority races")
+		strings.EqualFold(race, "Free Form Text Only")
 	return !whiteRace && !notAvail
 }
 

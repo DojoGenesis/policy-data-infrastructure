@@ -120,11 +120,11 @@ func TestHUDCHASSchema(t *testing.T) {
 	schema := s.Schema()
 
 	expectedIDs := []string{
-		"hud_cost_burden_30pct",
-		"hud_cost_burden_50pct",
-		"hud_housing_problems",
-		"hud_eli_renters",
-		"hud_overcrowded",
+		"hud_chas_cost_burden_30pct",
+		"hud_chas_cost_burden_50pct",
+		"hud_chas_housing_problems",
+		"hud_chas_eli_renters",
+		"hud_chas_overcrowded",
 	}
 
 	if len(schema) != len(expectedIDs) {
@@ -197,11 +197,11 @@ func TestHUDCHASParseCSV(t *testing.T) {
 		varID string
 		want  float64
 	}{
-		{"hud_cost_burden_30pct", 27.0},
-		{"hud_cost_burden_50pct", 12.0},
-		{"hud_housing_problems", 40.0},
-		{"hud_eli_renters", 30.0},
-		{"hud_overcrowded", 5.0},
+		{"hud_chas_cost_burden_30pct", 27.0},
+		{"hud_chas_cost_burden_50pct", 12.0},
+		{"hud_chas_housing_problems", 40.0},
+		{"hud_chas_eli_renters", 30.0},
+		{"hud_chas_overcrowded", 5.0},
 	}
 
 	for _, tc := range tests {

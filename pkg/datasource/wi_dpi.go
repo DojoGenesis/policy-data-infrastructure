@@ -27,13 +27,13 @@ package datasource
 //
 // Variables produced:
 //
-//	dpi_enrollment               — Total student enrollment (count)
-//	dpi_chronic_absence_rate     — Chronic absence rate: 100 - attendance_rate (%)
-//	dpi_attendance_rate          — District-level attendance rate (%)
-//	dpi_chronic_absence_black    — Chronic absence rate, Black students (%)
-//	dpi_chronic_absence_hispanic — Chronic absence rate, Hispanic students (%)
-//	dpi_chronic_absence_white    — Chronic absence rate, White students (%)
-//	dpi_chronic_absence_econ_disadv — Chronic absence rate, economically disadvantaged (%)
+//	wi_dpi_enrollment               — Total student enrollment (count)
+//	wi_dpi_chronic_absence_rate     — Chronic absence rate: 100 - attendance_rate (%)
+//	wi_dpi_attendance_rate          — District-level attendance rate (%)
+//	wi_dpi_chronic_absence_black    — Chronic absence rate, Black students (%)
+//	wi_dpi_chronic_absence_hispanic — Chronic absence rate, Hispanic students (%)
+//	wi_dpi_chronic_absence_white    — Chronic absence rate, White students (%)
+//	wi_dpi_chronic_absence_econ_disadv — Chronic absence rate, economically disadvantaged (%)
 
 import (
 	"archive/zip"
@@ -64,49 +64,49 @@ const (
 // wiDPIVariables is the complete set of indicator variables this adapter produces.
 var wiDPIVariables = []VariableDef{
 	{
-		ID:          "dpi_enrollment",
+		ID:          "wi_dpi_enrollment",
 		Name:        "Total Student Enrollment",
 		Description: "Total student enrollment across all grade levels for the school district",
 		Unit:        "count",
 		Direction:   "neutral",
 	},
 	{
-		ID:          "dpi_chronic_absence_rate",
+		ID:          "wi_dpi_chronic_absence_rate",
 		Name:        "Chronic Absence Rate",
 		Description: "Estimated chronic absence rate (100 - district attendance rate) for all students (%)",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "dpi_attendance_rate",
+		ID:          "wi_dpi_attendance_rate",
 		Name:        "Attendance Rate",
 		Description: "District-level mean attendance rate for all students across all grade levels (%)",
 		Unit:        "percent",
 		Direction:   "higher_better",
 	},
 	{
-		ID:          "dpi_chronic_absence_black",
+		ID:          "wi_dpi_chronic_absence_black",
 		Name:        "Chronic Absence Rate — Black Students",
 		Description: "Estimated chronic absence rate for Black or African American students (%)",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "dpi_chronic_absence_hispanic",
+		ID:          "wi_dpi_chronic_absence_hispanic",
 		Name:        "Chronic Absence Rate — Hispanic Students",
 		Description: "Estimated chronic absence rate for Hispanic or Latino students (%)",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "dpi_chronic_absence_white",
+		ID:          "wi_dpi_chronic_absence_white",
 		Name:        "Chronic Absence Rate — White Students",
 		Description: "Estimated chronic absence rate for White students (%)",
 		Unit:        "percent",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "dpi_chronic_absence_econ_disadv",
+		ID:          "wi_dpi_chronic_absence_econ_disadv",
 		Name:        "Chronic Absence Rate — Economically Disadvantaged Students",
 		Description: "Estimated chronic absence rate for economically disadvantaged students (%)",
 		Unit:        "percent",
@@ -568,7 +568,7 @@ func (s *wiDPISource) buildIndicators(
 				v := *e.Enrollment
 				out = append(out, store.Indicator{
 					GEOID:      geoid,
-					VariableID: "dpi_enrollment",
+					VariableID: "wi_dpi_enrollment",
 					Vintage:    s.vintage,
 					Value:      &v,
 					RawValue:   fmt.Sprintf("%.0f", v),
@@ -588,7 +588,7 @@ func (s *wiDPISource) buildIndicators(
 			attCopy := attVal
 			out = append(out, store.Indicator{
 				GEOID:      geoid,
-				VariableID: "dpi_attendance_rate",
+				VariableID: "wi_dpi_attendance_rate",
 				Vintage:    s.vintage,
 				Value:      &attCopy,
 				RawValue:   fmt.Sprintf("%.2f", attCopy),
@@ -598,7 +598,7 @@ func (s *wiDPISource) buildIndicators(
 			chronic := roundFloat(100.0-attVal, 2)
 			out = append(out, store.Indicator{
 				GEOID:      geoid,
-				VariableID: "dpi_chronic_absence_rate",
+				VariableID: "wi_dpi_chronic_absence_rate",
 				Vintage:    s.vintage,
 				Value:      &chronic,
 				RawValue:   fmt.Sprintf("%.2f", chronic),
@@ -615,10 +615,10 @@ func (s *wiDPISource) buildIndicators(
 		// If WI DPI publishes race-stratified attendance data in a future
 		// release, populate the values here from those records.
 		raceAbsenceVars := []string{
-			"dpi_chronic_absence_black",
-			"dpi_chronic_absence_hispanic",
-			"dpi_chronic_absence_white",
-			"dpi_chronic_absence_econ_disadv",
+			"wi_dpi_chronic_absence_black",
+			"wi_dpi_chronic_absence_hispanic",
+			"wi_dpi_chronic_absence_white",
+			"wi_dpi_chronic_absence_econ_disadv",
 		}
 		for _, varID := range raceAbsenceVars {
 			out = append(out, store.Indicator{

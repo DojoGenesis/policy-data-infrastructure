@@ -173,10 +173,10 @@ func TestBLSLAUSSchema(t *testing.T) {
 	schema := s.Schema()
 
 	expectedIDs := []string{
-		"bls_unemployment_rate",
-		"bls_unemployment_count",
-		"bls_employment_count",
-		"bls_labor_force",
+		"bls_laus_unemployment_rate",
+		"bls_laus_unemployment_count",
+		"bls_laus_employment_count",
+		"bls_laus_labor_force",
 	}
 
 	if len(schema) != len(expectedIDs) {
@@ -210,10 +210,10 @@ func TestBLSLAUSSchema(t *testing.T) {
 
 	// Verify expected directions.
 	dirChecks := map[string]string{
-		"bls_unemployment_rate":  "lower_better",
-		"bls_unemployment_count": "lower_better",
-		"bls_employment_count":   "higher_better",
-		"bls_labor_force":        "neutral",
+		"bls_laus_unemployment_rate":  "lower_better",
+		"bls_laus_unemployment_count": "lower_better",
+		"bls_laus_employment_count":   "higher_better",
+		"bls_laus_labor_force":        "neutral",
 	}
 	for id, want := range dirChecks {
 		if def, ok := byID[id]; ok && def.Direction != want {
@@ -558,16 +558,16 @@ func TestBLSLAUSFetchCounty(t *testing.T) {
 		byVar[ind.VariableID] = *ind.Value
 	}
 
-	if v, ok := byVar["bls_unemployment_rate"]; !ok || v != 3.2 {
+	if v, ok := byVar["bls_laus_unemployment_rate"]; !ok || v != 3.2 {
 		t.Errorf("bls_unemployment_rate: want 3.2, got %v (ok=%v)", v, ok)
 	}
-	if v, ok := byVar["bls_unemployment_count"]; !ok || v != 15000 {
+	if v, ok := byVar["bls_laus_unemployment_count"]; !ok || v != 15000 {
 		t.Errorf("bls_unemployment_count: want 15000, got %v (ok=%v)", v, ok)
 	}
-	if v, ok := byVar["bls_employment_count"]; !ok || v != 350000 {
+	if v, ok := byVar["bls_laus_employment_count"]; !ok || v != 350000 {
 		t.Errorf("bls_employment_count: want 350000, got %v (ok=%v)", v, ok)
 	}
-	if v, ok := byVar["bls_labor_force"]; !ok || v != 365000 {
+	if v, ok := byVar["bls_laus_labor_force"]; !ok || v != 365000 {
 		t.Errorf("bls_labor_force: want 365000, got %v (ok=%v)", v, ok)
 	}
 }
@@ -600,7 +600,7 @@ func TestBLSLAUSFetchCounty_MonthlyComputed(t *testing.T) {
 	}
 
 	for _, ind := range indicators {
-		if ind.VariableID == "bls_unemployment_rate" {
+		if ind.VariableID == "bls_laus_unemployment_rate" {
 			if ind.Value == nil {
 				t.Fatal("bls_unemployment_rate: nil value")
 			}
@@ -643,16 +643,16 @@ func TestBLSLAUSFetchCounty_MissingData(t *testing.T) {
 		byVar[ind.VariableID] = v
 	}
 
-	if byVar["bls_unemployment_rate"] == nil || *byVar["bls_unemployment_rate"] != 5.0 {
+	if byVar["bls_laus_unemployment_rate"] == nil || *byVar["bls_laus_unemployment_rate"] != 5.0 {
 		t.Errorf("bls_unemployment_rate: want 5.0")
 	}
-	if byVar["bls_unemployment_count"] != nil {
+	if byVar["bls_laus_unemployment_count"] != nil {
 		t.Error("bls_unemployment_count: want nil (no data), got non-nil")
 	}
-	if byVar["bls_employment_count"] != nil {
+	if byVar["bls_laus_employment_count"] != nil {
 		t.Error("bls_employment_count: want nil (no data), got non-nil")
 	}
-	if byVar["bls_labor_force"] != nil {
+	if byVar["bls_laus_labor_force"] != nil {
 		t.Error("bls_labor_force: want nil (no data), got non-nil")
 	}
 }

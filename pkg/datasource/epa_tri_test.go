@@ -52,7 +52,7 @@ func TestEPATRISchema(t *testing.T) {
 		"epa_tri_facility_count",
 		"epa_tri_total_releases_lbs",
 		"epa_tri_air_releases_lbs",
-		"epa_tri_carcinogen_releases",
+		"epa_tri_carcinogen_facility_count",
 	}
 
 	byID := make(map[string]VariableDef)
@@ -177,7 +177,7 @@ func TestEPATRIAggregateToCounty(t *testing.T) {
 		county.totalReleasesLbs += parseFloatOrZero(rec.TotalReleases)
 		county.airReleasesLbs += parseFloatOrZero(rec.FugitiveAir) + parseFloatOrZero(rec.StackAir)
 		if strings.EqualFold(strings.TrimSpace(rec.Carcinogen), "YES") {
-			county.carcinogenLbs += parseFloatOrZero(rec.TotalReleases)
+			county.carcinogenFacilityCount++
 		}
 	}
 
@@ -197,9 +197,9 @@ func TestEPATRIAggregateToCounty(t *testing.T) {
 	if dane.airReleasesLbs != wantAir {
 		t.Errorf("55025 airReleasesLbs: want %v, got %v", wantAir, dane.airReleasesLbs)
 	}
-	// Only first facility (5000 lbs) is carcinogen.
-	if dane.carcinogenLbs != 5000.0 {
-		t.Errorf("55025 carcinogenLbs: want 5000, got %v", dane.carcinogenLbs)
+	// Only first facility has CARCINOGEN=YES (second has NO).
+	if dane.carcinogenFacilityCount != 1 {
+		t.Errorf("55025 carcinogenFacilityCount: want 1, got %v", dane.carcinogenFacilityCount)
 	}
 
 	// Milwaukee County: 1 facility.
@@ -271,7 +271,7 @@ func TestEPATRIStateScope(t *testing.T) {
 		county.totalReleasesLbs += parseFloatOrZero(rec.TotalReleases)
 		county.airReleasesLbs += parseFloatOrZero(rec.FugitiveAir) + parseFloatOrZero(rec.StackAir)
 		if strings.EqualFold(strings.TrimSpace(rec.Carcinogen), "YES") {
-			county.carcinogenLbs += parseFloatOrZero(rec.TotalReleases)
+			county.carcinogenFacilityCount++
 		}
 	}
 

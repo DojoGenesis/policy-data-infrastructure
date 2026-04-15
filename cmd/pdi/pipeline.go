@@ -88,6 +88,7 @@ func runPipeline(stateFIPS, countyFIPS, scope string, year, parallel int) error 
 
 	reg := datasource.NewRegistry()
 	reg.Register(datasource.NewACSSource(datasource.ACSConfig{Year: year}))
+	reg.Register(datasource.NewTIGERSource(year))
 	reg.Register(datasource.NewCDCPlacesSource(datasource.CDCPlacesConfig{Year: year}))
 	reg.Register(datasource.NewEPAEJScreenSource(datasource.EPAEJScreenConfig{Year: year}))
 	reg.Register(datasource.NewHRSASource(datasource.HRSAConfig{Year: year}))

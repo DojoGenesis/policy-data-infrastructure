@@ -108,13 +108,13 @@ func TestWIDPISchema(t *testing.T) {
 
 	// All required variable IDs must be present.
 	wantIDs := []string{
-		"dpi_enrollment",
-		"dpi_chronic_absence_rate",
-		"dpi_attendance_rate",
-		"dpi_chronic_absence_black",
-		"dpi_chronic_absence_hispanic",
-		"dpi_chronic_absence_white",
-		"dpi_chronic_absence_econ_disadv",
+		"wi_dpi_enrollment",
+		"wi_dpi_chronic_absence_rate",
+		"wi_dpi_attendance_rate",
+		"wi_dpi_chronic_absence_black",
+		"wi_dpi_chronic_absence_hispanic",
+		"wi_dpi_chronic_absence_white",
+		"wi_dpi_chronic_absence_econ_disadv",
 	}
 
 	found := make(map[string]bool, len(schema))
@@ -291,25 +291,25 @@ func TestWIDPIBuildIndicators(t *testing.T) {
 	}
 
 	// District 0378: enrollment = 25000.
-	key := "wi-dist-0378|dpi_enrollment"
+	key := "wi-dist-0378|wi_dpi_enrollment"
 	if v, ok := idx[key]; !ok || v != 25000 {
 		t.Errorf("enrollment for 0378: want 25000, got %v (ok=%v)", v, ok)
 	}
 
 	// District 0378: attendance = 88.5.
-	key = "wi-dist-0378|dpi_attendance_rate"
+	key = "wi-dist-0378|wi_dpi_attendance_rate"
 	if v, ok := idx[key]; !ok || v != 88.5 {
 		t.Errorf("attendance_rate for 0378: want 88.5, got %v (ok=%v)", v, ok)
 	}
 
 	// District 0378: chronic_absence = 100 - 88.5 = 11.5.
-	key = "wi-dist-0378|dpi_chronic_absence_rate"
+	key = "wi-dist-0378|wi_dpi_chronic_absence_rate"
 	if v, ok := idx[key]; !ok || v != 11.5 {
 		t.Errorf("chronic_absence_rate for 0378: want 11.5, got %v (ok=%v)", v, ok)
 	}
 
 	// District 0441: chronic_absence = 100 - 94.0 = 6.0.
-	key = "wi-dist-0441|dpi_chronic_absence_rate"
+	key = "wi-dist-0441|wi_dpi_chronic_absence_rate"
 	if v, ok := idx[key]; !ok || v != 6.0 {
 		t.Errorf("chronic_absence_rate for 0441: want 6.0, got %v (ok=%v)", v, ok)
 	}
@@ -318,10 +318,10 @@ func TestWIDPIBuildIndicators(t *testing.T) {
 	// even though they have nil values (no race-stratified attendance data in the
 	// certified attendance download). Emitting nil makes the gap visible in queries.
 	raceAbsenceVars := []string{
-		"dpi_chronic_absence_black",
-		"dpi_chronic_absence_hispanic",
-		"dpi_chronic_absence_white",
-		"dpi_chronic_absence_econ_disadv",
+		"wi_dpi_chronic_absence_black",
+		"wi_dpi_chronic_absence_hispanic",
+		"wi_dpi_chronic_absence_white",
+		"wi_dpi_chronic_absence_econ_disadv",
 	}
 	for _, dc := range []string{"0378", "0441"} {
 		geoid := "wi-dist-" + dc
@@ -421,7 +421,7 @@ func TestWIDPIParseCSV_HTTPMock(t *testing.T) {
 	indicators := s.buildIndicators(enrollRecords, attRecords)
 	var found bool
 	for _, ind := range indicators {
-		if ind.GEOID == "wi-dist-0378" && ind.VariableID == "dpi_chronic_absence_rate" {
+		if ind.GEOID == "wi-dist-0378" && ind.VariableID == "wi_dpi_chronic_absence_rate" {
 			found = true
 			if ind.Value == nil {
 				t.Fatal("chronic_absence_rate for 0378: nil value")
@@ -433,7 +433,7 @@ func TestWIDPIParseCSV_HTTPMock(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("did not find dpi_chronic_absence_rate for wi-dist-0378 in HTTP mock test")
+		t.Error("did not find wi_dpi_chronic_absence_rate for wi-dist-0378 in HTTP mock test")
 	}
 }
 

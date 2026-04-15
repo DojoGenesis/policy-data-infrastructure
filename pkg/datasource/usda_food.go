@@ -15,11 +15,11 @@ package datasource
 //
 // Variables produced:
 //
-//	usda_food_desert     — Food desert flag: low-income + low-access tract (1=yes, 0=no)
-//	usda_low_access_1mi  — Population with low access at 1-mile urban threshold
-//	usda_low_access_10mi — Population with low access at 10-mile rural threshold
-//	usda_snap_count      — SNAP-recipient population (or share, depending on vintage)
-//	usda_grocery_count   — Grocery store count within the tract
+//	usda_food_desert          — Food desert flag: low-income + low-access tract (1=yes, 0=no)
+//	usda_food_low_access_1mi  — Population with low access at 1-mile urban threshold
+//	usda_food_low_access_10mi — Population with low access at 10-mile rural threshold
+//	usda_food_snap_count      — SNAP-recipient population (or share, depending on vintage)
+//	usda_food_grocery_count   — Grocery store count within the tract
 //
 // Geographic level: census tract (11-digit GEOID). FetchCounty filters by the
 // 5-digit county FIPS prefix; FetchState filters by the 2-digit state prefix.
@@ -71,28 +71,28 @@ var usdaFoodVariables = []VariableDef{
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "usda_low_access_1mi",
+		ID:          "usda_food_low_access_1mi",
 		Name:        "Low-Access Population (1-Mile Urban)",
 		Description: "Population living more than 1 mile from a supermarket or large grocery store (urban threshold). Source: USDA ERS LAPOP1 / LAPOP1_10 column.",
 		Unit:        "count",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "usda_low_access_10mi",
+		ID:          "usda_food_low_access_10mi",
 		Name:        "Low-Access Population (10-Mile Rural)",
 		Description: "Population living more than 10 miles from a supermarket or large grocery store (rural threshold). Source: USDA ERS LAPOP10 / LAPOP10_10 column.",
 		Unit:        "count",
 		Direction:   "lower_better",
 	},
 	{
-		ID:          "usda_snap_count",
+		ID:          "usda_food_snap_count",
 		Name:        "SNAP Recipients",
 		Description: "Count or share of SNAP-benefit recipients residing in the tract. Source: USDA ERS TractSNAP / SNAP_1 / lasnap1share column (varies by vintage).",
 		Unit:        "count",
 		Direction:   "neutral",
 	},
 	{
-		ID:          "usda_grocery_count",
+		ID:          "usda_food_grocery_count",
 		Name:        "Grocery Store Count",
 		Description: "Number of supermarkets and large grocery stores located within the tract. Source: USDA ERS TractSuper / SuperCount column.",
 		Unit:        "count",
@@ -166,10 +166,10 @@ var columnAliases = map[string]usdaCanonicalCol{
 // variableIDForCol maps canonical column IDs to output variable IDs.
 var variableIDForCol = map[usdaCanonicalCol]string{
 	usdaColFoodDesert: "usda_food_desert",
-	usdaColLowAcc1Mi:  "usda_low_access_1mi",
-	usdaColLowAcc10Mi: "usda_low_access_10mi",
-	usdaColSNAP:       "usda_snap_count",
-	usdaColGrocery:    "usda_grocery_count",
+	usdaColLowAcc1Mi:  "usda_food_low_access_1mi",
+	usdaColLowAcc10Mi: "usda_food_low_access_10mi",
+	usdaColSNAP:       "usda_food_snap_count",
+	usdaColGrocery:    "usda_food_grocery_count",
 }
 
 // tractRecord holds the raw string values for a single census tract row.
@@ -469,17 +469,11 @@ func parseUSDACSV(text string) (map[string]*tractRecord, error) {
 			continue
 		}
 		// Zero-pad to 11 digits.
-		geoid := strings.TrimLeft(rawGEOID, " ")
+		geoid := strings.TrimSpace(rawGEOID)
 		if len(geoid) < 11 {
-			geoid = fmt.Sprintf("%011s", geoid)
-			// Replace leading spaces from %s with zeroes.
-			b := []byte(geoid)
-			for i := range b {
-				if b[i] == ' ' {
-					b[i] = '0'
-				}
+			if n, err := strconv.ParseInt(geoid, 10, 64); err == nil {
+				geoid = fmt.Sprintf("%011d", n)
 			}
-			geoid = string(b)
 		}
 
 		rec := &tractRecord{
