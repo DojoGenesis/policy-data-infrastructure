@@ -104,12 +104,12 @@ func runServe(port int) error {
 	})
 
 	// Serve embedded frontend static files.
-	// CSS/JS at /static/*, pages at /static/pages/*, and index.html at /.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
-	r.StaticFS("/static", http.FS(feFS))
+	indexHTML, _ := fs.ReadFile(feFS, "index.html")
 	r.GET("/", func(c *gin.Context) {
-		c.FileFromFS("index.html", http.FS(feFS))
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
 	})
+	r.GET("/static/*filepath", gin.WrapH(http.StripPrefix("/static", http.FileServer(http.FS(feFS)))))
 
 	addr := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
