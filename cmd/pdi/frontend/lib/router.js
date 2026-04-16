@@ -1,6 +1,8 @@
-// lib/router.js — Hash-based SPA router (Alpine.js component)
-document.addEventListener('alpine:init', () => {
-  Alpine.data('appRouter', () => ({
+// lib/router.js — Hash-based SPA router
+// Registered as BOTH a global function (for x-data="appRouter()") and
+// an Alpine.data component (for x-data="appRouter").
+function appRouter() {
+  return {
     page: 'landing',
     geoid: null,
     analysisId: null,
@@ -54,5 +56,5 @@ document.addEventListener('alpine:init', () => {
     navigate(hash) {
       window.location.hash = hash;
     }
-  }));
-});
+  };
+}

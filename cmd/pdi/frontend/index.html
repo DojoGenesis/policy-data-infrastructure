@@ -495,9 +495,8 @@
     <hr class="section-rule">
 
     <div class="filter-pills" style="margin-bottom:1.5rem">
-      <button class="filter-btn" :class="!activeCategory ? 'active' : ''" @click="activeCategory=null">All</button>
-      <template x-for="cat in categories" :key="cat">
-        <button class="filter-btn" :class="activeCategory===cat ? 'active' : ''" @click="activeCategory = activeCategory===cat ? null : cat" x-text="cat"></button>
+      <template x-for="cat in categories" :key="cat.id">
+        <button class="filter-btn" :class="activeCategory===cat.id ? 'active' : ''" @click="setCategory(cat.id)" x-text="cat.label"></button>
       </template>
     </div>
 
@@ -505,22 +504,24 @@
       <template x-for="card in filtered" :key="card.id">
         <div class="card">
           <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
-            <span class="badge badge-amber" x-text="card.category"></span>
-            <span class="badge" :class="card.quality==='strong' ? 'badge-green' : 'badge-teal'" x-text="card.quality || 'moderate'"></span>
+            <span class="badge badge-amber" x-text="card.categoryLabel"></span>
           </div>
           <div class="card-header" style="font-size:1rem" x-text="card.title"></div>
-          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.55" x-text="card.finding"></p>
-          <template x-if="card.county_geoid">
+          <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.55" x-text="card.summary"></p>
+          <template x-if="card.source">
+            <p style="font-size:0.75rem;color:var(--teal);margin-top:0.5rem" x-text="card.source"></p>
+          </template>
+          <template x-if="countyUrl(card)">
             <div style="margin-top:0.75rem">
-              <a :href="'#/county/' + card.county_geoid" class="link-subtle">View County &#8594;</a>
+              <a :href="countyUrl(card)" class="link-subtle" x-text="card.countyName || 'View County'" ></a> <span style="font-size:0.8rem">&#8594;</span>
             </div>
           </template>
         </div>
       </template>
     </div>
 
-    <template x-if="filtered.length === 0 && !loading">
-      <div class="card" style="color:var(--text-secondary)">No evidence cards match this filter.</div>
+    <template x-if="filtered.length === 0">
+      <div class="card" style="color:var(--text-muted)">No evidence cards match this filter.</div>
     </template>
   </div>
 
@@ -532,16 +533,15 @@
 
     <!-- Candidate filter pills -->
     <div class="filter-pills" style="margin-bottom:0.75rem">
-      <button class="filter-btn" :class="!activeCandidate ? 'active' : ''" @click="activeCandidate=null">All Candidates</button>
-      <template x-for="c in candidateNames" :key="c">
-        <button class="filter-btn" :class="activeCandidate===c ? 'active' : ''" @click="activeCandidate = activeCandidate===c ? null : c" x-text="c"></button>
+      <template x-for="c in candidateList" :key="c.id">
+        <button class="filter-btn" :class="activeCandidate===c.id ? 'active' : ''" @click="setCandidate(c.id)" x-text="c.label"></button>
       </template>
     </div>
 
     <!-- Category filter pills -->
     <div class="filter-pills" style="margin-bottom:1.5rem">
-      <template x-for="cat in categories" :key="cat">
-        <button class="filter-btn" :class="activeCat===cat ? 'active' : ''" @click="activeCat = activeCat===cat ? null : cat" x-text="cat"></button>
+      <template x-for="cat in categoryList" :key="cat.id">
+        <button class="filter-btn" :class="activeCat===cat.id ? 'active' : ''" @click="setCategory(cat.id)" x-text="cat.label"></button>
       </template>
     </div>
 

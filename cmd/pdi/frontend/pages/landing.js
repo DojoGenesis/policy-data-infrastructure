@@ -9,6 +9,16 @@ document.addEventListener('alpine:init', () => {
     loading: false,
     error: null,
 
+    // HTML template uses stats.counties, stats.tracts, etc.
+    get stats() {
+      return {
+        counties: this.countyCount.toLocaleString(),
+        tracts: this.tractCount.toLocaleString(),
+        variables: this.variableCount.toLocaleString(),
+        policies: this.policyCount.toLocaleString()
+      };
+    },
+
     async init() {
       this.loading = true;
       try {

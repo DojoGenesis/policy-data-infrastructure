@@ -48,10 +48,14 @@ document.addEventListener('alpine:init', () => {
     get candidateList() {
       return [{ id: 'all', label: 'All Candidates' }, ...this._candidates.map(c => ({ id: c, label: c }))];
     },
+    // HTML template uses candidateNames (string array)
+    get candidateNames() { return this._candidates; },
 
     get categoryList() {
       return [{ id: 'all', label: 'All Categories' }, ...this._categories.map(c => ({ id: c, label: c }))];
     },
+    // HTML template uses categories (string array)
+    get categories() { return this._categories; },
 
     get filtered() {
       return this.policies.filter(p => {

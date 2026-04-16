@@ -5,8 +5,9 @@ document.addEventListener('alpine:init', () => {
     geoid1: '',
     geoid2: '',
     result: null,
-    nameMap: {},   // variable_id → display name built from response
+    nameMap: {},
     loading: false,
+    comparing: false,  // alias for HTML template
     error: null,
     compared: false,
 
@@ -20,6 +21,9 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
+    // HTML template uses 'counties' — alias for countyList
+    get counties() { return this.countyList; },
+
     async compare() {
       if (!this.geoid1 || !this.geoid2) return;
       if (this.geoid1 === this.geoid2) {
@@ -27,6 +31,7 @@ document.addEventListener('alpine:init', () => {
         return;
       }
       this.loading = true;
+      this.comparing = true;
       this.error = null;
       this.result = null;
       this.compared = false;
@@ -47,6 +52,7 @@ document.addEventListener('alpine:init', () => {
         this.error = err.message;
       } finally {
         this.loading = false;
+        this.comparing = false;
       }
     },
 
