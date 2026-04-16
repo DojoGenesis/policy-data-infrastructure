@@ -4,8 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -102,6 +105,43 @@ func runServe(port int) error {
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
+
+	// Chat proxy — forward /v1/chat to the Dojo Gateway for LLM-powered
+	// conversational data analysis. The gateway handles model routing, tool
+	// calling, and SSE streaming. DOJO_GATEWAY_URL configures the upstream.
+	gatewayURL := os.Getenv("DOJO_GATEWAY_URL")
+	if gatewayURL == "" {
+		gatewayURL = "http://localhost:7340"
+	}
+	if gwParsed, err := url.Parse(gatewayURL); err == nil {
+		chatProxy := &httputil.ReverseProxy{
+			Director: func(req *http.Request) {
+				req.URL.Scheme = gwParsed.Scheme
+				req.URL.Host = gwParsed.Host
+				req.URL.Path = "/chat"
+				req.Host = gwParsed.Host
+			},
+			// Flush immediately for SSE streaming.
+			FlushInterval: -1,
+			// Don't modify the response — pass SSE events through as-is.
+			ModifyResponse: func(resp *http.Response) error {
+				// Ensure SSE headers propagate for streaming.
+				if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
+					resp.Header.Set("Cache-Control", "no-cache")
+					resp.Header.Set("Connection", "keep-alive")
+				}
+				return nil
+			},
+			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadGateway)
+				_, _ = io.WriteString(w, `{"error":"gateway unreachable","detail":"`+err.Error()+`"}`)
+			},
+		}
+		v1.POST("/chat", gin.WrapH(chatProxy))
+		v1.OPTIONS("/chat", func(c *gin.Context) { c.Status(http.StatusNoContent) })
+		fmt.Printf("  chat:     %s → %s/chat\n", gatewayURL, gwParsed.Host)
+	}
 
 	// Serve embedded frontend static files.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
