@@ -112,6 +112,8 @@ The counties where policy interventions save the most money are those with the h
           message: userMessage,
           session_id: this._sessionId,
           system_prompt: systemPrompt,
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-20250514',
           stream: false
         })
       });
