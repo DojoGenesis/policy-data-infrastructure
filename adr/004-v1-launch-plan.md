@@ -1,6 +1,6 @@
 # ADR-004: v1 Launch Plan — From API to Usable Platform
 
-**Status:** Proposed
+**Status:** Accepted (with audit amendments below)
 **Date:** 2026-04-15
 **Deciders:** Alfonso Morales, Claude
 
@@ -102,3 +102,72 @@ Waves 1+2: ~10 hours (grant-critical).
   (acceptable for v1; revisit if user feedback demands a richer experience)
 - **Negative:** National data without a map is underwhelming
   (Wave 4E addresses this but is post-grant)
+
+## Opus-Level Audit (Apr 15)
+
+### Finding 1: indicators_latest was empty (FIXED)
+
+The materialized view had 0 rows on VPS — the API appeared to have no data for any
+geography profile. **Fixed during audit** by running `REFRESH MATERIALIZED VIEW`.
+Now 21,577 rows across 34 variables.
+
+**Prevention:** Wave 1D must include adding `REFRESH MATERIALIZED VIEW` to the pipeline's
+FetchStage post-completion hook. The existing `RefreshViews()` call in the pipeline
+already does this, but VPS data was loaded via Python scripts that bypassed the Go pipeline.
+
+### Finding 2: analyses + analysis_scores are 0 rows
+
+The narrative engine requires `analysis_id` and scores. No analysis has been run on VPS.
+**Wave 1D underestimates this.** Running the analysis requires either:
+- A new CLI command `pdi analyze --state 55` (analyze-only, no re-fetch)
+- Running the full pipeline on existing data (but FetchStage would re-fetch)
+- A one-off SQL script to insert analysis results
+
+**Recommendation:** Add `pdi analyze` subcommand that runs AnalyzeStage + SynthesizeStage
+without FetchStage. This is a reusable tool for reprocessing data after schema changes.
+Revise 1D to 1-2h including this new command.
+
+### Finding 3: indicator_meta has 42 rows (better than expected)
+
+The plan assumed indicator_meta might be empty. It has 42 rows for all 34 active
+variables. No seeding needed.
+
+### Finding 4: Wave 2 effort is undersized
+
+Alpine.js + Chart.js + responsive design + error handling + loading states for 4 pages
+is more than the plan's ~7h. Revised estimate: ~12h. Still achievable in 2-3 sessions
+before MCF LOI deadline.
+
+### Finding 5: DNS migration creates a visibility gap
+
+Moving `policydatainfrastructure.com` from GitHub Pages to VPS means the marketing page
+goes dark until the Go binary serves static files. **Mitigation:** port `docs/index.html`
+into `frontend/` and verify the Go binary serves it BEFORE switching DNS. Track 2A must
+produce a working marketing page fallback, not just an app shell.
+
+### Finding 6: Evidence cards are not in the DB
+
+The frontend evidence card gallery (Wave 2E) needs to fetch card data from somewhere.
+Options:
+- Serve `evidence_cards.json` as a static embedded file (quickest)
+- Add an evidence_cards table + API endpoint (cleanest, Wave 3)
+
+**Recommendation:** Wave 2E serves the JSON file embedded in the binary. Wave 3 adds
+the DB table. This prevents Wave 2 from depending on Wave 3.
+
+### Finding 7: geometry boundary data is empty
+
+All 1,724 geographies have `NULL` boundary. Maps (Wave 4E) will need TIGER shapefiles
+loaded. Not blocking for Waves 1-3.
+
+### Revised Effort Estimates
+
+| Wave | Original | Revised | Delta |
+|------|----------|---------|-------|
+| 1 | 3h | 4h | +1h (analyze command) |
+| 2 | 7h | 12h | +5h (frontend realism) |
+| 3 | 7h | 8h | +1h (research variable) |
+| 4 | 8h | 10h | +2h (geometry loading) |
+| **Total** | **25h** | **34h** | **+9h** |
+
+Still well within the 49-day MCF LOI window. Waves 1+2 at 16h = 2-3 focused sessions.
