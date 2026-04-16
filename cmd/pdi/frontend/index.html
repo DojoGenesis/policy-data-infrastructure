@@ -5,10 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Policy Data Infrastructure</title>
 <meta name="description" content="Open-source national policy data platform. Live county-level indicators for Wisconsin.">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <link rel="stylesheet" href="/static/style.css">
+<!-- Load page scripts BEFORE Alpine so Alpine.data() registrations are ready -->
+<script src="/static/pages/counties.js"></script>
+<script src="/static/pages/profile.js"></script>
+<script src="/static/pages/compare.js"></script>
+<script src="/static/pages/evidence.js"></script>
+<script src="/static/pages/candidates.js"></script>
+<script src="/static/pages/about.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="router()" x-init="init()">
+<body x-data="router()">
 
 <!-- Navigation -->
 <nav class="nav">
@@ -17,7 +24,7 @@
     <div class="nav-links">
       <a href="#/" :class="{'active': page==='home'}">Counties</a>
       <a href="#/compare" :class="{'active': page==='compare'}">Compare</a>
-      <a href="#/evidence" :class="{'active': page==='evidence'}">Evidence Cards</a>
+      <a href="#/evidence" :class="{'active': page==='evidence'}">Evidence</a>
       <a href="#/candidates" :class="{'active': page==='candidates'}">Candidates</a>
       <a href="#/about" :class="{'active': page==='about'}">About</a>
     </div>
@@ -25,73 +32,193 @@
 </nav>
 
 <main class="main">
-  <!-- County Explorer (home) -->
-  <div x-show="page==='home'" x-cloak>
-    <div x-ref="countyExplorer"></div>
-    <script src="/static/pages/counties.js"></script>
+  <div x-show="page==='home'" x-data="countyExplorer()" x-cloak>
+    <template x-if="loading"><div class="loading">Loading counties...</div></template>
+    <template x-if="error"><div class="card" style="color:var(--red)">Error: <span x-text="error"></span></div></template>
+    <template x-if="!loading && !error">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h1 style="font-size:1.5rem;font-weight:700">Wisconsin Counties <span class="badge badge-teal" x-text="filtered.length + ' counties'"></span></h1>
+          <input class="input" style="max-width:300px" type="text" placeholder="Search counties..." x-model="search">
+        </div>
+        <div class="grid-3">
+          <template x-for="c in filtered" :key="c.geoid">
+            <a :href="'#/county/' + c.geoid" class="card" style="text-decoration:none;color:inherit;cursor:pointer;transition:box-shadow 0.15s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow=''">
+              <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem" x-text="c.name"></div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem">Pop. <span x-text="c.population ? c.population.toLocaleString() : '—'"></span></div>
+              <div style="display:flex;gap:1rem;font-size:0.85rem">
+                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'poverty_rate', 'pct')"></div><div class="stat-label">Poverty</div></div>
+                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'median_household_income', 'dollar')"></div><div class="stat-label">Income</div></div>
+                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'uninsured_rate', 'pct')"></div><div class="stat-label">Uninsured</div></div>
+              </div>
+            </a>
+          </template>
+        </div>
+      </div>
+    </template>
   </div>
 
-  <!-- County Profile -->
-  <div x-show="page==='county'" x-cloak>
-    <div x-ref="countyProfile"></div>
-    <script src="/static/pages/profile.js"></script>
+  <div x-show="page==='county'" x-data="countyProfile()" x-cloak>
+    <template x-if="loading"><div class="loading">Loading county profile...</div></template>
+    <template x-if="error"><div class="card"><a href="#/" class="btn btn-outline btn-sm">Back</a> <span style="color:var(--red);margin-left:1rem" x-text="error"></span></div></template>
+    <template x-if="!loading && !error && county">
+      <div>
+        <div style="margin-bottom:1.5rem"><a href="#/" class="btn btn-outline btn-sm">Back to Counties</a></div>
+        <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:0.25rem" x-text="county.name"></h1>
+        <p style="color:var(--text-secondary);margin-bottom:1.5rem">FIPS <span x-text="county.geoid"></span> &middot; Pop. <span x-text="county.population ? county.population.toLocaleString() : '—'"></span></p>
+        <template x-if="indicators.length > 0">
+          <div>
+            <template x-for="group in grouped" :key="group.name">
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header" x-text="group.name"></div>
+                <div class="bar-chart">
+                  <template x-for="ind in group.items" :key="ind.variable_id">
+                    <div class="bar-row">
+                      <div class="bar-label" x-text="ind.name || ind.variable_id"></div>
+                      <div class="bar-track">
+                        <div class="bar-fill" :class="ind.direction==='lower_better' ? 'bar-fill-amber' : 'bar-fill-teal'" :style="'width:' + barWidth(ind)">
+                          <span x-text="fmtVal(ind)"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </template>
   </div>
 
-  <!-- Compare Tool -->
-  <div x-show="page==='compare'" x-cloak>
-    <div x-ref="compareTool"></div>
-    <script src="/static/pages/compare.js"></script>
+  <div x-show="page==='compare'" x-data="compareTool()" x-cloak>
+    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">Compare Counties</h1>
+    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <select class="input" style="max-width:250px" x-model="geoid1">
+        <option value="">Select County A</option>
+        <template x-for="c in counties" :key="c.geoid"><option :value="c.geoid" x-text="c.name"></option></template>
+      </select>
+      <select class="input" style="max-width:250px" x-model="geoid2">
+        <option value="">Select County B</option>
+        <template x-for="c in counties" :key="c.geoid"><option :value="c.geoid" x-text="c.name"></option></template>
+      </select>
+      <button class="btn btn-primary" @click="compare()" :disabled="!geoid1 || !geoid2 || comparing">Compare</button>
+    </div>
+    <template x-if="comparing"><div class="loading">Comparing...</div></template>
+    <template x-if="result">
+      <div class="card">
+        <div class="card-header"><span x-text="result.geography1.name"></span> vs <span x-text="result.geography2.name"></span></div>
+        <table class="table">
+          <thead><tr><th>Indicator</th><th x-text="result.geography1.name"></th><th x-text="result.geography2.name"></th><th>Diff</th></tr></thead>
+          <tbody>
+            <template x-for="d in result.differences" :key="d.variable_id">
+              <tr>
+                <td x-text="d.variable_id"></td>
+                <td x-text="d.value1 != null ? d.value1.toLocaleString() : '—'"></td>
+                <td x-text="d.value2 != null ? d.value2.toLocaleString() : '—'"></td>
+                <td><span :class="d.diff > 0 ? 'badge badge-green' : d.diff < 0 ? 'badge badge-red' : ''" x-text="d.pct_diff != null ? (d.pct_diff > 0 ? '+' : '') + d.pct_diff.toFixed(1) + '%' : '—'"></span></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
   </div>
 
-  <!-- Evidence Cards -->
-  <div x-show="page==='evidence'" x-cloak>
-    <div x-ref="evidenceCards"></div>
-    <script src="/static/pages/evidence.js"></script>
+  <div x-show="page==='evidence'" x-data="evidenceGallery()" x-cloak>
+    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">Evidence Cards <span class="badge badge-teal" x-text="filtered.length + ' cards'"></span></h1>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <button class="btn btn-sm" :class="!activeCategory ? 'btn-primary' : 'btn-outline'" @click="activeCategory=null">All</button>
+      <template x-for="cat in categories" :key="cat">
+        <button class="btn btn-sm" :class="activeCategory===cat ? 'btn-primary' : 'btn-outline'" @click="activeCategory=cat" x-text="cat"></button>
+      </template>
+    </div>
+    <div class="grid-3">
+      <template x-for="card in filtered" :key="card.id">
+        <div class="card">
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem"><span class="badge badge-amber" x-text="card.category"></span><span class="badge" :class="card.quality==='strong' ? 'badge-green' : 'badge-amber'" x-text="card.quality"></span></div>
+          <div class="card-header" style="font-size:1rem" x-text="card.title"></div>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5" x-text="card.finding"></p>
+        </div>
+      </template>
+    </div>
   </div>
 
-  <!-- Candidate Policy Tracker -->
-  <div x-show="page==='candidates'" x-cloak>
-    <div x-ref="candidateTracker"></div>
-    <script src="/static/pages/candidates.js"></script>
+  <div x-show="page==='candidates'" x-data="candidateTracker()" x-cloak>
+    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">Candidate Policy Tracker <span class="badge badge-teal" x-text="policies.length + ' positions'"></span></h1>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+      <button class="btn btn-sm" :class="!activeCandidate ? 'btn-primary' : 'btn-outline'" @click="activeCandidate=null">All</button>
+      <template x-for="c in candidateNames" :key="c">
+        <button class="btn btn-sm" :class="activeCandidate===c ? 'btn-primary' : 'btn-outline'" @click="activeCandidate=c" x-text="c"></button>
+      </template>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <template x-for="cat in categories" :key="cat">
+        <button class="btn btn-sm" :class="activeCat===cat ? 'btn-primary' : 'btn-outline'" @click="activeCat = activeCat===cat ? null : cat" x-text="cat"></button>
+      </template>
+    </div>
+    <div class="grid-3">
+      <template x-for="p in filtered" :key="p.id">
+        <div class="card">
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center"><span class="badge badge-teal" x-text="p.candidate"></span><span style="font-size:0.75rem;color:var(--text-secondary)" x-text="p.office + ', ' + p.state"></span></div>
+          <div class="card-header" style="font-size:1rem" x-text="p.title"></div>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5" x-text="p.description"></p>
+          <div style="margin-top:0.5rem"><span class="badge badge-amber" x-text="p.category"></span></div>
+        </div>
+      </template>
+    </div>
   </div>
 
-  <!-- About / Methodology -->
-  <div x-show="page==='about'" x-cloak>
-    <div x-ref="aboutPage"></div>
-    <script src="/static/pages/about.js"></script>
+  <div x-show="page==='about'" x-data="aboutPage()" x-cloak>
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1rem">About Policy Data Infrastructure</h1>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header">What is this?</div>
+      <p style="line-height:1.7">An open-source national policy data platform that ingests data from 13 federal and state sources, stores indicators at multiple geographic levels in PostGIS, runs statistical analyses, and generates evidence-based policy narratives. Built to make public data accessible for policy decisions.</p>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header">Data Sources</div>
+      <table class="table">
+        <thead><tr><th>Source</th><th>Type</th><th>Coverage</th></tr></thead>
+        <tbody>
+          <template x-for="s in sources" :key="s.name"><tr><td x-text="s.name"></td><td><span class="badge badge-teal" x-text="s.type"></span></td><td x-text="s.coverage"></td></tr></template>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header">Methodology</div>
+      <ul style="padding-left:1.5rem;line-height:2">
+        <li>Indicators stored as raw values with nil for missing/suppressed data</li>
+        <li>Pipeline validation gate rejects data loads with >30% null rate</li>
+        <li>Analysis uses percentile ranking within geographic scope</li>
+        <li>13 Go datasource adapters, 380+ tests, 77.5% store coverage</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Open Source</div>
+      <p style="margin-bottom:1rem">The entire platform is open source. Contributions welcome.</p>
+      <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary" target="_blank">View on GitHub</a>
+    </div>
   </div>
 </main>
 
 <footer class="footer">
-  <p>Policy Data Infrastructure &middot; Open Source &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">GitHub</a></p>
-  <p class="footer-sub">Data: Census ACS, CDC PLACES, BLS LAUS, EPA EJScreen, USDA Food Access, HUD CHAS</p>
+  <p>Policy Data Infrastructure &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">GitHub</a></p>
+  <p class="footer-sub">Data: Census ACS, CDC PLACES, BLS LAUS, EPA EJScreen, USDA Food Access, HUD CHAS, HMDA, HRSA</p>
 </footer>
 
 <script>
 function router() {
   return {
-    page: 'home',
-    geoid: null,
-    init() {
-      this.route();
-      window.addEventListener('hashchange', () => this.route());
-    },
+    page: 'home', geoid: null,
+    init() { this.route(); window.addEventListener('hashchange', () => this.route()); },
     route() {
-      const hash = window.location.hash || '#/';
-      if (hash.startsWith('#/county/')) {
-        this.page = 'county';
-        this.geoid = hash.replace('#/county/', '');
-      } else if (hash === '#/compare') {
-        this.page = 'compare';
-      } else if (hash === '#/evidence') {
-        this.page = 'evidence';
-      } else if (hash === '#/candidates') {
-        this.page = 'candidates';
-      } else if (hash === '#/about') {
-        this.page = 'about';
-      } else {
-        this.page = 'home';
-      }
+      const h = window.location.hash || '#/';
+      if (h.startsWith('#/county/')) { this.page = 'county'; this.geoid = h.replace('#/county/', ''); }
+      else if (h === '#/compare') this.page = 'compare';
+      else if (h === '#/evidence') this.page = 'evidence';
+      else if (h === '#/candidates') this.page = 'candidates';
+      else if (h === '#/about') this.page = 'about';
+      else this.page = 'home';
     }
   };
 }
