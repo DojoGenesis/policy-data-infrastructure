@@ -633,92 +633,94 @@
 
   <!-- ─── ABOUT ─────────────────────────────────────────────────────── -->
   <div x-show="page==='about'" x-data="aboutPage()" x-cloak>
-    <div class="section-num">ABOUT THE PLATFORM</div>
-    <h2>Policy Data Infrastructure</h2>
-    <hr class="section-rule">
+    <div class="page">
+      <div class="section-num">ABOUT THE PLATFORM</div>
+      <h2>Policy Data Infrastructure</h2>
+      <hr class="section-rule">
 
-    <div class="grid-2" style="margin-bottom:1.5rem">
-      <div class="card">
+      <!-- Platform stats row -->
+      <div class="stat-row" style="margin-bottom:2rem">
+        <template x-for="s in platformStats" :key="s.label">
+          <div class="ns">
+            <div class="ns-val" x-text="s.value"></div>
+            <div class="ns-label" x-text="s.label"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- What is this -->
+      <div class="card" style="margin-bottom:1.5rem">
         <div class="card-header">What is this?</div>
-        <p style="line-height:1.7;color:var(--text-secondary)">
-          An open-source policy data platform that ingests data from 13 federal and state sources,
-          stores indicators at multiple geographic levels in PostGIS, runs statistical analyses
-          (OLS regression, tipping points, composite indices, correlation matrices), and generates
-          evidence-based policy narratives. Built to make public data accessible for policy decisions.
+        <p style="line-height:1.8;color:var(--text-muted);margin-bottom:1rem">
+          Policy Data Infrastructure is an open-source national policy data platform. It ingests data from
+          13 federal and state sources, stores indicators at multiple geographic levels in PostGIS, runs
+          a statistical analysis engine (OLS regression, tipping points, ICE segregation indices, bootstrap
+          confidence intervals, Blinder-Oaxaca decomposition), and generates evidence-based policy narratives.
         </p>
-        <div class="stat-row" style="margin-top:1rem">
-          <div class="ns">
-            <div class="ns-value">72</div>
-            <div class="ns-label">Counties</div>
-          </div>
-          <div class="ns">
-            <div class="ns-value">1,652</div>
-            <div class="ns-label">Tracts</div>
-          </div>
-          <div class="ns">
-            <div class="ns-value">42</div>
-            <div class="ns-label">Variables</div>
-          </div>
-          <div class="ns">
-            <div class="ns-value">380+</div>
-            <div class="ns-label">Tests</div>
-          </div>
+        <p style="line-height:1.8;color:var(--text-muted)">
+          The platform connects candidate policy positions to the data that measures the problems they address.
+          85 policy positions from progressive candidates are crosswalked to 38 equity dimensions, enabling
+          automated links between data and advocacy. Built for grant reviewers, policy analysts, and advocates
+          who need real numbers — not dashboards for the sake of dashboards.
+        </p>
+      </div>
+
+      <!-- Methodology -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-header">Methodology</div>
+        <div style="display:flex;flex-direction:column;gap:1rem;margin-top:0.5rem">
+          <template x-for="step in methodologySteps" :key="step.step">
+            <div style="display:flex;gap:1rem;align-items:flex-start">
+              <div class="badge badge-navy" style="min-width:24px;text-align:center;margin-top:3px" x-text="step.step"></div>
+              <div>
+                <div style="font-family:var(--sans);font-weight:700;font-size:0.9rem;color:var(--navy);margin-bottom:2px" x-text="step.title"></div>
+                <p style="font-size:0.85rem;line-height:1.65;color:var(--text-muted)" x-text="step.body"></p>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">Methodology</div>
-        <ul style="padding-left:1.25rem;line-height:2;color:var(--text-secondary);font-size:0.9rem">
-          <li>Indicators stored as raw values — <code>NULL</code> for missing or suppressed data</li>
-          <li>Pipeline validation gate rejects loads with &gt;30% null rate</li>
-          <li>ICE (Index of Concentration at the Extremes) for segregation measures</li>
-          <li>OLS regression, bootstrap CIs, percentile ranking within geographic scope</li>
-          <li>Tipping point detection via piecewise linear regression</li>
-          <li>Blinder-Oaxaca decomposition for gap analysis</li>
-          <li>Composite indices weighted by equity dimension crosswalk</li>
-        </ul>
+      <!-- Data sources table -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-header">13 Data Sources</div>
+        <div style="overflow-x:auto">
+          <table class="wiki-table">
+            <thead>
+              <tr><th>Source</th><th>Type</th><th>Vintage</th><th>Coverage</th><th>Variables</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="s in sources" :key="s.name">
+                <tr>
+                  <td style="font-weight:600" x-text="s.name"></td>
+                  <td><span class="badge badge-teal" x-text="s.type"></span></td>
+                  <td style="font-family:var(--sans);font-size:0.8rem" x-text="s.vintage || '—'"></td>
+                  <td x-text="s.coverage || '—'"></td>
+                  <td x-text="s.variables || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Data sources table -->
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-header">Data Sources</div>
-      <table class="wiki-table">
-        <thead>
-          <tr><th>Source</th><th>Type</th><th>Coverage</th><th>Variables</th></tr>
-        </thead>
-        <tbody>
-          <template x-if="sources && sources.length > 0">
-            <template x-for="s in sources" :key="s.id || s.name">
-              <tr>
-                <td x-text="s.name"></td>
-                <td><span class="badge badge-teal" x-text="s.source_type || s.type"></span></td>
-                <td x-text="s.geography_level || s.coverage"></td>
-                <td x-text="s.variable_count || '—'"></td>
-              </tr>
-            </template>
-          </template>
-          <template x-if="!sources || sources.length === 0">
-            <tr><td colspan="4" style="color:var(--text-secondary);text-align:center">
-              Census ACS &middot; CDC PLACES &middot; BLS LAUS &middot; EPA EJScreen &middot; USDA Food Access &middot;
-              HUD CHAS &middot; HMDA &middot; HRSA &middot; GTFS &middot; WI DPI &middot; EPA TRI &middot; HUD PIT &middot; TIGER
-            </td></tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Open source -->
-    <div class="card">
-      <div class="card-header">Open Source</div>
-      <p style="margin-bottom:1rem;color:var(--text-secondary)">
-        The entire platform is open source under the Apache-2.0 license.
-        13 Go datasource adapters, full PostGIS integration, Python ingest pipeline, and statistical engine.
-        Contributions welcome.
-      </p>
-      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-        <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary" target="_blank">View on GitHub</a>
-        <a href="#/chat" class="btn btn-secondary">Talk to the Data</a>
+      <!-- Open source -->
+      <div class="card">
+        <div class="card-header">Open Source</div>
+        <p style="margin-bottom:0.75rem;color:var(--text-muted);line-height:1.7">
+          The entire platform is open source under the Apache-2.0 license. The Go backend has 13 datasource
+          adapters, a 7-stage pipeline with validation gates, a statistical engine with 10 analysis functions,
+          a narrative template engine, and an HTMLCraft deliverable builder. 380+ automated tests.
+          The Python layer handles data ingest, evidence card generation, and factor analysis.
+        </p>
+        <p style="margin-bottom:1rem;color:var(--text-muted);line-height:1.7">
+          Stack: Go 1.24 (pgx/v5, Gin, Cobra) &middot; PostgreSQL 16 + PostGIS 3.4 &middot; Python 3.11 &middot; Alpine.js &middot; Caddy &middot; Hetzner VPS
+        </p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary" target="_blank">View on GitHub</a>
+          <a href="#/chat" class="btn btn-outline">Talk to the Data</a>
+          <a href="#/counties" class="btn btn-outline">Browse Counties</a>
+        </div>
       </div>
     </div>
   </div>

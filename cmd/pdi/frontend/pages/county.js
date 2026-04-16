@@ -1,62 +1,59 @@
-// pages/county.js — Full county profile with grouped indicators, tracts, and wiki links.
+// pages/county.js — Full county profile with grouped indicators and wiki links.
 document.addEventListener('alpine:init', () => {
   Alpine.data('countyProfile', () => ({
-    geoid: null,
     county: null,
-    children: [],
+    indicators: [],
     tractCount: 0,
-    relatedAnalyses: [],
+    tractScores: [],
     allPolicies: [],
     loading: false,
     error: null,
+    _geoid: null,
 
-    async init() {
-      // $root is the appRouter component — watch its geoid.
-      this.$watch('$root.geoid', async (val) => {
-        if (val && this.$root.page === 'county') await this.load(val);
-      });
-      // Initial load if geoid is already set.
-      if (this.$root.geoid) await this.load(this.$root.geoid);
+    init() {
+      // Read geoid from hash on load and on every hash change
+      this._loadFromHash();
+      window.addEventListener('hashchange', () => this._loadFromHash());
+    },
+
+    _loadFromHash() {
+      const h = window.location.hash || '';
+      if (h.startsWith('#/county/') && !h.includes('/tracts')) {
+        const geoid = h.replace('#/county/', '');
+        if (geoid && geoid !== this._geoid) {
+          this.load(geoid);
+        }
+      }
     },
 
     async load(geoid) {
-      if (!geoid || geoid === this.geoid) return;
-      this.geoid = geoid;
+      this._geoid = geoid;
       this.loading = true;
       this.error = null;
       this.county = null;
-      this.children = [];
-      this.relatedAnalyses = [];
+      this.indicators = [];
+      this.tractScores = [];
 
       try {
-        const [geo, childResult, policies, analyses] = await Promise.allSettled([
+        const [geo, childResult, policies] = await Promise.allSettled([
           PDI.geography(geoid),
           PDI.children(geoid),
-          PDI.policies(),
-          PDI.analyses()
+          PDI.policies()
         ]);
 
         if (geo.status === 'fulfilled') {
           this.county = geo.value;
+          this.indicators = geo.value.indicators ?? [];
         } else {
-          this.error = geo.reason?.message || 'Failed to load county data.';
+          this.error = 'County not found';
         }
 
         if (childResult.status === 'fulfilled') {
-          this.children = childResult.value.items || [];
-          this.tractCount = childResult.value.total ?? this.children.length;
+          this.tractCount = childResult.value.total ?? (childResult.value.items?.length || 0);
         }
 
         if (policies.status === 'fulfilled') {
-          this.allPolicies = policies.value;
-        }
-
-        if (analyses.status === 'fulfilled') {
-          const all = analyses.value.analyses || [];
-          // Keep analyses scoped to this county or state-wide.
-          this.relatedAnalyses = all.filter(a =>
-            !a.scope_geoid || a.scope_geoid === geoid || a.scope_geoid === '55'
-          ).slice(0, 3);
+          this.allPolicies = policies.value || [];
         }
       } catch (err) {
         this.error = err.message;
@@ -65,59 +62,38 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
-    // ── Computed getters ───────────────────────────────────────────────────
-
     get grouped() {
-      if (!this.county) return [];
-      return Domain.groupIndicators(this.county.indicators ?? []);
+      return Domain.groupIndicators(this.indicators);
     },
 
     get relatedPolicies() {
-      if (!this.county) return [];
-      return Domain.findRelatedPolicies(this.county.indicators ?? [], this.allPolicies).slice(0, 6);
+      return Domain.findRelatedPolicies(this.indicators, this.allPolicies).slice(0, 6);
     },
 
-    // ── Display helpers ────────────────────────────────────────────────────
-
     barWidth(ind) {
-      const indicators = this.county?.indicators ?? [];
-      return Domain.barWidth(ind, indicators);
+      return Domain.barWidth(ind, this.indicators);
     },
 
     barColor(ind) {
       return Domain.barColor(ind);
     },
 
-    fmtValue(ind) {
+    fmtVal(ind) {
       if (!ind || ind.value == null) return '\u2014';
       return Domain.fmtValue(ind.value, ind.unit);
     },
 
-    tierClass(ind) {
-      return Domain.tierClass(ind?.percentile);
-    },
+    fmtValue(ind) { return this.fmtVal(ind); },
 
-    tierLabel(ind) {
-      return Domain.tierLabel(ind?.percentile);
-    },
-
-    fmtDim(dim) {
-      return Domain.fmtDimension(dim);
-    },
-
-    // Aliases for HTML template compatibility
-    fmtVal(ind) { return this.fmtValue(ind); },
     tierBadge(tier) {
       if (!tier) return 'badge-teal';
-      const t = tier.toLowerCase();
+      const t = (tier + '').toLowerCase();
       if (t === 'very_high' || t === 'critical') return 'badge-red';
       if (t === 'high' || t === 'warning') return 'badge-amber';
-      if (t === 'moderate') return 'badge-teal';
       return 'badge-green';
     },
 
-    tractsUrl() {
-      return `#/county/${this.geoid}/tracts`;
-    }
+    fmtDim(dim) { return Domain.fmtDimension(dim); },
+    tractsUrl() { return '#/county/' + this._geoid + '/tracts'; }
   }));
 });

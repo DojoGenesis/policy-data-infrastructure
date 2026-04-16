@@ -74,7 +74,13 @@ document.addEventListener('alpine:init', () => {
     // to counties page; a future enhancement can pass a filter param via hash.
     countyLinkForPolicy(policy) {
       if (policy.geoid) return `#/county/${policy.geoid}`;
+      // Link to counties page — future: filter by equity dimension
       return '#/counties';
+    },
+
+    countyLinkText(policy) {
+      if (policy.geoid) return 'View County →';
+      return 'Browse Counties →';
     }
   }));
 });
