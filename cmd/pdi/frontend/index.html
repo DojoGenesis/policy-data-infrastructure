@@ -328,7 +328,7 @@
           </tbody>
         </table>
         <div style="margin-top:1rem">
-          <a href="#/chat" class="btn btn-secondary btn-sm">Generate Comparison Brief in Chat</a>
+          <a :href="'#/chat?prompt=Compare+' + encodeURIComponent(name1) + '+and+' + encodeURIComponent(name2) + '+on+all+indicators.+Which+county+needs+more+policy+intervention+and+why?'" class="btn btn-outline btn-sm">Generate Comparison Brief in Chat →</a>
         </div>
       </div>
     </template>
@@ -502,20 +502,24 @@
 
     <div class="grid-3">
       <template x-for="card in filtered" :key="card.id">
-        <div class="card">
-          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
+        <div class="card" style="display:flex;flex-direction:column">
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;align-items:center">
             <span class="badge badge-amber" x-text="card.categoryLabel"></span>
+            <template x-if="card.countyName">
+              <span class="badge badge-teal" x-text="card.countyName"></span>
+            </template>
           </div>
           <div class="card-header" style="font-size:1rem" x-text="card.title"></div>
-          <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.55" x-text="card.summary"></p>
-          <template x-if="card.source">
-            <p style="font-size:0.75rem;color:var(--teal);margin-top:0.5rem" x-text="card.source"></p>
-          </template>
-          <template x-if="countyUrl(card)">
-            <div style="margin-top:0.75rem">
-              <a :href="countyUrl(card)" class="link-subtle" x-text="card.countyName || 'View County'" ></a> <span style="font-size:0.8rem">&#8594;</span>
+          <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.6;flex:1" x-text="card.summary"></p>
+          <div style="margin-top:auto;padding-top:0.75rem;border-top:1px solid var(--border)">
+            <p style="font-family:var(--sans);font-size:0.75rem;color:var(--teal);margin-bottom:0.5rem" x-text="card.source"></p>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+              <template x-if="countyUrl(card)">
+                <a :href="countyUrl(card)" class="btn btn-sm btn-outline" x-text="'View ' + (card.countyName || 'County') + ' →'"></a>
+              </template>
+              <a href="#/chat" class="btn btn-sm btn-outline">Ask about this →</a>
             </div>
-          </template>
+          </div>
         </div>
       </template>
     </div>
@@ -550,20 +554,32 @@
         <div class="card">
           <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap">
             <span class="badge badge-teal" x-text="p.candidate"></span>
-            <span style="font-size:0.75rem;color:var(--text-secondary)" x-text="p.office + ', ' + p.state"></span>
+            <span style="font-size:0.75rem;color:var(--text-muted)" x-text="(p.office || '') + (p.state ? ', ' + p.state : '')"></span>
           </div>
           <div class="card-header" style="font-size:1rem" x-text="p.title"></div>
-          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.55" x-text="p.description"></p>
+          <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.55" x-text="p.description"></p>
           <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
             <span class="badge badge-amber" x-text="p.category"></span>
             <template x-if="p.equity_dimension">
-              <span class="badge" x-text="p.equity_dimension"></span>
+              <span class="badge badge-teal" x-text="fmtDim(p.equity_dimension)"></span>
             </template>
           </div>
-          <!-- Wiki link: related counties -->
+          <!-- Related counties (expandable) -->
           <template x-if="p.equity_dimension">
             <div style="margin-top:0.75rem">
-              <a href="#/counties" class="link-subtle">View related counties &#8594;</a>
+              <button class="btn btn-sm btn-outline" @click="toggleExpand(p.id)"
+                x-text="expandedPolicy === p.id ? 'Hide counties ▲' : 'Most affected counties ▼'"></button>
+              <template x-if="expandedPolicy === p.id">
+                <div style="margin-top:0.5rem">
+                  <template x-for="rc in relatedCounties(p)" :key="rc.geoid">
+                    <div style="display:flex;align-items:center;gap:0.5rem;padding:4px 0;font-family:var(--sans);font-size:0.85rem">
+                      <a :href="'#/county/' + rc.geoid" class="link-subtle" style="font-weight:600" x-text="rc.name"></a>
+                      <span class="badge badge-red" x-text="fmtCountyVal(rc)"></span>
+                      <span style="color:var(--text-muted);font-size:0.75rem" x-text="rc.income ? '$' + Math.round(rc.income).toLocaleString() + ' income' : ''"></span>
+                    </div>
+                  </template>
+                </div>
+              </template>
             </div>
           </template>
         </div>

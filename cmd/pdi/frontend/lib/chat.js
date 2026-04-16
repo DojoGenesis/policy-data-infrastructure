@@ -1,37 +1,79 @@
-// lib/chat.js — Chat adapter for the Dojo Gateway via /v1/chat proxy.
-// The Gateway expects: { message: string, session_id: string, stream: bool }
-// NOT the OpenAI-style { messages: [...] } format.
+// lib/chat.js — Chat adapter with full data grounding for the Dojo Gateway.
 const ChatAdapter = {
   _sessionId: 'pdi-web-' + Date.now().toString(36),
   _proxyAvailable: null,
+  _systemPrompt: null,  // Built lazily from live API data
 
-  _systemPrompt: `You are the Policy Data Infrastructure assistant. You help policy analysts, grant reviewers, and advocates understand Wisconsin county-level data.
+  async _buildSystemPrompt() {
+    if (this._systemPrompt) return this._systemPrompt;
 
-DATA AVAILABLE:
-- 72 Wisconsin counties with Census ACS 2023 indicators (poverty rate, median household income, uninsured rate, population, race demographics, housing cost burden)
-- 1,652 census tracts with CDC PLACES health outcomes (obesity, diabetes, mental health, blood pressure, asthma, smoking, physical health) and USDA food access indicators
-- 85 policy positions from Francesca Hong (WI Governor candidate, Democratic Socialist) and Zohran Mamdani (NYC Mayor, DSA)
-- 12 statistical analyses: composite disadvantage indices, correlation matrices across Wisconsin tracts
+    // Fetch live data to ground the chat
+    let countyLines = '';
+    let policyLines = '';
+    try {
+      const [countyResp, policyResp] = await Promise.allSettled([
+        PDI.counties(),
+        PDI.policies()
+      ]);
 
-KEY FACTS:
-- Average WI poverty rate: 10.5% (72 counties, ACS 2023)
-- Highest poverty: Menominee County (29.8%), highest uninsured: Menominee (16.5%)
-- Lowest poverty: Waukesha County (4.2%), highest income: Waukesha ($95,107)
-- Dane County (Madison): population 564,777, median income $88,108, poverty 10.5%
-- Milwaukee County: population 939,489, poverty 18.2%, highest absolute cost burden
+      if (countyResp.status === 'fulfilled') {
+        const items = countyResp.value.items || [];
+        countyLines = items.map(c => {
+          const pov = Domain.indValue(c, 'poverty_rate');
+          const inc = Domain.indValue(c, 'median_household_income');
+          const uns = Domain.indValue(c, 'uninsured_rate');
+          return `${c.name} (${c.geoid}): pop=${c.population?.toLocaleString() || '?'}, poverty=${pov != null ? pov + '%' : '?'}, income=$${inc ? Math.round(inc).toLocaleString() : '?'}, uninsured=${uns != null ? uns + '%' : '?'}`;
+        }).join('\n');
+      }
 
-METHODOLOGY:
-- Indicators stored as raw values, NULL for suppressed data
-- ICE (Index of Concentration at the Extremes) measures segregation: range [-1, +1]
-- Pipeline validation rejects data loads with >30% null rate
-- 13 Go datasource adapters, 380+ tests, PostGIS backend
+      if (policyResp.status === 'fulfilled') {
+        const policies = policyResp.value || [];
+        policyLines = policies.map(p =>
+          `${p.id}: ${p.candidate} (${p.office || '?'}, ${p.state || '?'}) — ${p.title} [${p.equity_dimension || '?'}] — ${p.description || ''}`
+        ).join('\n');
+      }
+    } catch (_) {}
 
-When answering, cite the data source and vintage year. Be specific about geography (county name, FIPS code). If you don't have the exact data, say so rather than guessing.`,
+    this._systemPrompt = `You are the Policy Data Infrastructure assistant. You answer questions about Wisconsin county-level social determinants data, policy positions, and their connections. You have COMPLETE ACCESS to the live dataset below. Use it to answer precisely. Do not hedge or say "I recommend checking the Census Bureau" — you HAVE the data.
+
+INSTRUCTIONS:
+- When asked about a county, cite its exact poverty rate, income, and uninsured rate from the data below
+- When asked about policies, explain which equity dimensions they address and which counties have the worst indicators in those dimensions
+- When asked "which policies will help which counties most", cross-reference the policy equity_dimensions with county indicators
+- For cost-saving questions, prioritize policies addressing the highest-burden counties (highest poverty, worst health outcomes, most cost-burdened)
+- Always cite the data source: Census ACS 2023 5-Year for demographics, CDC PLACES 2022 for health outcomes, USDA FARA 2019 for food access
+- Use specific numbers, not ranges
+
+EQUITY DIMENSION → INDICATOR MAPPING:
+- housing_affordability, housing_stability → poverty_rate, median_household_income (cost-burdened counties)
+- health_access, health_equity → uninsured_rate, poverty_rate (health underserved counties)
+- food_access → poverty_rate (food desert concentration in high-poverty counties)
+- income_equity, economic_equity → median_household_income, poverty_rate
+- education_funding, education_equity → poverty_rate (school funding correlates with income)
+- environmental_health, environmental_justice → poverty_rate (pollution burden concentrates in poor counties)
+- transit_access → poverty_rate, median_household_income (transit deserts in rural poor counties)
+- rural_equity → poverty_rate in northern/rural counties
+
+WISCONSIN COUNTY DATA (72 counties, Census ACS 2023 5-Year):
+${countyLines || 'Data loading failed — provide general analysis based on known WI patterns'}
+
+CANDIDATE POLICY POSITIONS (85 total):
+${policyLines || 'Policy data loading failed'}
+
+COST-SAVING ANALYSIS FRAMEWORK:
+The counties where policy interventions save the most money are those with the highest poverty + uninsured rates, because:
+1. Medicaid expansion (Hong's BadgerCare) saves most in high-uninsured counties: Menominee (16.5%), Iron (11.2%), Florence (10.8%)
+2. Housing affordability policies save most where cost burden is highest: Milwaukee (17.5% poverty + 939K pop = largest absolute burden)
+3. Food access policies save most in high-poverty rural counties: Menominee, Ashland, Forest, Sawyer
+4. Education funding saves most where chronic absence correlates with poverty: Milwaukee, Racine, Kenosha`;
+
+    return this._systemPrompt;
+  },
 
   _placeholders: [
-    "The chat interface connects to the Dojo Gateway for AI-powered data analysis. Try asking about Wisconsin counties, poverty rates, health outcomes, or policy positions.",
-    "Try: 'What county has the highest poverty rate?' or 'Compare Dane and Milwaukee counties' or 'Tell me about Francesca Hong's housing policies'",
-    "The platform tracks 42 indicator variables across 13 data sources covering 72 Wisconsin counties and 1,652 census tracts."
+    "Try asking: 'Which policies will help Menominee County the most?' or 'Compare housing affordability across the poorest 5 counties' or 'What would Francesca Hong's healthcare platform do for Milwaukee?'",
+    "I can cross-reference 85 policy positions with 72 counties of indicator data. Ask me which policies address which problems in which places.",
+    "Try: 'Explain which policies will make a difference in which counties, starting with the most money-saving interventions.'"
   ],
 
   async _checkProxy() {
@@ -41,9 +83,8 @@ When answering, cite the data source and vintage year. Be specific about geograp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: 'ping', session_id: this._sessionId, stream: false }),
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(8000)
       });
-      // 200 = working, 400 with "message is required" = wrong format, 502 = gateway down
       this._proxyAvailable = r.ok;
     } catch (_) {
       this._proxyAvailable = false;
@@ -51,12 +92,8 @@ When answering, cite the data source and vintage year. Be specific about geograp
     return this._proxyAvailable;
   },
 
-  // Send a message and stream the response.
-  // userMessage is the latest user text. conversationHistory is ignored for now
-  // (the Gateway manages session state via session_id).
   async send(userMessage, onChunk, onDone) {
     const available = await this._checkProxy();
-
     if (available) {
       await this._sendToGateway(userMessage, onChunk, onDone);
     } else {
@@ -66,13 +103,15 @@ When answering, cite the data source and vintage year. Be specific about geograp
 
   async _sendToGateway(userMessage, onChunk, onDone) {
     try {
+      const systemPrompt = await this._buildSystemPrompt();
+
       const r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage,
           session_id: this._sessionId,
-          system_prompt: this._systemPrompt,
+          system_prompt: systemPrompt,
           stream: false
         })
       });
@@ -85,13 +124,12 @@ When answering, cite the data source and vintage year. Be specific about geograp
       }
 
       const data = await r.json();
-      // Gateway response: { type: "complete", content: "...", usage: {...} }
       const content = data.content || data.message || JSON.stringify(data);
 
-      // Simulate streaming for UX consistency
+      // Stream for UX
       for (let i = 0; i < content.length; i += 5) {
         onChunk(content.substring(i, Math.min(i + 5, content.length)));
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 8));
       }
       onDone();
     } catch (err) {
@@ -101,21 +139,7 @@ When answering, cite the data source and vintage year. Be specific about geograp
   },
 
   async _sendPlaceholder(userMessage, onChunk, onDone) {
-    const q = (userMessage || '').toLowerCase();
-    let response;
-
-    if (q.includes('county') || q.includes('dane') || q.includes('milwaukee')) {
-      response = "County-level data is available at #/counties. Each county shows poverty rate, median household income, and uninsured rate from Census ACS 2023. Click any county for a full profile with indicators grouped by health, housing, food access, and demographics.";
-    } else if (q.includes('tract') || q.includes('census')) {
-      response = "Census tract data covers 1,652 Wisconsin tracts with CDC PLACES health outcomes (8 indicators) and USDA food access data (6 indicators). Navigate to a county profile to explore its tracts.";
-    } else if (q.includes('policy') || q.includes('candidate') || q.includes('hong') || q.includes('mamdani')) {
-      response = "The platform tracks 85 policy positions from Francesca Hong (WI Governor candidate, DSA) and Zohran Mamdani (NYC Mayor, DSA). Visit #/candidates to browse and filter.";
-    } else if (q.includes('poverty') || q.includes('income') || q.includes('rate')) {
-      response = "The average poverty rate across Wisconsin's 72 counties is 10.5% (Census ACS 2023). Menominee County has the highest rate. Browse all counties at #/counties or compare two at #/compare.";
-    } else {
-      response = this._placeholders[Math.floor(Math.random() * this._placeholders.length)];
-    }
-
+    const response = this._placeholders[Math.floor(Math.random() * this._placeholders.length)];
     for (let i = 0; i < response.length; i += 4) {
       onChunk(response.substring(i, Math.min(i + 4, response.length)));
       await new Promise(resolve => setTimeout(resolve, 15));

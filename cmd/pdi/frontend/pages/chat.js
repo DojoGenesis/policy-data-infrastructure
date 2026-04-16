@@ -12,6 +12,22 @@ document.addEventListener('alpine:init', () => {
     streaming: false,
     _nextId: 1,
 
+    init() {
+      // Check for ?prompt= in the hash (from compare brief or evidence links)
+      const hash = window.location.hash || '';
+      const promptMatch = hash.match(/[?&]prompt=([^&]+)/);
+      if (promptMatch) {
+        const prompt = decodeURIComponent(promptMatch[1].replace(/\+/g, ' '));
+        // Clean the hash
+        window.location.hash = '#/chat';
+        // Auto-send after a short delay
+        setTimeout(() => {
+          this.input = prompt;
+          this.send();
+        }, 500);
+      }
+    },
+
     async send() {
       const text = this.input.trim();
       if (!text || this.streaming) return;
