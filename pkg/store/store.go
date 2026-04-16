@@ -96,6 +96,7 @@ type Store interface {
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 
 	// Lifecycle
+	Ping(ctx context.Context) error
 	Migrate(ctx context.Context) error
 	RefreshViews(ctx context.Context) error
 	Close() error

@@ -43,6 +43,7 @@ func (s *stubStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore
 func (s *stubStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil
 }
+func (s *stubStore) Ping(_ context.Context) error         { return nil }
 func (s *stubStore) Migrate(_ context.Context) error     { return nil }
 func (s *stubStore) RefreshViews(_ context.Context) error { return nil }
 func (s *stubStore) Close() error                         { return nil }

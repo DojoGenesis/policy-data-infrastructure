@@ -56,6 +56,11 @@ func NewPostgresStore(ctx context.Context, connString string) (*PostgresStore, e
 	return s, nil
 }
 
+// Ping verifies database connectivity by executing a lightweight query.
+func (s *PostgresStore) Ping(ctx context.Context) error {
+	return s.pool.Ping(ctx)
+}
+
 // Close releases all connections in the pool.
 func (s *PostgresStore) Close() error {
 	s.pool.Close()

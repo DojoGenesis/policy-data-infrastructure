@@ -134,6 +134,7 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID string, ti
 	return out, nil
 }
 
+func (m *mockStore) Ping(_ context.Context) error         { return nil }
 func (m *mockStore) Migrate(_ context.Context) error      { return nil }
 func (m *mockStore) RefreshViews(_ context.Context) error { return nil }
 func (m *mockStore) Close() error                         { return nil }

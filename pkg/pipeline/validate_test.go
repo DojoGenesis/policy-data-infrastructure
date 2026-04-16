@@ -47,6 +47,7 @@ func (m *mockValidateStore) PutAnalysisScores(_ context.Context, _ []store.Analy
 func (m *mockValidateStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) Ping(_ context.Context) error        { return nil }
 func (m *mockValidateStore) Migrate(_ context.Context) error    { return nil }
 func (m *mockValidateStore) RefreshViews(_ context.Context) error { return nil }
 func (m *mockValidateStore) Close() error                        { return nil }

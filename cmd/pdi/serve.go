@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
@@ -49,12 +51,51 @@ func runServe(port int) error {
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 
+	// CORS — allow browser clients from any policydatainfrastructure.com origin
+	// plus localhost for development. Configurable via CORS_ORIGINS env var
+	// (comma-separated list of allowed origins).
+	allowedOrigins := []string{
+		"https://policydatainfrastructure.com",
+		"https://www.policydatainfrastructure.com",
+		"https://api.policydatainfrastructure.com",
+		"http://localhost:*",
+		"http://127.0.0.1:*",
+	}
+	if extra := os.Getenv("CORS_ORIGINS"); extra != "" {
+		for _, o := range strings.Split(extra, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				allowedOrigins = append(allowedOrigins, o)
+			}
+		}
+	}
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	v1 := r.Group("/v1")
 	policyGroup := v1.Group("/policy")
 	plugin.RegisterRoutes(policyGroup)
 
+	// Liveness check — always returns 200.
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// Readiness check — verifies database connectivity.
+	r.GET("/readyz", func(c *gin.Context) {
+		pingCtx, pingCancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer pingCancel()
+		if err := s.Ping(pingCtx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
 	addr := fmt.Sprintf(":%d", port)
@@ -77,7 +118,10 @@ func runServe(port int) error {
 		_ = srv.Shutdown(shutCtx)
 	}()
 
-	fmt.Printf("pdi serving on http://localhost%s/v1/policy\n", addr)
+	fmt.Printf("pdi serving on 0.0.0.0%s\n", addr)
+	fmt.Printf("  health:  http://0.0.0.0%s/health\n", addr)
+	fmt.Printf("  readyz:  http://0.0.0.0%s/readyz\n", addr)
+	fmt.Printf("  API:     http://0.0.0.0%s/v1/policy/\n", addr)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("serve: %w", err)
 	}
