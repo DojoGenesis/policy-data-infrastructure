@@ -2,7 +2,7 @@
 
 Open-source national policy data platform. Ingests census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts. Runs validated statistical analyses grounded in peer-reviewed methodology. Generates data-driven narratives and single-file HTML deliverables for policy audiences.
 
-**Raw data is the foundation. Composites are derived views, never stored truth.**
+**Raw data is the foundation and a complex viewer is the deliverable: live at policydatainfrastructure.com and api.policydatainfrastructure.com!**
 
 ## Quick Start
 
