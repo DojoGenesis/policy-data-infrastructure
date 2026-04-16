@@ -291,6 +291,56 @@ go test ./... -short
 - Include root causes for fixes: `Fixed BLS LAUS: annualaverage param drops data`
 - Committed with `docs:` prefix separately from code changes
 
+## Subagent Protocol
+
+Subagents dispatched to this repo MUST follow these rules. You start cold — no session
+context, no memory. Read this section, then STATUS.md, then the relevant ADR.
+
+### Before Starting
+1. Read `STATUS.md` — current HEAD, test count, what's live, what's not
+2. Read `TODO.md` — find your assigned item(s)
+3. Read relevant `adr/*.md` — understand the decision context
+4. Run `go build ./...` to verify the repo compiles before making changes
+
+### While Working
+- `go build ./...` after every file save — do NOT accumulate errors
+- Run `go test ./pkg/PACKAGE/... -v` for each package you touch
+- Store interface: all callers use `store.Store`, not `*PostgresStore` directly
+- New Store methods: add to interface in `store.go` + implement in `postgres.go` + add to ALL mock stores in test files (grep for `mockStore`, `stubStore`, `mockValidateStore`)
+- New API endpoints: register in `pkg/gateway/plugin.go` RegisterRoutes()
+- New migrations: `pkg/store/migrations/00N_description.up.sql` + `.down.sql` — MUST be idempotent
+
+### Before Reporting Done
+1. `go build ./...` — MUST pass
+2. `go test ./... -short` — MUST pass (all 380+ tests)
+3. Update `TODO.md` — mark completed items with `[x]`, add new items discovered
+4. Update `CHANGELOG.md` — append to today's date section with commit hash
+5. Update `STATUS.md` — update HEAD, test count, any changed coverage or service state
+6. Do NOT commit — the orchestrator commits after verification
+
+### File Ownership (avoid conflicts with parallel agents)
+When assigned a track, you own ONLY the files listed in your dispatch. Do not modify
+files outside your manifest. If you discover a dependency on another file, report it
+in your completion summary — do not edit it.
+
+### Key Paths
+- API handlers: `pkg/gateway/handlers.go` (add new handlers here)
+- Route registration: `pkg/gateway/plugin.go` (register new routes here)
+- Store interface: `pkg/store/store.go` (add new methods here)
+- Store implementation: `pkg/store/postgres.go`
+- Migrations: `pkg/store/migrations/`
+- Pipeline stages: `pkg/pipeline/`
+- CLI commands: `cmd/pdi/`
+- ADRs: `adr/`
+- Policy CSVs: `data/policies/`
+- Deploy: `deploy/`
+
+### Live Infrastructure
+- API: `https://api.policydatainfrastructure.com` (VPS, port 8340, Caddy + Cloudflare)
+- PostGIS: `postgres://pdi:pdi@localhost:5432/pdi` on VPS
+- Service: `pdi.service` (systemd, user=dojo)
+- Static site: `https://policydatainfrastructure.com` (GitHub Pages, `docs/`)
+
 ## Security
 - Never hardcode API keys — all keys via environment variables
 - Census API key: `CENSUS_API_KEY` env var
