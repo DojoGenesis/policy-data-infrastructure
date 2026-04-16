@@ -71,7 +71,7 @@ func (p *PolicyPlugin) handleListGeographies(c *gin.Context) {
 
 	items := make([]GeographyResponse, 0, len(geos))
 	for _, g := range geos {
-		items = append(items, geoFromStore(g, nil, nil))
+		items = append(items, p.geoFromStore(g, nil, nil))
 	}
 
 	c.JSON(http.StatusOK, GeographyListResponse{
@@ -135,7 +135,7 @@ func (p *PolicyPlugin) handleGetGeography(c *gin.Context) {
 		scores = filtered
 	}
 
-	c.JSON(http.StatusOK, geoFromStore(*g, inds, scores))
+	c.JSON(http.StatusOK, p.geoFromStore(*g, inds, scores))
 }
 
 // ── GET /geographies/:geoid/children ───────────────────────────────────────
@@ -192,7 +192,7 @@ func (p *PolicyPlugin) handleGetChildren(c *gin.Context) {
 
 	items := make([]GeographyResponse, 0, len(geos))
 	for _, g := range geos {
-		items = append(items, geoFromStore(g, nil, nil))
+		items = append(items, p.geoFromStore(g, nil, nil))
 	}
 
 	c.JSON(http.StatusOK, GeographyListResponse{
@@ -232,13 +232,7 @@ func (p *PolicyPlugin) handleGetIndicators(c *gin.Context) {
 
 	items := make([]IndicatorResponse, 0, len(inds))
 	for _, ind := range inds {
-		items = append(items, IndicatorResponse{
-			VariableID:    ind.VariableID,
-			Vintage:       ind.Vintage,
-			Value:         ind.Value,
-			MarginOfError: ind.MarginOfError,
-			RawValue:      ind.RawValue,
-		})
+		items = append(items, p.indicatorToResponse(ind))
 	}
 
 	c.JSON(http.StatusOK, gin.H{"geoid": geoid, "indicators": items, "total": len(items)})
@@ -305,11 +299,11 @@ func (p *PolicyPlugin) handleQuery(c *gin.Context) {
 			indsByGEO[ind.GEOID] = append(indsByGEO[ind.GEOID], ind)
 		}
 		for _, g := range geos {
-			items = append(items, geoFromStore(g, indsByGEO[g.GEOID], nil))
+			items = append(items, p.geoFromStore(g, indsByGEO[g.GEOID], nil))
 		}
 	} else {
 		for _, g := range geos {
-			items = append(items, geoFromStore(g, nil, nil))
+			items = append(items, p.geoFromStore(g, nil, nil))
 		}
 	}
 
@@ -410,8 +404,8 @@ func (p *PolicyPlugin) handleCompare(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, CompareResponse{
-		Geography1:  geoFromStore(*g1, inds1, nil),
-		Geography2:  geoFromStore(*g2, inds2, nil),
+		Geography1:  p.geoFromStore(*g1, inds1, nil),
+		Geography2:  p.geoFromStore(*g2, inds2, nil),
 		Differences: diffs,
 	})
 }
@@ -631,6 +625,66 @@ func (p *PolicyPlugin) handlePipelineEvents(c *gin.Context) {
 	c.Writer.Flush()
 }
 
+// ── GET /variables ───────────────────────────────────────────────────────────
+
+// handleListVariables returns the full indicator_meta catalog with source info.
+func (p *PolicyPlugin) handleListVariables(c *gin.Context) {
+	vars, err := p.store.QueryVariables(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "variable query failed", Detail: err.Error()})
+		return
+	}
+
+	items := make([]VariableResponse, 0, len(vars))
+	for _, v := range vars {
+		items = append(items, VariableResponse{
+			ID:          v.VariableID,
+			Name:        v.Name,
+			Description: v.Description,
+			Unit:        v.Unit,
+			Direction:   v.Direction,
+			SourceID:    v.SourceID,
+			SourceName:  v.SourceName,
+		})
+	}
+
+	c.JSON(http.StatusOK, VariableListResponse{
+		Variables: items,
+		Total:     len(items),
+	})
+}
+
+// ── GET /analyses ─────────────────────────────────────────────────────────────
+
+// handleListAnalyses returns a summary of all analysis runs stored in the
+// database, ordered most-recent first. Frontends use this to discover
+// analysis_ids for use in score queries and narrative generation.
+func (p *PolicyPlugin) handleListAnalyses(c *gin.Context) {
+	summaries, err := p.store.ListAnalyses(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "analyses query failed", Detail: err.Error()})
+		return
+	}
+
+	items := make([]AnalysisSummaryResponse, 0, len(summaries))
+	for _, as := range summaries {
+		items = append(items, AnalysisSummaryResponse{
+			ID:         as.ID,
+			Type:       as.Type,
+			ScopeGEOID: as.ScopeGEOID,
+			ScopeLevel: as.ScopeLevel,
+			Vintage:    as.Vintage,
+			ComputedAt: as.ComputedAt,
+			ScoreCount: as.ScoreCount,
+		})
+	}
+
+	c.JSON(http.StatusOK, AnalysisListResponse{
+		Analyses: items,
+		Total:    len(items),
+	})
+}
+
 // ── GET /sources ─────────────────────────────────────────────────────────────
 
 // handleListSources returns the registered data sources supported by this
@@ -735,9 +789,28 @@ func generateNarrativeHTML(g *geo.Geography, inds []store.Indicator, vintage str
 
 // ── Internal helpers ────────────────────────────────────────────────────────
 
+// indicatorToResponse converts a store.Indicator to an IndicatorResponse,
+// enriching it with human-readable metadata from the plugin's varMeta cache.
+func (p *PolicyPlugin) indicatorToResponse(ind store.Indicator) IndicatorResponse {
+	resp := IndicatorResponse{
+		VariableID:    ind.VariableID,
+		Vintage:       ind.Vintage,
+		Value:         ind.Value,
+		MarginOfError: ind.MarginOfError,
+		RawValue:      ind.RawValue,
+	}
+	if meta, ok := p.varMeta[ind.VariableID]; ok {
+		resp.Name = meta.Name
+		resp.Unit = meta.Unit
+		resp.Direction = meta.Direction
+	}
+	return resp
+}
+
 // geoFromStore converts a geo.Geography and optional store slices to the HTTP
-// response shape, avoiding the interface{} indirection in types.go.
-func geoFromStore(g geo.Geography, inds []store.Indicator, scores []store.AnalysisScore) GeographyResponse {
+// response shape, enriching each indicator with metadata from the plugin's
+// varMeta cache.
+func (p *PolicyPlugin) geoFromStore(g geo.Geography, inds []store.Indicator, scores []store.AnalysisScore) GeographyResponse {
 	resp := GeographyResponse{
 		GEOID:       g.GEOID,
 		Level:       string(g.Level),
@@ -751,13 +824,7 @@ func geoFromStore(g geo.Geography, inds []store.Indicator, scores []store.Analys
 		Lon:         g.Lon,
 	}
 	for _, ind := range inds {
-		resp.Indicators = append(resp.Indicators, IndicatorResponse{
-			VariableID:    ind.VariableID,
-			Vintage:       ind.Vintage,
-			Value:         ind.Value,
-			MarginOfError: ind.MarginOfError,
-			RawValue:      ind.RawValue,
-		})
+		resp.Indicators = append(resp.Indicators, p.indicatorToResponse(ind))
 	}
 	for _, s := range scores {
 		resp.Scores = append(resp.Scores, ScoreResponse{

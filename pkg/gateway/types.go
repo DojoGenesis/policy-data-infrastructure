@@ -80,10 +80,30 @@ type GeographyResponse struct {
 // IndicatorResponse is a single indicator value in a response.
 type IndicatorResponse struct {
 	VariableID    string   `json:"variable_id"`
+	Name          string   `json:"name,omitempty"`
+	Unit          string   `json:"unit,omitempty"`
+	Direction     string   `json:"direction,omitempty"`
 	Vintage       string   `json:"vintage"`
 	Value         *float64 `json:"value"`
 	MarginOfError *float64 `json:"margin_of_error,omitempty"`
 	RawValue      string   `json:"raw_value,omitempty"`
+}
+
+// VariableResponse describes one indicator variable in the catalog.
+type VariableResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Unit        string `json:"unit,omitempty"`
+	Direction   string `json:"direction,omitempty"`
+	SourceID    string `json:"source_id"`
+	SourceName  string `json:"source_name,omitempty"`
+}
+
+// VariableListResponse is the response body for GET /variables.
+type VariableListResponse struct {
+	Variables []VariableResponse `json:"variables"`
+	Total     int                `json:"total"`
 }
 
 // ScoreResponse is a single analysis score in a response.
@@ -142,6 +162,23 @@ type PipelineRunResponse struct {
 	RunID   string `json:"run_id"`
 	Source  string `json:"source"`
 	Message string `json:"message"`
+}
+
+// AnalysisSummaryResponse is the per-item shape in GET /analyses.
+type AnalysisSummaryResponse struct {
+	ID         string `json:"id"`
+	Type       string `json:"type"`
+	ScopeGEOID string `json:"scope_geoid,omitempty"`
+	ScopeLevel string `json:"scope_level,omitempty"`
+	Vintage    string `json:"vintage,omitempty"`
+	ComputedAt string `json:"computed_at"`
+	ScoreCount int    `json:"score_count"`
+}
+
+// AnalysisListResponse wraps a list of analysis run summaries.
+type AnalysisListResponse struct {
+	Analyses []AnalysisSummaryResponse `json:"analyses"`
+	Total    int                        `json:"total"`
 }
 
 // PipelineEvent is one event emitted on the SSE stream.

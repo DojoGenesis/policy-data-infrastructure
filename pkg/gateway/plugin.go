@@ -6,6 +6,8 @@
 package gateway
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/DojoGenesis/policy-data-infrastructure/internal/version"
@@ -16,12 +18,22 @@ import (
 // infrastructure. It is created with a Store and registered onto a Gin router
 // group via RegisterRoutes.
 type PolicyPlugin struct {
-	store store.Store
+	store   store.Store
+	varMeta map[string]store.VariableMeta // variable_id -> metadata, populated at startup
 }
 
-// NewPlugin creates a PolicyPlugin backed by the given Store.
+// NewPlugin creates a PolicyPlugin backed by the given Store. It pre-loads
+// variable metadata into an in-memory map so every indicator response can be
+// enriched without hitting the database per-request.
 func NewPlugin(s store.Store) *PolicyPlugin {
-	return &PolicyPlugin{store: s}
+	p := &PolicyPlugin{store: s, varMeta: make(map[string]store.VariableMeta)}
+	ctx := context.Background()
+	if vars, err := s.QueryVariables(ctx); err == nil {
+		for _, v := range vars {
+			p.varMeta[v.VariableID] = v
+		}
+	}
+	return p
 }
 
 // Name returns the plugin identifier.
@@ -57,6 +69,12 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	// Pipeline.
 	group.POST("/pipeline/run", p.handlePipelineRun)
 	group.GET("/pipeline/events", p.handlePipelineEvents)
+
+	// Variable metadata catalog.
+	group.GET("/variables", p.handleListVariables)
+
+	// Analysis runs discovery.
+	group.GET("/analyses", p.handleListAnalyses)
 
 	// Data source info.
 	group.GET("/sources", p.handleListSources)

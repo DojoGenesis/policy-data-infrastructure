@@ -251,6 +251,12 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier stri
 func (m *mockStore) PutIndicatorsBatch(_ context.Context, _ []store.Indicator, _ int) error {
 	return nil
 }
+func (m *mockStore) QueryVariables(_ context.Context) ([]store.VariableMeta, error) {
+	return nil, nil
+}
+func (m *mockStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
+	return nil, nil
+}
 func (m *mockStore) Ping(_ context.Context) error          { return nil }
 func (m *mockStore) Migrate(_ context.Context) error       { return nil }
 func (m *mockStore) RefreshViews(_ context.Context) error  { return nil }

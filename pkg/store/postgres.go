@@ -576,6 +576,42 @@ WHERE il.variable_id = $1
 	return result, nil
 }
 
+// --- Metadata operations ---
+
+// QueryVariables returns all indicator_meta rows joined with their source name.
+// Results are ordered by variable_id. An empty table returns an empty slice, not an error.
+func (s *PostgresStore) QueryVariables(ctx context.Context) ([]VariableMeta, error) {
+	const q = `
+SELECT im.variable_id, im.source_id, COALESCE(src.name, '') AS source_name,
+       im.name, COALESCE(im.description, ''), COALESCE(im.unit, ''),
+       COALESCE(im.direction, '')
+FROM indicator_meta im
+LEFT JOIN indicator_sources src ON src.source_id = im.source_id
+ORDER BY im.variable_id`
+
+	rows, err := s.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryVariables: %w", err)
+	}
+	defer rows.Close()
+
+	var result []VariableMeta
+	for rows.Next() {
+		var v VariableMeta
+		if err := rows.Scan(
+			&v.VariableID, &v.SourceID, &v.SourceName,
+			&v.Name, &v.Description, &v.Unit, &v.Direction,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryVariables scan: %w", err)
+		}
+		result = append(result, v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryVariables rows: %w", err)
+	}
+	return result, nil
+}
+
 // --- Analysis operations ---
 
 // PutAnalysis persists an AnalysisResult record to the analyses table and
@@ -682,6 +718,43 @@ ORDER BY rank ASC`, tierClause)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("store: QueryAnalysisScores rows: %w", err)
+	}
+	return result, nil
+}
+
+// ListAnalyses returns a summary of all analysis runs ordered by computed_at
+// descending (most recent first). ScoreCount is populated via a correlated
+// subquery so no JOIN fanout occurs on the result set.
+func (s *PostgresStore) ListAnalyses(ctx context.Context) ([]AnalysisSummary, error) {
+	const q = `
+SELECT a.id, a.type,
+       COALESCE(a.scope_geoid, ''), COALESCE(a.scope_level::text, ''),
+       COALESCE(a.vintage, ''), a.computed_at::text,
+       (SELECT COUNT(*) FROM analysis_scores sc WHERE sc.analysis_id = a.id)
+FROM analyses a
+ORDER BY a.computed_at DESC`
+
+	rows, err := s.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("store: ListAnalyses: %w", err)
+	}
+	defer rows.Close()
+
+	var result []AnalysisSummary
+	for rows.Next() {
+		var as AnalysisSummary
+		if err := rows.Scan(
+			&as.ID, &as.Type,
+			&as.ScopeGEOID, &as.ScopeLevel,
+			&as.Vintage, &as.ComputedAt,
+			&as.ScoreCount,
+		); err != nil {
+			return nil, fmt.Errorf("store: ListAnalyses scan: %w", err)
+		}
+		result = append(result, as)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: ListAnalyses rows: %w", err)
 	}
 	return result, nil
 }

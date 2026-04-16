@@ -10,6 +10,18 @@ import (
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/geo"
 )
 
+// VariableMeta holds human-readable metadata for one indicator variable,
+// joined with its source name from indicator_sources.
+type VariableMeta struct {
+	VariableID  string
+	SourceID    string
+	SourceName  string
+	Name        string
+	Description string
+	Unit        string
+	Direction   string
+}
+
 // Indicator represents a single data point for a geography.
 type Indicator struct {
 	GEOID         string
@@ -26,6 +38,17 @@ type IndicatorQuery struct {
 	VariableIDs []string
 	Vintage     string
 	LatestOnly  bool
+}
+
+// AnalysisSummary is a lightweight summary of an analysis run for listing.
+type AnalysisSummary struct {
+	ID         string
+	Type       string
+	ScopeGEOID string
+	ScopeLevel string
+	Vintage    string
+	ComputedAt string // ISO 8601 timestamp
+	ScoreCount int    // number of scores in this analysis
 }
 
 // AnalysisResult represents a computed analysis.
@@ -94,6 +117,10 @@ type Store interface {
 	PutAnalysis(ctx context.Context, result AnalysisResult) (string, error)
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
+	ListAnalyses(ctx context.Context) ([]AnalysisSummary, error)
+
+	// Metadata operations
+	QueryVariables(ctx context.Context) ([]VariableMeta, error)
 
 	// Lifecycle
 	Ping(ctx context.Context) error
