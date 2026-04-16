@@ -4,52 +4,119 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Policy Data Infrastructure</title>
-<meta name="description" content="Open-source national policy data platform. Live county-level indicators for Wisconsin.">
+<meta name="description" content="Open-source policy data platform. 13 federal and state data sources. 42 indicator variables. 72 Wisconsin counties.">
 <link rel="stylesheet" href="/static/style.css">
-<!-- Load page scripts BEFORE Alpine so Alpine.data() registrations are ready -->
+
+<!-- Hexagonal lib layer (load first) -->
+<script src="/static/lib/router.js"></script>
+<script src="/static/lib/api.js"></script>
+<script src="/static/lib/domain.js"></script>
+<script src="/static/lib/chat.js"></script>
+
+<!-- Page components -->
+<script src="/static/pages/landing.js"></script>
 <script src="/static/pages/counties.js"></script>
-<script src="/static/pages/profile.js"></script>
+<script src="/static/pages/county.js"></script>
+<script src="/static/pages/tracts.js"></script>
 <script src="/static/pages/compare.js"></script>
+<script src="/static/pages/analysis.js"></script>
 <script src="/static/pages/evidence.js"></script>
 <script src="/static/pages/candidates.js"></script>
+<script src="/static/pages/chat.js"></script>
 <script src="/static/pages/about.js"></script>
+
+<!-- Alpine LAST -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="router()">
+<body x-data="appRouter()">
 
-<!-- Navigation -->
-<nav class="nav">
+<!-- Navigation — hidden on landing -->
+<nav class="nav" x-show="page!=='landing'" x-cloak>
   <div class="nav-inner">
     <a href="#/" class="nav-brand">Policy Data Infrastructure</a>
     <div class="nav-links">
-      <a href="#/" :class="{'active': page==='home'}">Counties</a>
+      <a href="#/counties" :class="{'active': page==='counties' || page==='county' || page==='tracts'}">Counties</a>
       <a href="#/compare" :class="{'active': page==='compare'}">Compare</a>
       <a href="#/evidence" :class="{'active': page==='evidence'}">Evidence</a>
       <a href="#/candidates" :class="{'active': page==='candidates'}">Candidates</a>
+      <a href="#/chat" :class="{'active': page==='chat'}">Chat</a>
       <a href="#/about" :class="{'active': page==='about'}">About</a>
     </div>
   </div>
 </nav>
 
 <main class="main">
-  <div x-show="page==='home'" x-data="countyExplorer()" x-cloak>
-    <template x-if="loading"><div class="loading">Loading counties...</div></template>
-    <template x-if="error"><div class="card" style="color:var(--red)">Error: <span x-text="error"></span></div></template>
+
+  <!-- ─── LANDING ──────────────────────────────────────────────────── -->
+  <div x-show="page==='landing'" x-data="landingPage()" x-cloak>
+    <div class="cover">
+      <div class="cover-inner">
+        <div class="cover-label">OPEN SOURCE &middot; APACHE-2.0</div>
+        <h1>From raw public data to the stories that change how <span>decisions</span> are made.</h1>
+        <p class="subtitle">An open-source policy data platform. 13 federal and state data sources. 42 indicator variables. 72 Wisconsin counties. 1,652 census tracts.</p>
+        <div class="cover-cta">
+          <a href="#/counties" class="btn btn-primary-cover">Browse Counties</a>
+          <a href="#/chat" class="btn btn-secondary">Talk to the Data</a>
+          <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-secondary" target="_blank">View Source</a>
+        </div>
+        <div class="cover-stats" x-show="stats">
+          <div class="cover-stat">
+            <span class="cover-stat-value" x-text="stats ? stats.counties : '72'"></span>
+            <span class="cover-stat-label">Counties</span>
+          </div>
+          <div class="cover-stat">
+            <span class="cover-stat-value" x-text="stats ? stats.tracts : '1,652'"></span>
+            <span class="cover-stat-label">Tracts</span>
+          </div>
+          <div class="cover-stat">
+            <span class="cover-stat-value" x-text="stats ? stats.variables : '42'"></span>
+            <span class="cover-stat-label">Variables</span>
+          </div>
+          <div class="cover-stat">
+            <span class="cover-stat-value" x-text="stats ? stats.policies : '85'"></span>
+            <span class="cover-stat-label">Policy Positions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── COUNTY EXPLORER ──────────────────────────────────────────── -->
+  <div x-show="page==='counties'" x-data="countyExplorer()" x-cloak>
+    <div class="section-num">WISCONSIN COUNTY EXPLORER</div>
+    <h2>Counties</h2>
+    <hr class="section-rule">
+
+    <template x-if="loading">
+      <div class="loading">Loading counties...</div>
+    </template>
+    <template x-if="error">
+      <div class="card" style="color:var(--red)">Error: <span x-text="error"></span></div>
+    </template>
     <template x-if="!loading && !error">
       <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <h1 style="font-size:1.5rem;font-weight:700">Wisconsin Counties <span class="badge badge-teal" x-text="filtered.length + ' counties'"></span></h1>
-          <input class="input" style="max-width:300px" type="text" placeholder="Search counties..." x-model="search">
+        <div class="toolbar">
+          <input class="input" type="text" placeholder="Search counties..." x-model="search">
+          <span class="badge badge-teal" x-text="filtered.length + ' counties'"></span>
         </div>
         <div class="grid-3">
           <template x-for="c in filtered" :key="c.geoid">
-            <a :href="'#/county/' + c.geoid" class="card" style="text-decoration:none;color:inherit;cursor:pointer;transition:box-shadow 0.15s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow=''">
-              <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem" x-text="c.name"></div>
-              <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem">Pop. <span x-text="c.population ? c.population.toLocaleString() : '—'"></span></div>
-              <div style="display:flex;gap:1rem;font-size:0.85rem">
-                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'poverty_rate', 'pct')"></div><div class="stat-label">Poverty</div></div>
-                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'median_household_income', 'dollar')"></div><div class="stat-label">Income</div></div>
-                <div class="stat"><div class="stat-value" style="font-size:1.2rem" x-text="fmtInd(c, 'uninsured_rate', 'pct')"></div><div class="stat-label">Uninsured</div></div>
+            <a :href="'#/county/' + c.geoid" class="county-card">
+              <div class="county-name" x-text="c.name"></div>
+              <div class="county-pop">Pop. <span x-text="c.population ? c.population.toLocaleString() : '—'"></span></div>
+              <div class="county-stats">
+                <div class="ns ns-amber">
+                  <div class="ns-value" x-text="fmtInd(c, 'poverty_rate', 'pct')"></div>
+                  <div class="ns-label">Poverty</div>
+                </div>
+                <div class="ns">
+                  <div class="ns-value" x-text="fmtInd(c, 'median_household_income', 'dollar')"></div>
+                  <div class="ns-label">Income</div>
+                </div>
+                <div class="ns ns-amber">
+                  <div class="ns-value" x-text="fmtInd(c, 'uninsured_rate', 'pct')"></div>
+                  <div class="ns-label">Uninsured</div>
+                </div>
               </div>
             </a>
           </template>
@@ -58,14 +125,41 @@
     </template>
   </div>
 
+  <!-- ─── COUNTY PROFILE ───────────────────────────────────────────── -->
   <div x-show="page==='county'" x-data="countyProfile()" x-cloak>
-    <template x-if="loading"><div class="loading">Loading county profile...</div></template>
-    <template x-if="error"><div class="card"><a href="#/" class="btn btn-outline btn-sm">Back</a> <span style="color:var(--red);margin-left:1rem" x-text="error"></span></div></template>
+    <template x-if="loading">
+      <div class="loading">Loading county profile...</div>
+    </template>
+    <template x-if="error">
+      <div class="card">
+        <a href="#/counties" class="btn btn-sm btn-outline">&#8592; Counties</a>
+        <span style="color:var(--red);margin-left:1rem" x-text="error"></span>
+      </div>
+    </template>
     <template x-if="!loading && !error && county">
       <div>
-        <div style="margin-bottom:1.5rem"><a href="#/" class="btn btn-outline btn-sm">Back to Counties</a></div>
-        <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:0.25rem" x-text="county.name"></h1>
-        <p style="color:var(--text-secondary);margin-bottom:1.5rem">FIPS <span x-text="county.geoid"></span> &middot; Pop. <span x-text="county.population ? county.population.toLocaleString() : '—'"></span></p>
+        <a href="#/counties" class="btn btn-sm btn-outline">&#8592; Counties</a>
+        <div class="section-num" style="margin-top:1.5rem">COUNTY PROFILE</div>
+        <h2 x-text="county.name"></h2>
+        <hr class="section-rule">
+
+        <!-- Top stat row -->
+        <div class="stat-row">
+          <div class="ns">
+            <div class="ns-value" x-text="county.population ? county.population.toLocaleString() : '—'"></div>
+            <div class="ns-label">Population</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value" x-text="county.geoid"></div>
+            <div class="ns-label">FIPS Code</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value" x-text="tractCount ? tractCount.toLocaleString() : '—'"></div>
+            <div class="ns-label">Census Tracts</div>
+          </div>
+        </div>
+
+        <!-- Grouped indicator bar charts -->
         <template x-if="indicators.length > 0">
           <div>
             <template x-for="group in grouped" :key="group.name">
@@ -76,7 +170,9 @@
                     <div class="bar-row">
                       <div class="bar-label" x-text="ind.name || ind.variable_id"></div>
                       <div class="bar-track">
-                        <div class="bar-fill" :class="ind.direction==='lower_better' ? 'bar-fill-amber' : 'bar-fill-teal'" :style="'width:' + barWidth(ind)">
+                        <div class="bar-fill"
+                             :class="ind.direction==='lower_better' ? 'bar-fill-amber' : 'bar-fill-teal'"
+                             :style="'width:' + barWidth(ind)">
                           <span x-text="fmtVal(ind)"></span>
                         </div>
                       </div>
@@ -87,141 +183,553 @@
             </template>
           </div>
         </template>
+
+        <!-- Tract analysis scores (if available) -->
+        <template x-if="tractScores && tractScores.length > 0">
+          <div class="card" style="margin-bottom:1rem">
+            <div class="section-num">TRACT ANALYSIS</div>
+            <div class="card-header">Most Disadvantaged Tracts</div>
+            <table class="wiki-table">
+              <thead>
+                <tr><th>Tract</th><th>Score</th><th>Tier</th><th></th></tr>
+              </thead>
+              <tbody>
+                <template x-for="ts in tractScores.slice(0,5)" :key="ts.geoid">
+                  <tr>
+                    <td x-text="ts.geoid"></td>
+                    <td x-text="ts.score != null ? ts.score.toFixed(3) : '—'"></td>
+                    <td><span class="badge" :class="tierBadge(ts.tier)" x-text="ts.tier || '—'"></span></td>
+                    <td><a :href="'#/tracts/' + county.geoid" class="link-subtle">View tracts</a></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- Wiki links section -->
+        <section class="wiki-links">
+          <h3>Related</h3>
+          <div class="wiki-link-grid">
+            <a :href="'#/tracts/' + county.geoid" class="wiki-link-card">
+              <span class="wiki-link-icon">&#9783;</span>
+              <span>Census Tracts</span>
+            </a>
+            <a href="#/candidates" class="wiki-link-card">
+              <span class="wiki-link-icon">&#9670;</span>
+              <span>Relevant Policy Positions</span>
+            </a>
+            <a href="#/evidence" class="wiki-link-card">
+              <span class="wiki-link-icon">&#128196;</span>
+              <span>Evidence Cards</span>
+            </a>
+            <a href="#/compare" class="wiki-link-card">
+              <span class="wiki-link-icon">&#8680;</span>
+              <span>Compare with Another County</span>
+            </a>
+          </div>
+        </section>
       </div>
     </template>
   </div>
 
+  <!-- ─── TRACT EXPLORER ───────────────────────────────────────────── -->
+  <div x-show="page==='tracts'" x-data="tractExplorer()" x-cloak>
+    <template x-if="loading">
+      <div class="loading">Loading tracts...</div>
+    </template>
+    <template x-if="!loading">
+      <div>
+        <a :href="'#/county/' + geoid" class="btn btn-sm btn-outline">&#8592; County Profile</a>
+        <div class="section-num" style="margin-top:1.5rem">TRACT EXPLORER</div>
+        <h2 x-text="countyName || ('County ' + geoid)"></h2>
+        <hr class="section-rule">
+
+        <div class="toolbar">
+          <input class="input" type="text" placeholder="Search tracts..." x-model="search">
+          <span class="badge badge-teal" x-text="filtered.length + ' tracts'"></span>
+        </div>
+
+        <div class="grid-3">
+          <template x-for="t in filtered" :key="t.geoid">
+            <div class="card">
+              <div class="county-name" style="font-size:1rem" x-text="'Tract ' + t.geoid.slice(-6)"></div>
+              <div class="county-pop">GEOID: <span x-text="t.geoid"></span></div>
+              <div class="county-stats" style="margin-top:0.75rem">
+                <template x-for="ind in t.keyIndicators || []" :key="ind.variable_id">
+                  <div class="ns">
+                    <div class="ns-value" x-text="fmtVal(ind)"></div>
+                    <div class="ns-label" x-text="ind.shortName || ind.variable_id"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <template x-if="filtered.length === 0 && !loading">
+          <div class="card" style="color:var(--text-secondary)">No tracts found for this county.</div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- ─── COMPARE ──────────────────────────────────────────────────── -->
   <div x-show="page==='compare'" x-data="compareTool()" x-cloak>
-    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">Compare Counties</h1>
-    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
-      <select class="input" style="max-width:250px" x-model="geoid1">
+    <div class="section-num">COMPARE</div>
+    <h2>Compare Counties</h2>
+    <hr class="section-rule">
+
+    <div class="compare-controls">
+      <select class="input" style="max-width:260px" x-model="geoid1">
         <option value="">Select County A</option>
-        <template x-for="c in counties" :key="c.geoid"><option :value="c.geoid" x-text="c.name"></option></template>
+        <template x-for="c in counties" :key="c.geoid">
+          <option :value="c.geoid" x-text="c.name"></option>
+        </template>
       </select>
-      <select class="input" style="max-width:250px" x-model="geoid2">
+      <span style="color:var(--text-secondary);font-size:1.25rem">vs</span>
+      <select class="input" style="max-width:260px" x-model="geoid2">
         <option value="">Select County B</option>
-        <template x-for="c in counties" :key="c.geoid"><option :value="c.geoid" x-text="c.name"></option></template>
+        <template x-for="c in counties" :key="c.geoid">
+          <option :value="c.geoid" x-text="c.name"></option>
+        </template>
       </select>
-      <button class="btn btn-primary" @click="compare()" :disabled="!geoid1 || !geoid2 || comparing">Compare</button>
+      <button class="btn btn-primary" @click="compare()" :disabled="!geoid1 || !geoid2 || comparing">
+        <span x-show="!comparing">Compare</span>
+        <span x-show="comparing">Loading...</span>
+      </button>
     </div>
-    <template x-if="comparing"><div class="loading">Comparing...</div></template>
+
     <template x-if="result">
       <div class="card">
-        <div class="card-header"><span x-text="result.geography1.name"></span> vs <span x-text="result.geography2.name"></span></div>
-        <table class="table">
-          <thead><tr><th>Indicator</th><th x-text="result.geography1.name"></th><th x-text="result.geography2.name"></th><th>Diff</th></tr></thead>
+        <div class="card-header">
+          <span x-text="result.geography1.name"></span> vs <span x-text="result.geography2.name"></span>
+        </div>
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Indicator</th>
+              <th x-text="result.geography1.name"></th>
+              <th x-text="result.geography2.name"></th>
+              <th>Diff</th>
+            </tr>
+          </thead>
           <tbody>
             <template x-for="d in result.differences" :key="d.variable_id">
               <tr>
-                <td x-text="d.variable_id"></td>
-                <td x-text="d.value1 != null ? d.value1.toLocaleString() : '—'"></td>
-                <td x-text="d.value2 != null ? d.value2.toLocaleString() : '—'"></td>
-                <td><span :class="d.diff > 0 ? 'badge badge-green' : d.diff < 0 ? 'badge badge-red' : ''" x-text="d.pct_diff != null ? (d.pct_diff > 0 ? '+' : '') + d.pct_diff.toFixed(1) + '%' : '—'"></span></td>
+                <td x-text="d.name || d.variable_id"></td>
+                <td x-text="d.value1 != null ? fmtDiffVal(d, d.value1) : '—'"></td>
+                <td x-text="d.value2 != null ? fmtDiffVal(d, d.value2) : '—'"></td>
+                <td>
+                  <span :class="diffClass(d)" x-text="d.pct_diff != null ? (d.pct_diff > 0 ? '+' : '') + d.pct_diff.toFixed(1) + '%' : '—'"></span>
+                </td>
               </tr>
             </template>
           </tbody>
         </table>
+        <div style="margin-top:1rem">
+          <a href="#/chat" class="btn btn-secondary btn-sm">Generate Comparison Brief in Chat</a>
+        </div>
       </div>
     </template>
   </div>
 
+  <!-- ─── ANALYSIS DETAIL ───────────────────────────────────────────── -->
+  <div x-show="page==='analysis'" x-data="analysisDetail()" x-cloak>
+    <template x-if="loading">
+      <div class="loading">Loading analysis...</div>
+    </template>
+    <template x-if="!loading && !analysis">
+      <div class="card" style="color:var(--text-secondary)">Analysis not found.</div>
+    </template>
+    <template x-if="!loading && analysis">
+      <div>
+        <a href="#/counties" class="btn btn-sm btn-outline">&#8592; Counties</a>
+        <div class="section-num" style="margin-top:1.5rem">ANALYSIS DETAIL</div>
+        <h2 x-text="analysis.name || analysis.id"></h2>
+        <hr class="section-rule">
+
+        <div class="stat-row" style="margin-bottom:1.5rem">
+          <div class="ns">
+            <div class="ns-value" x-text="analysis.analysis_type || '—'"></div>
+            <div class="ns-label">Type</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value" x-text="analysis.geography_level || '—'"></div>
+            <div class="ns-label">Geography</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value" x-text="analysis.record_count || '—'"></div>
+            <div class="ns-label">Records</div>
+          </div>
+        </div>
+
+        <!-- composite_index: tier distribution -->
+        <template x-if="analysis.analysis_type === 'composite_index'">
+          <div>
+            <div class="card" style="margin-bottom:1rem">
+              <div class="card-header">Score Distribution</div>
+              <div class="bar-chart">
+                <template x-for="tier in tierSummary" :key="tier.name">
+                  <div class="bar-row">
+                    <div class="bar-label" x-text="tier.name"></div>
+                    <div class="bar-track">
+                      <div class="bar-fill bar-fill-teal" :style="'width:' + tier.pct + '%'">
+                        <span x-text="tier.count + ' tracts'"></span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Top 10 Most Disadvantaged Tracts</div>
+              <table class="wiki-table">
+                <thead><tr><th>Tract</th><th>Score</th><th>Tier</th></tr></thead>
+                <tbody>
+                  <template x-for="s in topScores" :key="s.geoid">
+                    <tr>
+                      <td x-text="s.geoid"></td>
+                      <td x-text="s.score != null ? s.score.toFixed(4) : '—'"></td>
+                      <td><span class="badge" :class="tierBadge(s.tier)" x-text="s.tier || '—'"></span></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <!-- ols_regression: coefficients -->
+        <template x-if="analysis.analysis_type === 'ols_regression'">
+          <div class="card">
+            <div class="card-header">OLS Regression Coefficients</div>
+            <template x-if="analysis.results && analysis.results.r_squared != null">
+              <div class="stat-row" style="margin-bottom:1rem">
+                <div class="ns">
+                  <div class="ns-value" x-text="analysis.results.r_squared.toFixed(4)"></div>
+                  <div class="ns-label">R&#178;</div>
+                </div>
+                <div class="ns">
+                  <div class="ns-value" x-text="analysis.results.n || '—'"></div>
+                  <div class="ns-label">Observations</div>
+                </div>
+              </div>
+            </template>
+            <table class="wiki-table">
+              <thead><tr><th>Variable</th><th>&#946; Coefficient</th><th>Std Error</th><th>p-value</th></tr></thead>
+              <tbody>
+                <template x-for="coef in regressionCoefs" :key="coef.variable">
+                  <tr>
+                    <td x-text="coef.variable"></td>
+                    <td x-text="coef.beta != null ? coef.beta.toFixed(4) : '—'"></td>
+                    <td x-text="coef.std_err != null ? coef.std_err.toFixed(4) : '—'"></td>
+                    <td>
+                      <span :class="coef.p_value < 0.05 ? 'badge badge-green' : 'badge'" x-text="coef.p_value != null ? coef.p_value.toFixed(4) : '—'"></span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- correlation_matrix: pairwise table -->
+        <template x-if="analysis.analysis_type === 'correlation_matrix'">
+          <div class="card">
+            <div class="card-header">Pairwise Pearson Correlations</div>
+            <table class="wiki-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <template x-for="col in corrCols" :key="col"><th x-text="col"></th></template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in corrRows" :key="row.label">
+                  <tr>
+                    <td><strong x-text="row.label"></strong></td>
+                    <template x-for="col in corrCols" :key="col">
+                      <td :class="corrCellClass(row.values[col])" x-text="row.values[col] != null ? row.values[col].toFixed(3) : '—'"></td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- tipping_point: threshold display -->
+        <template x-if="analysis.analysis_type === 'tipping_point'">
+          <div class="card">
+            <div class="card-header">Tipping Point Analysis</div>
+            <template x-if="analysis.results">
+              <div>
+                <div class="stat-row">
+                  <div class="ns ns-amber">
+                    <div class="ns-value" x-text="analysis.results.threshold != null ? analysis.results.threshold.toFixed(3) : '—'"></div>
+                    <div class="ns-label">Threshold Value</div>
+                  </div>
+                  <div class="ns">
+                    <div class="ns-value" x-text="analysis.results.slope_below != null ? analysis.results.slope_below.toFixed(3) : '—'"></div>
+                    <div class="ns-label">Slope (below)</div>
+                  </div>
+                  <div class="ns">
+                    <div class="ns-value" x-text="analysis.results.slope_above != null ? analysis.results.slope_above.toFixed(3) : '—'"></div>
+                    <div class="ns-label">Slope (above)</div>
+                  </div>
+                </div>
+                <p style="color:var(--text-secondary);margin-top:1rem;font-size:0.9rem" x-text="analysis.results.interpretation || ''"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- ─── EVIDENCE ──────────────────────────────────────────────────── -->
   <div x-show="page==='evidence'" x-data="evidenceGallery()" x-cloak>
-    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">Evidence Cards <span class="badge badge-teal" x-text="filtered.length + ' cards'"></span></h1>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
-      <button class="btn btn-sm" :class="!activeCategory ? 'btn-primary' : 'btn-outline'" @click="activeCategory=null">All</button>
+    <div class="section-num">EVIDENCE LIBRARY</div>
+    <h2>Evidence Cards <span class="badge badge-teal" x-text="filtered.length + ' cards'"></span></h2>
+    <hr class="section-rule">
+
+    <div class="filter-pills" style="margin-bottom:1.5rem">
+      <button class="filter-btn" :class="!activeCategory ? 'active' : ''" @click="activeCategory=null">All</button>
       <template x-for="cat in categories" :key="cat">
-        <button class="btn btn-sm" :class="activeCategory===cat ? 'btn-primary' : 'btn-outline'" @click="activeCategory=cat" x-text="cat"></button>
+        <button class="filter-btn" :class="activeCategory===cat ? 'active' : ''" @click="activeCategory = activeCategory===cat ? null : cat" x-text="cat"></button>
       </template>
     </div>
+
     <div class="grid-3">
       <template x-for="card in filtered" :key="card.id">
         <div class="card">
-          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem"><span class="badge badge-amber" x-text="card.category"></span><span class="badge" :class="card.quality==='strong' ? 'badge-green' : 'badge-amber'" x-text="card.quality"></span></div>
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
+            <span class="badge badge-amber" x-text="card.category"></span>
+            <span class="badge" :class="card.quality==='strong' ? 'badge-green' : 'badge-teal'" x-text="card.quality || 'moderate'"></span>
+          </div>
           <div class="card-header" style="font-size:1rem" x-text="card.title"></div>
-          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5" x-text="card.finding"></p>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.55" x-text="card.finding"></p>
+          <template x-if="card.county_geoid">
+            <div style="margin-top:0.75rem">
+              <a :href="'#/county/' + card.county_geoid" class="link-subtle">View County &#8594;</a>
+            </div>
+          </template>
         </div>
       </template>
     </div>
+
+    <template x-if="filtered.length === 0 && !loading">
+      <div class="card" style="color:var(--text-secondary)">No evidence cards match this filter.</div>
+    </template>
   </div>
 
+  <!-- ─── CANDIDATES ────────────────────────────────────────────────── -->
   <div x-show="page==='candidates'" x-data="candidateTracker()" x-cloak>
-    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">Candidate Policy Tracker <span class="badge badge-teal" x-text="policies.length + ' positions'"></span></h1>
-    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
-      <button class="btn btn-sm" :class="!activeCandidate ? 'btn-primary' : 'btn-outline'" @click="activeCandidate=null">All</button>
+    <div class="section-num">POLICY TRACKER</div>
+    <h2>Candidate Policy Positions <span class="badge badge-teal" x-text="filtered.length + ' positions'"></span></h2>
+    <hr class="section-rule">
+
+    <!-- Candidate filter pills -->
+    <div class="filter-pills" style="margin-bottom:0.75rem">
+      <button class="filter-btn" :class="!activeCandidate ? 'active' : ''" @click="activeCandidate=null">All Candidates</button>
       <template x-for="c in candidateNames" :key="c">
-        <button class="btn btn-sm" :class="activeCandidate===c ? 'btn-primary' : 'btn-outline'" @click="activeCandidate=c" x-text="c"></button>
+        <button class="filter-btn" :class="activeCandidate===c ? 'active' : ''" @click="activeCandidate = activeCandidate===c ? null : c" x-text="c"></button>
       </template>
     </div>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
+
+    <!-- Category filter pills -->
+    <div class="filter-pills" style="margin-bottom:1.5rem">
       <template x-for="cat in categories" :key="cat">
-        <button class="btn btn-sm" :class="activeCat===cat ? 'btn-primary' : 'btn-outline'" @click="activeCat = activeCat===cat ? null : cat" x-text="cat"></button>
+        <button class="filter-btn" :class="activeCat===cat ? 'active' : ''" @click="activeCat = activeCat===cat ? null : cat" x-text="cat"></button>
       </template>
     </div>
+
     <div class="grid-3">
       <template x-for="p in filtered" :key="p.id">
         <div class="card">
-          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center"><span class="badge badge-teal" x-text="p.candidate"></span><span style="font-size:0.75rem;color:var(--text-secondary)" x-text="p.office + ', ' + p.state"></span></div>
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap">
+            <span class="badge badge-teal" x-text="p.candidate"></span>
+            <span style="font-size:0.75rem;color:var(--text-secondary)" x-text="p.office + ', ' + p.state"></span>
+          </div>
           <div class="card-header" style="font-size:1rem" x-text="p.title"></div>
-          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5" x-text="p.description"></p>
-          <div style="margin-top:0.5rem"><span class="badge badge-amber" x-text="p.category"></span></div>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.55" x-text="p.description"></p>
+          <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+            <span class="badge badge-amber" x-text="p.category"></span>
+            <template x-if="p.equity_dimension">
+              <span class="badge" x-text="p.equity_dimension"></span>
+            </template>
+          </div>
+          <!-- Wiki link: related counties -->
+          <template x-if="p.equity_dimension">
+            <div style="margin-top:0.75rem">
+              <a href="#/counties" class="link-subtle">View related counties &#8594;</a>
+            </div>
+          </template>
         </div>
       </template>
     </div>
   </div>
 
-  <div x-show="page==='about'" x-data="aboutPage()" x-cloak>
-    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1rem">About Policy Data Infrastructure</h1>
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-header">What is this?</div>
-      <p style="line-height:1.7">An open-source national policy data platform that ingests data from 13 federal and state sources, stores indicators at multiple geographic levels in PostGIS, runs statistical analyses, and generates evidence-based policy narratives. Built to make public data accessible for policy decisions.</p>
+  <!-- ─── CHAT ──────────────────────────────────────────────────────── -->
+  <div x-show="page==='chat'" x-data="chatInterface()" x-cloak>
+    <div class="section-num">TALK TO THE DATA</div>
+    <h2>Policy Data Chat</h2>
+    <hr class="section-rule">
+
+    <div class="chat-container">
+      <div class="chat-messages" x-ref="messages">
+        <!-- Welcome message if empty -->
+        <template x-if="messages.length === 0">
+          <div class="msg-system">
+            <div class="msg-content">
+              <strong>Policy Data Chat</strong> is connected to 72 Wisconsin counties, 1,652 census tracts, and 85 policy positions.
+              Try asking: "What are the poverty rates in Dane County?" or "Compare Milwaukee and Waukesha on housing affordability."
+            </div>
+          </div>
+        </template>
+
+        <template x-for="msg in messages" :key="msg.id">
+          <div :class="'msg-' + msg.role">
+            <div class="msg-content" x-html="msg.content"></div>
+            <!-- Tool call result cards -->
+            <template x-if="msg.toolResults && msg.toolResults.length > 0">
+              <div class="tool-results">
+                <template x-for="tr in msg.toolResults" :key="tr.id">
+                  <div class="tool-result-card">
+                    <div class="tool-result-label" x-text="tr.label || tr.name"></div>
+                    <div class="tool-result-body" x-html="tr.html || tr.text"></div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Streaming indicator -->
+        <template x-if="streaming">
+          <div class="msg-assistant">
+            <div class="msg-content">
+              <span class="streaming-dot"></span>
+              <span class="streaming-dot"></span>
+              <span class="streaming-dot"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="chat-input">
+        <input
+          class="input"
+          type="text"
+          placeholder="Ask about Wisconsin county data..."
+          x-model="input"
+          @keydown.enter="send()"
+          :disabled="streaming">
+        <button class="btn btn-primary" @click="send()" :disabled="streaming || !input.trim()">Send</button>
+      </div>
     </div>
+  </div>
+
+  <!-- ─── ABOUT ─────────────────────────────────────────────────────── -->
+  <div x-show="page==='about'" x-data="aboutPage()" x-cloak>
+    <div class="section-num">ABOUT THE PLATFORM</div>
+    <h2>Policy Data Infrastructure</h2>
+    <hr class="section-rule">
+
+    <div class="grid-2" style="margin-bottom:1.5rem">
+      <div class="card">
+        <div class="card-header">What is this?</div>
+        <p style="line-height:1.7;color:var(--text-secondary)">
+          An open-source policy data platform that ingests data from 13 federal and state sources,
+          stores indicators at multiple geographic levels in PostGIS, runs statistical analyses
+          (OLS regression, tipping points, composite indices, correlation matrices), and generates
+          evidence-based policy narratives. Built to make public data accessible for policy decisions.
+        </p>
+        <div class="stat-row" style="margin-top:1rem">
+          <div class="ns">
+            <div class="ns-value">72</div>
+            <div class="ns-label">Counties</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value">1,652</div>
+            <div class="ns-label">Tracts</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value">42</div>
+            <div class="ns-label">Variables</div>
+          </div>
+          <div class="ns">
+            <div class="ns-value">380+</div>
+            <div class="ns-label">Tests</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Methodology</div>
+        <ul style="padding-left:1.25rem;line-height:2;color:var(--text-secondary);font-size:0.9rem">
+          <li>Indicators stored as raw values — <code>NULL</code> for missing or suppressed data</li>
+          <li>Pipeline validation gate rejects loads with &gt;30% null rate</li>
+          <li>ICE (Index of Concentration at the Extremes) for segregation measures</li>
+          <li>OLS regression, bootstrap CIs, percentile ranking within geographic scope</li>
+          <li>Tipping point detection via piecewise linear regression</li>
+          <li>Blinder-Oaxaca decomposition for gap analysis</li>
+          <li>Composite indices weighted by equity dimension crosswalk</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Data sources table -->
     <div class="card" style="margin-bottom:1rem">
       <div class="card-header">Data Sources</div>
-      <table class="table">
-        <thead><tr><th>Source</th><th>Type</th><th>Coverage</th></tr></thead>
+      <table class="wiki-table">
+        <thead>
+          <tr><th>Source</th><th>Type</th><th>Coverage</th><th>Variables</th></tr>
+        </thead>
         <tbody>
-          <template x-for="s in sources" :key="s.name"><tr><td x-text="s.name"></td><td><span class="badge badge-teal" x-text="s.type"></span></td><td x-text="s.coverage"></td></tr></template>
+          <template x-if="sources && sources.length > 0">
+            <template x-for="s in sources" :key="s.id || s.name">
+              <tr>
+                <td x-text="s.name"></td>
+                <td><span class="badge badge-teal" x-text="s.source_type || s.type"></span></td>
+                <td x-text="s.geography_level || s.coverage"></td>
+                <td x-text="s.variable_count || '—'"></td>
+              </tr>
+            </template>
+          </template>
+          <template x-if="!sources || sources.length === 0">
+            <tr><td colspan="4" style="color:var(--text-secondary);text-align:center">
+              Census ACS &middot; CDC PLACES &middot; BLS LAUS &middot; EPA EJScreen &middot; USDA Food Access &middot;
+              HUD CHAS &middot; HMDA &middot; HRSA &middot; GTFS &middot; WI DPI &middot; EPA TRI &middot; HUD PIT &middot; TIGER
+            </td></tr>
+          </template>
         </tbody>
       </table>
     </div>
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-header">Methodology</div>
-      <ul style="padding-left:1.5rem;line-height:2">
-        <li>Indicators stored as raw values with nil for missing/suppressed data</li>
-        <li>Pipeline validation gate rejects data loads with >30% null rate</li>
-        <li>Analysis uses percentile ranking within geographic scope</li>
-        <li>13 Go datasource adapters, 380+ tests, 77.5% store coverage</li>
-      </ul>
-    </div>
+
+    <!-- Open source -->
     <div class="card">
       <div class="card-header">Open Source</div>
-      <p style="margin-bottom:1rem">The entire platform is open source. Contributions welcome.</p>
-      <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary" target="_blank">View on GitHub</a>
+      <p style="margin-bottom:1rem;color:var(--text-secondary)">
+        The entire platform is open source under the Apache-2.0 license.
+        13 Go datasource adapters, full PostGIS integration, Python ingest pipeline, and statistical engine.
+        Contributions welcome.
+      </p>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <a href="https://github.com/DojoGenesis/policy-data-infrastructure" class="btn btn-primary" target="_blank">View on GitHub</a>
+        <a href="#/chat" class="btn btn-secondary">Talk to the Data</a>
+      </div>
     </div>
   </div>
+
 </main>
 
-<footer class="footer">
-  <p>Policy Data Infrastructure &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">GitHub</a></p>
-  <p class="footer-sub">Data: Census ACS, CDC PLACES, BLS LAUS, EPA EJScreen, USDA Food Access, HUD CHAS, HMDA, HRSA</p>
+<!-- Footer — hidden on landing -->
+<footer class="footer" x-show="page!=='landing'" x-cloak>
+  <p>Policy Data Infrastructure &middot; Open Source &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">GitHub</a></p>
+  <p class="footer-sub">Data: Census ACS, CDC PLACES, BLS LAUS, EPA EJScreen, USDA Food Access, HUD CHAS, HMDA, HRSA, GTFS, WI DPI, EPA TRI, HUD PIT</p>
 </footer>
 
-<script>
-function router() {
-  return {
-    page: 'home', geoid: null,
-    init() { this.route(); window.addEventListener('hashchange', () => this.route()); },
-    route() {
-      const h = window.location.hash || '#/';
-      if (h.startsWith('#/county/')) { this.page = 'county'; this.geoid = h.replace('#/county/', ''); }
-      else if (h === '#/compare') this.page = 'compare';
-      else if (h === '#/evidence') this.page = 'evidence';
-      else if (h === '#/candidates') this.page = 'candidates';
-      else if (h === '#/about') this.page = 'about';
-      else this.page = 'home';
-    }
-  };
-}
-</script>
 </body>
 </html>

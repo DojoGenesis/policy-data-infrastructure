@@ -1,33 +1,76 @@
+// pages/candidates.js — Policy tracker with dual candidate + category filter.
 document.addEventListener('alpine:init', () => {
-  const fallback = [
-    { id: 'FH-HSG-001', candidate: 'Francesca Hong', office: 'Governor', state: 'WI', category: 'Housing', title: 'Expand affordable housing', description: 'State-funded affordable housing; community land trusts and ADUs' },
-    { id: 'FH-HEALTH-001', candidate: 'Francesca Hong', office: 'Governor', state: 'WI', category: 'Healthcare', title: 'Expand BadgerCare', description: 'Expand Medicaid and create a public health insurance option' },
-    { id: 'FH-EDU-001', candidate: 'Francesca Hong', office: 'Governor', state: 'WI', category: 'Schools', title: 'Free school meals', description: 'State-funded free healthy school meals for all children' },
-    { id: 'FH-LABOR-001', candidate: 'Francesca Hong', office: 'Governor', state: 'WI', category: 'Labor', title: 'Paid family leave', description: 'Statewide insurance program covering all workers' },
-    { id: 'ZM-HSG-001', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Housing', title: 'Rent freeze', description: 'Freeze rents for two million rent-stabilized tenants' },
-    { id: 'ZM-HSG-002', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Housing', title: '200K affordable units', description: 'Build 200,000 affordable units through non-profit developers' },
-    { id: 'ZM-TRANSIT-001', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Transit', title: 'Free city buses', description: 'Eliminate bus fares; speed up service for low-income workers' },
-    { id: 'ZM-HEALTH-001', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Healthcare', title: 'Universal free childcare', description: 'Expand free childcare citywide; goal of universal access' },
-    { id: 'ZM-EQUITY-001', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Racial Equity', title: 'Racial equity plan', description: '62% cannot meet basic needs; address racial wealth gap' },
-    { id: 'ZM-LABOR-001', candidate: 'Zohran Mamdani', office: 'Mayor', state: 'NY', category: 'Labor', title: '$25 minimum wage', description: 'Living wage increase to match true cost of living' }
-  ];
-
   Alpine.data('candidateTracker', () => ({
-    policies: [], activeCandidate: null, activeCat: null,
+    policies: [],
+    activeCandidate: 'all',
+    activeCat: 'all',
+    loading: false,
+    error: null,
+
+    // Hardcoded fallback used if API is unavailable.
+    _fallback: [
+      { id: 'hk-001', candidate: 'Hong', candidate_full: 'Sen. Melissa Agard (placeholder)', equity_dimension: 'housing_affordability', category: 'Housing', title: 'Expand Renter Protections', summary: 'Establish just-cause eviction standards and limit rent increases to CPI + 5% statewide.', geoid: null },
+      { id: 'hk-002', candidate: 'Hong', candidate_full: 'Sen. Melissa Agard (placeholder)', equity_dimension: 'health_access', category: 'Health', title: 'Universal Primary Care Access', summary: 'Expand Medicaid eligibility to 200% FPL and fund rural FQHC expansion.', geoid: null },
+      { id: 'hk-003', candidate: 'Hong', candidate_full: 'Sen. Melissa Agard (placeholder)', equity_dimension: 'food_access', category: 'Food Access', title: 'Double SNAP Benefit Match at Wisconsin Farmers Markets', summary: 'Fund double-match program at 200+ certified markets statewide.', geoid: null },
+      { id: 'mm-001', candidate: 'Mamdani', candidate_full: 'Zohran Mamdani (placeholder)', equity_dimension: 'economic_equity', category: 'Economic', title: 'Worker Ownership Fund', summary: 'Create a $50M revolving loan fund for employee buyouts of retiring business owners in distressed counties.', geoid: null },
+      { id: 'mm-002', candidate: 'Mamdani', candidate_full: 'Zohran Mamdani (placeholder)', equity_dimension: 'income_equity', category: 'Economic', title: 'Raise Minimum Wage to $20', summary: 'Phase in $20/hr minimum wage over 3 years with annual CPI adjustments.', geoid: null },
+      { id: 'mm-003', candidate: 'Mamdani', candidate_full: 'Zohran Mamdani (placeholder)', equity_dimension: 'environmental_health', category: 'Environment', title: 'Clean Air Fund for Disadvantaged Tracts', summary: 'Direct $25M annually to census tracts in top EPA EJScreen percentile for air quality.', geoid: null }
+    ],
+
+    // Unique candidate list derived from loaded policies.
+    _candidates: [],
+
+    // Category list derived from loaded policies.
+    _categories: [],
+
     async init() {
+      this.loading = true;
       try {
-        const r = await fetch('/v1/policy/policies?limit=200');
-        if (r.ok) { const d = await r.json(); this.policies = d.policies || fallback; }
-        else this.policies = fallback;
-      } catch(e) { this.policies = fallback; }
+        const p = await PDI.policies();
+        this.policies = p.length > 0 ? p : this._fallback;
+      } catch (_) {
+        this.policies = this._fallback;
+      } finally {
+        this.loading = false;
+      }
+
+      // Build unique candidate and category lists.
+      const candSet = new Set();
+      const catSet = new Set();
+      for (const p of this.policies) {
+        if (p.candidate) candSet.add(p.candidate);
+        if (p.category) catSet.add(p.category);
+      }
+      this._candidates = Array.from(candSet).sort();
+      this._categories = Array.from(catSet).sort();
     },
-    get candidateNames() { return [...new Set(this.policies.map(p => p.candidate))]; },
-    get categories() { return [...new Set(this.policies.map(p => p.category))].sort(); },
+
+    get candidateList() {
+      return [{ id: 'all', label: 'All Candidates' }, ...this._candidates.map(c => ({ id: c, label: c }))];
+    },
+
+    get categoryList() {
+      return [{ id: 'all', label: 'All Categories' }, ...this._categories.map(c => ({ id: c, label: c }))];
+    },
+
     get filtered() {
-      return this.policies.filter(p =>
-        (!this.activeCandidate || p.candidate === this.activeCandidate) &&
-        (!this.activeCat || p.category === this.activeCat)
-      );
+      return this.policies.filter(p => {
+        const matchCand = this.activeCandidate === 'all' || p.candidate === this.activeCandidate;
+        const matchCat  = this.activeCat === 'all'       || p.category === this.activeCat;
+        return matchCand && matchCat;
+      });
+    },
+
+    setCandidate(c) { this.activeCandidate = c; },
+    setCategory(c)  { this.activeCat = c; },
+
+    fmtDim(dim) { return Domain.fmtDimension(dim); },
+
+    // Link to counties filtered by this policy's equity dimension — currently navigates
+    // to counties page; a future enhancement can pass a filter param via hash.
+    countyLinkForPolicy(policy) {
+      if (policy.geoid) return `#/county/${policy.geoid}`;
+      return '#/counties';
     }
   }));
 });
