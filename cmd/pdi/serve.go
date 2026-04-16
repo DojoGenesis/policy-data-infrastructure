@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +19,9 @@ import (
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/gateway"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
+
+//go:embed all:frontend
+var frontendFS embed.FS
 
 func newServeCmd() *cobra.Command {
 	var port int
@@ -98,6 +103,14 @@ func runServe(port int) error {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
+	// Serve embedded frontend static files.
+	// CSS/JS at /static/*, pages at /static/pages/*, and index.html at /.
+	feFS, _ := fs.Sub(frontendFS, "frontend")
+	r.StaticFS("/static", http.FS(feFS))
+	r.GET("/", func(c *gin.Context) {
+		c.FileFromFS("index.html", http.FS(feFS))
+	})
+
 	addr := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
 		Addr:         addr,
@@ -119,9 +132,9 @@ func runServe(port int) error {
 	}()
 
 	fmt.Printf("pdi serving on 0.0.0.0%s\n", addr)
-	fmt.Printf("  health:  http://0.0.0.0%s/health\n", addr)
-	fmt.Printf("  readyz:  http://0.0.0.0%s/readyz\n", addr)
-	fmt.Printf("  API:     http://0.0.0.0%s/v1/policy/\n", addr)
+	fmt.Printf("  frontend: http://0.0.0.0%s/\n", addr)
+	fmt.Printf("  API:      http://0.0.0.0%s/v1/policy/\n", addr)
+	fmt.Printf("  health:   http://0.0.0.0%s/health\n", addr)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("serve: %w", err)
 	}

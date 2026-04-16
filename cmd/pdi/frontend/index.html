@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Policy Data Infrastructure</title>
+<meta name="description" content="Open-source national policy data platform. Live county-level indicators for Wisconsin.">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body x-data="router()" x-init="init()">
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#/" class="nav-brand">Policy Data Infrastructure</a>
+    <div class="nav-links">
+      <a href="#/" :class="{'active': page==='home'}">Counties</a>
+      <a href="#/compare" :class="{'active': page==='compare'}">Compare</a>
+      <a href="#/evidence" :class="{'active': page==='evidence'}">Evidence Cards</a>
+      <a href="#/about" :class="{'active': page==='about'}">About</a>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+  <!-- County Explorer (home) -->
+  <div x-show="page==='home'" x-cloak>
+    <div x-ref="countyExplorer"></div>
+    <script src="/static/pages/counties.js"></script>
+  </div>
+
+  <!-- County Profile -->
+  <div x-show="page==='county'" x-cloak>
+    <div x-ref="countyProfile"></div>
+    <script src="/static/pages/profile.js"></script>
+  </div>
+
+  <!-- Compare Tool -->
+  <div x-show="page==='compare'" x-cloak>
+    <div x-ref="compareTool"></div>
+    <script src="/static/pages/compare.js"></script>
+  </div>
+
+  <!-- Evidence Cards -->
+  <div x-show="page==='evidence'" x-cloak>
+    <div x-ref="evidenceCards"></div>
+    <script src="/static/pages/evidence.js"></script>
+  </div>
+
+  <!-- About / Methodology -->
+  <div x-show="page==='about'" x-cloak>
+    <div x-ref="aboutPage"></div>
+    <script src="/static/pages/about.js"></script>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>Policy Data Infrastructure &middot; Open Source &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">GitHub</a></p>
+  <p class="footer-sub">Data: Census ACS, CDC PLACES, BLS LAUS, EPA EJScreen, USDA Food Access, HUD CHAS</p>
+</footer>
+
+<script>
+function router() {
+  return {
+    page: 'home',
+    geoid: null,
+    init() {
+      this.route();
+      window.addEventListener('hashchange', () => this.route());
+    },
+    route() {
+      const hash = window.location.hash || '#/';
+      if (hash.startsWith('#/county/')) {
+        this.page = 'county';
+        this.geoid = hash.replace('#/county/', '');
+      } else if (hash === '#/compare') {
+        this.page = 'compare';
+      } else if (hash === '#/evidence') {
+        this.page = 'evidence';
+      } else if (hash === '#/about') {
+        this.page = 'about';
+      } else {
+        this.page = 'home';
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>
