@@ -140,6 +140,13 @@ func (m *mockStore) QueryVariables(_ context.Context) ([]store.VariableMeta, err
 func (m *mockStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (m *mockStore) PutPolicies(_ context.Context, _ []store.PolicyRecord) error { return nil }
+func (m *mockStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]store.PolicyRecord, error) {
+	return nil, nil
+}
+func (m *mockStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
+	return nil, nil
+}
 func (m *mockStore) Ping(_ context.Context) error         { return nil }
 func (m *mockStore) Migrate(_ context.Context) error      { return nil }
 func (m *mockStore) RefreshViews(_ context.Context) error { return nil }

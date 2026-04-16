@@ -44,6 +44,7 @@ func init() {
 		newGenerateCmd(),
 		newServeCmd(),
 		newPipelineCmd(),
+		newLoadPoliciesCmd(),
 		newVersionCmd(),
 	)
 }

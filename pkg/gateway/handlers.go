@@ -862,6 +862,94 @@ func sanitiseFilename(s string) string {
 	return b.String()
 }
 
+// ── GET /policies ────────────────────────────────────────────────────────────
+
+// handleListPolicies returns policy records filtered by optional query
+// parameters: candidate, category, state, limit (default 100), offset.
+func (p *PolicyPlugin) handleListPolicies(c *gin.Context) {
+	q := store.PolicyQuery{
+		Candidate: c.Query("candidate"),
+		Category:  c.Query("category"),
+		State:     c.Query("state"),
+		Limit:     100,
+		Offset:    0,
+	}
+
+	if lim := c.Query("limit"); lim != "" {
+		n, err := strconv.Atoi(lim)
+		if err != nil || n < 1 {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "limit must be a positive integer"})
+			return
+		}
+		if n > 1000 {
+			n = 1000
+		}
+		q.Limit = n
+	}
+	if off := c.Query("offset"); off != "" {
+		n, err := strconv.Atoi(off)
+		if err != nil || n < 0 {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "offset must be a non-negative integer"})
+			return
+		}
+		q.Offset = n
+	}
+
+	policies, err := p.store.QueryPolicies(c.Request.Context(), q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "policy query failed", Detail: err.Error()})
+		return
+	}
+
+	items := make([]PolicyResponse, 0, len(policies))
+	for _, pol := range policies {
+		items = append(items, policyToResponse(pol))
+	}
+
+	c.JSON(http.StatusOK, PolicyListResponse{
+		Policies: items,
+		Total:    len(items),
+	})
+}
+
+// ── GET /policies/:id ────────────────────────────────────────────────────────
+
+// handleGetPolicy returns a single policy record by its id.
+func (p *PolicyPlugin) handleGetPolicy(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "id path parameter required"})
+		return
+	}
+
+	pol, err := p.store.GetPolicy(c.Request.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			c.JSON(http.StatusNotFound, ErrorResponse{Error: "policy not found", Detail: id})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "policy lookup failed", Detail: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, policyToResponse(*pol))
+}
+
+// policyToResponse converts a store.PolicyRecord to the HTTP response shape.
+func policyToResponse(p store.PolicyRecord) PolicyResponse {
+	return PolicyResponse{
+		ID:              p.ID,
+		Candidate:       p.Candidate,
+		Office:          p.Office,
+		State:           p.State,
+		Category:        p.Category,
+		Title:           p.Title,
+		Description:     p.Description,
+		EquityDimension: p.EquityDimension,
+		GeographicScope: p.GeographicScope,
+	}
+}
+
 // formatInt formats an integer with thousands separators.
 func formatInt(n int) string {
 	s := strconv.Itoa(n)

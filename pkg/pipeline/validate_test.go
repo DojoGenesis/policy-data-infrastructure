@@ -53,10 +53,19 @@ func (m *mockValidateStore) QueryVariables(_ context.Context) ([]store.VariableM
 func (m *mockValidateStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
 	return nil, nil
 }
-func (m *mockValidateStore) Ping(_ context.Context) error        { return nil }
-func (m *mockValidateStore) Migrate(_ context.Context) error    { return nil }
+func (m *mockValidateStore) PutPolicies(_ context.Context, _ []store.PolicyRecord) error {
+	return nil
+}
+func (m *mockValidateStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]store.PolicyRecord, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) Ping(_ context.Context) error         { return nil }
+func (m *mockValidateStore) Migrate(_ context.Context) error      { return nil }
 func (m *mockValidateStore) RefreshViews(_ context.Context) error { return nil }
-func (m *mockValidateStore) Close() error                        { return nil }
+func (m *mockValidateStore) Close() error                         { return nil }
 
 // ---------------------------------------------------------------------------
 // Config.Validate tests

@@ -49,8 +49,15 @@ func (s *stubStore) QueryVariables(_ context.Context) ([]store.VariableMeta, err
 func (s *stubStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (s *stubStore) PutPolicies(_ context.Context, _ []store.PolicyRecord) error { return nil }
+func (s *stubStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]store.PolicyRecord, error) {
+	return nil, nil
+}
+func (s *stubStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
+	return nil, nil
+}
 func (s *stubStore) Ping(_ context.Context) error         { return nil }
-func (s *stubStore) Migrate(_ context.Context) error     { return nil }
+func (s *stubStore) Migrate(_ context.Context) error      { return nil }
 func (s *stubStore) RefreshViews(_ context.Context) error { return nil }
 func (s *stubStore) Close() error                         { return nil }
 

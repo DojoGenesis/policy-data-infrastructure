@@ -78,4 +78,8 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 
 	// Data source info.
 	group.GET("/sources", p.handleListSources)
+
+	// Policy positions.
+	group.GET("/policies", p.handleListPolicies)
+	group.GET("/policies/:id", p.handleGetPolicy)
 }

@@ -191,3 +191,22 @@ type PipelineEvent struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// PolicyResponse is a single policy record in a response.
+type PolicyResponse struct {
+	ID              string `json:"id"`
+	Candidate       string `json:"candidate"`
+	Office          string `json:"office,omitempty"`
+	State           string `json:"state,omitempty"`
+	Category        string `json:"category"`
+	Title           string `json:"title"`
+	Description     string `json:"description,omitempty"`
+	EquityDimension string `json:"equity_dimension,omitempty"`
+	GeographicScope string `json:"geographic_scope,omitempty"`
+}
+
+// PolicyListResponse is the response body for GET /policies.
+type PolicyListResponse struct {
+	Policies []PolicyResponse `json:"policies"`
+	Total    int              `json:"total"`
+}
+

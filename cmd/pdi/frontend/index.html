@@ -18,6 +18,7 @@
       <a href="#/" :class="{'active': page==='home'}">Counties</a>
       <a href="#/compare" :class="{'active': page==='compare'}">Compare</a>
       <a href="#/evidence" :class="{'active': page==='evidence'}">Evidence Cards</a>
+      <a href="#/candidates" :class="{'active': page==='candidates'}">Candidates</a>
       <a href="#/about" :class="{'active': page==='about'}">About</a>
     </div>
   </div>
@@ -46,6 +47,12 @@
   <div x-show="page==='evidence'" x-cloak>
     <div x-ref="evidenceCards"></div>
     <script src="/static/pages/evidence.js"></script>
+  </div>
+
+  <!-- Candidate Policy Tracker -->
+  <div x-show="page==='candidates'" x-cloak>
+    <div x-ref="candidateTracker"></div>
+    <script src="/static/pages/candidates.js"></script>
   </div>
 
   <!-- About / Methodology -->
@@ -78,6 +85,8 @@ function router() {
         this.page = 'compare';
       } else if (hash === '#/evidence') {
         this.page = 'evidence';
+      } else if (hash === '#/candidates') {
+        this.page = 'candidates';
       } else if (hash === '#/about') {
         this.page = 'about';
       } else {

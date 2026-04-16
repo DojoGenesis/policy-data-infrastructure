@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -720,6 +721,152 @@ ORDER BY rank ASC`, tierClause)
 		return nil, fmt.Errorf("store: QueryAnalysisScores rows: %w", err)
 	}
 	return result, nil
+}
+
+// --- Policy operations ---
+
+// PutPolicies upserts a slice of PolicyRecord rows into the policies table.
+// ON CONFLICT (id) DO UPDATE replaces all mutable columns so repeated CSV loads
+// are idempotent.
+func (s *PostgresStore) PutPolicies(ctx context.Context, policies []PolicyRecord) error {
+	if len(policies) == 0 {
+		return nil
+	}
+
+	const upsertSQL = `
+INSERT INTO policies (id, candidate, office, state, category, title, description,
+    bill_references, claims_empirical, equity_dimension, geographic_scope,
+    data_sources_needed, source_url)
+VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), $5, $6, NULLIF($7,''),
+    NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''),
+    NULLIF($12,''), NULLIF($13,''))
+ON CONFLICT (id) DO UPDATE SET
+    candidate          = EXCLUDED.candidate,
+    office             = EXCLUDED.office,
+    state              = EXCLUDED.state,
+    category           = EXCLUDED.category,
+    title              = EXCLUDED.title,
+    description        = EXCLUDED.description,
+    bill_references    = EXCLUDED.bill_references,
+    claims_empirical   = EXCLUDED.claims_empirical,
+    equity_dimension   = EXCLUDED.equity_dimension,
+    geographic_scope   = EXCLUDED.geographic_scope,
+    data_sources_needed = EXCLUDED.data_sources_needed,
+    source_url         = EXCLUDED.source_url`
+
+	batch := &pgx.Batch{}
+	for _, p := range policies {
+		batch.Queue(upsertSQL,
+			p.ID, p.Candidate, p.Office, p.State, p.Category, p.Title, p.Description,
+			p.BillReferences, p.ClaimsEmpirical, p.EquityDimension, p.GeographicScope,
+			p.DataSourcesNeeded, p.SourceURL,
+		)
+	}
+
+	br := s.pool.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for i, p := range policies {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("store: PutPolicies[%d] id=%s: %w", i, p.ID, err)
+		}
+	}
+	return nil
+}
+
+// QueryPolicies returns policy rows filtered by the optional fields in q.
+// Results are ordered by category, id. An empty result set returns an empty
+// slice, not an error.
+func (s *PostgresStore) QueryPolicies(ctx context.Context, q PolicyQuery) ([]PolicyRecord, error) {
+	args := []interface{}{}
+	clauses := []string{}
+
+	if q.Candidate != "" {
+		args = append(args, q.Candidate)
+		clauses = append(clauses, fmt.Sprintf("candidate = $%d", len(args)))
+	}
+	if q.Category != "" {
+		args = append(args, q.Category)
+		clauses = append(clauses, fmt.Sprintf("category = $%d", len(args)))
+	}
+	if q.State != "" {
+		args = append(args, q.State)
+		clauses = append(clauses, fmt.Sprintf("state = $%d", len(args)))
+	}
+
+	where := ""
+	if len(clauses) > 0 {
+		where = "WHERE " + strings.Join(clauses, " AND ")
+	}
+
+	limit := q.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	args = append(args, limit)
+	limitClause := fmt.Sprintf("LIMIT $%d", len(args))
+
+	args = append(args, q.Offset)
+	offsetClause := fmt.Sprintf("OFFSET $%d", len(args))
+
+	qSQL := fmt.Sprintf(`
+SELECT id, candidate, COALESCE(office,''), COALESCE(state,''), category, title,
+    COALESCE(description,''), COALESCE(bill_references,''), COALESCE(claims_empirical,''),
+    COALESCE(equity_dimension,''), COALESCE(geographic_scope,''),
+    COALESCE(data_sources_needed,''), COALESCE(source_url,'')
+FROM policies
+%s
+ORDER BY category, id
+%s %s`, where, limitClause, offsetClause)
+
+	rows, err := s.pool.Query(ctx, qSQL, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryPolicies: %w", err)
+	}
+	defer rows.Close()
+
+	var result []PolicyRecord
+	for rows.Next() {
+		var p PolicyRecord
+		if err := rows.Scan(
+			&p.ID, &p.Candidate, &p.Office, &p.State, &p.Category, &p.Title,
+			&p.Description, &p.BillReferences, &p.ClaimsEmpirical,
+			&p.EquityDimension, &p.GeographicScope, &p.DataSourcesNeeded, &p.SourceURL,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryPolicies scan: %w", err)
+		}
+		result = append(result, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryPolicies rows: %w", err)
+	}
+	return result, nil
+}
+
+// GetPolicy returns the policy record with the given id, or an error wrapping
+// pgx.ErrNoRows when no record exists.
+func (s *PostgresStore) GetPolicy(ctx context.Context, id string) (*PolicyRecord, error) {
+	const q = `
+SELECT id, candidate, COALESCE(office,''), COALESCE(state,''), category, title,
+    COALESCE(description,''), COALESCE(bill_references,''), COALESCE(claims_empirical,''),
+    COALESCE(equity_dimension,''), COALESCE(geographic_scope,''),
+    COALESCE(data_sources_needed,''), COALESCE(source_url,'')
+FROM policies
+WHERE id = $1`
+
+	var p PolicyRecord
+	err := s.pool.QueryRow(ctx, q, id).Scan(
+		&p.ID, &p.Candidate, &p.Office, &p.State, &p.Category, &p.Title,
+		&p.Description, &p.BillReferences, &p.ClaimsEmpirical,
+		&p.EquityDimension, &p.GeographicScope, &p.DataSourcesNeeded, &p.SourceURL,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("store: GetPolicy id=%s: %w", id, pgx.ErrNoRows)
+		}
+		return nil, fmt.Errorf("store: GetPolicy id=%s: %w", id, err)
+	}
+	return &p, nil
 }
 
 // ListAnalyses returns a summary of all analysis runs ordered by computed_at

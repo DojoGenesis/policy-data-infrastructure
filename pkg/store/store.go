@@ -99,6 +99,32 @@ type AggregateResult struct {
 	GroupBy string
 }
 
+// PolicyRecord represents a single policy position for a candidate.
+type PolicyRecord struct {
+	ID                string
+	Candidate         string
+	Office            string
+	State             string
+	Category          string
+	Title             string
+	Description       string
+	BillReferences    string
+	ClaimsEmpirical   string
+	EquityDimension   string
+	GeographicScope   string
+	DataSourcesNeeded string
+	SourceURL         string
+}
+
+// PolicyQuery filters policy records.
+type PolicyQuery struct {
+	Candidate string
+	Category  string
+	State     string
+	Limit     int
+	Offset    int
+}
+
 // Store is the primary data access interface.
 type Store interface {
 	// Geography operations
@@ -118,6 +144,11 @@ type Store interface {
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 	ListAnalyses(ctx context.Context) ([]AnalysisSummary, error)
+
+	// Policy operations
+	PutPolicies(ctx context.Context, policies []PolicyRecord) error
+	QueryPolicies(ctx context.Context, q PolicyQuery) ([]PolicyRecord, error)
+	GetPolicy(ctx context.Context, id string) (*PolicyRecord, error)
 
 	// Metadata operations
 	QueryVariables(ctx context.Context) ([]VariableMeta, error)
