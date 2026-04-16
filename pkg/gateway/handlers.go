@@ -787,6 +787,93 @@ func generateNarrativeHTML(g *geo.Geography, inds []store.Indicator, vintage str
 	return sb.String()
 }
 
+// ── GET /analyses/:id ─────────────────────────────────────────────────────
+
+// handleGetAnalysis returns the full analysis result including computed Results map.
+func (p *PolicyPlugin) handleGetAnalysis(c *gin.Context) {
+	id := c.Param("id")
+	result, err := p.store.GetAnalysis(c.Request.Context(), id)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, ErrorResponse{Error: "analysis not found", Detail: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":          result.ID,
+		"type":        result.Type,
+		"scope_geoid": result.ScopeGEOID,
+		"scope_level": result.ScopeLevel,
+		"parameters":  result.Parameters,
+		"results":     result.Results,
+		"vintage":     result.Vintage,
+	})
+}
+
+// ── GET /analyses/:id/scores ──────────────────────────────────────────────
+
+// handleGetAnalysisScores returns per-geography scores for an analysis.
+func (p *PolicyPlugin) handleGetAnalysisScores(c *gin.Context) {
+	id := c.Param("id")
+	tier := c.Query("tier")
+	scores, err := p.store.QueryAnalysisScores(c.Request.Context(), id, tier)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "query failed", Detail: err.Error()})
+		return
+	}
+	items := make([]ScoreResponse, 0, len(scores))
+	for _, s := range scores {
+		items = append(items, ScoreResponse{
+			AnalysisID: s.AnalysisID,
+			Score:      s.Score,
+			Rank:       s.Rank,
+			Percentile: s.Percentile,
+			Tier:       s.Tier,
+			Details:    s.Details,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"scores": items, "total": len(items)})
+}
+
+// ── POST /aggregate ───────────────────────────────────────────────────────
+
+// handleAggregate runs a statistical aggregation over a variable.
+func (p *PolicyPlugin) handleAggregate(c *gin.Context) {
+	var req struct {
+		VariableID string `json:"variable_id" binding:"required"`
+		Level      string `json:"level" binding:"required"`
+		StateFIPS  string `json:"state_fips"`
+		Function   string `json:"function" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request", Detail: err.Error()})
+		return
+	}
+	level, err := geo.LevelFromString(req.Level)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid level", Detail: err.Error()})
+		return
+	}
+	result, err := p.store.Aggregate(c.Request.Context(), store.AggregateQuery{
+		VariableID: req.VariableID,
+		Level:      level,
+		StateFIPS:  req.StateFIPS,
+		Function:   req.Function,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "aggregate failed", Detail: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"variable_id": req.VariableID,
+		"function":    req.Function,
+		"value":       result.Value,
+		"count":       result.Count,
+	})
+}
+
 // ── Internal helpers ────────────────────────────────────────────────────────
 
 // indicatorToResponse converts a store.Indicator to an IndicatorResponse,

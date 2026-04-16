@@ -257,6 +257,9 @@ func (m *mockStore) QueryVariables(_ context.Context) ([]store.VariableMeta, err
 func (m *mockStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (m *mockStore) GetAnalysis(_ context.Context, _ string) (*store.AnalysisResult, error) {
+	return nil, nil
+}
 func (m *mockStore) PutPolicies(_ context.Context, _ []store.PolicyRecord) error { return nil }
 func (m *mockStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]store.PolicyRecord, error) {
 	return nil, nil

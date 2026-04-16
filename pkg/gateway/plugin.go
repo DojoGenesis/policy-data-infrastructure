@@ -73,8 +73,13 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	// Variable metadata catalog.
 	group.GET("/variables", p.handleListVariables)
 
-	// Analysis runs discovery.
+	// Analysis runs + detail + scores.
 	group.GET("/analyses", p.handleListAnalyses)
+	group.GET("/analyses/:id", p.handleGetAnalysis)
+	group.GET("/analyses/:id/scores", p.handleGetAnalysisScores)
+
+	// Aggregation.
+	group.POST("/aggregate", p.handleAggregate)
 
 	// Data source info.
 	group.GET("/sources", p.handleListSources)

@@ -141,6 +141,7 @@ type Store interface {
 	// Analysis operations
 	// PutAnalysis persists an AnalysisResult and returns the database-generated UUID.
 	PutAnalysis(ctx context.Context, result AnalysisResult) (string, error)
+	GetAnalysis(ctx context.Context, id string) (*AnalysisResult, error)
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 	ListAnalyses(ctx context.Context) ([]AnalysisSummary, error)

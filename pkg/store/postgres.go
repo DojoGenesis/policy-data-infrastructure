@@ -639,6 +639,30 @@ RETURNING id`
 	return id, nil
 }
 
+// GetAnalysis retrieves a single analysis by ID.
+func (s *PostgresStore) GetAnalysis(ctx context.Context, id string) (*AnalysisResult, error) {
+	const q = `
+SELECT id, type, COALESCE(scope_geoid, ''), COALESCE(scope_level::text, ''),
+       COALESCE(parameters, '{}'), COALESCE(results, '{}'), COALESCE(vintage, '')
+FROM analyses WHERE id = $1`
+
+	var r AnalysisResult
+	var paramsJSON, resultsJSON []byte
+	err := s.pool.QueryRow(ctx, q, id).Scan(
+		&r.ID, &r.Type, &r.ScopeGEOID, &r.ScopeLevel,
+		&paramsJSON, &resultsJSON, &r.Vintage,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("store: GetAnalysis: id %q not found", id)
+		}
+		return nil, fmt.Errorf("store: GetAnalysis: %w", err)
+	}
+	r.Parameters = unmarshalJSONB(paramsJSON)
+	r.Results = unmarshalJSONB(resultsJSON)
+	return &r, nil
+}
+
 // PutAnalysisScores bulk-upserts AnalysisScore records using a pgx Batch.
 // ON CONFLICT (analysis_id, geoid) DO UPDATE refreshes all mutable columns.
 func (s *PostgresStore) PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error {

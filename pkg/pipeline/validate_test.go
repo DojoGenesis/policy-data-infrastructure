@@ -53,6 +53,9 @@ func (m *mockValidateStore) QueryVariables(_ context.Context) ([]store.VariableM
 func (m *mockValidateStore) ListAnalyses(_ context.Context) ([]store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) GetAnalysis(_ context.Context, _ string) (*store.AnalysisResult, error) {
+	return nil, nil
+}
 func (m *mockValidateStore) PutPolicies(_ context.Context, _ []store.PolicyRecord) error {
 	return nil
 }
