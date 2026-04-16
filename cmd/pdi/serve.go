@@ -7,8 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -113,35 +111,41 @@ func runServe(port int) error {
 	if gatewayURL == "" {
 		gatewayURL = "http://localhost:7340"
 	}
-	if gwParsed, err := url.Parse(gatewayURL); err == nil {
-		chatProxy := &httputil.ReverseProxy{
-			Director: func(req *http.Request) {
-				req.URL.Scheme = gwParsed.Scheme
-				req.URL.Host = gwParsed.Host
-				req.URL.Path = "/chat"
-				req.Host = gwParsed.Host
-			},
-			// Flush immediately for SSE streaming.
-			FlushInterval: -1,
-			// Don't modify the response — pass SSE events through as-is.
-			ModifyResponse: func(resp *http.Response) error {
-				// Ensure SSE headers propagate for streaming.
-				if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-					resp.Header.Set("Cache-Control", "no-cache")
-					resp.Header.Set("Connection", "keep-alive")
-				}
-				return nil
-			},
-			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusBadGateway)
-				_, _ = io.WriteString(w, `{"error":"gateway unreachable","detail":"`+err.Error()+`"}`)
-			},
+	gwTarget := strings.TrimRight(gatewayURL, "/")
+	r.POST("/v1/chat", func(c *gin.Context) {
+		// Read the incoming request body.
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "read body failed"})
+			return
 		}
-		v1.POST("/chat", gin.WrapH(chatProxy))
-		v1.OPTIONS("/chat", func(c *gin.Context) { c.Status(http.StatusNoContent) })
-		fmt.Printf("  chat:     %s → %s/chat\n", gatewayURL, gwParsed.Host)
-	}
+		// Forward to gateway /chat endpoint.
+		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", gwTarget+"/v1/chat", strings.NewReader(string(body)))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "build proxy request failed"})
+			return
+		}
+		proxyReq.Header.Set("Content-Type", "application/json")
+		proxyReq.Header.Set("Accept", c.GetHeader("Accept"))
+
+		client := &http.Client{Timeout: 5 * time.Minute}
+		resp, err := client.Do(proxyReq)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "gateway unreachable", "detail": err.Error()})
+			return
+		}
+		defer resp.Body.Close()
+
+		// Stream the response back — works for both JSON and SSE.
+		extraHeaders := map[string]string{}
+		for _, h := range []string{"Content-Type", "Cache-Control", "Connection"} {
+			if v := resp.Header.Get(h); v != "" {
+				extraHeaders[h] = v
+			}
+		}
+		c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, extraHeaders)
+	})
+	fmt.Printf("  chat:     /v1/chat → %s/v1/chat\n", gwTarget)
 
 	// Serve embedded frontend static files.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
