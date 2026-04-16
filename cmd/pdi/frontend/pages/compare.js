@@ -93,6 +93,14 @@ document.addEventListener('alpine:init', () => {
       return Domain.diffClass(diff.difference, diff.direction);
     },
 
+    // Alias for HTML template: fmtDiffVal(d, value)
+    fmtDiffVal(diff, value) {
+      if (value == null) return '\u2014';
+      const ind = (this.result?.geography1?.indicators ?? [])
+        .find(i => i.variable_id === diff.variable_id);
+      return Domain.fmtValue(value, ind?.unit || diff.unit);
+    },
+
     county1Url() { return this.geoid1 ? `#/county/${this.geoid1}` : '#/counties'; },
     county2Url() { return this.geoid2 ? `#/county/${this.geoid2}` : '#/counties'; }
   }));

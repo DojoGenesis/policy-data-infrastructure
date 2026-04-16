@@ -29,17 +29,14 @@ document.addEventListener('alpine:init', () => {
       );
     },
 
-    fmtPoverty(county) {
-      return Domain.fmtInd(county, 'poverty_rate', 'pct');
+    // Generic indicator formatter — called from template as fmtInd(county, varId, format)
+    fmtInd(county, varId, format) {
+      return Domain.fmtInd(county, varId, format);
     },
 
-    fmtIncome(county) {
-      return Domain.fmtInd(county, 'median_household_income', 'dollar');
-    },
-
-    fmtUninsured(county) {
-      return Domain.fmtInd(county, 'uninsured_rate', 'pct');
-    },
+    fmtPoverty(county) { return Domain.fmtInd(county, 'poverty_rate', 'pct'); },
+    fmtIncome(county) { return Domain.fmtInd(county, 'median_household_income', 'dollar'); },
+    fmtUninsured(county) { return Domain.fmtInd(county, 'uninsured_rate', 'pct'); },
 
     // Tier class driven by poverty_rate percentile if available, else raw value.
     tierClass(county) {

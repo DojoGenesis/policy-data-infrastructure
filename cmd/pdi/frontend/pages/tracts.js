@@ -82,6 +82,12 @@ document.addEventListener('alpine:init', () => {
       return Domain.fmtGeoid(tract.geoid) || tract.name || tract.geoid;
     },
 
+    // Alias for HTML template
+    fmtVal(ind) {
+      if (!ind || ind.value == null) return '\u2014';
+      return Domain.fmtValue(ind.value, ind.unit);
+    },
+
     countyUrl() {
       return `#/county/${this.geoid}`;
     }

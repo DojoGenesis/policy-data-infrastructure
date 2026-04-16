@@ -131,6 +131,23 @@ document.addEventListener('alpine:init', () => {
       if (!s?.score || this.scores.length === 0) return '0%';
       const max = Math.max(...this.scores.map(x => x.score ?? 0));
       return max > 0 ? Math.min((s.score / max) * 100, 100) + '%' : '0%';
+    },
+
+    // Aliases for HTML template compatibility
+    tierBadge(tier) {
+      if (!tier) return 'badge-teal';
+      const t = (tier + '').toLowerCase();
+      if (t === 'very_high' || t === 'critical') return 'badge-red';
+      if (t === 'high' || t === 'warning') return 'badge-amber';
+      if (t === 'moderate') return 'badge-teal';
+      return 'badge-green';
+    },
+    corrCellClass(value) {
+      if (value == null) return '';
+      const abs = Math.abs(value);
+      if (abs >= 0.7) return 'badge badge-red';
+      if (abs >= 0.4) return 'badge badge-amber';
+      return '';
     }
   }));
 });

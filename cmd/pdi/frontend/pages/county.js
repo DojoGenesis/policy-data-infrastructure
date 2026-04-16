@@ -105,6 +105,17 @@ document.addEventListener('alpine:init', () => {
       return Domain.fmtDimension(dim);
     },
 
+    // Aliases for HTML template compatibility
+    fmtVal(ind) { return this.fmtValue(ind); },
+    tierBadge(tier) {
+      if (!tier) return 'badge-teal';
+      const t = tier.toLowerCase();
+      if (t === 'very_high' || t === 'critical') return 'badge-red';
+      if (t === 'high' || t === 'warning') return 'badge-amber';
+      if (t === 'moderate') return 'badge-teal';
+      return 'badge-green';
+    },
+
     tractsUrl() {
       return `#/county/${this.geoid}/tracts`;
     }
