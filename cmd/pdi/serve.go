@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -104,48 +105,93 @@ func runServe(port int) error {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
-	// Chat proxy — forward /v1/chat to the Dojo Gateway for LLM-powered
-	// conversational data analysis. The gateway handles model routing, tool
-	// calling, and SSE streaming. DOJO_GATEWAY_URL configures the upstream.
-	gatewayURL := os.Getenv("DOJO_GATEWAY_URL")
-	if gatewayURL == "" {
-		gatewayURL = "http://localhost:7340"
-	}
-	gwTarget := strings.TrimRight(gatewayURL, "/")
+	// Chat endpoint — calls Anthropic directly with a rich system prompt
+	// grounded in the live data. The ANTHROPIC_API_KEY env var must be set.
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
 	r.POST("/v1/chat", func(c *gin.Context) {
-		// Read the incoming request body.
-		body, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "read body failed"})
+		if anthropicKey == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "chat not configured (ANTHROPIC_API_KEY not set)"})
 			return
 		}
-		// Forward to gateway /chat endpoint.
-		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", gwTarget+"/v1/chat", strings.NewReader(string(body)))
+
+		var req struct {
+			Message      string `json:"message"`
+			SystemPrompt string `json:"system_prompt"`
+			SessionID    string `json:"session_id"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil || req.Message == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message is required"})
+			return
+		}
+
+		systemPrompt := req.SystemPrompt
+		if systemPrompt == "" {
+			systemPrompt = "You are a helpful assistant."
+		}
+
+		// Build Anthropic Messages API request
+		anthropicBody := fmt.Sprintf(`{
+			"model": "claude-sonnet-4-20250514",
+			"max_tokens": 2048,
+			"system": %s,
+			"messages": [{"role": "user", "content": %s}]
+		}`,
+			jsonEscapeString(systemPrompt),
+			jsonEscapeString(req.Message),
+		)
+
+		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST",
+			"https://api.anthropic.com/v1/messages",
+			strings.NewReader(anthropicBody))
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "build proxy request failed"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "build request failed"})
 			return
 		}
 		proxyReq.Header.Set("Content-Type", "application/json")
-		proxyReq.Header.Set("Accept", c.GetHeader("Accept"))
+		proxyReq.Header.Set("x-api-key", anthropicKey)
+		proxyReq.Header.Set("anthropic-version", "2023-06-01")
 
-		client := &http.Client{Timeout: 5 * time.Minute}
+		client := &http.Client{Timeout: 2 * time.Minute}
 		resp, err := client.Do(proxyReq)
 		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "gateway unreachable", "detail": err.Error()})
+			c.JSON(http.StatusBadGateway, gin.H{"error": "anthropic unreachable", "detail": err.Error()})
 			return
 		}
 		defer resp.Body.Close()
 
-		// Stream the response back — works for both JSON and SSE.
-		extraHeaders := map[string]string{}
-		for _, h := range []string{"Content-Type", "Cache-Control", "Connection"} {
-			if v := resp.Header.Get(h); v != "" {
-				extraHeaders[h] = v
-			}
+		respBody, _ := io.ReadAll(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			c.JSON(resp.StatusCode, gin.H{"error": "anthropic error", "detail": string(respBody[:minInt(len(respBody), 500)])})
+			return
 		}
-		c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, extraHeaders)
+
+		// Parse Anthropic response and return in our format
+		var anthropicResp struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		}
+		if err := json.Unmarshal(respBody, &anthropicResp); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "parse response failed"})
+			return
+		}
+
+		text := ""
+		for _, block := range anthropicResp.Content {
+			text += block.Text
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"type":    "complete",
+			"content": text,
+		})
 	})
-	fmt.Printf("  chat:     /v1/chat → %s/v1/chat\n", gwTarget)
+	if anthropicKey != "" {
+		fmt.Println("  chat:     /v1/chat → Anthropic Claude (direct)")
+	} else {
+		fmt.Println("  chat:     /v1/chat → NOT CONFIGURED (set ANTHROPIC_API_KEY)")
+	}
 
 	// Serve embedded frontend static files.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
@@ -183,4 +229,18 @@ func runServe(port int) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	return nil
+}
+
+// jsonEscapeString returns a JSON-encoded string (with surrounding quotes).
+func jsonEscapeString(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
+// min returns the smaller of two ints. (Go 1.21+ has builtin min but we keep compat.)
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
