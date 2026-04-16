@@ -1,18 +1,15 @@
-// lib/chat.js — SSE streaming adapter for Dojo Gateway.
-// Falls back to a helpful placeholder while the proxy endpoint is being wired.
+// lib/chat.js — Chat adapter for the Dojo Gateway via /v1/chat proxy.
+// The Gateway expects: { message: string, session_id: string, stream: bool }
+// NOT the OpenAI-style { messages: [...] } format.
 const ChatAdapter = {
-
-  // Placeholder responses shown before the Gateway proxy is connected.
-  _placeholders: [
-    "The chat interface connects to the Dojo Gateway for AI-powered data analysis. The Gateway proxy endpoint is being wired up — check back soon.",
-    "While the live gateway connection is being configured, you can explore the data using the Counties, Compare, Evidence, and Analysis tabs.",
-    "The Policy Data Infrastructure platform tracks 42 indicator variables across 13 federal and state data sources covering all 72 Wisconsin counties and 1,652 census tracts.",
-    "Try browsing Wisconsin counties at #/counties, or compare two counties side-by-side at #/compare to see detailed indicator differences.",
-    "The Analysis section (#/analysis) surfaces statistical results including OLS regression coefficients, correlation matrices, and composite disadvantage indices computed across all tracts."
-  ],
-
-  // Detect whether the PDI chat proxy endpoint is available.
+  _sessionId: 'pdi-web-' + Date.now().toString(36),
   _proxyAvailable: null,
+
+  _placeholders: [
+    "The chat interface connects to the Dojo Gateway for AI-powered data analysis. Try asking about Wisconsin counties, poverty rates, health outcomes, or policy positions.",
+    "Try: 'What county has the highest poverty rate?' or 'Compare Dane and Milwaukee counties' or 'Tell me about Francesca Hong's housing policies'",
+    "The platform tracks 42 indicator variables across 13 data sources covering 72 Wisconsin counties and 1,652 census tracts."
+  ],
 
   async _checkProxy() {
     if (this._proxyAvailable !== null) return this._proxyAvailable;
@@ -20,73 +17,58 @@ const ChatAdapter = {
       const r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: 'ping' }], stream: false }),
-        signal: AbortSignal.timeout(2000)
+        body: JSON.stringify({ message: 'ping', session_id: this._sessionId, stream: false }),
+        signal: AbortSignal.timeout(5000)
       });
-      this._proxyAvailable = r.status !== 404 && r.status !== 501;
+      // 200 = working, 400 with "message is required" = wrong format, 502 = gateway down
+      this._proxyAvailable = r.ok;
     } catch (_) {
       this._proxyAvailable = false;
     }
     return this._proxyAvailable;
   },
 
-  // Send messages and stream the response.
-  // onChunk(text) called with each chunk; onDone() called when complete.
-  async send(messages, onChunk, onDone) {
+  // Send a message and stream the response.
+  // userMessage is the latest user text. conversationHistory is ignored for now
+  // (the Gateway manages session state via session_id).
+  async send(userMessage, onChunk, onDone) {
     const available = await this._checkProxy();
 
     if (available) {
-      await this._sendToGateway(messages, onChunk, onDone);
+      await this._sendToGateway(userMessage, onChunk, onDone);
     } else {
-      await this._sendPlaceholder(messages, onChunk, onDone);
+      await this._sendPlaceholder(userMessage, onChunk, onDone);
     }
   },
 
-  // Real SSE streaming to the PDI chat proxy (→ Dojo Gateway → Anthropic).
-  async _sendToGateway(messages, onChunk, onDone) {
+  async _sendToGateway(userMessage, onChunk, onDone) {
     try {
       const r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, stream: true })
+        body: JSON.stringify({
+          message: userMessage,
+          session_id: this._sessionId,
+          stream: false  // Non-streaming for now — gateway returns complete JSON
+        })
       });
 
       if (!r.ok) {
-        onChunk(`Error: HTTP ${r.status} from chat endpoint.`);
+        const errBody = await r.text();
+        onChunk(`Error (${r.status}): ${errBody.substring(0, 200)}`);
         onDone();
         return;
       }
 
-      const reader = r.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const data = await r.json();
+      // Gateway response: { type: "complete", content: "...", usage: {...} }
+      const content = data.content || data.message || JSON.stringify(data);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete last line
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') { onDone(); return; }
-            try {
-              const parsed = JSON.parse(data);
-              // Anthropic SSE delta format
-              const delta = parsed?.delta?.text
-                ?? parsed?.choices?.[0]?.delta?.content
-                ?? '';
-              if (delta) onChunk(delta);
-            } catch (_) {
-              // non-JSON SSE line — ignore
-            }
-          }
-        }
+      // Simulate streaming for UX consistency
+      for (let i = 0; i < content.length; i += 5) {
+        onChunk(content.substring(i, Math.min(i + 5, content.length)));
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
-
       onDone();
     } catch (err) {
       onChunk(`Connection error: ${err.message}`);
@@ -94,29 +76,25 @@ const ChatAdapter = {
     }
   },
 
-  // Placeholder fallback — simulates streaming for UX consistency.
-  async _sendPlaceholder(messages, onChunk, onDone) {
-    const last = messages[messages.length - 1]?.content?.toLowerCase() || '';
+  async _sendPlaceholder(userMessage, onChunk, onDone) {
+    const q = (userMessage || '').toLowerCase();
     let response;
 
-    // Simple keyword routing for slightly smarter placeholder responses.
-    if (last.includes('county') || last.includes('dane') || last.includes('milwaukee')) {
-      response = "County-level data is available at #/counties. Each county card shows poverty rate, median household income, and uninsured rate. Click any county for a full profile with grouped indicators by health, housing, food access, and demographics.";
-    } else if (last.includes('tract') || last.includes('census')) {
-      response = "Census tract data is available for all 1,652 Wisconsin tracts. Navigate to a county profile and click 'View Tracts' to explore tract-level CDC PLACES health outcomes and USDA food access indicators.";
-    } else if (last.includes('policy') || last.includes('candidate')) {
-      response = "The platform tracks 85 policy positions from Wisconsin progressive candidates, crosswalked to equity dimensions. Visit #/candidates to filter by candidate or policy category.";
-    } else if (last.includes('analysis') || last.includes('regression') || last.includes('correlation')) {
-      response = "The Analysis section (#/analysis) surfaces computed statistical results: OLS regression models, pairwise correlation matrices, composite disadvantage indices, and tipping point analyses across all 1,652 tracts.";
+    if (q.includes('county') || q.includes('dane') || q.includes('milwaukee')) {
+      response = "County-level data is available at #/counties. Each county shows poverty rate, median household income, and uninsured rate from Census ACS 2023. Click any county for a full profile with indicators grouped by health, housing, food access, and demographics.";
+    } else if (q.includes('tract') || q.includes('census')) {
+      response = "Census tract data covers 1,652 Wisconsin tracts with CDC PLACES health outcomes (8 indicators) and USDA food access data (6 indicators). Navigate to a county profile to explore its tracts.";
+    } else if (q.includes('policy') || q.includes('candidate') || q.includes('hong') || q.includes('mamdani')) {
+      response = "The platform tracks 85 policy positions from Francesca Hong (WI Governor candidate, DSA) and Zohran Mamdani (NYC Mayor, DSA). Visit #/candidates to browse and filter.";
+    } else if (q.includes('poverty') || q.includes('income') || q.includes('rate')) {
+      response = "The average poverty rate across Wisconsin's 72 counties is 10.5% (Census ACS 2023). Menominee County has the highest rate. Browse all counties at #/counties or compare two at #/compare.";
     } else {
-      const idx = Math.abs(last.length) % this._placeholders.length;
-      response = this._placeholders[idx];
+      response = this._placeholders[Math.floor(Math.random() * this._placeholders.length)];
     }
 
-    // Simulate streaming at ~50 chars/sec.
-    for (let i = 0; i < response.length; i += 3) {
-      onChunk(response.substring(i, Math.min(i + 3, response.length)));
-      await new Promise(r => setTimeout(r, 20));
+    for (let i = 0; i < response.length; i += 4) {
+      onChunk(response.substring(i, Math.min(i + 4, response.length)));
+      await new Promise(resolve => setTimeout(resolve, 15));
     }
     onDone();
   }

@@ -29,13 +29,10 @@ document.addEventListener('alpine:init', () => {
       this.$nextTick(() => this._scrollToBottom());
 
       try {
-        // Build messages array for the adapter (exclude the empty placeholder).
-        const history = this.messages
-          .filter(m => m.id !== assistantId && m.id !== 'sys-welcome')
-          .map(m => ({ role: m.role, content: m.content }));
-
+        // Send the latest user message text to the adapter.
+        // The Gateway manages session state via session_id.
         await ChatAdapter.send(
-          history,
+          text,
           (chunk) => {
             const msg = this.messages.find(m => m.id === assistantId);
             if (msg) {
