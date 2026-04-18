@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // hpsaFixturePC is a minimal primary care HPSA CSV fixture.
@@ -340,11 +341,16 @@ func TestHRSAAggregateHPSA_WithdrawnIgnored(t *testing.T) {
 	s := NewHRSASource(HRSAConfig{Year: 2024})
 	byCounty := make(map[string]*countyRecord)
 
-	// Parse the primary care fixture directly.
-	rows, err := s.csvRows(context.Background(), hrsaHPSAPCURL)
-	if err == nil && rows != nil {
-		// This shouldn't succeed without a mock server; fall through to manual test.
-		_ = rows
+	// Parse the primary care fixture directly — use a short timeout so this
+	// doesn't hang if the HRSA server is slow or unavailable.
+	{
+		ctx5s, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		rows, err := s.csvRows(ctx5s, hrsaHPSAPCURL)
+		if err == nil && rows != nil {
+			// This shouldn't succeed without a mock server; fall through to manual test.
+			_ = rows
+		}
 	}
 
 	// Manually inject rows that mirror the fixture:
