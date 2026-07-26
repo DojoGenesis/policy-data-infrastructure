@@ -107,6 +107,8 @@ Government batch APIs silently drop data with certain parameter combinations:
 - **BLS LAUS**: `annualaverage=true` silently drops ALL data when combined with year range + unregistered key. Compute annual averages client-side from M01-M12 monthly values.
 - **BLS LAUS**: Unregistered limit is 25 series per request, NOT 50. BLS truncates silently at 25 with no HTTP error.
 - **Census API**: Null sentinel is `-666666666`, not `null` or `0`. Always convert via `safe_int()`/`safe_float()` from `ingest/lib/census.py`.
+- **Census API requires a key** (verified 2026-07-26). Keyless requests 302 to `/data/missing_key.html`; urllib follows the redirect, so the symptom is a `JSONDecodeError` on HTML, not an auth error. Call `lib.census.require_api_key()` at the top of any fetch script.
+- **TIGER bulk GeoJSON is gone.** `https://www2.census.gov/geo/tiger/GENZ{year}/json/` 404s — the Census publishes those layers as shapefiles only now. Use `ingest/lib/tigerweb.py` (TIGERweb REST, serves GeoJSON, vintage-parameterized as `tigerWMS_ACS{year}`). TIGERweb attribute names differ from the bulk files: `STATE`/`COUNTY`/`AREALAND` vs `STATEFP`/`COUNTYFP`/`ALAND`.
 - **CDC PLACES Socrata**: Filter with `datavaluetypeid='CrdPrv'` (crude prevalence), NOT `data_value_type='CrudePrev'` — column name changed between PLACES versions.
 
 ### Rate limit handling
@@ -164,7 +166,7 @@ Expected minimums — if a query returns far below, the load failed silently:
 | Table | Level | Expected Rows |
 |-------|-------|--------------|
 | geographies | county | 72 (WI) |
-| geographies | tract | ~1,929 (WI) |
+| geographies | tract | 1,542 (WI, 2020 tract vintage — verified 2026-07-26 against the ACS API and TIGERweb; the old ~1,929 figure here was wrong) |
 | indicators | ACS | ~1,368 |
 | indicators | CDC PLACES | ~12,200 |
 | indicators | USDA | ~8,009 |

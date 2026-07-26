@@ -3,7 +3,7 @@
 # Required env vars:
 #   STATE     — 2-digit state FIPS (e.g., 55 for Wisconsin)
 #   COUNTY    — 3-digit county FIPS (e.g., 025 for Dane) [optional for county/state levels]
-#   YEAR      — ACS/TIGER vintage year (e.g., 2023)
+#   YEAR      — ACS/TIGER vintage year (e.g., 2024)
 #   DATA_DIR  — path to atlas-format JSON files (for 'load' target)
 #
 # Optional env vars:
@@ -14,15 +14,16 @@
 #
 # Examples:
 #   make install
-#   make fetch-acs STATE=55 COUNTY=025 YEAR=2023
-#   make fetch-tiger STATE=55 YEAR=2023 TIGER_LEVELS="tract county"
-#   make fetch-all STATE=55 COUNTY=025 YEAR=2023
+#   make fetch-acs STATE=55 COUNTY=025 YEAR=2024
+#   make fetch-tiger STATE=55 YEAR=2024 TIGER_LEVELS="tract county"
+#   make fetch-all STATE=55 COUNTY=025 YEAR=2024
 #   make load DATA_DIR=../CWD/atlas/data
-#   make dry-run-acs STATE=55 COUNTY=025 YEAR=2023
+#   make dry-run-acs STATE=55 COUNTY=025 YEAR=2024
 
 STATE     ?= 55
 COUNTY    ?= 025
-YEAR      ?= 2023
+# ACS 2020-2024 5-Year released 2025-12-11 — the newest published vintage.
+YEAR      ?= 2024
 GEO_LEVEL ?= tract
 TIGER_LEVELS ?= tract
 DATA_DIR  ?= ../CWD/atlas/data

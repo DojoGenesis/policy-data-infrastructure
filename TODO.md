@@ -1,9 +1,13 @@
 # TODO — policy-data-infrastructure
 
-> Updated: 2026-04-15 | Last audit: 2026-04-15 (full audit + quality infrastructure shipped)
+> Updated: 2026-07-26 | Last audit: 2026-04-15 (full audit + quality infrastructure shipped)
 > Update this file after every work session. Move completed items to CHANGELOG.md.
 
 ## P1 — High (grant-critical)
+
+- [ ] Verify `ingest/fetch_tiger.py` against a live PostGIS. The TIGERweb repoint is verified only via `--dry-run` (no psycopg on the build machine); `normalize_props()` -> `bulk_load_geographies()` has not been exercised against a real DB [source: PIP-91]
+- [ ] Reload PostGIS tract geographies at the ACS 2024 vintage — the DB predates this and the tract count on record (1,652) does not match the verified 1,542 [source: PIP-91]
+- [ ] Confirm whether `block_group` supports a statewide Census query. `lib/census._geo_clause()` still requires a county there; only `tract` was relaxed and verified [source: PIP-91]
 
 - [ ] Build policydatainfrastructure.com — domain returns 200, needs real app content beyond static marketing page [source: roadmap]
 - [ ] MCF LOI draft review with Justice — 9 open questions, due Jun 3 2026 (49 days) [source: grant]

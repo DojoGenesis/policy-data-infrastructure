@@ -8,10 +8,30 @@ import time
 CENSUS_BASE = "https://api.census.gov/data/{year}/acs/acs5"
 API_KEY = os.environ.get("CENSUS_API_KEY", "")
 
-# Without a key the Census API allows ~45 req/min; with a key ~500 req/min.
-RATE_LIMIT_DELAY = 1.5  # seconds between requests (conservative; safe without key)
+# An API key is now REQUIRED (verified 2026-07-26). A keyless request no longer
+# degrades to a rate-limited success — the API answers 302 -> /data/missing_key.html
+# with an `X-DataWebAPI-KeyError: 1` header. urllib follows that redirect, so the
+# caller gets an HTML page and a confusing JSONDecodeError far from the real cause.
+# require_api_key() below converts that into one clear message at the boundary.
+RATE_LIMIT_DELAY = 1.5  # seconds between requests (~40 req/min; safely under the keyed 500/min)
 
 NULL_SENTINEL = -666666666
+
+
+def require_api_key() -> str:
+    """Return the Census API key, or raise with a fix-it message.
+
+    Call this at the top of a fetch script's main() so a missing key fails on
+    line one instead of mid-fetch as an unparseable-JSON error.
+    """
+    if not API_KEY:
+        raise RuntimeError(
+            "CENSUS_API_KEY is not set, and the Census API now rejects keyless "
+            "requests (302 -> missing_key.html).\n"
+            "Get a key at https://api.census.gov/data/key_signup.html, then:\n"
+            "  export CENSUS_API_KEY=<key>"
+        )
+    return API_KEY
 
 
 def _dataset_path(year: int, subject: bool = False) -> str:
@@ -34,15 +54,21 @@ def _geo_clause(geo_level: str, state_fips: str, county_fips: str | None) -> str
     Build the Census API geography clause.
 
     geo_level options:
-      'tract'       — all tracts in a county  (county_fips required)
+      'tract'       — all tracts in a county, or statewide if county_fips is None
       'block_group' — all block groups in a county (county_fips required)
       'county'      — all counties in a state
       'state'       — the state itself
     """
     state = state_fips.zfill(2)
     if geo_level == "tract":
+        # Statewide tract queries are supported (verified against ACS 2024:
+        # `for=tract:*&in=state:55` returns all 1,542 WI tracts in one call).
+        # This used to raise when county_fips was absent; that restriction was
+        # inherited from an older API vintage and cost 72x the requests.
+        # block_group below still requires a county — its statewide response is
+        # far larger and that path has not been verified.
         if not county_fips:
-            raise ValueError("county_fips is required for geo_level='tract'")
+            return f"for=tract:*&in=state:{state}"
         county = county_fips.zfill(3)
         return f"for=tract:*&in=state:{state}%20county:{county}"
     elif geo_level == "block_group":
@@ -93,6 +119,14 @@ def fetch_acs_table(
         with urllib.request.urlopen(req, timeout=30) as resp:
             if resp.status != 200:
                 raise RuntimeError(f"Census API returned HTTP {resp.status} for {url}")
+            # A keyless (or bad-key) request 302s to an HTML error page. urllib follows
+            # it silently, so check where we actually landed before trying to parse JSON —
+            # otherwise this surfaces as JSONDecodeError with no hint of the real cause.
+            if "missing_key" in resp.url or "invalid_key" in resp.url:
+                raise RuntimeError(
+                    f"Census API rejected the key (redirected to {resp.url}). "
+                    "Set a valid CENSUS_API_KEY — see lib.census.require_api_key()."
+                )
             raw = json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"Census API HTTP error {exc.code}: {exc.reason}\nURL: {url}") from exc

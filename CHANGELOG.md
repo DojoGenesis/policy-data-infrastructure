@@ -3,6 +3,51 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-07-26
+
+### Statewide tract resolution — ACS 2024 (PIP-91)
+- Raised the ACS default vintage 2023 → 2024 across the ACS-facing scripts
+  (`analysis/fetch_wi_counties.py`, `ingest/fetch_acs.py`, `ingest/fetch_acs_b19001.py`,
+  `ingest/Makefile`). ACS 2020-2024 5-Year was released 2025-12-11.
+  - Deliberately NOT changed: `ingest/load_to_postgres.py`'s per-file vintage defaults.
+    Those describe the vintage of already-generated atlas JSON files (2023 data), not a
+    fetch target — bumping them would mislabel existing data.
+  - Also unchanged: `fetch_wi_dpi.py`, `fetch_bls_laus.py`, `fetch_epa_ejscreen.py`.
+    Different sources on different release cadences; bumping their defaults without
+    verifying availability would just create broken defaults.
+- New `analysis/fetch_wi_tracts.py` — statewide tract-level ACS fetch, two resolution
+  modes (`statewide`, `county-drill`) plus `--compare` to diff them. Loaded 1,542 WI
+  tracts, 11 indicators, ~1.2% null (normal small-tract suppression).
+- New `analysis/fetch_tract_boundaries.py` — vintage-matched boundary GeoJSON.
+  1,542 tract + 72 county features.
+- New `analysis/build_atlas_bundle.py` — validated join + quantile class breaks.
+  Join is a hard gate: any GEOID on one side and not the other exits non-zero.
+- New `ingest/lib/tigerweb.py` — TIGERweb REST client (stdlib only).
+
+### Fixes — three live bugs found while building the above
+- **The Census API now requires a key.** A keyless request 302s to
+  `/data/missing_key.html` (`X-DataWebAPI-KeyError: 1`); urllib follows it and the caller
+  gets a JSONDecodeError with no hint of the cause. Added `lib/census.require_api_key()`
+  and a landed-URL check in `fetch_acs_table()`. The repo's "45 req/min without key" note
+  was stale — keyless now means zero.
+- **`ingest/fetch_tiger.py` was entirely broken.** It downloaded from
+  `https://www2.census.gov/geo/tiger/GENZ{year}/json/` — that directory returns HTTP 404
+  (verified for 2024; the Census publishes these as shapefiles now, and this repo has no
+  shapefile reader). Repointed at TIGERweb, which serves GeoJSON directly and is
+  vintage-parameterized. Added `normalize_props()` because TIGERweb names attributes
+  differently (`STATE`/`AREALAND`) than `lib/db.bulk_load_geographies()` reads
+  (`STATEFP`/`ALAND`) — without it the load "succeeds" while writing NULL state_fips.
+  Also deferred the `lib.db` import past the `--dry-run` return, so a dry run no longer
+  requires psycopg to be installed.
+- **`lib/census._geo_clause()` rejected statewide tract queries.** It raised unless a
+  county was supplied, but `for=tract:*&in=state:55` works and returns all 1,542 tracts
+  in one call — the restriction was inherited from an older API vintage and cost 72x the
+  requests. Relaxed for `tract`; `block_group` still requires a county (unverified).
+
+### Data health note
+- Verified WI tract count is **1,542** (ACS 2024 API and TIGERweb `tigerWMS_ACS2024`
+  agree exactly). `STATUS.md` said 1,652 and `CLAUDE.md` said ~1,929 — both corrected.
+
 ## 2026-04-15
 
 ### Datasource Adapter Expansion (9 new adapters)

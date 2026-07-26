@@ -17,14 +17,22 @@ import argparse
 # Allow running as a script from the repo root or directly from analysis/
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'ingest'))
 
-from lib.census import fetch_acs_table, safe_int, safe_float, safe_pct, build_geoid
+from lib.census import (
+    fetch_acs_table,
+    safe_int,
+    safe_float,
+    safe_pct,
+    build_geoid,
+    require_api_key,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 WI_STATE_FIPS = "55"
-DEFAULT_YEAR = 2023
+# ACS 2020-2024 5-Year released 2025-12-11 — the newest published vintage.
+DEFAULT_YEAR = 2024
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 OUTPUT_CSV = os.path.join(OUTPUT_DIR, "wi_counties_acs.csv")
@@ -240,7 +248,7 @@ def print_dry_run_plan(year: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Fetch ACS 2023 5-Year county data for all 72 Wisconsin counties.",
+        description=f"Fetch ACS {DEFAULT_YEAR} 5-Year county data for all 72 Wisconsin counties.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -260,6 +268,8 @@ def main() -> None:
     if args.dry_run:
         print_dry_run_plan(args.year)
         return
+
+    require_api_key()  # fail here, not mid-fetch as an unparseable-JSON error
 
     year = args.year
     print(f"Fetching ACS {year} 5-Year — all Wisconsin counties (state FIPS {WI_STATE_FIPS})")

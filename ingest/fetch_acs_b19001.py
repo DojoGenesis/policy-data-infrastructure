@@ -224,8 +224,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("--year", type=int, default=2023,
-                        help="ACS 5-year release year (default: 2023)")
+    parser.add_argument("--year", type=int, default=2024,
+                        help="ACS 5-year release year (default: 2024 → 2020–2024 estimates)")
     parser.add_argument("--state", type=str, default="55",
                         help="State FIPS code (default: 55 = Wisconsin)")
     parser.add_argument("--dry-run", action="store_true",

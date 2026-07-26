@@ -1,7 +1,7 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-04-15
+> Last agent update: 2026-07-26
 
 ## Quick Reference
 
@@ -14,7 +14,9 @@
 | VPS | `5.161.84.125` — `pdi.service` active |
 | Live API | `https://api.policydatainfrastructure.com` |
 | Static Site | `https://policydatainfrastructure.com` (GitHub Pages, not connected to API) |
-| PostGIS | 72 counties, 1,652 tracts, 34 variables, 21K+ rows |
+| PostGIS | 72 counties, 34 variables, 21K+ rows |
+| WI tract count | **1,542** (ACS 2024 vintage — verified 2026-07-26 against both the ACS API and TIGERweb; this row previously said 1,652 and CLAUDE.md said ~1,929) |
+| Static tract bundle | `analysis/output/atlas/` — 1,542 tracts x 11 indicators, ACS 2020-2024 |
 
 ## Service Health
 

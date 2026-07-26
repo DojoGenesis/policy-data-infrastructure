@@ -1,149 +1,100 @@
 #!/usr/bin/env python3
 """
-Fetch Census TIGER/Line cartographic boundary files and load boundaries to PostGIS.
+Fetch Census TIGER boundaries and load them to PostGIS.
 
-Downloads GeoJSON-format cartographic boundary files from the Census Bureau
-(500k resolution, WGS84) for the requested state and geography levels,
-then inserts/updates rows in the ``geographies`` table.
+Pulls vintage-matched boundary geometry as GeoJSON from the TIGERweb REST
+service, then inserts/updates rows in the ``geographies`` table.
+
+Source change (2026-07-26): this script used to download bulk cartographic
+boundary files from ``https://www2.census.gov/geo/tiger/GENZ{year}/json/``.
+That directory no longer exists — ``GENZ2024/json/`` returns HTTP 404 and the
+Census now publishes those layers as shapefiles only. Every run of this script
+had been failing at the download step. It now reads TIGERweb instead, which
+serves GeoJSON directly and is vintage-parameterized (``tigerWMS_ACS{year}``).
+See ``lib/tigerweb.py`` for the full rationale.
 
 Usage examples:
-  # Wisconsin tracts (2023 vintage)
-  python fetch_tiger.py --state 55 --year 2023
+  # Wisconsin tracts (ACS 2024 vintage)
+  python fetch_tiger.py --state 55 --year 2024
 
   # Cook County, IL — tracts only
-  python fetch_tiger.py --state 17 --county 031 --year 2023 --levels tract
+  python fetch_tiger.py --state 17 --county 031 --year 2024 --levels tract
 
   # All counties in Wisconsin
-  python fetch_tiger.py --state 55 --year 2023 --levels county
+  python fetch_tiger.py --state 55 --year 2024 --levels county
 
   # Multiple levels
-  python fetch_tiger.py --state 55 --year 2023 --levels tract county
+  python fetch_tiger.py --state 55 --year 2024 --levels tract county
 
   # Dry run (download + parse, no DB write)
-  python fetch_tiger.py --state 55 --year 2023 --dry-run
+  python fetch_tiger.py --state 55 --year 2024 --dry-run
 """
 import argparse
-import json
 import sys
-import time
-import urllib.error
-import urllib.request
-from pathlib import Path
 
-from lib.db import get_conn, bulk_load_geographies
+from lib import tigerweb
 
-# ---------------------------------------------------------------------------
-# Census cartographic boundary file URL templates
-# 500k resolution GeoJSON — suitable for map rendering and area calculations.
-# Census releases these at https://www2.census.gov/geo/tiger/GENZ{year}/
-# ---------------------------------------------------------------------------
+# lib.db imports psycopg at module scope. Importing it here would make --dry-run
+# require a Postgres driver to be installed, which defeats the point of a dry
+# run (and of this repo's "first run of any script is --dry-run" rule). The DB
+# import is deferred into main(), past the dry-run return.
 
-# Resolution to use (500k balances file size with polygon detail)
-_CB_BASE = "https://www2.census.gov/geo/tiger/GENZ{year}/json"
+# TIGER vintage default, matched to the ACS 5-Year vintage the indicators use.
+DEFAULT_YEAR = 2024
 
-_LAYER_URLS: dict[str, str] = {
-    # State-level files (national, filtered by STATEFP after download)
-    "state":   "{base}/cb_{year}_us_state_500k.json",
-    # County-level file (national; filter by STATEFP)
-    "county":  "{base}/cb_{year}_us_county_500k.json",
-    # Tract-level files are per-state: cb_{year}_{state}_tract_500k.json
-    "tract":   "{base}/cb_{year}_{state}_tract_500k.json",
-    # Block-group files are also per-state
-    "block_group": "{base}/cb_{year}_{state}_bg_500k.json",
-    # Place (incorporated places) — national file
-    "place":   "{base}/cb_{year}_us_place_500k.json",
-    # ZCTA — national file (large; ~50MB)
-    "zcta":    "{base}/cb_{year}_us_zcta520_500k.json",
+# Geography levels this script can load. Superset lives in lib/tigerweb.LAYERS;
+# this is the subset that maps onto rows in the ``geographies`` table.
+_LEVELS = ["tract", "block_group", "county", "state", "place"]
+
+
+# TIGERweb names its attributes differently from the old bulk TIGER files.
+# lib/db.bulk_load_geographies() reads the bulk-file names, so translate here —
+# without this, state_fips/county_fips/land area all silently write as NULL
+# (the load still "succeeds", which is the dangerous part).
+_PROP_ALIASES = {
+    "STATE":     "STATEFP",
+    "COUNTY":    "COUNTYFP",
+    "AREALAND":  "ALAND",
+    "AREAWATER": "AWATER",
 }
 
-# Levels that have a per-state file (use {state} in URL template)
-_PER_STATE_LEVELS = {"tract", "block_group"}
 
-# Download timeout in seconds — TIGER files can be large
-_TIMEOUT = 120
+def normalize_props(props: dict) -> dict:
+    """Add bulk-TIGER-style aliases for the fields lib/db.py looks up.
 
-# Polite delay between requests
-_RATE_DELAY = 2.0
-
-
-def build_url(year: int, level: str, state_fips: str) -> str:
-    base = _CB_BASE.format(year=year)
-    template = _LAYER_URLS[level]
-    return template.format(base=base, year=year, state=state_fips.zfill(2))
-
-
-def download_geojson(url: str) -> dict:
-    """Download a GeoJSON file from the Census Bureau. Retries once on transient errors."""
-    print(f"  GET {url}")
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "policy-data-infrastructure/1.0"},
-    )
-    for attempt in (1, 2):
-        try:
-            with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-                if resp.status != 200:
-                    raise RuntimeError(f"HTTP {resp.status}")
-                data = resp.read()
-            print(f"  Downloaded {len(data) / 1024:.1f} KB")
-            return json.loads(data.decode("utf-8"))
-        except (urllib.error.URLError, OSError) as exc:
-            if attempt == 2:
-                raise RuntimeError(f"Failed to download {url}: {exc}") from exc
-            print(f"  Attempt {attempt} failed ({exc}), retrying…", file=sys.stderr)
-            time.sleep(3)
-    raise RuntimeError("unreachable")  # pragma: no cover
-
-
-def filter_features(features: list[dict], state_fips: str, county_fips: str | None) -> list[dict]:
+    Original keys are kept — callers writing GeoJSON out (rather than to the
+    DB) may prefer TIGERweb's own names.
     """
-    Filter GeoJSON features to only those matching state (and optionally county).
-    Census national files include all states; per-state files may include adjacent counties.
-    """
-    state = state_fips.zfill(2)
-    county = county_fips.zfill(3) if county_fips else None
-
-    result = []
-    for feat in features:
-        props = feat.get("properties") or {}
-        feat_state = props.get("STATEFP", "")
-        if feat_state != state:
-            continue
-        if county is not None:
-            feat_county = props.get("COUNTYFP", "")
-            if feat_county != county:
-                continue
-        result.append(feat)
-    return result
+    out = dict(props)
+    for src, dst in _PROP_ALIASES.items():
+        if src in out and dst not in out:
+            out[dst] = out[src]
+    # A tract's TIGERweb NAME ("Census Tract 7") is already the NAMELSAD form.
+    if "NAMELSAD" not in out and "NAME" in out:
+        out["NAMELSAD"] = out["NAME"]
+    return out
 
 
 def fetch_level(year: int, level: str, state_fips: str, county_fips: str | None) -> list[dict]:
     """
-    Download and filter TIGER features for one geography level.
+    Fetch TIGER features for one geography level.
     Returns a list of GeoJSON Feature dicts (with GEOID in properties).
     """
-    if level not in _LAYER_URLS:
-        raise ValueError(f"Unsupported level: {level!r}. Choose from: {list(_LAYER_URLS)}")
+    if level not in _LEVELS:
+        raise ValueError(f"Unsupported level: {level!r}. Choose from: {_LEVELS}")
 
-    url = build_url(year, level, state_fips)
-    fc = download_geojson(url)
-    time.sleep(_RATE_DELAY)
-
-    all_features = fc.get("features", [])
-    print(f"  Total features in file: {len(all_features)}")
-
-    # Per-state files don't need state filtering; national files do
-    if level in _PER_STATE_LEVELS:
-        # Still filter by county if requested
-        if county_fips:
-            filtered = filter_features(all_features, state_fips, county_fips)
-        else:
-            filtered = all_features
-    else:
-        filtered = filter_features(all_features, state_fips, county_fips)
-
-    print(f"  Features after filter (state={state_fips} county={county_fips or 'all'}): {len(filtered)}")
-    return filtered
+    # Full resolution here — this path feeds PostGIS, which does its own
+    # simplification at query time. Generalization is for static-file exports.
+    features = tigerweb.fetch_features(
+        year=year,
+        level=level,
+        state_fips=state_fips,
+        county_fips=county_fips,
+        simplify=None,
+    )
+    for feat in features:
+        feat["properties"] = normalize_props(feat.get("properties") or {})
+    return features
 
 
 # ---------------------------------------------------------------------------
@@ -158,12 +109,13 @@ def main() -> None:
     )
     parser.add_argument("--state",   required=True, help="2-digit state FIPS (e.g., 55 for Wisconsin)")
     parser.add_argument("--county",  default=None,  help="3-digit county FIPS to filter features (optional)")
-    parser.add_argument("--year",    type=int, default=2023, help="TIGER vintage year (default: 2023)")
+    parser.add_argument("--year",    type=int, default=DEFAULT_YEAR,
+                        help=f"TIGER vintage year (default: {DEFAULT_YEAR})")
     parser.add_argument(
         "--levels",
         nargs="+",
         default=["tract"],
-        choices=list(_LAYER_URLS),
+        choices=_LEVELS,
         help="Geography levels to fetch (default: tract). Multiple values accepted.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Download and parse but do not write to database")
@@ -208,6 +160,8 @@ def main() -> None:
     if args.dry_run:
         print("\n[dry-run] Skipping database write.")
         return
+
+    from lib.db import get_conn, bulk_load_geographies  # noqa: PLC0415 — see module docstring
 
     print("\nConnecting to database...")
     conn = get_conn()

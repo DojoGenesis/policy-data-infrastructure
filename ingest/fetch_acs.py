@@ -4,13 +4,15 @@ Fetch ACS 5-Year data for any state/county and load to PostgreSQL.
 
 Usage examples:
   # Dane County, WI — tract level, dry run
-  python fetch_acs.py --state 55 --county 025 --year 2023 --dry-run
+  python fetch_acs.py --state 55 --county 025 --year 2024 --dry-run
 
   # All Wisconsin counties
-  python fetch_acs.py --state 55 --year 2023 --geo-level county
+  python fetch_acs.py --state 55 --year 2024 --geo-level county
 
   # Block groups in Cook County, IL
-  python fetch_acs.py --state 17 --county 031 --year 2023 --geo-level block_group
+  python fetch_acs.py --state 17 --county 031 --year 2024 --geo-level block_group
+
+Requires CENSUS_API_KEY (the Census API rejects keyless requests).
 """
 import argparse
 import sys
@@ -22,8 +24,12 @@ from lib.census import (
     safe_int,
     safe_pct,
     build_geoid,
+    require_api_key,
 )
 from lib.db import get_conn, bulk_load_indicators, upsert_indicator_meta
+
+# ACS 2020-2024 5-Year released 2025-12-11 — the newest published vintage.
+DEFAULT_YEAR = 2024
 
 # ---------------------------------------------------------------------------
 # ACS variable definitions
@@ -351,12 +357,15 @@ def main() -> None:
     )
     parser.add_argument("--state",     required=True, help="2-digit state FIPS (e.g., 55 for Wisconsin)")
     parser.add_argument("--county",    default=None,  help="3-digit county FIPS (e.g., 025 for Dane). Required for tract/block_group.")
-    parser.add_argument("--year",      type=int, default=2023, help="ACS end year (default: 2023 → 2019–2023 estimates)")
+    parser.add_argument("--year",      type=int, default=DEFAULT_YEAR,
+                        help=f"ACS end year (default: {DEFAULT_YEAR} → {DEFAULT_YEAR-4}–{DEFAULT_YEAR} estimates)")
     parser.add_argument("--geo-level", default="tract",
                         choices=["tract", "block_group", "county", "state"],
                         help="Geographic level to fetch (default: tract)")
     parser.add_argument("--dry-run",   action="store_true", help="Fetch and process but do not write to the database")
     args = parser.parse_args()
+
+    require_api_key()  # fail here, not mid-fetch as an unparseable-JSON error
 
     state  = args.state.zfill(2)
     county = args.county.zfill(3) if args.county else None
