@@ -43,6 +43,7 @@ func init() {
 		newQueryCmd(),
 		newGenerateCmd(),
 		newServeCmd(),
+		newChatCmd(),
 		newPipelineCmd(),
 		newLoadPoliciesCmd(),
 		newVersionCmd(),
