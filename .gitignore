@@ -76,4 +76,8 @@ tmp/
 scratch/
 *.tmp
 *.bak
-pdi
+# The built binary at the repo root. Anchored: a bare "pdi" also matches the
+# cmd/pdi DIRECTORY, which silently blocks every new file added there — a new
+# CLI subcommand can be committed as a call site with its definition left
+# untracked, and the repo then fails to build from a clean clone.
+/pdi
