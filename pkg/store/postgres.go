@@ -498,17 +498,17 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 
 	rawValueExpr := "COALESCE(raw_value, '')"
 	cvExpr := "cv"
-	reliabilityExpr := "reliability::text"
+	reliabilityExpr := "COALESCE(reliability::text, '')"
 	if table == "indicators_latest" {
 		rawValueExpr = "''" // indicators_latest materialized view has no raw_value column
 		cvExpr = "NULL::double precision"
-		reliabilityExpr = "NULL::text"
+		reliabilityExpr = "''"
 	}
 	sql := fmt.Sprintf(`
 SELECT geoid, variable_id, vintage, value, margin_of_error, %s, %s, %s
 FROM %s
 %s
-ORDER BY geoid, variable_id, vintage`, rawValueExpr, cvExpr, reliabilityExpr, table, whereClause)
+ORDER BY geoid, variable_id, vintage`, cvExpr, reliabilityExpr, rawValueExpr, table, whereClause)
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {

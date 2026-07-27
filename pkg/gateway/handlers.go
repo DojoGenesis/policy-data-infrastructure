@@ -996,17 +996,17 @@ func (p *PolicyPlugin) handleComposite(c *gin.Context) {
 	}
 	shift := -minZ + 1.0 // ensures all values are ≥ 1
 
-	// 5. Build weights map. Default to equal weights if not provided.
-	weights := make(map[string]float64, len(req.VariableIDs))
-	if req.Weights != nil && len(req.Weights) > 0 {
-		for k, v := range req.Weights {
-			weights[k] = v
+		// 5. Build weights map. Default to equal weights if not provided.
+		weights := make(map[string]float64, len(req.VariableIDs))
+		if len(req.Weights) > 0 {
+			for k, v := range req.Weights {
+				weights[k] = v
+			}
+		} else {
+			for _, varID := range req.VariableIDs {
+				weights[varID] = 1.0 / float64(len(req.VariableIDs))
+			}
 		}
-	} else {
-		for _, varID := range req.VariableIDs {
-			weights[varID] = 1.0 / float64(len(req.VariableIDs))
-		}
-	}
 
 	// 6. Compute composite scores (geometric mean of shifted z-scores).
 	geoidInputs := make([]stats.CompositeInput, len(req.GEOIDs))
