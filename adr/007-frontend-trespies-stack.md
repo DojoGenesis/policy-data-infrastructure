@@ -18,39 +18,70 @@ Build the frontend as a set of distinct, purpose-built HTML pages — not a coll
 
 ### Design Stack
 
+PDI adopts the **`casa-datos`** stack from [`trespies-stacks/`](../../trespies-stacks/) — the build-stack palette's data-viz template, purpose-built for indicator dashboards, public maps, and data explorers. The stack provides token discipline, chart/map primitives, i18n scaffolding, and a verification gate suite — all with zero build step, zero package manager, and zero external dependencies.
+
 | Concern | Choice | Source |
 |---|---|---|
-| Design tokens | Night Shift v4 | `design-systems/TresPies/web-tokens.css` |
-| Surfaces | Near-black canvas (#0a0a0f), cards (#111118), raised (#16161f) | Context A |
-| Typography | Inter 400-900 + JetBrains Mono | `design-systems/TresPies/typography.md` |
+| Design tokens | Night Shift v4 + Rainbow categorical | `tokens.css` (vendored from `spine/kits/tokens/`) |
+| Surfaces | Near-black canvas (#0a0a0f), cards (#111118), raised (#16161f) | Context A (Night Shift) |
+| Typography | System font stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif` | Stack constraint — no webfonts |
 | Accent | Amber (#fbbf24) | `--accent` |
 | Signature gradient | amber→pink→purple (#fbbf24 → #ec4899 → #8b5cf6) | `--grad` |
-| Data viz categorical | Rainbow 8-color scale | `design-systems/TresPies/rainbow-tokens.css` |
-| CSS approach | Inline `<style>` per page with shared token `<link>` | TresPies house pattern |
-| Framework | Alpine.js 3.x (CDN, no build step) | ADR-001 |
+| Data viz categorical | Rainbow 8-color scale (`--tp-cat-1` through `--tp-cat-8`) | Context D (Rainbow) |
+| Chart rendering | `charts.js` — hand-rolled SVG bar/dot/line primitives, zero dependencies | `casa-datos/charts.js` |
+| Map rendering | `choropleth.js` — hand-rolled SVG choropleth, token-driven palette | `casa-datos/choropleth.js` |
+| CSS approach | `tokens.css` (vendored verbatim) + stack-owned `styles.css` per page | TresPies stack pattern |
+| Framework | None. Alpine.js is NOT vendored here — the stack's own JS handles reactivity through DOM manipulation | Stack constraint |
 | Delivery | Embedded via `//go:embed frontend/*` in Go binary | ADR-001 |
-| Mapping | Leaflet 1.9 (CDN, ~40KB) | ADR-004 Wave 4E |
-| Design SoT | Night Shift directly from `design-systems/TresPies/` until `trespies-stacks` ships | |
+| Routing | Multi-page: each view is an independent HTML file. Navigation is native `<a href>` between pages, not a hash-routed SPA | Stack pattern |
+| i18n | EN/ES twin pages with reciprocal `hreflang`, flipper from `spine/kits/i18n/` | Stack constraint |
+| Accessibility | WCAG AA including computed Rainbow rules. JS-off: every page is complete and legible. Reduced motion honored. | Stack gate suite |
 
-### Page Architecture — 8 Pages
+### Stack Constraint Relaxations for PDI
 
-Each page is a distinct HTML file in `frontend/`, sharing a common token import and navigation shell. All pages serve a specific audience task and pull from live API endpoints.
+The `trespies-stacks` constraint "no external anything" was written for static sites. PDI is an API-driven data platform — it MUST call its own backend. Two relaxations:
+
+1. **Same-origin API calls are NOT "external."** `fetch('/v1/policy/geographies')` hits the Go binary that served the page. This is the same process, not a third party. The `no-external` gate is updated to allow `fetch()` to same-origin paths under `/v1/`.
+2. **Alpine.js is a framework, not external content.** The stack's own `charts.js` and `parametric.js` already use the IIFE + `window` namespace pattern. Alpine.js serves the same role — a JS enhancement that makes the page interactive, not a remote dependency that could break the page. It is vendored as a single file (`alpine.js`) alongside the other vendored kits, loaded from the same embedded filesystem. No CDN.
+
+Everything else — no webfonts, no remote images, no third-party scripts, system font stack, JS-off legibility, WCAG AA, Spanish twins — holds without modification.
+
+### File Structure (aligned with casa-datos)
 
 ```
 frontend/
-  tokens.css              ← Night Shift v4 token import (shared)
-  nav.js                  ← Hash-router + navigation shell (shared)
-  index.html              ← #/        County Explorer
-  county.html             ← #/county/:geoid  County Profile + Dashboard
-  compare.html            ← #/compare  Compare Tool
-  evidence.html           ← #/evidence  Evidence Card Gallery
-  candidates.html         ← #/candidates  Candidate Policy Tracker
-  map.html                ← #/map       LISA Cluster Map
-  narrative.html          ← #/narrative/:id  Narrative Reader
-  about.html              ← #/about     Methodology + Sources
-  composites.html         ← #/composite  Composite Index Builder
-  chat.js                 ← Chat drawer (available from all pages)
+  tokens.css              ← vendored from spine/kits/tokens/ (@spine-kit tag)
+  theme-toggle.js         ← vendored from spine/kits/tokens/
+  motion.css              ← vendored from spine/kits/motion/
+  motion.js               ← vendored from spine/kits/motion/
+  parametric.js           ← vendored from spine/kits/parametric/
+  bilingual-data.js       ← vendored from spine/kits/i18n/
+  alpine.js               ← vendored (single file, no CDN)
+  charts.js               ← vendored from casa-datos/charts.js
+  choropleth.js            ← vendored from casa-datos/choropleth.js
+  styles.css              ← stack-owned: PDI layout over tokens
+
+  index.html              ← County Explorer
+  county.html             ← County Profile + Dashboard
+  compare.html            ← Compare Tool
+  evidence.html           ← Evidence Card Gallery
+  candidates.html         ← Candidate Policy Tracker
+  map.html                ← LISA Cluster Map
+  narrative.html          ← Narrative Reader
+  about.html              ← About + Methodology
+  composites.html         ← Composite Index Builder
+  chat.html               ← Grounded Chat (loadable drawer from any page)
+
+  es/                     ← Spanish twins (every .html above)
+  site-manifest.json      ← agent-nav: structured data for LLM consumption
+  llms.txt                ← agent-nav: plain-text guide for LLMs
 ```
+
+### Page Architecture — 8 Pages
+
+Each page is a complete, self-contained HTML document — not a fragment within a single-page shell. Navigation between pages uses native `<a href>` links. Within each page, Alpine.js handles interactivity (search, filter, sort, toggle) scoped to that page's data. This matches the `casa-datos` pattern: independent pages, vendored scripts, no build step.
+
+Pages are served from the Go binary at their natural paths: `GET /` → `index.html`, `GET /county` → `county.html`, etc. The server maps clean URLs to files. No hash routing.
 
 ### Page 1: County Explorer (`index.html`)
 
@@ -60,7 +91,7 @@ frontend/
 - 72 county cards in a responsive grid (6→4→2→1 columns)
 - Each card shows: county name, population, top-line indicator spark (poverty rate or median income)
 - Search bar filters by name
-- Click → navigates to `#/county/:geoid`
+- Click → navigates to `/county?geoid=:geoid`
 - States: loading skeleton (6 ghost cards), empty (no match), error (retry)
 
 ### Page 2: County Profile + Dashboard (`county.html`)
@@ -162,7 +193,7 @@ This is the richest page — it surfaces all five statistical layers.
 
 **Audience task:** "Read a data-driven narrative about structural conditions in this county."
 
-- Accessed via "Generate Brief" button from County Profile, or directly via `#/narrative/:analysis_id`
+- Accessed via "Generate Brief" button from County Profile, or directly via `/narrative?analysis_id=:analysis_id`
 - Fetches `GET /generate/narrative/:analysis_id` (or renders from POST response)
 - Full HTML narrative with chapter navigation
 - Each chapter: tract name, indicator profile, stat callouts, policy lever recommendations with evidence citations
@@ -333,12 +364,12 @@ The model can suggest — and the chat UI can render — clickable actions:
 
 | User says | Chat responds with |
 |---|---|
-| "Generate a narrative for Dane County" | Button: "Open Five Mornings Narrative" → navigates to `#/narrative/:analysis_id` |
-| "Build a composite index from poverty and income" | Button: "Open Composite Builder" → navigates to `#/composite?vars=poverty_rate,median_household_income` |
-| "Compare Dane and Milwaukee" | Button: "Open Compare Tool" → navigates to `#/compare?geoid1=55025&geoid2=55079` |
-| "Show me on a map" | Button: "Open LISA Map" → navigates to `#/map?indicator=poverty_rate` |
+| "Generate a narrative for Dane County" | Button: "Open Five Mornings Narrative" → navigates to `/narrative?analysis_id=:analysis_id` |
+| "Build a composite index from poverty and income" | Button: "Open Composite Builder" → navigates to `/composite?vars=poverty_rate,median_household_income` |
+| "Compare Dane and Milwaukee" | Button: "Open Compare Tool" → navigates to `/compare?geoid1=55025&geoid2=55079` |
+| "Show me on a map" | Button: "Open LISA Map" → navigates to `/map?indicator=poverty_rate` |
 
-Actions are suggested by the model in the Compose stage, rendered as buttons in the chat UI, and trigger hash navigation. The grounding pipeline verifies that the action parameters match the data context.
+Actions are suggested by the model in the Compose stage, rendered as buttons in the chat UI, and trigger native page navigation. The grounding pipeline verifies that the action parameters match the data context.
 
 #### 6. Expanded Operation Schema
 
@@ -466,25 +497,25 @@ Suggestions change with the page context. Clicking one sends it as a message. Th
 
 ### Negative
 
-- **More files to maintain.** 13 files vs. 1 file in the current shell. Mitigated by clear file ownership and shared token/nav dependencies.
-- **Alpine.js ceiling for complex interactions.** The composite builder (weight sliders), compare table (delta sorting), and map (cluster toggles) push Alpine.js to its practical limit. Acceptable for v2; revisit Svelte if user feedback demands richer interactivity — same escape hatch as ADR-004.
-- **Leaflet dependency.** Adds ~40KB to the map page. Acceptable for a spatial data platform. Lazy-loaded only on `map.html`.
-- **`trespies-stacks` not yet stabilized.** Tokens come directly from `design-systems/TresPies/` as interim SoT. Update paths when `trespies-stacks` ships.
+- **More files to maintain.** 20+ files vs. 1 file in the current shell. Mitigated by clear file ownership, shared vendored kits (never edited in place), and the stack's verification gate suite (`verify.sh`).
+- **Alpine.js ceiling for complex interactions.** The composite builder (weight sliders), compare table (delta sorting), and map (cluster toggles) push Alpine.js to its practical limit. Acceptable for v2; revisit if user feedback demands richer interactivity.
+- **`casa-datos` constraint tension.** The stack's `charts.js` and `choropleth.js` are designed for static SVG rendering. PDI's live API data requires bridging the static-to-dynamic gap — fetching JSON, transforming into chart input, and re-rendering on navigation. This is manageable (the same pattern `tool.html` uses) but adds ~200 lines of glue JS per charted page.
 
 ## Supersedes
 
-- **ADR-004** Wave 2 (Data Explorer Frontend) — this ADR replaces the original 4-page plan with an 8-page architecture that surfaces every statistical layer, spatial analysis, and the grounded chat system. The Alpine.js + embedded delivery decisions from ADR-001 and ADR-004 still hold.
-- **ADR-001** — reaffirmed: embedded Alpine.js frontend in Go binary. This ADR extends the file structure from a single page to a multi-page architecture with shared nav and tokens.
+- **ADR-004** Wave 2 (Data Explorer Frontend) — this ADR replaces the original 4-page hash-routed SPA with an 8-page native-navigation architecture anchored in the `casa-datos` stack, surfacing every statistical layer, spatial analysis, and the grounded chat system. The embedded delivery decision from ADR-001 still holds; the Alpine.js SPA approach does not.
+- **ADR-001** — partially superseded: embedded frontend in Go binary is reaffirmed. The single-page Alpine.js hash-routed architecture is replaced with multi-page native navigation following the `casa-datos` stack pattern.
 
 ## Related
 
-- ADR-001: Embedded frontend decision
+- ADR-001: Embedded frontend decision (partially superseded)
 - ADR-002: Policy data in Postgres
 - ADR-004: v1 launch plan (superseded frontend wave)
 - ADR-006: Grounded chat architecture
 - `research/05_refactor_plan.md`: Five-layer statistical architecture
 - `research/07_live_platform_plan.md`: Live platform vision
-- `design-systems/TresPies/web-tokens.css`: Night Shift v4 canonical tokens
-- `design-systems/TresPies/rainbow-tokens.css`: Categorical data viz scale
-- `design-systems/TresPies/colors.md`: Complete palette documentation
-- `design-systems/TresPies/typography.md`: Font stacks and scale
+- `trespies-stacks/casa-datos/`: Canonical data-viz stack (tokens, charts, choropleth, gates)
+- `trespies-stacks/spine/kits/tokens/`: Night Shift + Rainbow token system
+- `trespies-stacks/spine/kits/i18n/`: EN/ES twin page scaffolding
+- `trespies-stacks/spine/gates/`: Verification gate suite (no-external, a11y, js-off, i18n-parity, spine-drift, token-fidelity)
+- `design-systems/TresPies/colors.md`: Canonical color contexts (A/B/C/D)
