@@ -263,7 +263,196 @@ Served from `GET /` (index.html) and `GET /static/*` (all other assets). Deploy 
 | 7J | `composites.html` — Composite Builder | 2h |
 | 7K | `chat.js` — Grounded Chat Drawer | 2h |
 | 7L | Embed + build + deploy + verify | 1h |
-| **Total** | | **~26h** |
+| **Total** | | **~30h** |
+
+## Chat Revamp: Intelligent Grounded Conversation
+
+ADR-006 established the three-stage pipeline (Plan → Execute → Verify) and proved it works against the Atlas static bundle. This revamp extends the chat from a proof-of-concept into an intelligent assistant that works across the full platform, not just a static snapshot.
+
+### Current Limitations (ADR-006 as built)
+
+| Limitation | Impact |
+|---|---|
+| Queries only the Atlas static bundle | Stale data — new ACS vintages, LISA results, and composite scores are invisible |
+| Single-turn only | Can't ask "what about the neighboring county?" after a lookup |
+| No page context | Chat doesn't know you're looking at Dane County's profile |
+| Plain text responses only | Tables, charts, and stat callouts would make answers more useful |
+| No action triggers | Can't say "generate a narrative" or "build a composite" from chat |
+| No Spanish support | Bilingual capability exists in the data but not in the chat |
+| Refusals are generic | "I can't answer that" doesn't guide the user to what they CAN ask |
+
+### Revamp: 9 Capabilities
+
+#### 1. Live API Backend
+
+Replace the static Atlas bundle with live PostGIS queries through the existing API endpoints. The grounding pipeline stays — Plan → Execute → Verify — but Execute now hits `GET /geographies/:geoid/indicators`, `POST /compare`, `GET /analyses/:id/scores`, etc. instead of a static JSON file.
+
+A question like "what's the poverty rate in Dane County?" becomes: Plan = `{op: lookup, indicator: poverty_rate, place: Dane County}` → Execute = `GET /geographies/55025/indicators?variable_id=poverty_rate` → Verify = check response value against model's prose.
+
+This means new data (ACS 2024, LISA results, composite scores) is available immediately without re-bundling.
+
+#### 2. Multi-Turn Conversation
+
+Maintain a conversation history within the chat session. The model receives the last N exchanges as context, allowing:
+
+- Follow-ups: "What about Milwaukee?" → resolves "Milwaukee" from context (the previous answer was about Dane County)
+- Refinement: "Show me just the health indicators" → adds filter to previous query
+- Drill-down: "Which tracts in that county are worst?" → switches from county to tract level with rank operation
+
+No server-side session storage needed — the conversation lives in the browser and is sent with each request. The grounding pipeline still verifies every number independently per turn.
+
+#### 3. Page Context Awareness
+
+When the chat opens, it receives the current page context:
+
+- On County Profile: `{page: "county", geoid: "55025", name: "Dane County"}`
+- On Compare: `{page: "compare", geoid1: "55025", geoid2: "55079"}`
+- On Map: `{page: "map", indicator: "poverty_rate"}`
+- On Explorer: `{page: "explorer", state: "WI"}`
+
+The model uses this to:
+- Default geography to the current page ("how does this compare to the state average?" → knows which county)
+- Suggest relevant questions in the empty state
+- Provide more specific refusals ("I don't have tract-level data for that indicator, but I can show you the county values")
+
+#### 4. Rich Responses
+
+Beyond plain text, the chat can render:
+
+- **Inline stat callouts:** Big number + label + direction arrow, matching the County Profile stat cards
+- **Mini bar charts:** 5-bar horizontal comparison (e.g., "top 5 counties by poverty rate")
+- **Comparison tables:** Side-by-side for two geographies
+- **Reliability badges:** Green/amber/red indicator next to values with low CV
+- **Trend sparklines:** When asking about vintage changes (future)
+
+These use the same Night Shift design tokens as the rest of the platform — the chat doesn't have its own visual language.
+
+#### 5. Action Triggers
+
+The model can suggest — and the chat UI can render — clickable actions:
+
+| User says | Chat responds with |
+|---|---|
+| "Generate a narrative for Dane County" | Button: "Open Five Mornings Narrative" → navigates to `#/narrative/:analysis_id` |
+| "Build a composite index from poverty and income" | Button: "Open Composite Builder" → navigates to `#/composite?vars=poverty_rate,median_household_income` |
+| "Compare Dane and Milwaukee" | Button: "Open Compare Tool" → navigates to `#/compare?geoid1=55025&geoid2=55079` |
+| "Show me on a map" | Button: "Open LISA Map" → navigates to `#/map?indicator=poverty_rate` |
+
+Actions are suggested by the model in the Compose stage, rendered as buttons in the chat UI, and trigger hash navigation. The grounding pipeline verifies that the action parameters match the data context.
+
+#### 6. Expanded Operation Schema
+
+Extend the 6 current operations (lookup, rank, compare, aggregate, threshold, representation) with:
+
+| Operation | Example | API call |
+|---|---|---|
+| `time_series` | "How has poverty changed since 2019?" | `GET /indicators?geoid=X&variable_id=Y&vintage=2019,2024` |
+| `distribution` | "What's the range of median incomes across WI tracts?" | `POST /query` with all tracts |
+| `correlation` | "Is poverty correlated with cost burden?" | `POST /composite` or compute client-side |
+| `explain` | "Why is this tract's poverty rate so high?" | Prose retrieval from methodology docs + factor scores + LISA cluster |
+| `what_if` | "What would the composite look like if I doubled the weight on income?" | `POST /composite` with custom weights |
+
+The `explain` operation is the key addition — it combines the numeric answer with definitional prose from the documentation corpus (ADR-006's "prose path"), factor profile interpretation, and LISA cluster context. "Why is tract 55025001700's poverty rate 35%?" → "This tract sits at the 92nd percentile for poverty statewide. It is classified as a High-High LISA cluster (concentrated disadvantage), meaning neighboring tracts also have elevated poverty. Its factor profile shows high loadings on Economic Distress and Housing Burden. [citation: ACS 2020-2024 5-Year, ICE score, LISA analysis]"
+
+#### 7. Methodology Transparency
+
+Every numeric answer includes a disclosure path:
+
+- **Source:** Which API endpoint produced this number
+- **Vintage:** ACS 2020-2024 5-Year (released Dec 2025)
+- **Reliability:** CV-based flag (high/moderate/low) for ACS-derived indicators
+- **Computation:** If derived (ICE, composite, percentile), show the formula on request
+- **Limitation:** If the indicator suppresses data for small populations, surface that
+
+The user can ask "how did you get that number?" and receive the full chain: indicator → API endpoint → source table → vintage → reliability → computation method.
+
+#### 8. Spanish Language Parity
+
+The Plan and Compose stages work in Spanish with the same verification pipeline. The data already carries Spanish labels (`labelEs`, `unitEs`, `descriptionEs`) in the Atlas bundle. The model receives bilingual system prompts and can switch languages mid-conversation.
+
+Spanish queries use the same Intent schema — the indicator IDs are language-neutral. The verify stage works identically (numbers have no language). The Compose stage generates Spanish prose from Spanish-labeled data.
+
+#### 9. Suggested Questions
+
+The empty chat state shows context-aware prompts instead of a blank input:
+
+- County Explorer: "Which county has the highest poverty rate?" "Show me counties above the state median income"
+- County Profile (Dane County): "How does Dane County compare to the state average?" "What are the biggest disparities within Dane County?" "Generate a Five Mornings narrative"
+- Compare (Dane vs. Milwaukee): "Which county has better health outcomes?" "Show me the biggest differences between these counties"
+- Map: "Where are the LISA High-High clusters?" "Which tracts are outliers?"
+- Evidence: "Which policies address housing affordability?" "Show me evidence for education equity policies"
+
+Suggestions change with the page context. Clicking one sends it as a message. The chat learns — after a user asks a novel question, that question type can appear in suggestions for other users (future: analytics-driven suggestion ranking).
+
+### Chat Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────┐
+│  USER MESSAGE                                     │
+│  "What's the poverty rate in Dane County?"         │
+└────────────────────┬─────────────────────────────┘
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  CONTEXT ASSEMBLY                                 │
+│  + page context (county profile, geoid=55025)     │
+│  + conversation history (last N exchanges)         │
+│  + available operations + indicator catalog        │
+└────────────────────┬─────────────────────────────┘
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  STAGE 1: PLAN (model)                            │
+│  Intent: {op: lookup, indicator: poverty_rate,    │
+│           place: "55025"}                          │
+│  Validate against closed schema → pass/fail        │
+└────────────────────┬─────────────────────────────┘
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  STAGE 2: EXECUTE (deterministic Go)               │
+│  GET /v1/policy/geographies/55025/indicators       │
+│       ?variable_id=poverty_rate                    │
+│  Result: {value: 10.3, vintage: ACS-2023-5yr,     │
+│           reliability: high, cv: 0.08}             │
+└────────────────────┬─────────────────────────────┘
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  STAGE 3: COMPOSE + VERIFY (model + Go)            │
+│  Model writes prose from result + Spanish labels   │
+│  Go extracts every number → checks against result  │
+│  Mismatch → refuse. Match → render.                │
+│  Add action buttons if applicable.                 │
+└────────────────────┬─────────────────────────────┘
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  RENDERED RESPONSE                                 │
+│  "Dane County's poverty rate is 10.3%              │
+│   (ACS 2023 5-Year, high reliability).             │
+│   [Stat callout: 10.3% poverty rate]               │
+│   [Button: Compare to state average ▸]             │
+│   [Button: See on LISA map ▸]"                    │
+└──────────────────────────────────────────────────┘
+```
+
+### Effort (added to frontend build)
+
+| Track | Deliverable | Effort |
+|---|---|---|
+| 7M | Live API backend for Execute stage (replace Atlas bundle) | 2h |
+| 7N | Multi-turn conversation + page context injection | 2h |
+| 7O | Rich response rendering (stat callouts, mini charts, tables) | 2h |
+| 7P | Action trigger system (nav + parameter passing) | 1h |
+| 7Q | Expanded operations (time_series, distribution, correlation, explain, what_if) | 3h |
+| 7R | Methodology transparency (source/vintage/reliability/computation chain) | 1h |
+| 7S | Spanish language parity in Plan + Compose stages | 2h |
+| 7T | Suggested questions engine (context-aware, page-specific) | 1h |
+| **Chat subtotal** | | **14h** |
+
+### Chat Consequences
+
+- **Positive:** The chat becomes the platform's intelligent interface — not a toy bolted on, but the primary way many users will interact with the data. Every page gains an assistant that knows where you are and what you can ask.
+- **Positive:** Spanish parity makes the platform accessible to the communities the data describes. The bilingual labels already exist in the data; the chat is the last piece.
+- **Positive:** Action triggers bridge chat to navigation — the chat doesn't just answer questions, it moves you through the platform. A user who starts in chat can end up on the LISA map, the Composite Builder, or the Narrative Reader without knowing those pages exist.
+- **Negative:** The expanded operation schema (time_series, correlation, what_if) requires new API endpoints or client-side computation. Some operations may be deferred to a second chat wave.
+- **Negative:** The model must now handle more context (page state, conversation history, expanded schema), which increases token usage. Mitigated by keeping the intent schema compact and the conversation window bounded (last 6 exchanges).
 
 ## Consequences
 
