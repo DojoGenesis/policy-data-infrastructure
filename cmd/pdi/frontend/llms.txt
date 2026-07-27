@@ -1,0 +1,22 @@
+# casa-datos
+
+> The TresPies parametric data-viz stack: hand-rolled chart, small-multiples, and choropleth SVG primitives, the house 8-color categorical scale, and a single-file data tool. Zero dependencies, zero build step. All sample data on this site is synthetic — none of it describes a real client, program, or place.
+
+## Docs
+
+- [casa-datos](https://example.com/casa-datos/): the example site — all four primitives shown live, with a seed control that regenerates the synthetic sample dataset reproducibly.
+- [Data tool](https://example.com/casa-datos/tool.html): a single self-contained HTML file — paste a small label,value dataset, get a bar chart back, no other file required.
+- [DATAVIZ-RULES.md](https://example.com/casa-datos/DATAVIZ-RULES.md): the house data-viz rules — the categorical scale, color-vision accessibility, axis legibility, the accessible-table requirement, and honest-scale rules.
+
+## Machine-readable
+
+- [site-manifest.json](https://example.com/casa-datos/site-manifest.json): structured index of this site's sections and items — the same data the page's own script renders from.
+
+## Español
+
+- [casa-datos (español)](https://example.com/casa-datos/es/): la página de ejemplo, en español.
+- [Herramienta de datos (español)](https://example.com/casa-datos/es/tool.html): la herramienta de un solo archivo, en español.
+
+## Optional
+
+- [README.md](https://example.com/casa-datos/README.md): what this stack is, when to reach for it instead of a sibling stack, and how to copy it and start.

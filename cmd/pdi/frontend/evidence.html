@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evidence Card Gallery — PDI</title>
+<meta name="description" content="Evidence Card Gallery — 70 policy evidence cards with indicators, county-level variation, and key findings from the Policy Data Infrastructure platform.">
+
+<!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
+<link rel="stylesheet" href="/static/tokens.css">
+
+<!-- PDI layout layer — cards, tables, badges, nav -->
+<link rel="stylesheet" href="/static/styles.css">
+
+<!-- Alpine.js — local, no CDN -->
+<script defer src="/static/alpine.min.js"></script>
+
+<style>
+  [x-cloak] { display: none !important; }
+
+  /* ── Evidence page-specific ──────────────────────────────────── */
+  :root {
+    --evidence-gap: clamp(14px, 2vw, 20px);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────── */
+  .hero {
+    margin-bottom: clamp(20px, 3vw, 32px);
+  }
+
+  .hero h1 {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+
+  .hero-subtitle {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .hero-count {
+    font-size: 0.75rem;
+    color: var(--subtle);
+    margin-top: 4px;
+  }
+
+  /* ── Back link ──────────────────────────────────────────────── */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    margin-bottom: clamp(16px, 2.5vw, 24px);
+    transition: color 160ms ease;
+  }
+  .back-link:hover { color: var(--text); text-decoration: none; }
+  .back-link svg { width: 14px; height: 14px; }
+
+  /* ── Filter bar ─────────────────────────────────────────────── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(10px, 2vw, 16px);
+    margin-bottom: var(--evidence-gap);
+    align-items: center;
+  }
+
+  .filter-search {
+    flex: 1 1 260px;
+    max-width: 380px;
+    min-width: 200px;
+  }
+
+  .filter-select {
+    flex: 0 0 auto;
+    min-width: 200px;
+  }
+
+  .filter-select select {
+    padding: 0.55em 2.4em 0.55em 0.85em;
+    font-size: 0.8rem;
+  }
+
+  /* ── Category chips row ─────────────────────────────────────── */
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: var(--evidence-gap);
+  }
+
+  .chip-row .filter-chip {
+    font-size: 0.7rem;
+    padding: 0.25em 0.75em;
+  }
+
+  /* ── Card result count ──────────────────────────────────────── */
+  .results-info {
+    font-size: 0.75rem;
+    color: var(--subtle);
+    margin-bottom: clamp(12px, 2vw, 18px);
+  }
+
+  .results-info strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ── Evidence card in the grid ──────────────────────────────── */
+  .evidence-card {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.5vw, 14px);
+    position: relative;
+  }
+
+  .evidence-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .evidence-card-id {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .evidence-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+    margin: 0;
+    flex: 1;
+  }
+
+  .evidence-card-finding {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .evidence-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .evidence-card-meta .badge {
+    font-size: 0.62rem;
+    padding: 0.15em 0.55em;
+  }
+
+  .evidence-card .indicator-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .indicator-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 0.2em 0.6em;
+    border-radius: var(--r-badge);
+    background: var(--plane-1);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .indicator-chip-val {
+    font-family: var(--font-mono);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Expand icon ────────────────────────────────────────────── */
+  .expand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--plane-1);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.7rem;
+    transition: transform 200ms ease, background-color 160ms ease, color 160ms ease;
+    flex-shrink: 0;
+  }
+
+  .evidence-card.expanded .expand-icon {
+    transform: rotate(180deg);
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  .evidence-card:hover .expand-icon {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+
+  /* ── Expanded card detail ───────────────────────────────────── */
+  .expand-detail {
+    display: none;
+    padding-top: clamp(12px, 2vw, 18px);
+    border-top: 1px solid var(--border);
+    animation: detail-enter 200ms ease;
+  }
+
+  .evidence-card.expanded .expand-detail {
+    display: block;
+  }
+
+  @keyframes detail-enter {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .detail-section {
+    margin-bottom: clamp(14px, 2vw, 20px);
+  }
+
+  .detail-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-heading {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.6em;
+  }
+
+  .detail-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+    gap: 8px;
+  }
+
+  .detail-stat {
+    background: var(--plane-1);
+    border-radius: var(--r-badge);
+    padding: 0.5em 0.75em;
+    text-align: center;
+  }
+
+  .detail-stat-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .detail-stat-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle);
+    margin-top: 0.15em;
+  }
+
+  /* ── County mini-table in expanded view ─────────────────────── */
+  .county-mini-table {
+    width: 100%;
+    font-size: 0.72rem;
+    border-collapse: collapse;
+  }
+
+  .county-mini-table th {
+    text-align: left;
+    padding: 0.4em 0.6em;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle);
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .county-mini-table td {
+    padding: 0.35em 0.6em;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .county-mini-table .county-geoid {
+    font-family: var(--font-mono);
+    color: var(--subtle);
+    font-size: 0.62rem;
+  }
+
+  .county-mini-table .county-val {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .county-mini-table .county-need-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .county-need-high {
+    color: var(--gated);
+  }
+
+  .county-need-low {
+    color: var(--live);
+  }
+
+  /* ── Key finding block ──────────────────────────────────────── */
+  .key-finding-block {
+    background: var(--plane-1);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-badge);
+    padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 18px);
+    font-size: 0.82rem;
+    color: var(--text);
+    line-height: 1.55;
+    margin-bottom: clamp(14px, 2vw, 20px);
+  }
+
+  /* ── Methodology / citations ────────────────────────────────── */
+  .methodology-note {
+    font-size: 0.72rem;
+    color: var(--subtle);
+    line-height: 1.5;
+    padding: 0.75em 1em;
+    background: var(--plane-base);
+    border-radius: var(--r-badge);
+    border: 1px solid var(--border);
+  }
+
+  .methodology-note strong {
+    color: var(--muted);
+  }
+
+  /* ── Skeleton grid ──────────────────────────────────────────── */
+  .skeleton-evidence-card {
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .skeleton-evidence-card .skeleton-line {
+    height: 0.8em;
+    border-radius: 4px;
+  }
+
+  .skeleton-evidence-card .skeleton-line:first-child {
+    width: 30%;
+    height: 0.65em;
+    margin-bottom: 2px;
+  }
+
+  .skeleton-evidence-card .skeleton-line:nth-child(2) {
+    width: 85%;
+    height: 1em;
+    margin-bottom: 4px;
+  }
+
+  .skeleton-evidence-card .skeleton-line:nth-child(3) {
+    width: 95%;
+    height: 0.75em;
+  }
+
+  .skeleton-evidence-card .skeleton-line:nth-child(4) {
+    width: 70%;
+    height: 0.75em;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: clamp(32px, 5vw, 56px);
+    padding: clamp(16px, 2.5vw, 24px) 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--subtle);
+  }
+
+  .site-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-search {
+      max-width: none;
+    }
+
+    .filter-select {
+      min-width: auto;
+    }
+
+    .filter-select select {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .detail-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Data Explorer
+    </a>
+
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/">Counties</a>
+      <a href="/compare">Compare</a>
+      <a href="/evidence" aria-current="page">Evidence</a>
+      <a href="/candidates">Candidates</a>
+      <a href="/map">Map</a>
+      <a href="/about">About</a>
+    </nav>
+
+    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
+<main class="wrap" x-data="evidenceGallery()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+
+  <!-- ── Back link ─────────────────────────────────────────────── -->
+  <a href="/" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Back to County Explorer
+  </a>
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <div class="hero">
+    <h1>Evidence Card Gallery</h1>
+    <p class="hero-subtitle">
+      70 policy evidence cards · <span x-text="allCards.length"></span> cards loaded
+    </p>
+    <p class="hero-count">
+      Explore data-backed policy positions with linked indicators, county-level variation, and key findings.
+    </p>
+  </div>
+
+  <!-- ── Filter bar ───────────────────────────────────────────── -->
+  <div class="filter-bar">
+    <div class="filter-search">
+      <input
+        type="search"
+        x-model="searchQuery"
+        placeholder="Search by policy title, finding, or indicator…"
+        aria-label="Search evidence cards"
+      >
+    </div>
+    <div class="filter-select">
+      <select x-model="equityFilter" aria-label="Filter by equity dimension">
+        <option value="">All equity dimensions</option>
+        <template x-for="dim in equityDimensions" :key="dim">
+          <option :value="dim" x-text="fmtLabel(dim)"></option>
+        </template>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Category chips ───────────────────────────────────────── -->
+  <div class="chip-row">
+    <button
+      class="filter-chip"
+      :class="{ active: categoryFilter === '' }"
+      @click="categoryFilter = ''"
+    >All categories</button>
+    <template x-for="cat in categories" :key="cat">
+      <button
+        class="filter-chip"
+        :class="{ active: categoryFilter === cat }"
+        @click="categoryFilter = (categoryFilter === cat ? '' : cat)"
+        x-text="cat"
+      ></button>
+    </template>
+  </div>
+
+  <!-- ── Results info ─────────────────────────────────────────── -->
+  <div class="results-info" x-show="!cardsLoading && !cardsError">
+    Showing <strong x-text="filteredCards.length"></strong> of <strong x-text="allCards.length"></strong> evidence cards
+    <span x-show="searchQuery || categoryFilter || equityFilter">(filtered)</span>
+  </div>
+
+  <!-- ── Skeleton loading ─────────────────────────────────────── -->
+  <div x-show="cardsLoading" x-cloak>
+    <div class="card-grid" aria-hidden="true">
+      <template x-for="i in 6" :key="i">
+        <div class="card skeleton skeleton-card skeleton-evidence-card">
+          <div class="skeleton-line skeleton"></div>
+          <div class="skeleton-line skeleton"></div>
+          <div class="skeleton-line skeleton"></div>
+          <div class="skeleton-line skeleton"></div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Error state ──────────────────────────────────────────── -->
+  <div x-show="cardsError" x-cloak class="state-error">
+    <span x-text="cardsError"></span>
+    <button class="btn btn-ghost" @click="loadCards()" style="margin-left:1em">Retry</button>
+  </div>
+
+  <!-- ── Card grid ────────────────────────────────────────────── -->
+  <div x-show="!cardsLoading && !cardsError && filteredCards.length > 0" x-cloak>
+    <div class="card-grid">
+      <template x-for="(card, idx) in filteredCards" :key="card.policy_id">
+        <div
+          class="card card-hover evidence-card"
+          :class="{ expanded: expandedCard === card.policy_id }"
+          @click="toggleCard(card.policy_id, $event)"
+        >
+
+          <!-- ── Card header ──────────────────────────────────── -->
+          <div class="evidence-card-header">
+            <span class="evidence-card-id" x-text="card.policy_id"></span>
+            <h3 class="evidence-card-title" x-text="card.policy_title"></h3>
+            <span class="expand-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
+          </div>
+
+          <!-- ── Key finding (collapsed summary) ──────────────── -->
+          <p class="evidence-card-finding" x-text="card.key_finding"></p>
+
+          <!-- ── Indicator chips ──────────────────────────────── -->
+          <div class="indicator-chips">
+            <template x-for="(stats, indicator) in card.statewide_context" :key="indicator">
+              <span class="indicator-chip">
+                <span x-text="fmtLabel(indicator)"></span>
+                <span class="indicator-chip-val" x-text="fmtNum(stats.mean)"></span>
+              </span>
+            </template>
+          </div>
+
+          <!-- ── Meta badges ──────────────────────────────────── -->
+          <div class="evidence-card-meta">
+            <span class="badge badge-info" x-text="card.category"></span>
+            <span class="badge" :class="'badge-' + card.data_quality" x-text="card.data_quality"></span>
+          </div>
+
+          <!-- ── Expanded detail ──────────────────────────────── -->
+          <div class="expand-detail" @click.stop>
+
+            <!-- Key finding -->
+            <div class="key-finding-block" x-text="card.key_finding"></div>
+
+            <!-- Statewide context -->
+            <div class="detail-section" x-show="Object.keys(card.statewide_context || {}).length">
+              <div class="detail-heading">Statewide Indicator Values</div>
+              <div class="detail-stats">
+                <template x-for="(stats, indicator) in card.statewide_context" :key="indicator">
+                  <div class="detail-stat">
+                    <div class="detail-stat-val" x-text="fmtNum(stats.mean)"></div>
+                    <div class="detail-stat-label" x-text="'Mean ' + fmtLabel(indicator)"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- County variation -->
+            <div class="detail-section" x-show="Object.keys(card.county_variation || {}).length">
+              <div class="detail-heading">County-Level Variation</div>
+              <div class="detail-stats">
+                <template x-for="(v, indicator) in card.county_variation" :key="indicator">
+                  <div class="detail-stat">
+                    <div class="detail-stat-val" x-text="fmtNum(v.range)"></div>
+                    <div class="detail-stat-label">Range</div>
+                  </div>
+                </template>
+                <template x-for="(v, indicator) in card.county_variation" :key="'std-'+indicator">
+                  <div class="detail-stat">
+                    <div class="detail-stat-val" x-text="fmtNum(v.std)"></div>
+                    <div class="detail-stat-label">Std Dev</div>
+                  </div>
+                </template>
+                <template x-for="(v, indicator) in card.county_variation" :key="'count-'+indicator">
+                  <div class="detail-stat">
+                    <div class="detail-stat-val" x-text="v.counties_with_data"></div>
+                    <div class="detail-stat-label">Counties</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Top need counties -->
+            <div class="detail-section" x-show="card.top_need_counties && card.top_need_counties.length">
+              <div class="detail-heading">Counties With Highest Need</div>
+              <div class="table-wrapper" style="overflow-x:auto;">
+                <table class="county-mini-table">
+                  <thead>
+                    <tr>
+                      <th>County</th>
+                      <th>GEOID</th>
+                      <th class="county-val">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="c in card.top_need_counties" :key="c.geoid">
+                      <tr>
+                        <td x-text="c.county_name"></td>
+                        <td class="county-geoid" x-text="c.geoid"></td>
+                        <td class="county-val" x-text="fmtNum(c.display_value)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Bottom need counties -->
+            <div class="detail-section" x-show="card.bottom_need_counties && card.bottom_need_counties.length">
+              <div class="detail-heading">Counties With Lowest Need</div>
+              <div class="table-wrapper" style="overflow-x:auto;">
+                <table class="county-mini-table">
+                  <thead>
+                    <tr>
+                      <th>County</th>
+                      <th>GEOID</th>
+                      <th class="county-val">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="c in card.bottom_need_counties" :key="c.geoid">
+                      <tr>
+                        <td x-text="c.county_name"></td>
+                        <td class="county-geoid" x-text="c.geoid"></td>
+                        <td class="county-val" x-text="fmtNum(c.display_value)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Methodology note -->
+            <div class="detail-section">
+              <div class="detail-heading">Methodology &amp; Citations</div>
+              <div class="methodology-note">
+                <strong>Data source:</strong> PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.<br>
+                <strong>Methodology:</strong> County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).<br>
+                <strong>Data quality:</strong>
+                <span x-text="card.data_quality"></span> —
+                <template x-if="card.data_quality === 'strong'">
+                  <span>High-confidence indicators with CV &lt; 15% and full county coverage.</span>
+                </template>
+                <template x-if="card.data_quality === 'moderate'">
+                  <span>Moderate confidence; some indicators have CV 15–30% or partial county coverage.</span>
+                </template>
+                <template x-if="card.data_quality === 'low'">
+                  <span>Limited data availability; use as suggestive evidence only.</span>
+                </template>
+                <br>
+                <strong>Policy ID:</strong> <span x-text="card.policy_id"></span> ·
+                <strong>Equity dimension:</strong> <span x-text="fmtLabel(card.equity_dimension)"></span>
+              </div>
+            </div>
+
+          </div><!-- /expand-detail -->
+        </div>
+      </template>
+    </div><!-- /card-grid -->
+  </div>
+
+  <!-- ── Empty state ──────────────────────────────────────────── -->
+  <div
+    x-show="!cardsLoading && !cardsError && filteredCards.length === 0"
+    x-cloak
+    class="state-empty"
+  >
+    <p>No evidence cards match your filters.</p>
+    <p style="font-size:0.82rem;margin-top:0.5em;">
+      <button class="btn btn-ghost" @click="clearFilters()">Clear all filters</button>
+    </p>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
+<!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<script>
+function evidenceGallery() {
+  return {
+    allCards: [],
+    cardsLoading: false,
+    cardsError: '',
+    searchQuery: '',
+    categoryFilter: '',
+    equityFilter: '',
+    expandedCard: null,
+
+    /* ── Derived ──────────────────────────────────────────────── */
+    get categories() {
+      const cats = new Set();
+      this.allCards.forEach(c => { if (c.category) cats.add(c.category); });
+      return Array.from(cats).sort();
+    },
+
+    get equityDimensions() {
+      const dims = new Set();
+      this.allCards.forEach(c => { if (c.equity_dimension) dims.add(c.equity_dimension); });
+      return Array.from(dims).sort();
+    },
+
+    get filteredCards() {
+      let cards = this.allCards;
+
+      if (this.categoryFilter) {
+        cards = cards.filter(c => c.category === this.categoryFilter);
+      }
+
+      if (this.equityFilter) {
+        cards = cards.filter(c => c.equity_dimension === this.equityFilter);
+      }
+
+      if (this.searchQuery.trim()) {
+        const q = this.searchQuery.toLowerCase();
+        cards = cards.filter(c => {
+          if (c.policy_title.toLowerCase().includes(q)) return true;
+          if (c.key_finding.toLowerCase().includes(q)) return true;
+          if (c.policy_id.toLowerCase().includes(q)) return true;
+          if (c.category.toLowerCase().includes(q)) return true;
+          if (c.equity_dimension.toLowerCase().includes(q)) return true;
+          // Search indicator names
+          for (const ind of Object.keys(c.statewide_context || {})) {
+            if (fmtLabel(ind).toLowerCase().includes(q)) return true;
+          }
+          return false;
+        });
+      }
+
+      return cards;
+    },
+
+    /* ── Init ─────────────────────────────────────────────────── */
+    init() {
+      this.loadCards();
+    },
+
+    /* ── Data loading ─────────────────────────────────────────── */
+    async loadCards() {
+      this.cardsLoading = true;
+      this.cardsError = '';
+      try {
+        const resp = await fetch('/static/evidence_cards.json');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+        const data = await resp.json();
+        this.allCards = data || [];
+      } catch (e) {
+        this.cardsError = `Failed to load evidence cards: ${e.message}`;
+      } finally {
+        this.cardsLoading = false;
+      }
+    },
+
+    /* ── Card expansion ───────────────────────────────────────── */
+    toggleCard(policyId, event) {
+      // Don't toggle if clicking inside the expanded detail (allow text selection)
+      if (event && event.target.closest('.expand-detail')) return;
+      this.expandedCard = (this.expandedCard === policyId) ? null : policyId;
+    },
+
+    /* ── Filters ──────────────────────────────────────────────── */
+    clearFilters() {
+      this.searchQuery = '';
+      this.categoryFilter = '';
+      this.equityFilter = '';
+    }
+  };
+}
+
+/* ── Shared formatters ─────────────────────────────────────────── */
+function fmtLabel(s) {
+  if (!s) return '';
+  return s.replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase())
+          .replace(/Pct /g, '% ')
+          .replace(/Hh /g, 'HH ');
+}
+
+function fmtNum(n) {
+  if (n == null) return '\u2014';
+  if (typeof n === 'number') {
+    // Format with appropriate precision
+    if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (Math.abs(n) >= 1000) {
+      // Check if it's a dollar amount or population-like
+      if (n > 10000) return (n / 1000).toFixed(1) + 'K';
+      return n.toLocaleString();
+    }
+    if (Math.abs(n) < 1) return n.toFixed(3);
+    if (Number.isInteger(n)) return n.toLocaleString();
+    return n.toFixed(1);
+  }
+  return String(n);
+}
+</script>
+
+</body>
+</html>
