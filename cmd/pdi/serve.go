@@ -166,14 +166,12 @@ func runServe(port int) error {
 		{"/composite", "composites.html"},
 		{"/chat", "chat.html"},
 	}
-		for _, p := range htmlPages {
-			p := p // capture by value for closure
-			html, err := fs.ReadFile(feFS, p.file)
-			if err != nil {
-				fmt.Printf("  frontend: skipping %s → %s: %v\n", p.route, p.file, err)
-				continue // file not yet built; skip route
-			}
-			fmt.Printf("  frontend: %s → %s (%d bytes)\n", p.route, p.file, len(html))
+	for _, p := range htmlPages {
+		p := p // capture by value for closure
+		html, err := fs.ReadFile(feFS, p.file)
+		if err != nil {
+			continue // file not yet built; skip route
+		}
 		r.GET(p.route, func(c *gin.Context) {
 			c.Data(http.StatusOK, "text/html; charset=utf-8", html)
 		})
@@ -219,4 +217,3 @@ func runServe(port int) error {
 	}
 	return nil
 }
-
