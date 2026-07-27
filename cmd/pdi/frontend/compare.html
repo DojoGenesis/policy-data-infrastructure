@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Compare Counties — Policy Data Infrastructure</title>
-<meta name="description" content="Side-by-side county comparison tool — compare indicators across Wisconsin counties with delta highlighting, bar charts, and statistical summaries.">
-
-<!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare Counties — PDI</title>
+<meta name="description" content="Side-by-side county comparison — compare indicators across Wisconsin counties with delta highlighting and statistical summaries.">
 <link rel="stylesheet" href="/static/tokens.css">
-
-<!-- PDI layout layer — cards, tables, badges, nav -->
+<link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
-
-<!-- Alpine.js — local, no CDN -->
 <script defer src="/static/alpine.min.js"></script>
-
 <style>
   [x-cloak] { display: none !important; }
 
-  /* ── Compare page layout ──────────────────────────────────── */
+  /* ── Page hero ───────────────────────────────────────────── */
   .compare-hero {
     margin-bottom: clamp(20px, 3vw, 32px);
   }
@@ -180,7 +179,7 @@
     gap: 8px;
   }
 
-  /* ── Spinner ──────────────────────────────────────────────── */
+  /* ── Spinner ─────────────────────────────────────────────── */
   .selector-spinner {
     display: inline-block;
     width: 14px;
@@ -220,23 +219,18 @@
     color: var(--muted);
   }
 
-  /* ── Geo summary cards ────────────────────────────────────── */
+  /* ── Geo summary cards (extend .card) ──────────────────────── */
+  .geo-summary-card.card-a {
+    border-top: 2px solid var(--accent);
+  }
+  .geo-summary-card.card-b {
+    border-top: 2px solid var(--info);
+  }
   .geo-summary-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: clamp(12px, 2vw, 20px);
     margin-bottom: clamp(20px, 3vw, 32px);
-  }
-  .geo-summary-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--accent);
-    border-radius: var(--r-card);
-    padding: clamp(14px, 2vw, 20px);
-    transition: border-top-color 300ms ease;
-  }
-  .geo-summary-card.card-b {
-    border-top-color: var(--info);
   }
   .geo-summary-name {
     font-size: 1.1rem;
@@ -268,142 +262,12 @@
     color: var(--text);
   }
 
-  /* ── Statistical summary card ─────────────────────────────── */
-  .stats-summary {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--live);
-    border-radius: var(--r-card);
-    padding: clamp(16px, 2.5vw, 24px);
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .stats-summary-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 clamp(8px, 1.5vw, 14px) 0;
-  }
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: clamp(10px, 1.5vw, 16px);
-  }
-  .stats-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .stats-item-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--subtle);
-  }
-  .stats-item-value {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .stats-item-value.lead {
-    color: var(--live);
-  }
-  .stats-item-value.gap {
-    color: var(--gated);
-  }
-
-  /* ── ICE comparison card ──────────────────────────────────── */
-  .ice-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--info);
-    border-radius: var(--r-card);
-    padding: clamp(16px, 2.5vw, 24px);
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .ice-card-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 clamp(8px, 1.5vw, 14px) 0;
-  }
-  .ice-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-  }
-  .ice-bar-wrap {
-    flex: 1;
-    height: 10px;
-    background: color-mix(in srgb, var(--text) 8%, transparent);
-    border-radius: 999px;
-    overflow: hidden;
-    min-width: 80px;
-  }
-  .ice-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 500ms ease;
-  }
-  .ice-bar-fill--a {
-    background: var(--accent);
-  }
-  .ice-bar-fill--b {
-    background: var(--info);
-  }
-  .ice-value {
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 0.8rem;
-    min-width: 60px;
-    text-align: right;
-  }
-
-  /* ── Category filter tabs ─────────────────────────────────── */
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: clamp(8px, 1.5vw, 16px);
-    margin-bottom: clamp(12px, 2vw, 20px);
-  }
-  .cat-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .cat-tab {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35em 0.85em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    border-radius: var(--r-chip);
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
-    white-space: nowrap;
-  }
-  .cat-tab:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
-  .cat-tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
-  }
-
-  /* ── Compare table ────────────────────────────────────────── */
+  /* ── Compare table (extends .data-table) ───────────────────── */
   .compare-table-wrap {
     overflow-x: auto;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-card);
-    background: var(--surface);
     margin-bottom: clamp(16px, 2.5vw, 24px);
   }
   .compare-table {
@@ -522,20 +386,9 @@
   .rel-badge-low { background: var(--gated); opacity: 0.5; }
   .rel-badge-unknown { background: var(--subtle); }
 
-  /* ── Delta bar chart ──────────────────────────────────────── */
-  .delta-chart-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    border-radius: var(--r-card);
-    padding: clamp(16px, 2.5vw, 24px);
+  /* ── Delta bar chart ───────────────────────────────────────── */
+  .delta-bar-card {
     margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .delta-chart-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 clamp(12px, 2vw, 20px) 0;
   }
   .delta-bar-row {
     display: flex;
@@ -592,21 +445,29 @@
     flex-shrink: 0;
   }
 
-  /* ── State messages ───────────────────────────────────────── */
+  /* ── Category filter tabs ──────────────────────────────────── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(8px, 1.5vw, 16px);
+    margin-bottom: clamp(12px, 2vw, 20px);
+  }
+
+  /* ── State messages ────────────────────────────────────────── */
   .state-no-indicators {
     padding: clamp(32px, 5vw, 56px) 0;
     text-align: center;
     color: var(--muted);
     font-size: 0.95rem;
   }
-
   .selector-error {
     font-size: 0.7rem;
     color: var(--gated);
     margin-top: 6px;
   }
 
-  /* ── Skeleton loading ─────────────────────────────────────── */
+  /* ── Skeleton loading ──────────────────────────────────────── */
   .skeleton-table {
     width: 100%;
     border-collapse: collapse;
@@ -626,7 +487,7 @@
     50% { opacity: 0.8; }
   }
 
-  /* ── Responsive ───────────────────────────────────────────── */
+  /* ── Responsive ────────────────────────────────────────────── */
   @media (max-width: 700px) {
     .selector-row {
       grid-template-columns: 1fr;
@@ -636,9 +497,6 @@
       padding-bottom: 4px;
     }
     .geo-summary-row {
-      grid-template-columns: 1fr;
-    }
-    .stats-grid {
       grid-template-columns: 1fr;
     }
     .filter-bar {
@@ -653,52 +511,45 @@
       max-width: 160px;
       font-size: 0.8rem;
     }
+    .stat-row {
+      grid-template-columns: 1fr 1fr;
+    }
   }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<!-- ══════════════════ HEADER ══════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
-    </a>
-
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="/">Counties</a>
+    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
+    <nav class="site-nav">
+      <a href="/">Explorer</a>
       <a href="/compare" aria-current="page">Compare</a>
-      <a href="/evidence">Evidence</a>
-      <a href="/candidates">Candidates</a>
       <a href="/map">Map</a>
+      <a href="/chat">Chat</a>
       <a href="/about">About</a>
     </nav>
-
-    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    </button>
   </div>
 </header>
 
-<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
+<!-- ══════════════════ MAIN ════════════════════ -->
 <main class="wrap" x-data="compareTool()" x-init="init()">
 
-  <!-- ── Back link ───────────────────────────────────────────── -->
+  <!-- ── Back link ──────────────────────────────── -->
   <a href="/" class="btn btn-ghost" style="margin-bottom:clamp(16px,2.5vw,24px);display:inline-flex;align-items:center;gap:6px;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
     Back to counties
   </a>
 
-  <!-- ── Hero ────────────────────────────────────────────────── -->
-  <div class="compare-hero">
+  <!-- ── Hero ──────────────────────────────────── -->
+  <div class="compare-hero reveal">
     <h1>County Comparison</h1>
     <p class="compare-hero-subtitle">Select two Wisconsin counties to compare indicators side by side</p>
   </div>
 
-  <!-- ═══════════════════ COUNTY SELECTORS ════════════════════ -->
-  <div class="selector-row">
+  <!-- ═════════════ SELECTORS ═════════════════════ -->
+  <div class="selector-row reveal">
     <!-- County A -->
     <div>
       <div class="selector-label">County A</div>
@@ -719,20 +570,16 @@
           @keydown.tab="dropdown1 = false"
         >
         <div x-show="dropdown1" x-cloak class="autocomplete-dropdown" @click.stop="">
-          <!-- Loading -->
           <div x-show="countyListLoading" class="autocomplete-loading">
             <span class="selector-spinner"></span> Loading counties…
           </div>
-          <!-- Error -->
           <div x-show="countyListError" class="autocomplete-empty" style="color:var(--gated);">
             <span x-text="countyListError"></span>
             <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.7rem;margin-top:4px;">Retry</button>
           </div>
-          <!-- No matches -->
           <div x-show="!countyListLoading && !countyListError && filteredCounties1.length === 0" class="autocomplete-empty">
             No counties match "<span x-text="search1"></span>"
           </div>
-          <!-- Results -->
           <template x-for="(c, idx) in filteredCounties1" :key="c.geoid">
             <div
               class="autocomplete-item"
@@ -747,7 +594,6 @@
           </template>
         </div>
       </div>
-      <!-- Selected county display -->
       <div x-show="selectedName1" x-cloak class="selected-county">
         <span class="selected-county-name" x-text="selectedName1"></span>
         <span class="selected-county-pop" x-show="selectedPop1" x-text="fmtNum(selectedPop1)"></span>
@@ -814,7 +660,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════ COMPARE BUTTON ═══════════════════════ -->
+  <!-- ═════════════ COMPARE BUTTON ════════════════ -->
   <div class="compare-action">
     <button
       class="btn btn-primary"
@@ -826,7 +672,7 @@
     <div x-show="compareError" x-cloak style="margin-top:10px;color:var(--gated);font-size:0.8rem;" x-text="compareError"></div>
   </div>
 
-  <!-- ═══════════════ SKELETON (initial load) ══════════════════ -->
+  <!-- ═════════════ SKELETON (initial load) ═══════ -->
   <div x-show="initialSkeleton" x-cloak>
     <div class="compare-table-wrap">
       <table class="skeleton-table">
@@ -846,18 +692,18 @@
     </div>
   </div>
 
-  <!-- ═══════════════════ COMPARE LOADING ═══════════════════════ -->
+  <!-- ═════════════ COMPARE LOADING ═══════════════ -->
   <div x-show="compareLoading" x-cloak class="loader" style="margin: clamp(40px, 5vw, 60px) 0;">
     <div class="loader-spinner"></div>
     <p style="margin-top:12px;color:var(--muted);font-size:0.85rem;">Comparing counties…</p>
   </div>
 
-  <!-- ═══════════════════ RESULTS ══════════════════════════════ -->
+  <!-- ═══════════════ RESULTS ════════════════════ -->
   <div x-show="compared && !compareError" x-cloak>
 
-    <!-- ── Geography summary cards ─────────────────────────────── -->
+    <!-- ── Geography summary cards ────────────────── -->
     <div class="geo-summary-row" x-show="geo1Name && geo2Name">
-      <div class="geo-summary-card">
+      <div class="card card-spectral geo-summary-card card-a">
         <div class="geo-summary-name" x-text="geo1Name"></div>
         <div class="geo-summary-meta" x-text="geoid1"></div>
         <div class="geo-summary-stat" x-show="geo1Pop">
@@ -869,7 +715,7 @@
           <span class="geo-summary-stat-value" x-text="geo1IndicatorCount"></span>
         </div>
       </div>
-      <div class="geo-summary-card card-b">
+      <div class="card card-spectral geo-summary-card card-b">
         <div class="geo-summary-name" x-text="geo2Name"></div>
         <div class="geo-summary-meta" x-text="geoid2"></div>
         <div class="geo-summary-stat" x-show="geo2Pop">
@@ -883,52 +729,39 @@
       </div>
     </div>
 
-    <!-- ── Statistical Summary Card ────────────────────────────── -->
-    <div class="stats-summary">
-      <h3 class="stats-summary-title">Statistical Summary</h3>
-      <div class="stats-grid">
-        <div class="stats-item">
-          <span class="stats-item-label">Leads</span>
-          <span class="stats-item-value lead" x-text="statsLead"></span>
+    <!-- ── Statistical Summary Card ────────────────── -->
+    <div class="card card-raised" style="margin-bottom:clamp(16px,2.5vw,24px);">
+      <h3 class="chart-card-title" style="margin-bottom:clamp(10px,1.5vw,16px);">Statistical Summary</h3>
+      <div class="stat-row">
+        <div class="stat-callout">
+          <span class="stat-value" x-text="leadACount"></span>
+          <span class="stat-label" x-text="geo1Name + ' leads in'"></span>
+          <span class="stat-delta stat-delta-up" x-show="leadACount > leadBCount"></span>
         </div>
-        <div class="stats-item">
-          <span class="stats-item-label">Biggest Gap</span>
-          <span class="stats-item-value gap" x-text="statsBiggestGap"></span>
+        <div class="stat-callout">
+          <span class="stat-value" x-text="leadBCount"></span>
+          <span class="stat-label" x-text="geo2Name + ' leads in'"></span>
+          <span class="stat-delta stat-delta-up" x-show="leadBCount > leadACount"></span>
         </div>
-        <div class="stats-item">
-          <span class="stats-item-label">Most Similar</span>
-          <span class="stats-item-value" x-text="statsMostSimilar"></span>
+        <div class="stat-callout">
+          <span class="stat-value" x-text="statsBiggestGapVal"></span>
+          <span class="stat-label">Biggest Gap</span>
+          <span class="stat-delta stat-delta-down" x-show="statsBiggestGapVal !== '—'"></span>
         </div>
-        <div class="stats-item">
-          <span class="stats-item-label">Comparable Indicators</span>
-          <span class="stats-item-value" x-text="mergedDiffs.length"></span>
+        <div class="stat-callout">
+          <span class="stat-value" x-text="mergedDiffs.length"></span>
+          <span class="stat-label">Comparable Indicators</span>
         </div>
+      </div>
+      <div style="margin-top:10px;font-size:0.78rem;color:var(--muted);">
+        <span x-text="statsLead"></span> ·
+        <span>Most similar: </span><span x-text="statsMostSimilar"></span>
       </div>
     </div>
 
-    <!-- ── ICE Comparison ──────────────────────────────────────── -->
-    <div class="ice-card" x-show="iceA != null && iceB != null">
-      <h3 class="ice-card-title">Index of Concentration at Extremes (ICE)</h3>
-      <div class="ice-row">
-        <span style="color:var(--accent);font-weight:600;" x-text="geo1Name"></span>
-        <div class="ice-bar-wrap">
-          <div class="ice-bar-fill ice-bar-fill--a" :style="'width:' + iceBarPctA + '%'"></div>
-        </div>
-        <span class="ice-value" x-text="fmtICE(iceA)"></span>
-      </div>
-      <div class="ice-row">
-        <span style="color:var(--info);font-weight:600;" x-text="geo2Name"></span>
-        <div class="ice-bar-wrap">
-          <div class="ice-bar-fill ice-bar-fill--b" :style="'width:' + iceBarPctB + '%'"></div>
-        </div>
-        <span class="ice-value" x-text="fmtICE(iceB)"></span>
-      </div>
-      <p style="font-size:0.7rem;color:var(--subtle);margin:8px 0 0 0;" x-show="iceNote" x-text="iceNote"></p>
-    </div>
-
-    <!-- ── Delta Bar Chart ─────────────────────────────────────── -->
-    <div class="delta-chart-card" x-show="topDeltas.length > 0">
-      <h3 class="delta-chart-title">Top 10 Largest Differences</h3>
+    <!-- ── Delta Bar Chart ─────────────────────────── -->
+    <div class="card card-spectral delta-bar-card" x-show="topDeltas.length > 0">
+      <h3 class="chart-card-title" style="margin-bottom:clamp(12px,2vw,20px);">Top 10 Largest Differences</h3>
       <template x-for="d in topDeltas" :key="d.variable_id">
         <div class="delta-bar-row">
           <div class="delta-bar-label" x-text="d.name" :title="d.name"></div>
@@ -944,7 +777,7 @@
       </template>
     </div>
 
-    <!-- ── Results header / count ─────────────────────────────── -->
+    <!-- ── Results header ──────────────────────────── -->
     <div class="results-header">
       <div>
         <h2 class="results-title">Indicator Comparison</h2>
@@ -952,7 +785,7 @@
       </div>
     </div>
 
-    <!-- ── Category tabs ───────────────────────────────────────── -->
+    <!-- ── Category tabs ───────────────────────────── -->
     <div class="filter-bar">
       <div class="cat-tabs">
         <button
@@ -971,7 +804,7 @@
       </div>
     </div>
 
-    <!-- ── Compare table ───────────────────────────────────────── -->
+    <!-- ── Compare table ───────────────────────────── -->
     <div class="compare-table-wrap" x-show="displayedDiffs.length > 0">
       <table class="compare-table">
         <thead>
@@ -980,10 +813,12 @@
               Indicator
               <span class="sort-arrow" x-show="sortCol === 'name'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }" x-text="geo1Name || 'County A'">
+            <th class="num-header" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }">
+              <span x-text="geo1Name || 'County A'"></span>
               <span class="sort-arrow" x-show="sortCol === 'val1'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('val2')" :class="{ sorted: sortCol === 'val2' }" x-text="geo2Name || 'County B'">
+            <th class="num-header" @click="sortByCol('val2')" :class="{ sorted: sortCol === 'val2' }">
+              <span x-text="geo2Name || 'County B'"></span>
               <span class="sort-arrow" x-show="sortCol === 'val2'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
             <th class="num-header" @click="sortByCol('delta')" :class="{ sorted: sortCol === 'delta' }">
@@ -1023,7 +858,7 @@
       </table>
     </div>
 
-    <!-- ── Empty filtered state ───────────────────────────────── -->
+    <!-- ── Empty states ────────────────────────────── -->
     <div
       x-show="displayedDiffs.length === 0 && mergedDiffs.length > 0"
       x-cloak
@@ -1032,7 +867,6 @@
       <p>No indicators in category &ldquo;<span x-text="activeCategory"></span>&rdquo;.</p>
     </div>
 
-    <!-- ── No indicators at all ───────────────────────────────── -->
     <div
       x-show="mergedDiffs.length === 0"
       x-cloak
@@ -1041,7 +875,6 @@
       <p>No indicator data available for this comparison.</p>
     </div>
 
-    <!-- ── Empty state ────────────────────────────────────────── -->
     <div
       x-show="!compared && !initialSkeleton"
       x-cloak
@@ -1054,23 +887,16 @@
 
 </main>
 
-<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
-<footer class="site-footer">
-  Policy Data Infrastructure ·
-  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
-  · Apache-2.0
-</footer>
-
-<!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<!-- ═══════════════ APP LOGIC ════════════════════ -->
 <script>
 function compareTool() {
   return {
-    // ── County list ───────────────────────────────────────────
+    // ── County list ──────────────────────────────────────
     countyList: [],
     countyListLoading: false,
     countyListError: '',
 
-    // ── Selector A state ─────────────────────────────────────
+    // ── Selector A state ─────────────────────────────────
     geoid1: '',
     search1: '',
     selectedName1: '',
@@ -1079,7 +905,7 @@ function compareTool() {
     highlightA: -1,
     countyError1: '',
 
-    // ── Selector B state ─────────────────────────────────────
+    // ── Selector B state ─────────────────────────────────
     geoid2: '',
     search2: '',
     selectedName2: '',
@@ -1088,22 +914,22 @@ function compareTool() {
     highlightB: -1,
     countyError2: '',
 
-    // ── Variable catalog ─────────────────────────────────────
+    // ── Variable catalog ─────────────────────────────────
     variablesMap: {},  // variable_id → {name, unit, direction, category}
 
-    // ── Compare results ──────────────────────────────────────
+    // ── Compare results ──────────────────────────────────
     result: null,
     compareLoading: false,
     compareError: '',
     compared: false,
     initialSkeleton: true,
 
-    // ── Filtering / sorting ──────────────────────────────────
+    // ── Filtering / sorting ──────────────────────────────
     activeCategory: 'all',
     sortCol: 'delta',
     sortAsc: false,
 
-    // ═══════════════ COMPUTED ═══════════════════════════════
+    // ═══════════════ COMPUTED ═══════════════════════════
 
     get filteredCounties1() {
       const q = this.search1.toLowerCase().trim();
@@ -1147,13 +973,12 @@ function compareTool() {
       return this.result?.geography2?.indicators?.length || 0;
     },
 
-    // Merge differences with indicator metadata from embedded indicators + variables
+    // Merge differences with indicator metadata
     get mergedDiffs() {
       const diffs = this.result?.differences || [];
       const inds1 = this.result?.geography1?.indicators || [];
       const inds2 = this.result?.geography2?.indicators || [];
 
-      // Build lookup maps from embedded indicators
       const map1 = {};
       const map2 = {};
       for (const ind of inds1) { map1[ind.variable_id] = ind; }
@@ -1164,14 +989,12 @@ function compareTool() {
         const i2 = map2[d.variable_id];
         const vmeta = this.variablesMap[d.variable_id] || {};
 
-        // Name priority: embedded indicator > variables endpoint > sanitized id
         const name = i1?.name || i2?.name || vmeta.name || null;
         const unit = i1?.unit || i2?.unit || vmeta.unit || null;
         const direction = i1?.direction || i2?.direction || vmeta.direction || null;
         const reliability1 = i1?.reliability || null;
         const reliability2 = i2?.reliability || null;
 
-        // Category: from variable metadata category field or infer from name
         let category = vmeta.category || null;
         if (!category) {
           category = this.inferCategory(d.variable_id, name);
@@ -1189,7 +1012,6 @@ function compareTool() {
       });
     },
 
-    // Categories from merged diffs
     get categories() {
       const cats = new Set();
       for (const d of this.mergedDiffs) {
@@ -1198,16 +1020,13 @@ function compareTool() {
       return Array.from(cats).sort();
     },
 
-    // Filtered + sorted diffs
     get displayedDiffs() {
       let items = this.mergedDiffs;
 
-      // Category filter
       if (this.activeCategory !== 'all') {
         items = items.filter(d => d.category === this.activeCategory);
       }
 
-      // Sort
       const asc = this.sortAsc;
       items = [...items].sort((a, b) => {
         let va, vb;
@@ -1239,7 +1058,6 @@ function compareTool() {
       return items;
     },
 
-    // Top 10 deltas for bar chart
     get topDeltas() {
       const items = [...this.mergedDiffs]
         .filter(d => d.diff != null)
@@ -1251,10 +1069,6 @@ function compareTool() {
       return items.map(d => {
         const absDiff = Math.abs(d.diff);
         const pct = maxAbs > 0 ? (absDiff / maxAbs) * 100 : 0;
-        // Determine which county "wins" based on direction
-        // diff = value2 - value1
-        // higher_is_better: A better when diff < 0
-        // lower_is_better:  A better when diff > 0
         let directionClass = 'a-better';
         if (d.direction === 'higher_is_better') {
           directionClass = d.diff < 0 ? 'a-better' : 'b-better';
@@ -1270,21 +1084,51 @@ function compareTool() {
       });
     },
 
-    // Statistical summary
-    get statsLead() {
+    // ── Statistical summary ────────────────────────────
+
+    get leadACount() {
       const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
-      if (diffs.length === 0) return '—';
       let aBetter = 0;
       for (const d of diffs) {
         if (this.deltaClass(d) === 'delta-green') aBetter++;
       }
-      const total = diffs.length;
-      if (aBetter > total - aBetter) {
-        return this.geo1Name + ' leads in ' + aBetter + ' of ' + total + ' indicators';
-      } else if (aBetter < total - aBetter) {
-        return this.geo2Name + ' leads in ' + (total - aBetter) + ' of ' + total + ' indicators';
+      return aBetter;
+    },
+
+    get leadBCount() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
+      let bBetter = 0;
+      for (const d of diffs) {
+        if (this.deltaClass(d) === 'delta-red') bBetter++;
       }
-      return 'Tied across ' + total + ' indicators';
+      return bBetter;
+    },
+
+    get statsLead() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
+      if (diffs.length === 0) return '—';
+      let aBetter = 0;
+      let bBetter = 0;
+      for (const d of diffs) {
+        if (this.deltaClass(d) === 'delta-green') aBetter++;
+        else if (this.deltaClass(d) === 'delta-red') bBetter++;
+      }
+      if (aBetter > bBetter) {
+        return this.geo1Name + ' leads in ' + aBetter + ' of ' + (aBetter + bBetter) + ' directional indicators';
+      } else if (bBetter > aBetter) {
+        return this.geo2Name + ' leads in ' + bBetter + ' of ' + (aBetter + bBetter) + ' directional indicators';
+      }
+      return 'Tied across ' + (aBetter + bBetter) + ' directional indicators';
+    },
+
+    get statsBiggestGapVal() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null);
+      if (diffs.length === 0) return '—';
+      let biggest = diffs[0];
+      for (const d of diffs) {
+        if (Math.abs(d.diff) > Math.abs(biggest.diff)) biggest = d;
+      }
+      return this.fmtDiffAbs(Math.abs(biggest.diff));
     },
 
     get statsBiggestGap() {
@@ -1311,32 +1155,9 @@ function compareTool() {
       return name + ' (Δ ' + this.fmtDiffAbs(absDiff) + ')';
     },
 
-    // ── ICE comparison (from merged diffs, using income/poverty indicators) ──
-
-    get iceBarPctA() {
-      if (this.iceA == null || this.iceB == null) return 50;
-      const max = Math.max(Math.abs(this.iceA), Math.abs(this.iceB), 0.01);
-      const mappedA = ((this.iceA + 1) / 2) * 100; // map [-1, 1] → [0, 100]
-      return Math.max(3, Math.min(97, mappedA));
-    },
-
-    get iceBarPctB() {
-      if (this.iceA == null || this.iceB == null) return 50;
-      const mappedB = ((this.iceB + 1) / 2) * 100;
-      return Math.max(3, Math.min(97, mappedB));
-    },
-
-    get iceNote() {
-      if (this.iceA == null) return '';
-      const iceVars = this._iceVars();
-      if (!iceVars.length) return 'ICE approximated from income-related indicators.';
-      return 'ICE computed from ' + iceVars.join(', ') + '.';
-    },
-
-    // ═══════════════ METHODS ═══════════════════════════════
+    // ═══════════════ METHODS ═══════════════════════════
 
     async init() {
-      // Check URL params for pre-selected counties
       const params = new URLSearchParams(window.location.search);
       const g1 = params.get('geoid1');
       const g2 = params.get('geoid2');
@@ -1356,7 +1177,6 @@ function compareTool() {
         }
       }
 
-      // Auto-compare if both counties pre-selected via URL
       if (g1 && g2 && g1 !== g2) {
         await this.loadVariables();
         this.initialSkeleton = false;
@@ -1365,7 +1185,6 @@ function compareTool() {
         this.initialSkeleton = false;
       }
 
-      // Lazy-load variables
       this.loadVariables();
     },
 
@@ -1407,7 +1226,7 @@ function compareTool() {
       }
     },
 
-    // ── Autocomplete dropdown management ───────────────────
+    // ── Autocomplete dropdown management ──────────────
 
     openDropdown(which) {
       if (this.countyList.length === 0 && !this.countyListLoading) {
@@ -1466,7 +1285,6 @@ function compareTool() {
       }
     },
 
-    // Silent selection (for URL-initiated pre-selection — no URL rewrite)
     selectCountySilent(which, county) {
       if (which === 'a') {
         this.geoid1 = county.geoid;
@@ -1515,7 +1333,7 @@ function compareTool() {
       }
     },
 
-    // ── Compare ──────────────────────────────────────────
+    // ── Compare ──────────────────────────────────────
 
     async compare() {
       if (!this.geoid1 || !this.geoid2) return;
@@ -1547,7 +1365,6 @@ function compareTool() {
         this.result = await resp.json();
         this.compared = true;
 
-        // Ensure variables are loaded (lazy)
         if (Object.keys(this.variablesMap).length === 0) {
           await this.loadVariables();
         }
@@ -1558,7 +1375,7 @@ function compareTool() {
       }
     },
 
-    // ── Sorting ──────────────────────────────────────────
+    // ── Sorting ──────────────────────────────────────
 
     sortByCol(col) {
       if (this.sortCol === col) {
@@ -1573,7 +1390,7 @@ function compareTool() {
       return this.mergedDiffs.filter(d => d.category === cat).length;
     },
 
-    // ── Sorting ──────────────────────────────────────────
+    // ── Formatting ────────────────────────────────────
 
     fmtVal(value, unit) {
       if (value == null) return '—';
@@ -1646,17 +1463,11 @@ function compareTool() {
       return n.toLocaleString();
     },
 
-    fmtICE(v) {
-      if (v == null) return '—';
-      const sign = v >= 0 ? '+' : '';
-      return sign + v.toFixed(3);
-    },
-
     displayName(varId) {
       return varId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     },
 
-    // ── Delta coloring logic ────────────────────────────
+    // ── Delta coloring ───────────────────────────────
     // diff = value2 - value1 (server-computed)
     // Green = County A better, Red = County A worse
     // higher_is_better: A better when diff < 0 (value1 > value2)
@@ -1677,7 +1488,7 @@ function compareTool() {
       return 'delta-neutral';
     },
 
-    // ── Category inference ──────────────────────────────
+    // ── Category inference ────────────────────────────
 
     inferCategory(varId, name) {
       const s = (varId + ' ' + (name || '')).toLowerCase();
@@ -1699,58 +1510,6 @@ function compareTool() {
       }
 
       return 'other';
-    },
-
-    // ═══════════════ ICE via merged diffs ══════════════════
-    // Re-compute ICE from the compare results
-    get _iceValues() {
-      if (!this.mergedDiffs.length) return { a: null, b: null };
-
-      // Normalized ICE proxy: (advantage_score - disadvantage_score) / N
-      // ICE ranges from -1 (concentrated disadvantage) to +1 (concentrated advantage)
-      let aScore = 0;
-      let bScore = 0;
-      let count = 0;
-
-      for (const d of this.mergedDiffs) {
-        const vid = d.variable_id.toLowerCase();
-        const isHigh = vid.includes('income') || vid.includes('earnings') || vid.includes('bachelor') || vid.includes('degree') || vid.includes('employed');
-        const isLow = vid.includes('poverty') || vid.includes('snap') || vid.includes('unemploy') || vid.includes('no_health') || vid.includes('disability');
-
-        if (isHigh || isLow) {
-          // Normalize: treat value1 and value2 as the two counties' scores
-          // For high-is-good indicators, higher = better
-          // For low-is-good indicators, lower = better
-          // Simple approach: rank counties 1 vs 2, normalize to [-1, 1]
-          if (d.value1 != null && d.value2 != null && (d.value1 !== 0 || d.value2 !== 0)) {
-            const range = Math.abs(d.value1) + Math.abs(d.value2);
-            if (range === 0) continue;
-            if (isHigh) {
-              aScore += d.value1 / range;
-              bScore += d.value2 / range;
-            } else {
-              aScore -= d.value1 / range;
-              bScore -= d.value2 / range;
-            }
-            count++;
-          }
-        }
-      }
-
-      if (count === 0) return { a: null, b: null };
-
-      return {
-        a: Math.max(-1, Math.min(1, aScore / count)),
-        b: Math.max(-1, Math.min(1, bScore / count)),
-      };
-    },
-
-    get iceA() {
-      return this._iceValues.a;
-    },
-
-    get iceB() {
-      return this._iceValues.b;
     },
   };
 }

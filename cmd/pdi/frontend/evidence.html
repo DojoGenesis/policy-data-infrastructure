@@ -72,10 +72,9 @@
     align-items: center;
   }
 
-  .filter-search {
-    flex: 1 1 260px;
+  .search-wrap {
     max-width: 380px;
-    min-width: 200px;
+    margin-bottom: 0;
   }
 
   .filter-select {
@@ -426,7 +425,7 @@
       align-items: stretch;
     }
 
-    .filter-search {
+    .search-wrap {
       max-width: none;
     }
 
@@ -496,7 +495,7 @@
 
   <!-- ── Filter bar ───────────────────────────────────────────── -->
   <div class="filter-bar">
-    <div class="filter-search">
+    <div class="search-wrap">
       <input
         type="search"
         x-model="searchQuery"

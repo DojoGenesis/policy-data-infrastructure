@@ -9,12 +9,10 @@
 <link rel="stylesheet" href="/static/styles.css">
 <script defer src="/static/alpine.min.js"></script>
 <style>
-[x-cloak] { display:none !important; }
+[x-cloak] { display: none !important; }
 
-/* ── About-page layout ────────────────────────────────────────────── */
-.about-section {
-  margin-bottom: var(--section-gap, 48px);
-}
+/* ── About-page layout ──────────────────────────────────────────── */
+.about-section { margin-bottom: var(--section-gap, 48px); }
 
 .about-section-title {
   font-size: clamp(1.3rem, 3.4vw, 1.8rem);
@@ -29,7 +27,23 @@
   margin-bottom: 1.25em;
 }
 
-/* ── Architecture diagram: five layers, stacked ───────────────────── */
+/* ── Hero stat row ──────────────────────────────────────────────── */
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(12px, 2vw, 24px);
+  margin: 1em 0 0;
+}
+.hero-stat {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.hero-stat strong {
+  color: var(--text);
+  font-size: 1.15rem;
+}
+
+/* ── Architecture diagram: five layers, stacked ──────────────────── */
 .arch-diagram {
   display: grid;
   grid-template-columns: 1fr;
@@ -75,7 +89,7 @@
   line-height: 1.4;
 }
 
-/* ── Method cards ─────────────────────────────────────────────────── */
+/* ── Method cards ────────────────────────────────────────────────── */
 .method-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
@@ -111,7 +125,7 @@
   line-height: 1.45;
 }
 
-/* ── Search input ─────────────────────────────────────────────────── */
+/* ── Search input ────────────────────────────────────────────────── */
 .catalog-search {
   width: 100%;
   margin-bottom: 1em;
@@ -123,7 +137,7 @@
   border-radius: var(--r-badge);
   background: var(--plane-base, var(--surface));
   color: var(--text);
-  font-family: inherit;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   transition: border-color 200ms ease;
 }
@@ -135,7 +149,7 @@
   color: var(--subtle);
 }
 
-/* ── Variable groups ──────────────────────────────────────────────── */
+/* ── Variable groups ─────────────────────────────────────────────── */
 .var-group {
   margin-bottom: 1.5em;
 }
@@ -164,7 +178,7 @@
 .var-unit { color: var(--subtle); font-size: 0.7rem; margin-left: 0.5em; }
 .var-desc { color: var(--muted); font-size: 0.7rem; max-width: 38em; text-align: right; }
 
-/* ── Manim placeholder ────────────────────────────────────────────── */
+/* ── Manim placeholder ───────────────────────────────────────────── */
 .manim-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
@@ -179,7 +193,7 @@
   text-align: center;
   color: var(--subtle);
   font-size: 0.85rem;
-  transition: border-color 200ms ease;
+  transition: border-color 200ms ease, color 200ms ease;
 }
 .manim-card:hover {
   border-color: var(--accent);
@@ -191,13 +205,13 @@
   opacity: 0.5;
 }
 
-/* ── Tables ───────────────────────────────────────────────────────── */
-.data-table {
+/* ── Tables ──────────────────────────────────────────────────────── */
+.about-section .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
-.data-table th {
+.about-section .data-table th {
   text-align: left;
   font-weight: 600;
   font-size: 0.68rem;
@@ -208,17 +222,17 @@
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
-.data-table td {
+.about-section .data-table td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   vertical-align: top;
 }
-.data-table tr:hover td {
+.about-section .data-table tr:hover td {
   background: var(--plane-1, var(--raised));
 }
 
-/* ── Ref table ────────────────────────────────────────────────────── */
+/* ── Ref table ───────────────────────────────────────────────────── */
 .ref-table { font-size: 0.78rem; }
 .ref-table th { white-space: nowrap; }
 .ref-table td { vertical-align: top; }
@@ -226,22 +240,34 @@
 .ref-table .ref-title { font-weight: 500; color: var(--text); }
 .ref-table .ref-authors { color: var(--muted); }
 .ref-table .ref-year { font-variant-numeric: tabular-nums; color: var(--subtle); }
-.ref-table .ref-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ref-table .ref-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .ref-table .ref-key { font-size: 0.68rem; color: var(--accent); }
 
-/* ── Badges ───────────────────────────────────────────────────────── */
-.badge {
+/* ── Badges ──────────────────────────────────────────────────────── */
+.about-section .badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--r-badge);
   font-size: 0.68rem;
   font-weight: 600;
 }
-.badge-info { background: var(--accent); color: var(--bg); }
-.badge-api { background: #2563eb; color: white; }
-.badge-file { background: #7c3aed; color: white; }
+.badge-type-api {
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
+}
+.badge-type-file {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.badge-type-unsure {
+  color: var(--subtle);
+  background: color-mix(in srgb, var(--subtle) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--subtle) 20%, transparent);
+}
 
-/* ── Grant / license section ──────────────────────────────────────── */
+/* ── Grant / license section ─────────────────────────────────────── */
 .grant-section {
   background: var(--plane-base, var(--surface));
   border: 1px solid var(--border);
@@ -263,33 +289,28 @@
   opacity: 0.8;
 }
 
-/* ── Loading / error state ────────────────────────────────────────── */
-.loading-row { text-align: center; padding: 2em 0; color: var(--muted); }
-.error-inline {
+/* ── Loading / error / empty state ───────────────────────────────── */
+.about-section .loading-row { text-align: center; padding: 2em 0; color: var(--muted); }
+
+.about-section .error-inline {
   padding: 0.75em 1em;
   border-radius: var(--r-badge);
   font-size: 0.85rem;
   margin: 0.5em 0;
-  background: #7f1d1d20;
-  border: 1px solid #7f1d1d40;
-  color: #fca5a5;
-}
-.state-empty { text-align: center; padding: 2em 0; color: var(--muted); font-size: 0.85rem; }
-
-/* ── Narrow content wrap ──────────────────────────────────────────── */
-.wrap-narrow {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: clamp(24px, 4vw, 48px) 16px;
+  color: var(--gated);
+  background: color-mix(in srgb, var(--gated) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gated) 30%, transparent);
 }
 
-/* ── Table wrapper ────────────────────────────────────────────────── */
-.table-wrapper {
+.about-section .state-empty { text-align: center; padding: 2em 0; color: var(--muted); font-size: 0.85rem; }
+
+/* ── Table wrapper ───────────────────────────────────────────────── */
+.about-section .table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--r-card);
 }
-.table-wrapper .data-table { margin: 0; }
+.about-section .table-wrapper .data-table { margin: 0; }
 </style>
 </head>
 <body>
@@ -297,32 +318,38 @@
 <!-- ═══════════════ SITE HEADER ═══════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="index.html" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
+    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
     <nav class="site-nav">
-      <a href="index.html">Explorer</a>
-      <a href="about.html" aria-current="page">About</a>
+      <a href="/">Explorer</a>
+      <a href="/about" aria-current="page">About</a>
       <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </div>
 </header>
 
 <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<main class="wrap-narrow">
+<main class="wrap-narrow" x-data="aboutPage()" x-init="init()">
 
-  <!-- ── Platform Overview ──────────────────────────────────────────── -->
+  <!-- ── Platform Overview ────────────────────────────────────────── -->
   <section class="about-section" id="overview">
     <span class="section-tag">About PDI</span>
     <h1 class="about-section-title">Platform Overview</h1>
     <p class="about-section-subtitle">An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts.</p>
 
-    <p>PDI ingests public data from <strong>9 sources</strong>, produces validated variables, and runs a <strong>5-layer statistical engine</strong> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</p>
+    <p>PDI ingests public data from
+      <strong x-show="!overviewLoading && sourceCount != null" x-text="sourceCount + ' sources'"></strong>
+      <strong x-show="overviewLoading || sourceCount == null">multiple sources</strong>,
+      produces
+      <strong x-show="!overviewLoading && variableCount != null" x-text="variableCount + ' validated variables'"></strong>
+      <strong x-show="overviewLoading || variableCount == null">validated variables</strong>,
+      and runs a <strong>5-layer statistical engine</strong> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</p>
 
     <p>The platform runs on a six-stage DAG pipeline — <em>fetch &rarr; process &rarr; enrich &rarr; analyze &rarr; synthesize &rarr; deliver</em> — with stages executing in concurrent waves via topological sort. Raw indicators are stored in PostGIS, validated features are derived mathematically, and composites exist only at query time with mandatory sensitivity analysis.</p>
 
     <p><strong>Stack:</strong> Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. All code is open source under Apache-2.0.</p>
   </section>
 
-  <!-- ── Five-Layer Architecture ────────────────────────────────────── -->
+  <!-- ── Five-Layer Architecture ──────────────────────────────────── -->
   <section class="about-section" id="architecture">
     <span class="section-tag">Architecture</span>
     <h2 class="about-section-title">Five-Layer Statistical Architecture</h2>
@@ -357,51 +384,55 @@
     </div>
   </section>
 
-  <!-- ── Data Sources (live from API) ───────────────────────────────── -->
-  <section class="about-section" id="sources" x-data="sourcesData()">
+  <!-- ── Data Sources (live from API) ─────────────────────────────── -->
+  <section class="about-section" id="sources" x-data="sourcesData()" x-init="init()">
     <span class="section-tag">Data Sources</span>
     <h2 class="about-section-title">Data Sources</h2>
-    <p class="about-section-subtitle">Live data fetched from the PDI API at page load.</p>
+    <p class="about-section-subtitle">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
 
-    <div x-show="loading" class="loading-row">Loading sources&hellip;</div>
-    <div x-show="error" class="error-inline" x-text="error"></div>
+    <div x-show="loading" x-cloak class="loading-row">Loading sources&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
-          <input type="text" placeholder="Search sources by name, category, or geographic level&hellip;" aria-label="Search sources" x-model="search">
+          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" aria-label="Search sources" x-model="search">
         </div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Source</th>
-                <th>Type</th>
-                <th>Geographic Levels</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="s in filteredSources" :key="s.id">
+        <div x-show="filteredSources.length === 0" class="state-empty" x-text="search ? 'No sources match \u201c' + search + '\u201d.' : 'No sources available.'"></div>
+        <template x-if="filteredSources.length > 0">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td style="font-weight:500;" x-text="s.name"></td>
-                  <td>
-                    <template x-if="s.type === 'api'"><span class="badge badge-api">API</span></template>
-                    <template x-if="s.type === 'file'"><span class="badge badge-file">FILE</span></template>
-                  </td>
-                  <td x-text="s.levels ? s.levels.join(', ') : '—'"></td>
-                  <td style="color:var(--muted);max-width:300px;" x-text="s.description || '—'"></td>
+                  <th>Source</th>
+                  <th>Type</th>
+                  <th>Geographic Levels</th>
+                  <th>Description</th>
                 </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                <template x-for="s in filteredSources" :key="s.id">
+                  <tr>
+                    <td style="font-weight:500;" x-text="s.name"></td>
+                    <td>
+                      <span class="badge badge-type-api" x-show="s.type === 'api'">API</span>
+                      <span class="badge badge-type-file" x-show="s.type === 'file'">FILE</span>
+                      <span class="badge badge-type-unsure" x-show="!s.type || (s.type !== 'api' && s.type !== 'file')" x-text="s.type || '—'"></span>
+                    </td>
+                    <td x-text="s.levels ? s.levels.join(', ') : '—'"></td>
+                    <td style="color:var(--muted);max-width:320px;" x-text="s.description || '—'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
         <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="filteredSources.length + ' of ' + sources.length + ' sources'"></p>
       </div>
     </template>
   </section>
 
-  <!-- ── Statistical Methodology ────────────────────────────────────── -->
+  <!-- ── Statistical Methodology ──────────────────────────────────── -->
   <section class="about-section" id="methodology">
     <span class="section-tag">Methodology</span>
     <h2 class="about-section-title">Statistical Methodology</h2>
@@ -443,21 +474,21 @@
     <p style="margin-top:1.25em;">Additional methods include <strong>OLS regression</strong>, <strong>Blinder-Oaxaca decomposition</strong> for equity gaps, <strong>segmented regression</strong> for threshold detection, and <strong>interaction effects</strong> via automated term construction. The full methodology is documented in the project repository.</p>
   </section>
 
-  <!-- ── Variable Catalog (live from API) ───────────────────────────── -->
-  <section class="about-section" id="variables" x-data="variablesData()">
+  <!-- ── Variable Catalog (live from API) ─────────────────────────── -->
+  <section class="about-section" id="variables" x-data="variablesData()" x-init="init()">
     <span class="section-tag">Variables</span>
     <h2 class="about-section-title">Variable Catalog</h2>
     <p class="about-section-subtitle">Validated variables across multiple sources. Searchable and grouped by data source.</p>
 
-    <div x-show="loading" class="loading-row">Loading variable catalog&hellip;</div>
-    <div x-show="error" class="error-inline" x-text="error"></div>
+    <div x-show="loading" x-cloak class="loading-row">Loading variable catalog&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
           <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" aria-label="Search variables" x-model="search">
         </div>
-        <div x-show="groupedVariables.length === 0" class="state-empty" x-text="'No variables match \u201c' + search + '\u201d.'"></div>
+        <div x-show="groupedVariables.length === 0" class="state-empty" x-text="search ? 'No variables match \u201c' + search + '\u201d.' : 'No variables available.'"></div>
         <template x-for="[name, vars] in groupedVariables" :key="name">
           <div class="var-group">
             <div class="var-group-title" x-text="name + ' (' + vars.length + ')'"></div>
@@ -476,7 +507,7 @@
     </template>
   </section>
 
-  <!-- ── Manim Video Gallery ────────────────────────────────────────── -->
+  <!-- ── Manim Video Gallery ──────────────────────────────────────── -->
   <section class="about-section" id="manim">
     <span class="section-tag">Animations</span>
     <h2 class="about-section-title">Manim Video Gallery</h2>
@@ -516,43 +547,45 @@
     </div>
   </section>
 
-  <!-- ── Research References ────────────────────────────────────────── -->
+  <!-- ── Research References ──────────────────────────────────────── -->
   <section class="about-section" id="references" x-data="referencesData()" x-init="load()">
     <span class="section-tag">References</span>
     <h2 class="about-section-title">Research References</h2>
     <p class="about-section-subtitle">30 peer-reviewed and technical sources that ground the statistical architecture.</p>
 
-    <div x-show="loading" class="loading-row">Loading references&hellip;</div>
-    <div x-show="error" class="error-inline" x-text="error"></div>
+    <div x-show="loading" x-cloak class="loading-row">Loading references&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
-      <div class="table-wrapper" style="overflow-x:auto;">
-        <table class="data-table ref-table">
-          <thead>
-            <tr><th>#</th><th>Title</th><th>Authors</th><th>Year</th><th>Type</th><th>Key Finding</th></tr>
-          </thead>
-          <tbody>
-            <template x-for="r in refs" :key="r.id">
-              <tr>
-                <td class="ref-id" x-text="r.id"></td>
-                <td class="ref-title">
-                  <a x-show="r.url" :href="r.url" target="_blank" rel="noopener" x-text="r.title"></a>
-                  <span x-show="!r.url" x-text="r.title"></span>
-                </td>
-                <td class="ref-authors" x-text="r.authors"></td>
-                <td class="ref-year" x-text="r.year"></td>
-                <td class="ref-type" x-text="r.type"></td>
-                <td class="ref-key" x-text="r.keyFinding"></td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+      <div>
+        <div class="table-wrapper">
+          <table class="data-table ref-table">
+            <thead>
+              <tr><th>#</th><th>Title</th><th>Authors</th><th>Year</th><th>Type</th><th>Key Finding</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="r in refs" :key="r.id">
+                <tr>
+                  <td class="ref-id" x-text="r.id"></td>
+                  <td class="ref-title">
+                    <a x-show="r.url" :href="r.url" target="_blank" rel="noopener" x-text="r.title"></a>
+                    <span x-show="!r.url" x-text="r.title"></span>
+                  </td>
+                  <td class="ref-authors" x-text="r.authors"></td>
+                  <td class="ref-year" x-text="r.year"></td>
+                  <td class="ref-type" x-text="r.type"></td>
+                  <td class="ref-key" x-text="r.keyFinding"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="refs.length + ' references from research/references.csv'"></p>
       </div>
     </template>
-    <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);">References 1&ndash;30 from <code>research/references.csv</code></p>
   </section>
 
-  <!-- ── Grant Acknowledgments ──────────────────────────────────────── -->
+  <!-- ── Grant Acknowledgments ────────────────────────────────────── -->
   <section class="about-section" id="grants">
     <span class="section-tag">Funding</span>
     <h2 class="about-section-title">Grant Acknowledgments</h2>
@@ -567,7 +600,7 @@
     </div>
   </section>
 
-  <!-- ── License ────────────────────────────────────────────────────── -->
+  <!-- ── License ──────────────────────────────────────────────────── -->
   <section class="about-section" id="license">
     <span class="section-tag">License</span>
     <h2 class="about-section-title">Apache-2.0</h2>
@@ -583,8 +616,25 @@
 </footer>
 
 <!-- ═══════════════ SCRIPTS ═══════════════ -->
-<script src="theme-toggle.js"></script>
+<script src="/static/theme-toggle.js"></script>
 <script>
+/* ── About page root scope: overview stats ────────────────────────── */
+function aboutPage() {
+  return {
+    sourceCount: null,
+    variableCount: null,
+    overviewLoading: false,
+
+    async init() {
+      // Optionally load overview counts; not critical for page function
+    },
+
+    // Called by sourcesData / variablesData after their fetches complete
+    updateSourceCount(n) { this.sourceCount = n; },
+    updateVariableCount(n) { this.variableCount = n; }
+  };
+}
+
 /* ── Alpine.js: Sources ────────────────────────────────────────────── */
 function sourcesData() {
   return {
@@ -601,7 +651,11 @@ function sourcesData() {
         this.sources = data.sources || [];
         if (this.sources.length === 0) {
           this.error = 'No sources available.';
-          this.loading = false;
+        }
+        // Push count up to the parent scope
+        const aboutEl = document.querySelector('[x-data="aboutPage()"]');
+        if (aboutEl && aboutEl.__x) {
+          aboutEl.__x.updateSourceCount(this.sources.length);
         }
       } catch (e) {
         this.error = 'Unable to load data sources: ' + e.message;
@@ -639,7 +693,11 @@ function variablesData() {
         this.variables = data.variables || [];
         if (this.variables.length === 0) {
           this.error = 'No variables available.';
-          this.loading = false;
+        }
+        // Push count up to the parent scope
+        const aboutEl = document.querySelector('[x-data="aboutPage()"]');
+        if (aboutEl && aboutEl.__x) {
+          aboutEl.__x.updateVariableCount(this.variables.length);
         }
       } catch (e) {
         this.error = 'Unable to load variable catalog: ' + e.message;
@@ -672,7 +730,7 @@ function variablesData() {
   };
 }
 
-/* ── References: CSV parse (native) ────────────────────────────────── */
+/* ── References: CSV parse from /static/research/references.csv ────── */
 function referencesData() {
   return {
     refs: [],
@@ -681,7 +739,7 @@ function referencesData() {
 
     async load() {
       try {
-        const resp = await fetch('research/references.csv');
+        const resp = await fetch('/static/research/references.csv');
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const text = await resp.text();
         const lines = text.trim().split(/\r?\n/).slice(1);
@@ -689,13 +747,13 @@ function referencesData() {
           const cols = parseCSVLine(line);
           if (cols.length < 8) continue;
           this.refs.push({
-            id:    cols[0],
-            title: cols[1],
-            authors: cols[2],
-            year:  cols[3],
-            type:  cols[4],
-            url:   cols[5] && cols[5].trim(),
-            relevance: cols[6],
+            id:         cols[0],
+            title:      cols[1],
+            authors:    cols[2],
+            year:       cols[3],
+            type:       cols[4],
+            url:        cols[5] && cols[5].trim(),
+            relevance:  cols[6],
             keyFinding: cols[7]
           });
         }
