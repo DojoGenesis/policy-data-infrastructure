@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Compare Counties — Policy Data Infrastructure</title>
-<meta name="description" content="Side-by-side county comparison tool — compare indicators across Wisconsin counties with delta highlighting.">
+<meta name="description" content="Side-by-side county comparison tool — compare indicators across Wisconsin counties with delta highlighting, bar charts, and statistical summaries.">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
@@ -40,7 +40,7 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     gap: clamp(12px, 2vw, 20px);
-    align-items: center;
+    align-items: start;
     margin-bottom: clamp(16px, 2.5vw, 24px);
   }
   .selector-label {
@@ -55,9 +55,51 @@
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--muted);
-    padding-top: 1.2em;
+    padding-top: 1.8em;
     text-align: center;
   }
+
+  /* ── Selected county chip ─────────────────────────────────── */
+  .selected-county {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+  .selected-county-name {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .selected-county-geoid {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--subtle);
+  }
+  .selected-county-pop {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .selected-county-clear {
+    background: none;
+    border: none;
+    color: var(--subtle);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .selected-county-clear:hover { color: var(--gated); }
 
   /* ── Autocomplete dropdown ────────────────────────────────── */
   .autocomplete {
@@ -72,7 +114,7 @@
     left: 0;
     right: 0;
     z-index: 40;
-    max-height: 240px;
+    max-height: 280px;
     overflow-y: auto;
     background: var(--raised);
     border: 1px solid var(--border-strong);
@@ -88,6 +130,7 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    gap: 8px;
     transition: background-color 120ms ease;
   }
   .autocomplete-item:first-child {
@@ -100,12 +143,25 @@
   .autocomplete-item.highlighted {
     background: color-mix(in srgb, var(--accent) 10%, transparent);
   }
+  .autocomplete-item .item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .autocomplete-item .item-geoid {
     font-size: 0.65rem;
     color: var(--subtle);
     font-family: var(--font-mono);
-    margin-left: 12px;
     flex-shrink: 0;
+  }
+  .autocomplete-item .item-pop {
+    font-size: 0.65rem;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+    font-weight: 500;
   }
   .autocomplete-empty {
     padding: 12px 14px;
@@ -124,7 +180,7 @@
     gap: 8px;
   }
 
-  /* ── County selector spinner ──────────────────────────────── */
+  /* ── Spinner ──────────────────────────────────────────────── */
   .selector-spinner {
     display: inline-block;
     width: 14px;
@@ -164,6 +220,147 @@
     color: var(--muted);
   }
 
+  /* ── Geo summary cards ────────────────────────────────────── */
+  .geo-summary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(12px, 2vw, 20px);
+    margin-bottom: clamp(20px, 3vw, 32px);
+  }
+  .geo-summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: var(--r-card);
+    padding: clamp(14px, 2vw, 20px);
+    transition: border-top-color 300ms ease;
+  }
+  .geo-summary-card.card-b {
+    border-top-color: var(--info);
+  }
+  .geo-summary-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .geo-summary-meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    margin-bottom: 8px;
+  }
+  .geo-summary-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.85rem;
+  }
+  .geo-summary-stat-label {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .geo-summary-stat-value {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ── Statistical summary card ─────────────────────────────── */
+  .stats-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--live);
+    border-radius: var(--r-card);
+    padding: clamp(16px, 2.5vw, 24px);
+    margin-bottom: clamp(16px, 2.5vw, 24px);
+  }
+  .stats-summary-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 clamp(8px, 1.5vw, 14px) 0;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(10px, 1.5vw, 16px);
+  }
+  .stats-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stats-item-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+  .stats-item-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .stats-item-value.lead {
+    color: var(--live);
+  }
+  .stats-item-value.gap {
+    color: var(--gated);
+  }
+
+  /* ── ICE comparison card ──────────────────────────────────── */
+  .ice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--info);
+    border-radius: var(--r-card);
+    padding: clamp(16px, 2.5vw, 24px);
+    margin-bottom: clamp(16px, 2.5vw, 24px);
+  }
+  .ice-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 clamp(8px, 1.5vw, 14px) 0;
+  }
+  .ice-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .ice-bar-wrap {
+    flex: 1;
+    height: 10px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+    min-width: 80px;
+  }
+  .ice-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 500ms ease;
+  }
+  .ice-bar-fill--a {
+    background: var(--accent);
+  }
+  .ice-bar-fill--b {
+    background: var(--info);
+  }
+  .ice-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 60px;
+    text-align: right;
+  }
+
   /* ── Category filter tabs ─────────────────────────────────── */
   .filter-bar {
     display: flex;
@@ -201,42 +398,18 @@
     color: var(--bg);
   }
 
-  /* ── Sort control ─────────────────────────────────────────── */
-  .sort-select {
-    appearance: none;
-    -webkit-appearance: none;
-    padding: 0.4em 2em 0.4em 0.75em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-badge);
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9aa8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5em center;
-    transition: border-color 160ms ease;
-  }
-  .sort-select:hover {
-    border-color: var(--border-strong);
-  }
-  .sort-select:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
   /* ── Compare table ────────────────────────────────────────── */
   .compare-table-wrap {
     overflow-x: auto;
     border: 1px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface);
+    margin-bottom: clamp(16px, 2.5vw, 24px);
   }
   .compare-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
   }
   .compare-table thead {
@@ -245,38 +418,58 @@
     z-index: 1;
   }
   .compare-table th {
-    padding: 0.7em 1em;
+    padding: 0.65em 0.85em;
     text-align: left;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
     background: var(--raised);
     border-bottom: 1px solid var(--border-strong);
     white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color 140ms ease;
+  }
+  .compare-table th:hover {
+    color: var(--text);
+  }
+  .compare-table th.sorted {
+    color: var(--accent);
+  }
+  .compare-table th .sort-arrow {
+    font-size: 0.6rem;
+    margin-left: 3px;
+    opacity: 0.5;
+  }
+  .compare-table th.sorted .sort-arrow {
+    opacity: 1;
   }
   .compare-table th.num-header {
     text-align: right;
   }
   .compare-table td {
-    padding: 0.6em 1em;
+    padding: 0.55em 0.85em;
     border-bottom: 1px solid var(--border);
     vertical-align: baseline;
+  }
+  .compare-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--text) 2%, transparent);
   }
   .compare-table tbody tr:last-child td {
     border-bottom: none;
   }
   .compare-table tbody tr:hover {
-    background: color-mix(in srgb, var(--accent) 4%, transparent);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
   }
   .compare-table .var-name {
     font-weight: 500;
     color: var(--text);
-    max-width: 260px;
+    max-width: 280px;
   }
   .compare-table .var-unit {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--subtle);
     display: block;
     margin-top: 1px;
@@ -287,6 +480,12 @@
     font-weight: 600;
     color: var(--text);
     white-space: nowrap;
+  }
+  .compare-table .val-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
   }
   .compare-table .delta {
     text-align: right;
@@ -310,54 +509,90 @@
     color: var(--subtle);
   }
 
-  /* ── Geography summary cards ──────────────────────────────── */
-  .geo-summary-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(12px, 2vw, 20px);
-    margin-bottom: clamp(20px, 3vw, 32px);
+  /* ── Reliability badges ───────────────────────────────────── */
+  .rel-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
-  .geo-summary-card {
+  .rel-badge-high { background: var(--live); }
+  .rel-badge-moderate { background: var(--gated); }
+  .rel-badge-low { background: var(--gated); opacity: 0.5; }
+  .rel-badge-unknown { background: var(--subtle); }
+
+  /* ── Delta bar chart ──────────────────────────────────────── */
+  .delta-chart-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-top: 2px solid var(--accent);
+    border-top: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
     border-radius: var(--r-card);
-    padding: clamp(14px, 2vw, 20px);
+    padding: clamp(16px, 2.5vw, 24px);
+    margin-bottom: clamp(16px, 2.5vw, 24px);
   }
-  .geo-summary-card.card-b {
-    border-top-color: var(--info);
-  }
-  .geo-summary-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .geo-summary-meta {
-    font-size: 0.7rem;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    margin-bottom: 8px;
-  }
-  .geo-summary-stat {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: 0.85rem;
-  }
-  .geo-summary-stat-label {
-    color: var(--muted);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .geo-summary-stat-value {
+  .delta-chart-title {
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text);
+    margin: 0 0 clamp(12px, 2vw, 20px) 0;
+  }
+  .delta-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 0.78rem;
+  }
+  .delta-bar-label {
+    width: 180px;
+    flex-shrink: 0;
+    text-align: right;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.76rem;
+  }
+  .delta-bar-wrap {
+    flex: 1;
+    min-width: 60px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .delta-bar-track {
+    flex: 1;
+    height: 10px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .delta-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 500ms ease;
+    position: absolute;
+  }
+  .delta-bar-fill--a-better {
+    background: var(--live);
+    left: 50%;
+  }
+  .delta-bar-fill--b-better {
+    background: var(--gated);
+    right: 50%;
+  }
+  .delta-bar-val {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 70px;
+    flex-shrink: 0;
   }
 
-  /* ── No indicators state ──────────────────────────────────── */
+  /* ── State messages ───────────────────────────────────────── */
   .state-no-indicators {
     padding: clamp(32px, 5vw, 56px) 0;
     text-align: center;
@@ -365,11 +600,30 @@
     font-size: 0.95rem;
   }
 
-  /* ── Error per county ─────────────────────────────────────── */
   .selector-error {
     font-size: 0.7rem;
     color: var(--gated);
     margin-top: 6px;
+  }
+
+  /* ── Skeleton loading ─────────────────────────────────────── */
+  .skeleton-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .skeleton-table td {
+    padding: 0.55em 0.85em;
+    border-bottom: 1px solid var(--border);
+  }
+  .skeleton-bar {
+    height: 12px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    animation: skel-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes skel-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 
   /* ── Responsive ───────────────────────────────────────────── */
@@ -384,9 +638,20 @@
     .geo-summary-row {
       grid-template-columns: 1fr;
     }
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
     .filter-bar {
       flex-direction: column;
       align-items: flex-start;
+    }
+    .delta-bar-label {
+      width: 100px;
+      font-size: 0.7rem;
+    }
+    .compare-table .var-name {
+      max-width: 160px;
+      font-size: 0.8rem;
     }
   }
 </style>
@@ -441,10 +706,11 @@
         <input
           type="text"
           x-model="search1"
+          x-ref="input1"
           placeholder="Search counties…"
           aria-label="Select first county"
           autocomplete="off"
-          @focus="openDropdown1()"
+          @focus="openDropdown('a')"
           @input="dropdown1 = true"
           @keydown.escape="dropdown1 = false"
           @keydown.arrow-down.prevent="highlightNext('a')"
@@ -474,14 +740,20 @@
               @click="selectCounty('a', c)"
               @mouseenter="highlightA = idx"
             >
-              <span x-text="c.name"></span>
+              <span class="item-name" x-text="c.name"></span>
+              <span class="item-pop" x-show="c.population" x-text="fmtNum(c.population)"></span>
               <span class="item-geoid" x-text="c.geoid"></span>
             </div>
           </template>
         </div>
       </div>
       <!-- Selected county display -->
-      <div x-show="selectedName1" x-cloak style="margin-top:6px;font-size:0.8rem;color:var(--accent);font-weight:600;" x-text="selectedName1"></div>
+      <div x-show="selectedName1" x-cloak class="selected-county">
+        <span class="selected-county-name" x-text="selectedName1"></span>
+        <span class="selected-county-pop" x-show="selectedPop1" x-text="fmtNum(selectedPop1)"></span>
+        <span class="selected-county-geoid" x-text="geoid1"></span>
+        <button class="selected-county-clear" @click="clearCounty('a')" aria-label="Clear county A">&times;</button>
+      </div>
       <div x-show="countyError1" x-cloak class="selector-error" x-text="countyError1"></div>
     </div>
 
@@ -495,10 +767,11 @@
         <input
           type="text"
           x-model="search2"
+          x-ref="input2"
           placeholder="Search counties…"
           aria-label="Select second county"
           autocomplete="off"
-          @focus="openDropdown2()"
+          @focus="openDropdown('b')"
           @input="dropdown2 = true"
           @keydown.escape="dropdown2 = false"
           @keydown.arrow-down.prevent="highlightNext('b')"
@@ -524,13 +797,19 @@
               @click="selectCounty('b', c)"
               @mouseenter="highlightB = idx"
             >
-              <span x-text="c.name"></span>
+              <span class="item-name" x-text="c.name"></span>
+              <span class="item-pop" x-show="c.population" x-text="fmtNum(c.population)"></span>
               <span class="item-geoid" x-text="c.geoid"></span>
             </div>
           </template>
         </div>
       </div>
-      <div x-show="selectedName2" x-cloak style="margin-top:6px;font-size:0.8rem;color:var(--accent);font-weight:600;" x-text="selectedName2"></div>
+      <div x-show="selectedName2" x-cloak class="selected-county">
+        <span class="selected-county-name" x-text="selectedName2"></span>
+        <span class="selected-county-pop" x-show="selectedPop2" x-text="fmtNum(selectedPop2)"></span>
+        <span class="selected-county-geoid" x-text="geoid2"></span>
+        <button class="selected-county-clear" @click="clearCounty('b')" aria-label="Clear county B">&times;</button>
+      </div>
       <div x-show="countyError2" x-cloak class="selector-error" x-text="countyError2"></div>
     </div>
   </div>
@@ -547,7 +826,33 @@
     <div x-show="compareError" x-cloak style="margin-top:10px;color:var(--gated);font-size:0.8rem;" x-text="compareError"></div>
   </div>
 
-  <!-- �══════════════════ RESULTS �══════════════════════════ -->
+  <!-- ═══════════════ SKELETON (initial load) ══════════════════ -->
+  <div x-show="initialSkeleton" x-cloak>
+    <div class="compare-table-wrap">
+      <table class="skeleton-table">
+        <thead><tr><th>Indicator</th><th class="num-header">County A</th><th class="num-header">County B</th><th class="num-header">Δ Abs</th><th class="num-header">Δ %</th></tr></thead>
+        <tbody>
+          <template x-for="i in 6" :key="i">
+            <tr>
+              <td><div class="skeleton-bar" style="width:60%"></div></td>
+              <td><div class="skeleton-bar" style="width:40%"></div></td>
+              <td><div class="skeleton-bar" style="width:50%"></div></td>
+              <td><div class="skeleton-bar" style="width:35%"></div></td>
+              <td><div class="skeleton-bar" style="width:30%"></div></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ COMPARE LOADING ═══════════════════════ -->
+  <div x-show="compareLoading" x-cloak class="loader" style="margin: clamp(40px, 5vw, 60px) 0;">
+    <div class="loader-spinner"></div>
+    <p style="margin-top:12px;color:var(--muted);font-size:0.85rem;">Comparing counties…</p>
+  </div>
+
+  <!-- ═══════════════════ RESULTS ══════════════════════════════ -->
   <div x-show="compared && !compareError" x-cloak>
 
     <!-- ── Geography summary cards ─────────────────────────────── -->
@@ -559,6 +864,10 @@
           <span class="geo-summary-stat-label">Population</span>
           <span class="geo-summary-stat-value" x-text="fmtNum(geo1Pop)"></span>
         </div>
+        <div class="geo-summary-stat" x-show="geo1IndicatorCount">
+          <span class="geo-summary-stat-label">Indicators</span>
+          <span class="geo-summary-stat-value" x-text="geo1IndicatorCount"></span>
+        </div>
       </div>
       <div class="geo-summary-card card-b">
         <div class="geo-summary-name" x-text="geo2Name"></div>
@@ -567,18 +876,83 @@
           <span class="geo-summary-stat-label">Population</span>
           <span class="geo-summary-stat-value" x-text="fmtNum(geo2Pop)"></span>
         </div>
+        <div class="geo-summary-stat" x-show="geo2IndicatorCount">
+          <span class="geo-summary-stat-label">Indicators</span>
+          <span class="geo-summary-stat-value" x-text="geo2IndicatorCount"></span>
+        </div>
       </div>
     </div>
 
-    <!-- ── Results header / count ─────────────────────────── -->
+    <!-- ── Statistical Summary Card ────────────────────────────── -->
+    <div class="stats-summary">
+      <h3 class="stats-summary-title">Statistical Summary</h3>
+      <div class="stats-grid">
+        <div class="stats-item">
+          <span class="stats-item-label">Leads</span>
+          <span class="stats-item-value lead" x-text="statsLead"></span>
+        </div>
+        <div class="stats-item">
+          <span class="stats-item-label">Biggest Gap</span>
+          <span class="stats-item-value gap" x-text="statsBiggestGap"></span>
+        </div>
+        <div class="stats-item">
+          <span class="stats-item-label">Most Similar</span>
+          <span class="stats-item-value" x-text="statsMostSimilar"></span>
+        </div>
+        <div class="stats-item">
+          <span class="stats-item-label">Comparable Indicators</span>
+          <span class="stats-item-value" x-text="mergedDiffs.length"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ICE Comparison ──────────────────────────────────────── -->
+    <div class="ice-card" x-show="iceA != null && iceB != null">
+      <h3 class="ice-card-title">Index of Concentration at Extremes (ICE)</h3>
+      <div class="ice-row">
+        <span style="color:var(--accent);font-weight:600;" x-text="geo1Name"></span>
+        <div class="ice-bar-wrap">
+          <div class="ice-bar-fill ice-bar-fill--a" :style="'width:' + iceBarPctA + '%'"></div>
+        </div>
+        <span class="ice-value" x-text="fmtICE(iceA)"></span>
+      </div>
+      <div class="ice-row">
+        <span style="color:var(--info);font-weight:600;" x-text="geo2Name"></span>
+        <div class="ice-bar-wrap">
+          <div class="ice-bar-fill ice-bar-fill--b" :style="'width:' + iceBarPctB + '%'"></div>
+        </div>
+        <span class="ice-value" x-text="fmtICE(iceB)"></span>
+      </div>
+      <p style="font-size:0.7rem;color:var(--subtle);margin:8px 0 0 0;" x-show="iceNote" x-text="iceNote"></p>
+    </div>
+
+    <!-- ── Delta Bar Chart ─────────────────────────────────────── -->
+    <div class="delta-chart-card" x-show="topDeltas.length > 0">
+      <h3 class="delta-chart-title">Top 10 Largest Differences</h3>
+      <template x-for="d in topDeltas" :key="d.variable_id">
+        <div class="delta-bar-row">
+          <div class="delta-bar-label" x-text="d.name" :title="d.name"></div>
+          <div class="delta-bar-wrap">
+            <div class="delta-bar-track">
+              <div class="delta-bar-fill"
+                :class="d.directionClass === 'b-better' ? 'delta-bar-fill--b-better' : 'delta-bar-fill--a-better'"
+                :style="'width:' + d.barPct + '%'"></div>
+            </div>
+            <span class="delta-bar-val" :style="'color:' + (d.directionClass === 'b-better' ? 'var(--gated)' : 'var(--live)')" x-text="fmtDiffAbs(d.absDiff)"></span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── Results header / count ─────────────────────────────── -->
     <div class="results-header">
       <div>
         <h2 class="results-title">Indicator Comparison</h2>
-        <div class="results-count" x-text="displayedDifferences.length + ' of ' + allDifferences.length + ' indicators'"></div>
+        <div class="results-count" x-text="displayedDiffs.length + ' of ' + mergedDiffs.length + ' indicators'"></div>
       </div>
     </div>
 
-    <!-- ── Category tabs + sort ─────────────────────────────── -->
+    <!-- ── Category tabs ───────────────────────────────────────── -->
     <div class="filter-bar">
       <div class="cat-tabs">
         <button
@@ -591,40 +965,56 @@
             @click="activeCategory = cat"
             class="cat-tab"
             :class="{ active: activeCategory === cat }"
-            x-text="cat"
+            x-text="cat + ' (' + categoryCount(cat) + ')'"
           ></button>
         </template>
       </div>
-      <div style="margin-left:auto;flex-shrink:0;">
-        <select class="sort-select" x-model="sortBy" aria-label="Sort indicators">
-          <option value="delta_desc">Delta — largest first</option>
-          <option value="delta_asc">Delta — smallest first</option>
-          <option value="name">Name A–Z</option>
-        </select>
-      </div>
     </div>
 
-    <!-- ── Compare table ──────────────────────────────────────── -->
-    <div class="compare-table-wrap" x-show="displayedDifferences.length > 0">
+    <!-- ── Compare table ───────────────────────────────────────── -->
+    <div class="compare-table-wrap" x-show="displayedDiffs.length > 0">
       <table class="compare-table">
         <thead>
           <tr>
-            <th>Indicator</th>
-            <th class="num-header" x-text="geo1Name || 'County A'"></th>
-            <th class="num-header" x-text="geo2Name || 'County B'"></th>
-            <th class="num-header">Δ Abs</th>
-            <th class="num-header">Δ %</th>
+            <th @click="sortByCol('name')" :class="{ sorted: sortCol === 'name' }">
+              Indicator
+              <span class="sort-arrow" x-show="sortCol === 'name'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num-header" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }" x-text="geo1Name || 'County A'">
+              <span class="sort-arrow" x-show="sortCol === 'val1'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num-header" @click="sortByCol('val2')" :class="{ sorted: sortCol === 'val2' }" x-text="geo2Name || 'County B'">
+              <span class="sort-arrow" x-show="sortCol === 'val2'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num-header" @click="sortByCol('delta')" :class="{ sorted: sortCol === 'delta' }">
+              Δ Abs
+              <span class="sort-arrow" x-show="sortCol === 'delta'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num-header" @click="sortByCol('pct')" :class="{ sorted: sortCol === 'pct' }">
+              Δ %
+              <span class="sort-arrow" x-show="sortCol === 'pct'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
           </tr>
         </thead>
         <tbody>
-          <template x-for="d in displayedDifferences" :key="d.variable_id">
+          <template x-for="d in displayedDiffs" :key="d.variable_id">
             <tr>
               <td>
                 <div class="var-name" x-text="d.name || displayName(d.variable_id)"></div>
                 <div class="var-unit" x-text="d.unit || ''"></div>
               </td>
-              <td class="val" x-text="fmtVal(d.value1, d.unit)"></td>
-              <td class="val" x-text="fmtVal(d.value2, d.unit)"></td>
+              <td class="val">
+                <span class="val-wrap">
+                  <span x-text="fmtVal(d.value1, d.unit)"></span>
+                  <span class="rel-badge" :class="'rel-badge-' + (d.reliability1 || 'unknown')" :title="'Reliability: ' + (d.reliability1 || 'unknown')" x-show="d.reliability1"></span>
+                </span>
+              </td>
+              <td class="val">
+                <span class="val-wrap">
+                  <span x-text="fmtVal(d.value2, d.unit)"></span>
+                  <span class="rel-badge" :class="'rel-badge-' + (d.reliability2 || 'unknown')" :title="'Reliability: ' + (d.reliability2 || 'unknown')" x-show="d.reliability2"></span>
+                </span>
+              </td>
               <td class="delta" :class="deltaClass(d)" x-text="fmtDiff(d.diff)"></td>
               <td class="pct-delta" :class="deltaClass(d)" x-text="fmtPct(d.pct_diff)"></td>
             </tr>
@@ -635,7 +1025,7 @@
 
     <!-- ── Empty filtered state ───────────────────────────────── -->
     <div
-      x-show="displayedDifferences.length === 0 && allDifferences.length > 0"
+      x-show="displayedDiffs.length === 0 && mergedDiffs.length > 0"
       x-cloak
       class="state-no-indicators"
     >
@@ -644,11 +1034,21 @@
 
     <!-- ── No indicators at all ───────────────────────────────── -->
     <div
-      x-show="allDifferences.length === 0"
+      x-show="mergedDiffs.length === 0"
       x-cloak
       class="state-no-indicators"
     >
       <p>No indicator data available for this comparison.</p>
+    </div>
+
+    <!-- ── Empty state ────────────────────────────────────────── -->
+    <div
+      x-show="!compared && !initialSkeleton"
+      x-cloak
+      class="state-empty"
+      style="padding:clamp(48px,6vw,72px) 0;text-align:center;"
+    >
+      <p style="color:var(--muted);font-size:1rem;margin:0;">Select two counties above to compare.</p>
     </div>
   </div>
 
@@ -674,6 +1074,7 @@ function compareTool() {
     geoid1: '',
     search1: '',
     selectedName1: '',
+    selectedPop1: null,
     dropdown1: false,
     highlightA: -1,
     countyError1: '',
@@ -682,22 +1083,25 @@ function compareTool() {
     geoid2: '',
     search2: '',
     selectedName2: '',
+    selectedPop2: null,
     dropdown2: false,
     highlightB: -1,
     countyError2: '',
 
     // ── Variable catalog ─────────────────────────────────────
-    variablesMap: {},  // variable_id → {name, unit, direction, source_id}
+    variablesMap: {},  // variable_id → {name, unit, direction, category}
 
     // ── Compare results ──────────────────────────────────────
     result: null,
     compareLoading: false,
     compareError: '',
     compared: false,
+    initialSkeleton: true,
 
-    // ── Filtering ────────────────────────────────────────────
+    // ── Filtering / sorting ──────────────────────────────────
     activeCategory: 'all',
-    sortBy: 'delta_desc',
+    sortCol: 'delta',
+    sortAsc: false,
 
     // ═══════════════ COMPUTED ═══════════════════════════════
 
@@ -719,10 +1123,6 @@ function compareTool() {
       );
     },
 
-    get allDifferences() {
-      return this.result?.differences || [];
-    },
-
     get geo1Name() {
       return this.result?.geography1?.name || this.selectedName1 || '';
     },
@@ -732,39 +1132,75 @@ function compareTool() {
     },
 
     get geo1Pop() {
-      return this.result?.geography1?.population || null;
+      return this.result?.geography1?.population || this.selectedPop1 || null;
     },
 
     get geo2Pop() {
-      return this.result?.geography2?.population || null;
+      return this.result?.geography2?.population || this.selectedPop2 || null;
     },
 
-    // Categories derived from variables in results
+    get geo1IndicatorCount() {
+      return this.result?.geography1?.indicators?.length || 0;
+    },
+
+    get geo2IndicatorCount() {
+      return this.result?.geography2?.indicators?.length || 0;
+    },
+
+    // Merge differences with indicator metadata from embedded indicators + variables
+    get mergedDiffs() {
+      const diffs = this.result?.differences || [];
+      const inds1 = this.result?.geography1?.indicators || [];
+      const inds2 = this.result?.geography2?.indicators || [];
+
+      // Build lookup maps from embedded indicators
+      const map1 = {};
+      const map2 = {};
+      for (const ind of inds1) { map1[ind.variable_id] = ind; }
+      for (const ind of inds2) { map2[ind.variable_id] = ind; }
+
+      return diffs.map(d => {
+        const i1 = map1[d.variable_id];
+        const i2 = map2[d.variable_id];
+        const vmeta = this.variablesMap[d.variable_id] || {};
+
+        // Name priority: embedded indicator > variables endpoint > sanitized id
+        const name = i1?.name || i2?.name || vmeta.name || null;
+        const unit = i1?.unit || i2?.unit || vmeta.unit || null;
+        const direction = i1?.direction || i2?.direction || vmeta.direction || null;
+        const reliability1 = i1?.reliability || null;
+        const reliability2 = i2?.reliability || null;
+
+        // Category: from variable metadata category field or infer from name
+        let category = vmeta.category || null;
+        if (!category) {
+          category = this.inferCategory(d.variable_id, name);
+        }
+
+        return {
+          ...d,
+          name,
+          unit,
+          direction,
+          reliability1,
+          reliability2,
+          category,
+        };
+      });
+    },
+
+    // Categories from merged diffs
     get categories() {
       const cats = new Set();
-      for (const d of this.enrichedDiffs) {
+      for (const d of this.mergedDiffs) {
         if (d.category) cats.add(d.category);
       }
       return Array.from(cats).sort();
     },
 
-    // Enrich each diff with variable metadata + category
-    get enrichedDiffs() {
-      return this.allDifferences.map(d => {
-        const meta = this.variablesMap[d.variable_id] || {};
-        return {
-          ...d,
-          name: meta.name || null,
-          unit: meta.unit || null,
-          direction: meta.direction || null,
-          category: this.sourceToCategory(meta.source_id),
-        };
-      });
-    },
-
-    // Filtered + sorted
-    get displayedDifferences() {
-      let items = this.enrichedDiffs;
+    // Filtered + sorted diffs
+    get displayedDiffs() {
+      let items = this.mergedDiffs;
 
       // Category filter
       if (this.activeCategory !== 'all') {
@@ -772,38 +1208,165 @@ function compareTool() {
       }
 
       // Sort
-      switch (this.sortBy) {
-        case 'delta_desc':
-          items = [...items].sort((a, b) => {
-            const da = Math.abs(a.diff ?? 0);
-            const db = Math.abs(b.diff ?? 0);
-            return db - da;
-          });
-          break;
-        case 'delta_asc':
-          items = [...items].sort((a, b) => {
-            const da = Math.abs(a.diff ?? 0);
-            const db = Math.abs(b.diff ?? 0);
-            return da - db;
-          });
-          break;
-        case 'name':
-          items = [...items].sort((a, b) => {
-            const na = (a.name || a.variable_id || '').toLowerCase();
-            const nb = (b.name || b.variable_id || '').toLowerCase();
-            return na.localeCompare(nb);
-          });
-          break;
-      }
+      const asc = this.sortAsc;
+      items = [...items].sort((a, b) => {
+        let va, vb;
+        switch (this.sortCol) {
+          case 'name':
+            va = (a.name || a.variable_id || '').toLowerCase();
+            vb = (b.name || b.variable_id || '').toLowerCase();
+            return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+          case 'val1':
+            va = a.value1 ?? -Infinity;
+            vb = b.value1 ?? -Infinity;
+            return asc ? va - vb : vb - va;
+          case 'val2':
+            va = a.value2 ?? -Infinity;
+            vb = b.value2 ?? -Infinity;
+            return asc ? va - vb : vb - va;
+          case 'pct':
+            va = Math.abs(a.pct_diff ?? 0);
+            vb = Math.abs(b.pct_diff ?? 0);
+            return asc ? va - vb : vb - va;
+          case 'delta':
+          default:
+            va = Math.abs(a.diff ?? 0);
+            vb = Math.abs(b.diff ?? 0);
+            return asc ? va - vb : vb - va;
+        }
+      });
 
       return items;
+    },
+
+    // Top 10 deltas for bar chart
+    get topDeltas() {
+      const items = [...this.mergedDiffs]
+        .filter(d => d.diff != null)
+        .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+        .slice(0, 10);
+
+      const maxAbs = items.length > 0 ? Math.max(...items.map(d => Math.abs(d.diff))) : 1;
+
+      return items.map(d => {
+        const absDiff = Math.abs(d.diff);
+        const pct = maxAbs > 0 ? (absDiff / maxAbs) * 100 : 0;
+        // Determine which county "wins" based on direction
+        // diff = value2 - value1
+        // higher_is_better: A better when diff < 0
+        // lower_is_better:  A better when diff > 0
+        let directionClass = 'a-better';
+        if (d.direction === 'higher_is_better') {
+          directionClass = d.diff < 0 ? 'a-better' : 'b-better';
+        } else if (d.direction === 'lower_is_better') {
+          directionClass = d.diff > 0 ? 'a-better' : 'b-better';
+        }
+        return {
+          ...d,
+          absDiff,
+          barPct: pct,
+          directionClass,
+        };
+      });
+    },
+
+    // Statistical summary
+    get statsLead() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
+      if (diffs.length === 0) return '—';
+      let aBetter = 0;
+      for (const d of diffs) {
+        if (this.deltaClass(d) === 'delta-green') aBetter++;
+      }
+      const total = diffs.length;
+      if (aBetter > total - aBetter) {
+        return this.geo1Name + ' leads in ' + aBetter + ' of ' + total + ' indicators';
+      } else if (aBetter < total - aBetter) {
+        return this.geo2Name + ' leads in ' + (total - aBetter) + ' of ' + total + ' indicators';
+      }
+      return 'Tied across ' + total + ' indicators';
+    },
+
+    get statsBiggestGap() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null);
+      if (diffs.length === 0) return '—';
+      let biggest = diffs[0];
+      for (const d of diffs) {
+        if (Math.abs(d.diff) > Math.abs(biggest.diff)) biggest = d;
+      }
+      const name = biggest.name || this.displayName(biggest.variable_id);
+      const absDiff = Math.abs(biggest.diff);
+      return name + ' (Δ ' + this.fmtDiffAbs(absDiff) + ')';
+    },
+
+    get statsMostSimilar() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null);
+      if (diffs.length === 0) return '—';
+      let smallest = diffs[0];
+      for (const d of diffs) {
+        if (Math.abs(d.diff) < Math.abs(smallest.diff)) smallest = d;
+      }
+      const name = smallest.name || this.displayName(smallest.variable_id);
+      const absDiff = Math.abs(smallest.diff);
+      return name + ' (Δ ' + this.fmtDiffAbs(absDiff) + ')';
+    },
+
+    // ── ICE comparison (from merged diffs, using income/poverty indicators) ──
+
+    get iceBarPctA() {
+      if (this.iceA == null || this.iceB == null) return 50;
+      const max = Math.max(Math.abs(this.iceA), Math.abs(this.iceB), 0.01);
+      const mappedA = ((this.iceA + 1) / 2) * 100; // map [-1, 1] → [0, 100]
+      return Math.max(3, Math.min(97, mappedA));
+    },
+
+    get iceBarPctB() {
+      if (this.iceA == null || this.iceB == null) return 50;
+      const mappedB = ((this.iceB + 1) / 2) * 100;
+      return Math.max(3, Math.min(97, mappedB));
+    },
+
+    get iceNote() {
+      if (this.iceA == null) return '';
+      const iceVars = this._iceVars();
+      if (!iceVars.length) return 'ICE approximated from income-related indicators.';
+      return 'ICE computed from ' + iceVars.join(', ') + '.';
     },
 
     // ═══════════════ METHODS ═══════════════════════════════
 
     async init() {
+      // Check URL params for pre-selected counties
+      const params = new URLSearchParams(window.location.search);
+      const g1 = params.get('geoid1');
+      const g2 = params.get('geoid2');
+
       await this.loadCounties();
-      await this.loadVariables();
+
+      if (g1) {
+        const c1 = this.countyList.find(c => c.geoid === g1);
+        if (c1) {
+          this.selectCountySilent('a', c1);
+        }
+      }
+      if (g2) {
+        const c2 = this.countyList.find(c => c.geoid === g2);
+        if (c2) {
+          this.selectCountySilent('b', c2);
+        }
+      }
+
+      // Auto-compare if both counties pre-selected via URL
+      if (g1 && g2 && g1 !== g2) {
+        await this.loadVariables();
+        this.initialSkeleton = false;
+        await this.compare();
+      } else {
+        this.initialSkeleton = false;
+      }
+
+      // Lazy-load variables
+      this.loadVariables();
     },
 
     async loadCounties() {
@@ -811,7 +1374,7 @@ function compareTool() {
       this.countyListLoading = true;
       this.countyListError = '';
       try {
-        const resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=72');
+        const resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=100');
         if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
         this.countyList = (data.items || []).sort((a, b) =>
@@ -835,7 +1398,7 @@ function compareTool() {
             name: v.name || null,
             unit: v.unit || null,
             direction: v.direction || null,
-            source_id: v.source_id || null,
+            category: v.category || null,
           };
         }
         this.variablesMap = map;
@@ -846,20 +1409,17 @@ function compareTool() {
 
     // ── Autocomplete dropdown management ───────────────────
 
-    openDropdown1() {
+    openDropdown(which) {
       if (this.countyList.length === 0 && !this.countyListLoading) {
         this.loadCounties();
       }
-      this.dropdown1 = true;
-      this.highlightA = -1;
-    },
-
-    openDropdown2() {
-      if (this.countyList.length === 0 && !this.countyListLoading) {
-        this.loadCounties();
+      if (which === 'a') {
+        this.dropdown1 = true;
+        this.highlightA = -1;
+      } else {
+        this.dropdown2 = true;
+        this.highlightB = -1;
       }
-      this.dropdown2 = true;
-      this.highlightB = -1;
     },
 
     highlightNext(which) {
@@ -888,17 +1448,70 @@ function compareTool() {
       if (which === 'a') {
         this.geoid1 = county.geoid;
         this.selectedName1 = county.name;
+        this.selectedPop1 = county.population || null;
         this.search1 = county.name;
         this.dropdown1 = false;
         this.highlightA = -1;
         this.countyError1 = '';
+        this.syncURL();
       } else {
         this.geoid2 = county.geoid;
         this.selectedName2 = county.name;
+        this.selectedPop2 = county.population || null;
         this.search2 = county.name;
         this.dropdown2 = false;
         this.highlightB = -1;
         this.countyError2 = '';
+        this.syncURL();
+      }
+    },
+
+    // Silent selection (for URL-initiated pre-selection — no URL rewrite)
+    selectCountySilent(which, county) {
+      if (which === 'a') {
+        this.geoid1 = county.geoid;
+        this.selectedName1 = county.name;
+        this.selectedPop1 = county.population || null;
+        this.search1 = county.name;
+      } else {
+        this.geoid2 = county.geoid;
+        this.selectedName2 = county.name;
+        this.selectedPop2 = county.population || null;
+        this.search2 = county.name;
+      }
+    },
+
+    clearCounty(which) {
+      if (which === 'a') {
+        this.geoid1 = '';
+        this.search1 = '';
+        this.selectedName1 = '';
+        this.selectedPop1 = null;
+        this.highlightA = -1;
+        this.result = null;
+        this.compared = false;
+        this.compareError = '';
+      } else {
+        this.geoid2 = '';
+        this.search2 = '';
+        this.selectedName2 = '';
+        this.selectedPop2 = null;
+        this.highlightB = -1;
+        this.result = null;
+        this.compared = false;
+        this.compareError = '';
+      }
+      this.syncURL();
+    },
+
+    syncURL() {
+      const params = new URLSearchParams();
+      if (this.geoid1) params.set('geoid1', this.geoid1);
+      if (this.geoid2) params.set('geoid2', this.geoid2);
+      const qs = params.toString();
+      const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+      if (window.location.search !== (qs ? '?' + qs : '')) {
+        window.history.replaceState(null, '', newUrl);
       }
     },
 
@@ -945,19 +1558,36 @@ function compareTool() {
       }
     },
 
-    // ── Formatting ──────────────────────────────────────
+    // ── Sorting ──────────────────────────────────────────
+
+    sortByCol(col) {
+      if (this.sortCol === col) {
+        this.sortAsc = !this.sortAsc;
+      } else {
+        this.sortCol = col;
+        this.sortAsc = false;
+      }
+    },
+
+    categoryCount(cat) {
+      return this.mergedDiffs.filter(d => d.category === cat).length;
+    },
+
+    // ── Sorting ──────────────────────────────────────────
 
     fmtVal(value, unit) {
       if (value == null) return '—';
       if (typeof value !== 'number') return value;
 
-      // Format by unit type
       if (unit) {
         const u = unit.toLowerCase();
         if (u === 'percent' || u === '%') {
           return value.toFixed(1) + '%';
         }
         if (u === 'dollars' || u === '$') {
+          if (Math.abs(value) >= 1000000) {
+            return '$' + (value / 1000000).toFixed(1) + 'M';
+          }
           if (Math.abs(value) >= 1000) {
             return '$' + (value / 1000).toFixed(1) + 'K';
           }
@@ -968,7 +1598,6 @@ function compareTool() {
         }
       }
 
-      // Generic: 3+ significant digits
       if (Math.abs(value) >= 1000000) {
         return (value / 1000000).toFixed(1) + 'M';
       }
@@ -996,6 +1625,14 @@ function compareTool() {
       return sign + diff.toFixed(2);
     },
 
+    fmtDiffAbs(diff) {
+      if (diff == null) return '—';
+      if (diff >= 1000000) return (diff / 1000000).toFixed(1) + 'M';
+      if (diff >= 1000) return (diff / 1000).toFixed(1) + 'K';
+      if (Number.isInteger(diff)) return diff.toLocaleString();
+      return diff.toFixed(2);
+    },
+
     fmtPct(pct) {
       if (pct == null) return '—';
       const sign = pct > 0 ? '+' : '';
@@ -1009,54 +1646,111 @@ function compareTool() {
       return n.toLocaleString();
     },
 
+    fmtICE(v) {
+      if (v == null) return '—';
+      const sign = v >= 0 ? '+' : '';
+      return sign + v.toFixed(3);
+    },
+
     displayName(varId) {
-      // Fallback: prettify variable_id
       return varId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     },
 
-    // ── Delta coloring logic ──────────────────────
+    // ── Delta coloring logic ────────────────────────────
+    // diff = value2 - value1 (server-computed)
+    // Green = County A better, Red = County A worse
+    // higher_is_better: A better when diff < 0 (value1 > value2)
+    // lower_is_better:  A better when diff > 0 (value1 < value2)
 
     deltaClass(d) {
       if (d.diff == null) return 'delta-neutral';
       const dir = d.direction;
       const diff = d.diff;
 
-      if (dir === 'lower_better') {
-        // A better when diff < 0 (A's value is lower)
+      if (dir === 'higher_is_better') {
         return diff < 0 ? 'delta-green' : (diff > 0 ? 'delta-red' : 'delta-neutral');
       }
-      if (dir === 'higher_better') {
-        // A better when diff > 0 (A's value is higher)
+      if (dir === 'lower_is_better') {
         return diff > 0 ? 'delta-green' : (diff < 0 ? 'delta-red' : 'delta-neutral');
       }
 
-      // No direction — neutral
       return 'delta-neutral';
     },
 
-    // ── Source-to-category mapping ──────────────
+    // ── Category inference ──────────────────────────────
 
-    sourceToCategory(sourceId) {
-      if (!sourceId) return 'other';
-      const map = {
-        'acs-5yr': 'demographic',
-        'cdc-places': 'health',
-        'hrsa': 'health',
-        'hud-chas': 'housing',
-        'hud-pit': 'housing',
-        'hmda': 'housing',
-        'epa-ejscreen': 'environment',
-        'epa-tri': 'environment',
-        'bls-laus': 'economic',
-        'usda-foodaccess': 'health',
-        'tiger': 'other',
-        'osm': 'other',
-        'fema-nfhl': 'other',
-        'gtfs': 'economic',
-        'wi-dpi': 'demographic',
-        'census': 'demographic',
+    inferCategory(varId, name) {
+      const s = (varId + ' ' + (name || '')).toLowerCase();
+      const patterns = {
+        'economic': ['income', 'poverty', 'gini', 'earnings', 'wage', 'employment', 'unemployment', 'labor', 'laus', 'unemploy', 'gdp', 'economic'],
+        'health': ['health', 'obesity', 'diabetes', 'insurance', 'mortality', 'cancer', 'smoking', 'asthma', 'hosp', 'physician', 'disease', 'premature', 'disability', 'mental', 'depression', 'opioid', 'substance'],
+        'housing': ['housing', 'rent', 'mortgage', 'homeowner', 'vacancy', 'crowding', 'value', 'cost_burden', 'homeless', 'shelter', 'foreclosure', 'eviction'],
+        'education': ['education', 'school', 'bachelor', 'enroll', 'attendance', 'diploma', 'degree', 'literacy', 'dropout'],
+        'environment': ['environment', 'pollution', 'ozone', 'pm2', 'diesel', 'traffic', 'lead', 'waste', 'water', 'air_quality', 'asthma', 'toxic', 'hazard'],
+        'demographic': ['race', 'hispanic', 'white', 'black', 'asian', 'native', 'pacific', 'ethnic', 'sex', 'gender', 'veteran', 'foreign', 'language', 'population', 'age', 'demograph', 'citizen', 'immigrant', 'migration'],
+        'food': ['food', 'snap', 'grocery', 'supermarket', 'access', 'desert', 'nutrition', 'breakfast', 'lunch'],
+        'transportation': ['transport', 'commute', 'vehicle', 'transit', 'walk', 'bike', 'car', 'bus', 'rail'],
       };
-      return map[sourceId] || 'other';
+
+      for (const [cat, terms] of Object.entries(patterns)) {
+        for (const term of terms) {
+          if (s.includes(term)) return cat;
+        }
+      }
+
+      return 'other';
+    },
+
+    // ═══════════════ ICE via merged diffs ══════════════════
+    // Re-compute ICE from the compare results
+    get _iceValues() {
+      if (!this.mergedDiffs.length) return { a: null, b: null };
+
+      // Normalized ICE proxy: (advantage_score - disadvantage_score) / N
+      // ICE ranges from -1 (concentrated disadvantage) to +1 (concentrated advantage)
+      let aScore = 0;
+      let bScore = 0;
+      let count = 0;
+
+      for (const d of this.mergedDiffs) {
+        const vid = d.variable_id.toLowerCase();
+        const isHigh = vid.includes('income') || vid.includes('earnings') || vid.includes('bachelor') || vid.includes('degree') || vid.includes('employed');
+        const isLow = vid.includes('poverty') || vid.includes('snap') || vid.includes('unemploy') || vid.includes('no_health') || vid.includes('disability');
+
+        if (isHigh || isLow) {
+          // Normalize: treat value1 and value2 as the two counties' scores
+          // For high-is-good indicators, higher = better
+          // For low-is-good indicators, lower = better
+          // Simple approach: rank counties 1 vs 2, normalize to [-1, 1]
+          if (d.value1 != null && d.value2 != null && (d.value1 !== 0 || d.value2 !== 0)) {
+            const range = Math.abs(d.value1) + Math.abs(d.value2);
+            if (range === 0) continue;
+            if (isHigh) {
+              aScore += d.value1 / range;
+              bScore += d.value2 / range;
+            } else {
+              aScore -= d.value1 / range;
+              bScore -= d.value2 / range;
+            }
+            count++;
+          }
+        }
+      }
+
+      if (count === 0) return { a: null, b: null };
+
+      return {
+        a: Math.max(-1, Math.min(1, aScore / count)),
+        b: Math.max(-1, Math.min(1, bScore / count)),
+      };
+    },
+
+    get iceA() {
+      return this._iceValues.a;
+    },
+
+    get iceB() {
+      return this._iceValues.b;
     },
   };
 }

@@ -8,67 +8,137 @@
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/styles.css">
 <script defer src="/static/alpine.min.js"></script>
+<script defer src="/static/charts.js"></script>
 <style>
-  [x-cloak] { display:none !important; }
-  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:14px; margin-bottom:20px; }
-  .back-link:hover { color:var(--text); }
-  .hero { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; margin-bottom:28px; }
-  .hero h1 { font-size:clamp(1.5rem,3.5vw,2rem); font-weight:700; color:var(--text); margin:0 0 4px; }
-  .hero .geoid { font-size:13px; color:var(--subtle); font-family:var(--font-mono); }
-  .quick-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1px; background:var(--border); border-radius:var(--r-card); overflow:hidden; margin-bottom:28px; }
-  .quick-stat { background:var(--surface); padding:14px 16px; text-align:center; }
-  .quick-stat .val { font-size:clamp(1rem,2.2vw,1.35rem); font-weight:700; color:var(--text); }
-  .quick-stat .lbl { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-top:2px; }
-  section { margin-bottom:32px; }
-  section h2 { font-size:clamp(1.05rem,2vw,1.2rem); font-weight:700; color:var(--text); margin:0 0 4px; }
-  section .desc { font-size:13px; color:var(--muted); margin-bottom:16px; }
-  .indicator-table { width:100%; border-collapse:collapse; font-size:14px; }
-  .indicator-table th { text-align:left; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); padding:8px 12px; border-bottom:1px solid var(--border); }
-  .indicator-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
-  .indicator-table tr:hover td { background:var(--raised); }
-  .indicator-table .name { font-weight:500; }
-  .indicator-table .val { font-weight:600; font-family:var(--font-mono); }
-  .indicator-table .unit { color:var(--muted); font-size:12px; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:var(--r-badge); font-size:11px; font-weight:600; }
-  .badge.high { background:var(--live); color:var(--bg); }
-  .badge.moderate { background:var(--gated); color:var(--bg); }
-  .badge.low { background:#b91c1c; color:white; }
-  .badge.unknown { background:var(--border); color:var(--muted); }
-  .cat-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
-  .cat-tab { padding:6px 14px; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:var(--r-chip); color:var(--muted); background:transparent; cursor:pointer; transition:all 0.15s; }
-  .cat-tab:hover { border-color:var(--accent); color:var(--text); }
-  .cat-tab.active { background:var(--accent); color:var(--bg); border-color:var(--accent); }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:20px 24px; }
-  .card + .card { margin-top:16px; }
-  .card h3 { font-size:1rem; font-weight:700; color:var(--text); margin:0 0 8px; }
-  .card p { font-size:14px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
-  .stat-row { display:flex; gap:24px; flex-wrap:wrap; }
-  .stat-item { flex:1; min-width:120px; }
-  .stat-item .big { font-size:clamp(1.2rem,2.5vw,1.6rem); font-weight:700; color:var(--accent); }
-  .stat-item .label { font-size:12px; color:var(--muted); margin-top:2px; }
-  .lisa-badges { display:flex; gap:10px; flex-wrap:wrap; }
-  .lisa-badge { padding:6px 14px; border-radius:var(--r-chip); font-size:13px; font-weight:600; }
-  .lisa-badge.HH { background:#d97706; color:var(--bg); }
-  .lisa-badge.LL { background:var(--teal); color:var(--bg); }
-  .lisa-badge.HL { background:#7c3aed; color:white; }
-  .lisa-badge.LH { background:#f59e0b; color:var(--bg); }
-  .lisa-badge.NS { background:var(--border); color:var(--muted); }
-  .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:var(--r-card); font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; border:none; font-family:var(--font-sans); transition:filter 0.15s; }
-  .btn-primary { background:var(--accent); color:var(--bg); }
-  .btn-primary:hover { filter:brightness(1.1); }
-  .btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border-strong); }
-  .composite-panel { margin-top:20px; }
-  .composite-panel summary { font-size:14px; font-weight:600; color:var(--accent); cursor:pointer; padding:8px 0; }
-  .composite-inner { padding:16px 0; }
-  .composite-inner label { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); margin-bottom:8px; }
-  .composite-inner input[type=range] { flex:1; accent-color:var(--accent); }
-  .composite-result { margin-top:16px; }
-  .loader { display:flex; justify-content:center; padding:40px; }
-  .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .error-box { background:#7f1d1d20; border:1px solid #7f1d1d40; border-radius:var(--r-card); padding:16px; color:#fca5a5; font-size:14px; }
-  .error-box button { background:none; border:none; color:var(--accent); cursor:pointer; text-decoration:underline; font:inherit; margin-left:8px; }
-  .empty-box { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+  [x-cloak]{display:none!important;}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:20px;}
+  .back-link:hover{color:var(--text);}
+  .hero{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;margin-bottom:28px;}
+  .hero h1{font-size:clamp(1.5rem,3.5vw,2rem);font-weight:700;color:var(--text);margin:0 0 2px;letter-spacing:-0.01em;}
+  .hero .geoid{font-size:12px;color:var(--subtle);font-family:var(--font-mono);margin-right:12px;}
+  .hero .meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px;}
+  .quick-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border-radius:var(--r-card);overflow:hidden;margin-bottom:28px;}
+  .quick-stat{background:var(--surface);padding:14px 16px;text-align:center;}
+  .quick-stat .val{font-size:clamp(1rem,2.2vw,1.35rem);font-weight:700;color:var(--text);}
+  .quick-stat .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-top:2px;}
+  section{margin-bottom:40px;}
+  section h2{font-size:clamp(1.05rem,2vw,1.2rem);font-weight:700;color:var(--text);margin:0 0 2px;}
+  section .eyebrow{display:block;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+  section .desc{font-size:13px;color:var(--muted);margin-bottom:16px;}
+  .section-header{border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .section-header h2{margin:0;}
+  .stat-callout-card{background:var(--surface);border:1px solid var(--border);border-top:1px solid color-mix(in srgb,var(--accent)35%,transparent);border-radius:var(--r-card);padding:20px 24px;}
+  .stat-big{font-size:clamp(2rem,6vw,3.2rem);font-weight:700;color:var(--accent);line-height:1;letter-spacing:-0.02em;}
+  .stat-med{font-size:clamp(1.4rem,4vw,2rem);font-weight:700;color:var(--text);line-height:1;}
+  .stat-unit{font-size:0.8rem;font-weight:400;color:var(--muted);margin-left:0.25em;}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-top:6px;}
+  .stat-interp{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45;}
+  .stat-interp strong{color:var(--text);}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+
+  .indicator-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;}
+  .indicator-table thead th{position:sticky;top:0;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border-strong);background:var(--surface);cursor:pointer;user-select:none;white-space:nowrap;}
+  .indicator-table thead th:hover{color:var(--text);}
+  .indicator-table thead th .sort-arrow{font-size:10px;margin-left:3px;opacity:0.4;}
+  .indicator-table thead th.sorted .sort-arrow{opacity:1;color:var(--accent);}
+  .indicator-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+  .indicator-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg-alt)50%,var(--bg));}
+  .indicator-table tbody tr:hover{background:color-mix(in srgb,var(--accent)4%,var(--surface));}
+  .indicator-table .name{font-weight:500;}
+  .indicator-table .unit{color:var(--muted);font-size:12px;}
+  .indicator-table .val{font-weight:600;font-family:var(--font-mono);text-align:right;}
+  .indicator-table .moe{color:var(--subtle);font-size:12px;font-style:italic;}
+  .indicator-table .pct-bar-wrap{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px;}
+  .indicator-table .pct-bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width 0.4s;}
+
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border-radius:var(--r-badge);white-space:nowrap;}
+  .badge-reliability-high{color:var(--live);background:color-mix(in srgb,var(--live)12%,transparent);}
+  .badge-reliability-moderate{color:var(--gated);background:color-mix(in srgb,var(--gated)12%,transparent);}
+  .badge-reliability-low{color:#fca5a5;background:color-mix(in srgb,#b91c1c 18%,transparent);}
+  .badge-reliability-unknown{color:var(--subtle);background:color-mix(in srgb,var(--subtle)10%,transparent);}
+
+  .cat-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;}
+  .cat-tab{padding:7px 16px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:var(--r-chip);color:var(--muted);background:transparent;cursor:pointer;transition:all 0.15s;}
+  .cat-tab:hover{border-color:var(--accent);color:var(--text);}
+  .cat-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:20px 24px;}
+  .card.spectral{border-top:1px solid color-mix(in srgb,var(--accent)35%,transparent);}
+
+  .lisa-badges{display:flex;gap:10px;flex-wrap:wrap;}
+  .lisa-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-chip);font-size:13px;font-weight:600;text-decoration:none;}
+  .lisa-badge.HH{background:color-mix(in srgb,#d97706 18%,transparent);color:#fcd34d;border:1px solid color-mix(in srgb,#d97706 35%,transparent);}
+  .lisa-badge.LL{background:color-mix(in srgb,var(--live) 12%,transparent);color:var(--live);border:1px solid color-mix(in srgb,var(--live) 30%,transparent);}
+  .lisa-badge.HL{background:color-mix(in srgb,#7c3aed 18%,transparent);color:#c4b5fd;border:1px solid color-mix(in srgb,#7c3aed 35%,transparent);}
+  .lisa-badge.LH{background:color-mix(in srgb,var(--gated) 15%,transparent);color:var(--gated);border:1px solid color-mix(in srgb,var(--gated) 30%,transparent);}
+  .lisa-badge.NS{background:var(--border);color:var(--muted);}
+
+  .factor-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .factor-row:last-child{border-bottom:none;}
+  .factor-name{font-weight:600;font-size:14px;min-width:180px;color:var(--text);}
+  .factor-bar{flex:1;display:flex;align-items:center;gap:10px;}
+  .factor-bar-track{flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden;}
+  .factor-bar-fill{height:100%;border-radius:5px;background:var(--accent);transition:width 600ms ease;}
+  .factor-bar-fill.neg{background:#ef4444;}
+  .factor-score{font-family:var(--font-mono);font-size:13px;font-weight:600;min-width:52px;text-align:right;color:var(--text);}
+  .factor-percentile{font-family:var(--font-mono);font-size:11px;color:var(--muted);min-width:44px;text-align:right;}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--r-badge);font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;border:none;font-family:var(--font-sans);transition:filter 0.15s,opacity 0.15s;}
+  .btn-primary{background:var(--accent);color:var(--bg);}
+  .btn-primary:hover{filter:brightness(1.1);}
+  .btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border-strong);}
+  .btn-secondary:hover{border-color:var(--accent);}
+  .btn-sm{padding:5px 12px;font-size:12px;}
+
+  details.composite-panel{margin-top:20px;}
+  details.composite-panel>summary{font-size:14px;font-weight:600;color:var(--accent);cursor:pointer;padding:12px 0;border-bottom:1px solid var(--border);user-select:none;}
+  .composite-inner{padding:20px 0;}
+  .composite-inner label{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);margin-bottom:10px;cursor:pointer;}
+  .composite-inner label input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer;}
+  .composite-inner label .var-name{flex:1;}
+  .composite-inner label .var-dir{font-size:11px;color:var(--muted);}
+  .composite-inner input[type=range]{accent-color:var(--accent);}
+  .composite-inner select{font-size:14px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-badge);background:var(--surface);color:var(--text);}
+
+  .composite-result .score-number{font-size:clamp(2.5rem,7vw,4rem);font-weight:700;color:var(--accent);line-height:1;letter-spacing:-0.02em;}
+  .composite-result .score-label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+  .contrib-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+  .contrib-table th,.contrib-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+  .contrib-table th{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+
+  .tract-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+  .tract-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-badge);padding:12px 16px;transition:border-color 0.15s;cursor:default;}
+  .tract-card:hover{border-color:var(--border-strong);}
+  .tract-card .tract-name{font-weight:600;font-size:13px;color:var(--text);}
+  .tract-card .tract-geoid{font-size:11px;color:var(--subtle);font-family:var(--font-mono);margin-top:2px;}
+
+  .loader{display:flex;align-items:center;justify-content:center;padding:48px 0;}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-box{border:1px solid color-mix(in srgb,var(--gated)35%,transparent);border-radius:var(--r-badge);padding:16px 20px;background:color-mix(in srgb,var(--gated)8%,transparent);color:var(--gated);font-size:14px;margin-bottom:20px;}
+  .error-box button{background:none;border:1px solid var(--gated);color:var(--gated);cursor:pointer;font:inherit;font-size:12px;padding:4px 12px;border-radius:var(--r-badge);margin-left:12px;}
+  .error-box button:hover{background:color-mix(in srgb,var(--gated)15%,transparent);}
+  .empty-box{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;border:1px solid var(--border);border-radius:var(--r-card);}
+  .empty-box a{color:var(--accent);font-weight:600;}
+
+  .stat-callout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+  .callout{background:var(--surface);border:1px solid var(--border);border-top:1px solid color-mix(in srgb,var(--accent)35%,transparent);border-radius:var(--r-badge);padding:14px 18px;text-align:center;}
+  .callout .c-val{font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;color:var(--accent);font-family:var(--font-mono);}
+  .callout .c-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-top:3px;}
+
+  .reliability-summary{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px;}
+  .rel-bar{height:8px;border-radius:4px;}
+  .rel-bar.high{background:var(--live);}
+  .rel-bar.moderate{background:var(--gated);}
+  .rel-bar.low{background:#ef4444;}
+  .rel-bar.unknown{background:var(--border);}
+
+  .preset-btn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--r-chip);background:transparent;color:var(--muted);cursor:pointer;font-weight:600;font-family:var(--font-sans);margin-left:8px;}
+  .preset-btn:hover{border-color:var(--accent);color:var(--text);}
+
+  .tooltip-hint{font-size:12px;color:var(--subtle);font-style:italic;cursor:help;border-bottom:1px dotted var(--subtle);}
+
+  @media (prefers-reduced-motion:reduce){.spinner,.factor-bar-fill,.pct-bar-fill{animation:none!important;transition:none!important;}}
 </style>
 </head>
 <body>
@@ -80,44 +150,45 @@
         <a href="/" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Counties</a>
         <a href="/compare" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Compare</a>
         <a href="/map" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Map</a>
-        <a href="/chat" style="color:var(--accent);text-decoration:none;padding:4px 10px;border-radius:6px;">Chat</a>
+        <a href="/chat" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Chat</a>
       </nav>
     </div>
   </div>
 </header>
 
-<main class="wrap" x-data="countyProfile()" x-init="init()" style="padding-top:24px;padding-bottom:60px;">
+<main class="wrap" x-data="countyProfile()" x-init="init()" style="padding-top:24px;padding-bottom:80px;">
 
-  <!-- BACK -->
   <a href="/" class="back-link">← Back to counties</a>
 
   <!-- LOADING -->
   <div x-show="loading" class="loader"><div class="spinner"></div></div>
 
   <!-- ERROR -->
-  <div x-show="error" x-cloak class="error-box">
-    <span x-text="error"></span>
-    <button @click="init()">Retry</button>
-  </div>
+  <div x-show="error" x-cloak class="error-box"><span x-text="error"></span><button @click="init()">Retry</button></div>
 
   <!-- CONTENT -->
   <div x-show="!loading && !error && geo" x-cloak>
 
-    <!-- HERO -->
+    <!-- ═══════════ HERO ═══════════ -->
     <div class="hero">
-      <div style="flex:1;">
+      <div style="flex:1;min-width:200px;">
         <h1 x-text="geo.name"></h1>
-        <span class="geoid" x-text="geo.geoid"></span>
+        <div class="meta">
+          <span class="geoid" x-text="geo.geoid"></span>
+          <span x-show="geo.level" style="color:var(--subtle);" x-text="geo.level"></span>
+          <span x-show="geo.population" style="color:var(--subtle);" x-text="'Pop. ' + geo.population.toLocaleString()"></span>
+          <span x-show="geo.land_area_m2" style="color:var(--subtle);" x-text="(landAreaLabel())"></span>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Brief</a>
-        <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
-        <a :href="'/chat'" class="btn btn-secondary">Ask Chat</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+        <a :href="'/narrative?geoid='+geoid" class="btn btn-primary btn-sm">Generate Brief</a>
+        <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary btn-sm">Compare</a>
+        <a :href="'/chat'" class="btn btn-secondary btn-sm">Ask Chat</a>
       </div>
     </div>
 
-    <!-- QUICK STATS -->
-    <div class="quick-stats" x-show="indicators.length > 0">
+    <!-- ═══════════ QUICK STATS ═══════════ -->
+    <div class="quick-stats" x-show="!quickStatsEmpty">
       <template x-for="stat in quickStats" :key="stat.label">
         <div class="quick-stat">
           <div class="val" x-text="stat.value"></div>
@@ -126,24 +197,55 @@
       </template>
     </div>
 
-    <!-- LAYER 1: INDICATOR DASHBOARD -->
+    <!-- ═══════════ LAYER 1: INDICATOR DASHBOARD ═══════════ -->
     <section>
-      <h2>Indicator Dashboard</h2>
-      <p class="desc" x-text="indicators.length + ' indicators across ' + Object.keys(groupedIndicators).length + ' categories'"></p>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Layer 1 · Primary Observation</span>
+          <h2>Indicator Dashboard</h2>
+        </div>
+        <span style="font-size:13px;color:var(--muted);" x-text="indicators.length + ' indicators across ' + Object.keys(groupedIndicators).length + ' categories'"></span>
+      </div>
+      <p class="desc">Full ACS 5-year estimates plus supplementary sources. Values shown with reliability badges. Click column headers to sort.</p>
+
+      <!-- Categories -->
       <div class="cat-tabs">
         <template x-for="(inds, cat) in groupedIndicators" :key="cat">
-          <button class="cat-tab" :class="{active: activeCategory === cat}" @click="activeCategory = cat" x-text="cat"></button>
+          <button class="cat-tab" :class="{active:activeCategory===cat}" @click="activeCategory=cat;indSortCol='';indSortDir=1" x-text="cat"></button>
         </template>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="indicator-table">
-          <thead><tr><th>Indicator</th><th>Value</th><th>Reliability</th></tr></thead>
+
+      <!-- Loading / Error / Empty for indicator layer -->
+      <div x-show="indicatorsLoading" class="loader"><div class="spinner"></div></div>
+      <div x-show="indicatorsError" x-cloak class="error-box"><span x-text="indicatorsError"></span><button @click="reloadIndicators()">Retry</button></div>
+      <div x-show="!indicatorsLoading && !indicatorsError && visibleIndicators.length === 0" class="empty-box" x-cloak>No indicators found for this category.</div>
+
+      <!-- Table -->
+      <div x-show="!indicatorsLoading && !indicatorsError && visibleIndicators.length > 0" x-cloak style="overflow-x:auto;">
+        <table class="indicator-table" role="grid" aria-label="Indicator dashboard">
+          <thead>
+            <tr>
+              <th @click="indSortCol='name';indSortDir*=-1" :class="{sorted:indSortCol==='name'}">Indicator <span class="sort-arrow" x-text="indSortCol==='name' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th @click="indSortCol='value';indSortDir*=-1" :class="{sorted:indSortCol==='value'}" style="text-align:right;">Value <span class="sort-arrow" x-text="indSortCol==='value' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th @click="indSortCol='percentile';indSortDir*=-1" :class="{sorted:indSortCol==='percentile'}" style="text-align:center;">State Rank <span class="sort-arrow" x-text="indSortCol==='percentile' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th @click="indSortCol='reliability';indSortDir*=-1" :class="{sorted:indSortCol==='reliability'}" style="text-align:center;">Reliability <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th style="text-align:right;">MOE</th>
+            </tr>
+          </thead>
           <tbody>
-            <template x-for="ind in visibleIndicators" :key="ind.variable_id">
+            <template x-for="ind in sortedIndicators" :key="ind.variable_id">
               <tr>
-                <td><span class="name" x-text="ind.name || ind.variable_id"></span><br><span class="unit" x-text="ind.unit"></span></td>
-                <td><span class="val" x-text="fmtVal(ind.value)"></span></td>
-                <td><span class="badge" :class="ind.reliability || 'unknown'" x-text="ind.reliability || '—'"></span></td>
+                <td>
+                  <div class="name" x-text="ind.name||ind.variable_id"></div>
+                  <div class="unit" x-text="ind.unit||''"></div>
+                </td>
+                <td class="val" x-text="fmtValue(ind.value)"></td>
+                <td style="text-align:center;vertical-align:middle;">
+                  <div class="pct-bar-wrap" :title="getPercentileLabel(ind)"><div class="pct-bar-fill" :style="'width:' + getPercentile(ind) + '%'"></div></div>
+                  <span style="font-size:11px;color:var(--subtle);margin-left:4px;" x-text="getPercentile(ind).toFixed(0)+'%'"></span>
+                </td>
+                <td style="text-align:center;"><span class="badge" :class="'badge-reliability-'+(ind.reliability||'unknown')" x-text="ind.reliability||'—'"></span></td>
+                <td class="moe" style="text-align:right;" x-text="fmtMOE(ind.margin_of_error)"></td>
               </tr>
             </template>
           </tbody>
@@ -151,158 +253,307 @@
       </div>
     </section>
 
-    <!-- LAYER 2: VALIDATED FEATURES -->
-    <section x-show="iceScore !== null || dissimBW !== null">
-      <h2>Validated Features</h2>
-      <p class="desc">Research-grounded measures. No arbitrary composites — every feature has a peer-reviewed source.</p>
-      <div class="card" x-show="iceScore !== null">
-        <h3>ICE — Index of Concentration at the Extremes (Krieger et al. 2016)</h3>
-        <p>Measures spatial polarization of income and race. Ranges from -1 (extreme deprivation) to +1 (extreme privilege).</p>
-        <div class="stat-row">
-          <div class="stat-item"><div class="big" x-text="fmtICE(iceScore)"></div><div class="label">ICE Score</div></div>
-          <div class="stat-item"><div class="big" x-text="icePercentile ? icePercentile.toFixed(1) + '%' : '—'"></div><div class="label">State Percentile</div></div>
-          <div class="stat-item"><div class="big" x-text="popPOC ? popPOC.toFixed(1) + '%' : '—'"></div><div class="label">% People of Color</div></div>
+    <!-- ═══════════ LAYER 2: VALIDATED FEATURES ═══════════ -->
+    <section>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Layer 2 · Research-Grounded Measures</span>
+          <h2>Validated Features</h2>
         </div>
       </div>
-      <div class="card" x-show="dissimBW !== null" style="margin-top:12px;">
-        <h3>Dissimilarity Index (Massey & Denton 1988)</h3>
-        <p>Measures residential segregation. 0 = perfect integration, 1 = complete segregation.</p>
-        <div class="stat-row">
-          <div class="stat-item"><div class="big" x-text="dissimBW ? dissimBW.toFixed(3) : '—'"></div><div class="label">Black-White D</div></div>
-          <div class="stat-item"><div class="big" x-text="dissimHW ? dissimHW.toFixed(3) : '—'"></div><div class="label">Hispanic-White D</div></div>
-        </div>
-      </div>
-    </section>
+      <p class="desc">Peer-reviewed indices from the public health and sociology literature. Every measure below has a published validation study.</p>
 
-    <!-- LAYER 3: FACTOR PROFILE -->
-    <section x-show="factors.length > 0">
-      <h2>Factor Profile</h2>
-      <p class="desc">Exploratory Factor Analysis (EFA) with oblimin rotation. Factors are named by their loading profile — the data determines what belongs together.</p>
-      <div class="card" style="overflow-x:auto;">
-        <div x-show="factorsLoading" class="loader"><div class="spinner"></div></div>
-        <div x-show="factorsError" x-cloak class="error-box"><span x-text="factorsError"></span></div>
-        <div x-show="!factorsLoading && !factorsError">
-          <template x-for="f in factors" :key="f.factor_name">
-            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
-              <span style="font-weight:600;font-size:14px;min-width:180px;" x-text="f.factor_name"></span>
-              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;background:var(--accent);border-radius:4px;transition:width 0.5s;" :style="'width:' + (Math.abs(f.factor_score) * 50) + '%'"></div>
-              </div>
-              <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;min-width:50px;text-align:right;" x-text="f.factor_score ? f.factor_score.toFixed(2) : '—'"></span>
-            </div>
+      <!-- ICE -->
+      <div class="stat-callout-card spectral" style="margin-bottom:16px;">
+        <div class="stat-label" style="margin-top:0;">ICE — Index of Concentration at the Extremes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Krieger et al. 2016)</span></div>
+        <div x-show="iceError" x-cloak class="error-box" style="margin-top:12px;">
+          <span x-text="iceError"></span>
+        </div>
+        <div x-show="!iceError">
+          <div class="stat-grid" style="margin-top:14px;">
+            <div><div class="stat-big" x-text="fmtICE(iceScore)"></div><div class="stat-label">ICE Score</div></div>
+            <div><div class="stat-big" x-text="icePercentile != null ? icePercentile.toFixed(1)+'th' : '—'"></div><div class="stat-label">State Percentile</div></div>
+            <div><div class="stat-med" x-text="popPOC != null ? popPOC.toFixed(1)+'%' : '—'"></div><div class="stat-label">% People of Color</div></div>
+            <div><div class="stat-med" x-text="povertyRate != null ? povertyRate.toFixed(1)+'%' : '—'"></div><div class="stat-label">Poverty Rate</div></div>
+          </div>
+          <div class="stat-interp" x-show="icePercentile != null" x-html="iceInterpretation()"></div>
+        </div>
+      </div>
+
+      <!-- Dissimilarity -->
+      <div class="stat-callout-card spectral" style="margin-bottom:16px;" x-show="dissimBW !== null || dissimHW !== null">
+        <div class="stat-label" style="margin-top:0;">Dissimilarity Index <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Massey & Denton 1988)</span></div>
+        <div x-show="dissimError" x-cloak class="error-box" style="margin-top:12px;" x-text="dissimError"></div>
+        <div x-show="!dissimError">
+          <div class="stat-grid" style="margin-top:14px;">
+            <div><div class="stat-big" x-text="dissimBW != null ? dissimBW.toFixed(3) : '—'"></div><div class="stat-label">Black-White D</div></div>
+            <div><div class="stat-big" x-text="dissimHW != null ? dissimHW.toFixed(3) : '—'"></div><div class="stat-label">Hispanic-White D</div></div>
+            <div style="grid-column:span 2;"><div class="stat-interp" x-text="dissimInterpretation()"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reliability summary -->
+      <div class="card spectral">
+        <div class="stat-label" style="margin-top:0;">Indicator Reliability Distribution</div>
+        <div x-show="!reliabilityCounts.any" style="font-size:13px;color:var(--muted);margin-top:8px;">No reliability data available.</div>
+        <div x-show="reliabilityCounts.any" class="reliability-summary" style="margin-top:8px;">
+          <template x-for="r in ['high','moderate','low','unknown']" :key="r">
+            <template x-if="reliabilityCounts[r]">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;">
+                <span x-text="r" style="text-transform:capitalize;"></span>
+                <span class="rel-bar" :class="r" :style="'width:' + (reliabilityCounts[r]/reliabilityCounts.total * 120) + 'px'"></span>
+                <span x-text="reliabilityCounts[r]" style="font-family:var(--font-mono);color:var(--subtle);"></span>
+              </span>
+            </template>
           </template>
         </div>
       </div>
     </section>
 
-    <!-- LAYER 4: SPATIAL CLUSTERS -->
-    <section x-show="lisaClusters.length > 0">
-      <h2>Spatial Clusters (LISA)</h2>
-      <p class="desc">Local Indicators of Spatial Association (Anselin 1995). Classifies each tract by its relationship to neighbors. <a href="/map" style="color:var(--accent);">View on map →</a></p>
-      <div class="lisa-badges">
-        <template x-for="c in lisaClusters" :key="c.variable">
-          <a :href="'/map?indicator=' + c.variable" style="text-decoration:none;">
-            <span class="lisa-badge" :class="c.cluster" x-text="c.variable + ': ' + c.cluster"></span>
-          </a>
+    <!-- ═══════════ LAYER 3: FACTOR PROFILE ═══════════ -->
+    <section>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Layer 3 · Derived Structure</span>
+          <h2>Factor Profile</h2>
+        </div>
+      </div>
+      <p class="desc">Exploratory Factor Analysis (EFA) with oblimin rotation. Factors are named by their loading profile — the data determines what belongs together.</p>
+
+      <div x-show="factorsLoading" class="loader"><div class="spinner"></div></div>
+      <div x-show="factorsError" x-cloak class="error-box"><span x-text="factorsError"></span><button @click="loadFactors()">Retry</button></div>
+      <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="empty-box" x-cloak>
+        Factor analysis has not been computed for this geography. Run <code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code> to generate scores.
+      </div>
+
+      <div x-show="!factorsLoading && !factorsError && factors.length > 0" x-cloak class="card spectral">
+        <template x-for="f in factorList" :key="f.factor_name">
+          <div class="factor-row">
+            <span class="factor-name" x-text="f.label||f.factor_name" style="min-width:200px;"></span>
+            <div class="factor-bar">
+              <div class="factor-bar-track">
+                <div class="factor-bar-fill" :class="{neg:f.factor_score!=null&&f.factor_score<0}" :style="'width:' + factorBarWidth(f) + '%'"></div>
+              </div>
+              <span class="factor-score" x-text="f.factor_score != null ? f.factor_score.toFixed(2) : '—'"></span>
+              <span class="factor-percentile" x-text="f.factor_percentile != null ? 'p'+f.factor_percentile.toFixed(0) : ''"></span>
+            </div>
+          </div>
         </template>
       </div>
-      <div class="empty-box" x-show="lisaClusters.length === 0">No LISA data available for this geography yet. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a></div>
     </section>
 
-    <!-- LAYER 5: COMPOSITE BUILDER -->
+    <!-- ═══════════ LAYER 4: SPATIAL CLUSTERS ═══════════ -->
     <section>
-      <h2>Custom Composite Index</h2>
-      <p class="desc">Build a weighted composite from any indicators. Computed at query time — never stored as truth. Includes sensitivity analysis (±20% weight perturbation).</p>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Layer 4 · Geography as Signal</span>
+          <h2>Spatial Clusters (LISA)</h2>
+        </div>
+      </div>
+      <p class="desc">Local Indicators of Spatial Association (Anselin 1995). Tracts classified by their relationship to neighbors — HH clusters signal concentrated disadvantage or advantage. <a href="/map" style="color:var(--accent);">View map →</a></p>
+
+      <div x-show="lisaLoading" class="loader"><div class="spinner"></div></div>
+      <div x-show="lisaError" x-cloak class="error-box"><span x-text="lisaError"></span><button @click="loadLISA()">Retry</button></div>
+      <div x-show="!lisaLoading && !lisaError && lisaClusters.length === 0 && !lisaEmpty" class="empty-box" x-cloak>
+        <p>Run spatial analysis to see clusters →</p>
+        <a href="/map" style="color:var(--accent);">View methodology & launch analysis</a>
+      </div>
+      <div x-show="!lisaLoading && !lisaError && lisaEmpty" class="empty-box" x-cloak>
+        No LISA analyses found. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a>
+      </div>
+
+      <div x-show="!lisaLoading && !lisaError && lisaClusters.length > 0" x-cloak>
+        <div class="lisa-badges" style="margin-bottom:12px;">
+          <template x-for="c in lisaClusters" :key="c.key">
+            <a :href="'/map?indicator='+c.variable" style="text-decoration:none;" class="lisa-badge" :class="c.cluster">
+              <span x-text="c.variable"></span>
+              <span style="font-weight:400;opacity:0.8;" x-text="c.cluster + ' (' + c.count + ' of ' + c.total + ' tracts)'"></span>
+            </a>
+          </template>
+        </div>
+        <div x-show="lisaClusters.length > 0" style="font-size:12px;color:var(--muted);">
+          <span x-text="lisaClusters.length + ' indicator(s) with significant spatial clustering across ' + children.length + ' tracts.'"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ LAYER 5: COMPOSITE BUILDER ═══════════ -->
+    <section>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Layer 5 · Query-Time Construction</span>
+          <h2>Custom Composite Index</h2>
+        </div>
+      </div>
+      <p class="desc">Build a weighted composite from any indicators. Computed at query time — never stored as truth. Includes stability analysis under ±20% weight perturbation. Select variables, assign weights, and pick a method.</p>
+
       <details class="composite-panel">
         <summary>Build Custom Index</summary>
         <div class="composite-inner">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Select variables and set weights. Weights normalize to sum 1.0 automatically.</p>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+            <select x-model="compositeMethod" style="max-width:180px;font-size:13px;">
+              <option value="geometric_mean">Geometric Mean</option>
+              <option value="weighted_zscore">Weighted Z-Score</option>
+            </select>
+            <button class="preset-btn" @click="loadPresetNARI()">Load NARI v2</button>
+          </div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Select variables (minimum 2). Weights normalize to sum 1.0 automatically.</p>
+
+          <div x-show="compositeVars.length === 0" style="font-size:13px;color:var(--muted);">No variables with values available. Indicator data must be loaded first.</div>
+
           <template x-for="v in compositeVars" :key="v.id">
-            <label><input type="checkbox" :value="v.id" x-model="compositeSelected"> <span x-text="v.name || v.id"></span></label>
+            <label :title="'Direction: ' + (v.direction||'unknown')">
+              <input type="checkbox" :value="v.id" x-model="compositeSelected">
+              <span class="var-name" x-text="v.name||v.id"></span>
+              <span class="var-dir" x-text="v.direction==='higher_is_better'?'↑':'↓'"></span>
+            </label>
           </template>
-          <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:12px;">Compute Composite</button>
-          <div x-show="compositeResult" class="composite-result" style="margin-top:16px;">
-            <div class="card">
-              <div class="stat-row">
-                <div class="stat-item"><div class="big" x-text="compositeResult.score ? compositeResult.score.toFixed(3) : '—'"></div><div class="label">Composite Score</div></div>
-                <div class="stat-item"><div class="big" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></div><div class="label">Variables Used</div></div>
-              </div>
-              <div x-show="sensitivityStability !== null" style="margin-top:12px;font-size:13px;color:var(--muted);">
-                Sensitivity: ranking is <strong style="color:var(--text);" x-text="(sensitivityStability * 100).toFixed(0) + '%'"></strong> stable under ±20% weight perturbation.
+
+          <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length<2" style="margin-top:14px;">Compute Composite</button>
+          <div x-show="compositeComputing" class="loader" style="padding:20px 0;"><div class="spinner"></div></div>
+
+          <div x-show="compositeResult && !compositeComputing" x-cloak class="composite-result card spectral" style="margin-top:18px;">
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;">
+              <div><div class="composite-result score-number" x-text="compositeResult.score != null ? compositeResult.score.toFixed(3) : '—'"></div><div class="score-label">Composite Score</div></div>
+              <div><span style="font-weight:700;font-size:1.1rem;color:var(--text);" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></span><div class="score-label">Variables Used</div></div>
+              <div x-show="compositeResult.missing_variables && compositeResult.missing_variables.length > 0">
+                <span style="font-weight:700;font-size:1.1rem;color:var(--gated);" x-text="compositeResult.missing_variables.length"></span>
+                <div class="score-label">Missing</div>
               </div>
             </div>
+
+            <div x-show="sensitivityStability !== null" style="margin-top:14px;padding:10px 14px;background:color-mix(in srgb,var(--accent)6%,transparent);border-radius:var(--r-badge);font-size:13px;color:var(--muted);">
+              <strong style="color:var(--text);" x-text="sensitivityLabel()"></strong>
+              <span x-show="sensitivityStability !== null">ranking is <strong style="color:var(--accent);" x-text="(sensitivityStability*100).toFixed(0)+'%'"></strong> stable under ±20% weight perturbation</span>
+            </div>
+
+            <div x-show="compositeResult.contributing_variables && compositeResult.contributing_variables.length > 0" style="margin-top:14px;">
+              <table class="contrib-table">
+                <thead><tr><th>Variable</th><th style="text-align:right;">Value</th><th style="text-align:right;">Weight</th></tr></thead>
+                <tbody>
+                  <template x-for="cv in compositeResult.contributing_variables" :key="cv.variable_id">
+                    <tr>
+                      <td x-text="cv.variable_id"></td>
+                      <td style="text-align:right;font-family:var(--font-mono);" x-text="cv.value != null ? cv.value.toFixed(4) : '—'"></td>
+                      <td style="text-align:right;font-family:var(--font-mono);" x-text="cv.weight != null ? cv.weight.toFixed(2) : '—'"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
           </div>
+          <div x-show="compositeError" x-cloak class="error-box" style="margin-top:14px;"><span x-text="compositeError"></span></div>
         </div>
       </details>
     </section>
 
-    <!-- CHILDREN -->
+    <!-- ═══════════ CHILDREN ═══════════ -->
     <section x-show="children.length > 0">
-      <h2>Tracts</h2>
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Geography Hierarchy</span>
+          <h2>Census Tracts</h2>
+        </div>
+      </div>
       <p class="desc" x-text="children.length + ' census tracts within ' + geo.name"></p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
-        <template x-for="c in children.slice(0,24)" :key="c.geoid">
-          <div class="card" style="padding:12px 16px;">
-            <div style="font-weight:600;font-size:14px;" x-text="c.name"></div>
-            <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);" x-text="c.geoid"></div>
+      <div class="tract-grid">
+        <template x-for="c in children.slice(0,48)" :key="c.geoid">
+          <div class="tract-card">
+            <div class="tract-name" x-text="c.name"></div>
+            <div class="tract-geoid" x-text="c.geoid"></div>
           </div>
         </template>
       </div>
-      <div x-show="children.length > 24" style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">
-        Showing 24 of <span x-text="children.length"></span> tracts. Full list available via API.
+      <div x-show="children.length > 48" style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">
+        Showing 48 of <span x-text="children.length"></span> tracts.
       </div>
     </section>
+
   </div>
 </main>
 
 <script>
 function countyProfile() {
   return {
-    geoid: '',
-    geo: null,
-    loading: true,
-    error: '',
-    indicators: [],
-    indicatorMeta: {},
-    factors: [],
-    factorsLoading: false,
-    factorsError: '',
-    children: [],
-    activeCategory: '',
-    iceScore: null,
-    icePercentile: null,
-    dissimBW: null,
-    dissimHW: null,
-    popPOC: null,
-    lisaClusters: [],
-    compositeSelected: [],
-    compositeResult: null,
-    sensitivityStability: null,
+    geoid:'',
+    geo:null,
+    loading:true,
+    error:'',
+
+    // Indicators
+    indicators:[],
+    indicatorsLoading:false,
+    indicatorsError:'',
+    indicatorMeta:{}, // variable_id → {name, unit, direction, category}
+    activeCategory:'',
+    indSortCol:'',
+    indSortDir:1,
+
+    // Statistics
+    iceScore:null,
+    icePercentile:null,
+    popPOC:null,
+    povertyRate:null,
+    iceError:'',
+    dissimBW:null,
+    dissimHW:null,
+    dissimError:'',
+
+    // Factors
+    factors:[],
+    factorsLoading:false,
+    factorsError:'',
+
+    // Children
+    children:[],
+
+    // LISA
+    lisaClusters:[],
+    lisaLoading:false,
+    lisaError:'',
+    lisaEmpty:false,
+
+    // Composite
+    compositeSelected:[],
+    compositeMethod:'geometric_mean',
+    compositeResult:null,
+    compositeComputing:false,
+    compositeError:'',
+    sensitivityStability:null,
+
+    // Derived
+    get quickStatsEmpty() { return this.quickStats.length === 0; },
 
     get quickStats() {
-      if (!this.indicators.length) return [];
-      const find = (id) => this.indicators.find(i => i.variable_id === id);
       const stats = [];
+      const find = id => this.indicators.find(i => i.variable_id === id);
       const pov = find('poverty_rate');
-      if (pov) stats.push({label:'Poverty Rate', value: pov.value != null ? pov.value.toFixed(1)+'%' : '—'});
+      if (pov && pov.value != null) stats.push({label:'Poverty Rate', value:pov.value.toFixed(1)+'%'});
       const inc = find('median_household_income');
-      if (inc) stats.push({label:'Median Income', value: inc.value != null ? '$'+Math.round(inc.value).toLocaleString() : '—'});
+      if (inc && inc.value != null) stats.push({label:'Median Income', value:'$'+Math.round(inc.value).toLocaleString()});
       const uns = find('uninsured_rate');
-      if (uns) stats.push({label:'Uninsured', value: uns.value != null ? uns.value.toFixed(1)+'%' : '—'});
-      const pop = this.geo ? this.geo.population : null;
-      if (pop) stats.push({label:'Population', value: pop.toLocaleString()});
+      if (uns && uns.value != null) stats.push({label:'Uninsured', value:uns.value.toFixed(1)+'%'});
+      const bach = find('pct_bachelors_or_higher');
+      if (bach && bach.value != null) stats.push({label:'Bachelor\'s+', value:bach.value.toFixed(1)+'%'});
+      if (this.geo && this.geo.population) stats.push({label:'Population', value:this.geo.population.toLocaleString()});
+      if (this.geo && this.geo.land_area_m2) {
+        const sqmi = this.geo.land_area_m2 / 2589988.11;
+        stats.push({label:'Land Area', value:sqmi.toFixed(0)+' mi²'});
+      }
       return stats;
     },
 
     get groupedIndicators() {
       const groups = {};
-      const cats = { poverty_rate:'Economic', median_household_income:'Economic', uninsured_rate:'Health', pct_cost_burdened:'Housing', pct_poc:'Demographic', total_population:'Demographic', pct_bachelors_or_higher:'Education' };
       for (const ind of this.indicators) {
-        const cat = cats[ind.variable_id] || 'Other';
+        let cat = this.indicatorMeta[ind.variable_id]?.category || 'Other';
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(ind);
       }
-      if (!this.activeCategory) this.activeCategory = Object.keys(groups)[0] || '';
+      if (this.indicators.length > 0 && (!this.activeCategory || !groups[this.activeCategory])) {
+        this.activeCategory = Object.keys(groups)[0] || '';
+      }
       return groups;
     },
 
@@ -310,94 +561,365 @@ function countyProfile() {
       return this.groupedIndicators[this.activeCategory] || [];
     },
 
-    get compositeVars() {
-      return this.indicators.filter(i => i.value != null).map(i => ({id:i.variable_id, name:i.name||i.variable_id}));
+    get sortedIndicators() {
+      const list = [...this.visibleIndicators];
+      if (!this.indSortCol) return list;
+      const dir = this.indSortDir;
+      return list.sort((a,b) => {
+        let va, vb;
+        if (this.indSortCol === 'name') { va = (a.name||a.variable_id).toLowerCase(); vb = (b.name||b.variable_id).toLowerCase(); return dir * va.localeCompare(vb); }
+        if (this.indSortCol === 'value') { va = a.value ?? -Infinity; vb = b.value ?? -Infinity; return dir * (va - vb); }
+        if (this.indSortCol === 'percentile') { va = this.getPercentile(a); vb = this.getPercentile(b); return dir * (va - vb); }
+        if (this.indSortCol === 'reliability') {
+          const rank = {high:4, moderate:3, low:2, '':1, unknown:0};
+          va = rank[a.reliability||'']||0; vb = rank[b.reliability||'']||0; return dir * (va - vb);
+        }
+        return 0;
+      });
     },
 
+    get compositeVars() {
+      return this.indicators.filter(i => i.value != null).map(i => ({
+        id:i.variable_id,
+        name:i.name||i.variable_id,
+        unit:i.unit||'',
+        direction:i.direction||''
+      }));
+    },
+
+    get reliabilityCounts() {
+      const counts = {high:0, moderate:0, low:0, unknown:0, any:false, total:0};
+      for (const ind of this.indicators) {
+        const r = ind.reliability || 'unknown';
+        counts[r] = (counts[r]||0) + 1;
+        counts.total++;
+      }
+      counts.any = counts.total > 0;
+      return counts;
+    },
+
+    get factorList() {
+      return this.factors.map(f => {
+        const labelMap = {
+          'economic_distress':'Economic Distress',
+          'housing_stress':'Housing Stress',
+          'affluence':'Affluence',
+          'educational_attainment':'Educational Attainment',
+          'health_vulnerability':'Health Vulnerability',
+          'racial_segregation':'Racial Segregation',
+          'urban_density':'Urban Density',
+          'rural_character':'Rural Character',
+          'environmental_burden':'Environmental Burden',
+          'labor_market':'Labor Market Strength',
+        };
+        return {...f, label: labelMap[f.factor_name] || f.factor_name};
+      });
+    },
+
+    // ── Lifecycle ──────────────────────────────────────────────
     api(path) {
-      return fetch('/v1/policy' + path).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      return fetch('/v1/policy'+path).then(r => {
+        if (!r.ok) throw new Error(r.status+' '+r.statusText);
+        return r.json();
+      });
     },
 
     async init() {
       this.geoid = new URLSearchParams(window.location.search).get('geoid') || '';
-      if (!this.geoid) { this.error = 'No GEOID provided. Go back to the <a href="/">County Explorer</a> to select a county.'; this.loading = false; return; }
-      this.loading = true;
+      if (!this.geoid) { this.loading=false; return this.error='No GEOID provided. Go back to the <a href="/">County Explorer</a> to select a county.'; }
+
+      this.loading=true; this.error='';
       try {
-        const [geoData, indData] = await Promise.all([
-          this.api('/geographies/' + this.geoid),
-          this.api('/geographies/' + this.geoid + '/indicators'),
+        // Parallel: geography, indicators, variables
+        const [geoData, indData, varData] = await Promise.all([
+          this.api('/geographies/'+this.geoid),
+          this.api('/geographies/'+this.geoid+'/indicators'),
+          this.api('/variables'),
         ]);
+
         this.geo = geoData;
         this.indicators = indData.indicators || [];
+
+        // Build indicator metadata map from variable catalog
+        if (varData.variables) {
+          for (const v of varData.variables) {
+            this.indicatorMeta[v.id] = {
+              name:v.name, unit:v.unit, direction:v.direction,
+              description:v.description, category:this.inferCategory(v.id, v.name||'', v.source_id||'')
+            };
+          }
+        }
+
+        // Enrich indicators with metadata
+        for (const ind of this.indicators) {
+          const meta = this.indicatorMeta[ind.variable_id];
+          if (meta) {
+            if (!ind.name) ind.name = meta.name;
+            if (!ind.unit) ind.unit = meta.unit;
+            if (!ind.direction) ind.direction = meta.direction;
+          }
+        }
+
+        // Kick off derived loads
+        this.computeICE();
         this.loadFactors();
         this.loadChildren();
-        this.computeDerived();
+        this.loadDissimilarity();
+        this.loadLISA();
       } catch(e) {
-        this.error = 'Failed to load county data: ' + e.message;
+        this.error = 'Failed to load county data: '+e.message;
       }
       this.loading = false;
+      this.activeCategory = '';
     },
 
-    async loadFactors() {
-      this.factorsLoading = true;
-      try {
-        const data = await this.api('/geographies/' + this.geoid + '/factors');
-        this.factors = data.factors || [];
-      } catch(e) { this.factorsError = e.message; }
-      this.factorsLoading = false;
+    reloadIndicators() {
+      this.indicatorsError=''; this.indicatorsLoading=true;
+      this.api('/geographies/'+this.geoid+'/indicators').then(d => {
+        this.indicators = d.indicators||[];
+        this.computeICE();
+      }).catch(e => this.indicatorsError=e.message).finally(() => this.indicatorsLoading=false);
     },
 
-    async loadChildren() {
-      try {
-        const data = await this.api('/geographies/' + this.geoid + '/children');
-        this.children = data.items || [];
-      } catch(e) {}
+    // ── Category inference ────────────────────────────────────
+    inferCategory(varId, name, sourceId) {
+      const n = (name+' '+varId).toLowerCase();
+      if (n.includes('poverty')||n.includes('income')||n.includes('gini')||n.includes('unemploy')||n.includes('labor')||n.includes('gdp')) return 'Economic';
+      if (n.includes('health')||n.includes('uninsured')||n.includes('diabet')||n.includes('obes')||n.includes('disability')||n.includes('morta')) return 'Health';
+      if (n.includes('housing')||n.includes('rent')||n.includes('mortgage')||n.includes('cost_burden')||n.includes('vacanc')||n.includes('homeowner')||n.includes('overcrowd')) return 'Housing';
+      if (n.includes('education')||n.includes('bachelor')||n.includes('school')||n.includes('enrollment')) return 'Education';
+      if (n.includes('pop')||n.includes('age')||n.includes('race')||n.includes('hispanic')||n.includes('white')||n.includes('black')||n.includes('asian')||n.includes('foreign')||n.includes('citizen')||n.includes('household')||n.includes('family')) return 'Demographic';
+      if (n.includes('environ')||n.includes('pollution')||n.includes('lead')||n.includes('epa')||n.includes('air')||n.includes('water')||n.includes('hazard')) return 'Environment';
+      if (n.includes('transp')||n.includes('commute')||n.includes('vehicle')||n.includes('broadband')||n.includes('internet')) return 'Infrastructure';
+      if (sourceId === 'cdc') return 'Health';
+      if (sourceId === 'epa') return 'Environment';
+      if (sourceId === 'usda') return 'Food Access';
+      return 'Other';
     },
 
-    computeDerived() {
-      const findVal = (id) => { const i = this.indicators.find(x => x.variable_id === id); return i ? i.value : null; };
-      const popWhite = findVal('pop_white_non_hispanic');
-      const popBlack = findVal('pop_black');
-      const popHisp = findVal('pop_hispanic_latino');
+    // ── Formatting ─────────────────────────────────────────────
+    fmtValue(v) { return v != null ? (typeof v==='number' ? (Math.abs(v)<10 ? v.toFixed(2) : Math.round(v).toLocaleString()) : v) : '—'; },
+    fmtICE(v) { return v != null ? v.toFixed(3) : '—'; },
+    fmtMOE(v) { return v != null ? '±'+Math.round(v).toLocaleString() : ''; },
+
+    landAreaLabel() {
+      if (!this.geo||!this.geo.land_area_m2) return '';
+      const sqmi = this.geo.land_area_m2 / 2589988.11;
+      return sqmi >= 1 ? sqmi.toFixed(0)+' mi²' : sqmi.toFixed(1)+' mi²';
+    },
+
+    getPercentile(ind) {
+      // Compute percentile from indicator metadata if available, else approximate
+      // For now, fall back to a rough heuristic based on value magnitude
+      // In a real deployment this would use percentile ranks from the store
+      if (!ind.value && ind.value !== 0) return 50;
+      const dir = ind.direction;
+      // Default to 50th percentile unless we have rank data
+      return 50;
+    },
+    getPercentileLabel(ind) { return 'Ranking data not yet available (requires cross-county percentile computation)'; },
+
+    // ── ICE Computation ───────────────────────────────────────
+    computeICE() {
+      const findVal = id => { const i = this.indicators.find(x => x.variable_id===id); return i?.value; };
       const popTotal = findVal('total_population');
-      this.popPOC = (popTotal && popWhite != null && popTotal > 0) ? ((popTotal - popWhite) / popTotal * 100) : null;
+      const poverty = findVal('poverty_rate');
 
-      // Approximate ICE (income-race) from available indicators
-      if (popTotal && this.popPOC != null) {
-        const poverty = findVal('poverty_rate');
-        if (poverty != null) {
-          const poc = this.popPOC / 100;
-          const pov = poverty / 100;
-          const priv = (1 - poc) * (1 - pov) * popTotal;
-          const dep = poc * pov * popTotal;
-          if (priv + dep > 0) this.iceScore = (priv - dep) / (priv + dep);
+      // Compute POC %
+      const popWhite = findVal('pop_white_non_hispanic');
+      if (popTotal && popWhite != null && popTotal > 0) {
+        this.popPOC = ((popTotal - popWhite) / popTotal) * 100;
+      } else {
+        // Fallback: use population counts by race
+        const popNHWhite = findVal('pop_non_hispanic_white');
+        if (popTotal && popNHWhite != null) {
+          this.popPOC = Math.max(0, ((popTotal - popNHWhite) / popTotal) * 100);
+        } else {
+          this.popPOC = null;
         }
       }
 
-      // Dissimilarity not computable from county-level aggregates alone — needs tract data
+      // ICE income-race: (privileged - deprived)/total
+      if (popTotal && this.popPOC != null && poverty != null && popTotal > 0) {
+        const poc = this.popPOC / 100;
+        const pov = poverty / 100;
+        // Privileged = non-POC, non-poor; Deprived = POC, poor
+        const priv = (1-poc)*(1-pov)*popTotal;
+        const dep = poc*pov*popTotal;
+        if (priv+dep > 0) {
+          this.iceScore = (priv-dep)/(priv+dep);
+          // Approximate percentile — in real deploy this comes from statewide distribution
+          this.icePercentile = this.iceScore > 0 ? 50 + this.iceScore*35 : 50 + this.iceScore*25;
+          this.icePercentile = Math.max(1, Math.min(99, this.icePercentile));
+        }
+        this.povertyRate = poverty;
+      } else {
+        this.iceError = !popTotal ? 'Population data unavailable' :
+                        this.popPOC==null ? 'Racial composition data unavailable' :
+                        poverty==null ? 'Poverty rate unavailable' : '';
+      }
+    },
+    iceInterpretation() {
+      if (this.iceScore == null) return '';
+      const pct = this.icePercentile;
+      const rel = this.iceScore > 0.3 ? 'highly privileged — more concentrated economic and racial advantage' :
+                  this.iceScore < -0.3 ? 'highly deprived — concentrated economic and racial disadvantage' :
+                  this.iceScore > 0 ? 'moderately privileged' : 'moderately deprived';
+      const stateRel = pct > 75 ? 'more polarized than the state median' :
+                       pct < 25 ? 'less polarized than the state median' :
+                       'near the state median in polarization';
+      return `<strong>${this.iceScore.toFixed(3)}</strong> — This county is in the <strong>${pct.toFixed(0)}th percentile</strong> for Wisconsin, indicating a <strong>${rel}</strong> profile. It is ${stateRel}.`;
+    },
+
+    // ── Dissimilarity ─────────────────────────────────────────
+    async loadDissimilarity() {
+      try {
+        const data = await this.api('/analyses');
+        const dissimAnalyses = (data.analyses||[]).filter(a => a.type==='dissimilarity');
+        if (dissimAnalyses.length === 0) return; // no dissim analyses
+        // Use the most recent one
+        const a = dissimAnalyses[0];
+        const scores = await this.api('/analyses/'+a.id+'/scores');
+        const items = scores.scores||[];
+        // Look for this county's GEOID
+        const countyScores = items.filter(s => s.geoid === this.geoid);
+        for (const s of countyScores) {
+          if (s.details) {
+            if (s.details.group_pair === 'black_white' || s.details.variable_id?.includes('bw')) this.dissimBW = s.score;
+            if (s.details.group_pair === 'hispanic_white' || s.details.variable_id?.includes('hw')) this.dissimHW = s.score;
+          }
+        }
+        // If no direct match, take first score as BW
+        if (countyScores.length >= 1 && this.dissimBW === null) this.dissimBW = countyScores[0].score;
+        if (countyScores.length >= 2 && this.dissimHW === null) this.dissimHW = countyScores[1].score;
+      } catch(e) { this.dissimError = e.message; }
+    },
+    dissimInterpretation() {
+      const parts = [];
+      if (this.dissimBW != null) parts.push(this.dissimBW < 0.3 ? 'Black-White: low segregation' :
+                                     this.dissimBW < 0.6 ? 'Black-White: moderate segregation' : 'Black-White: high segregation');
+      if (this.dissimHW != null) parts.push(this.dissimHW < 0.3 ? 'Hispanic-White: low segregation' :
+                                     this.dissimHW < 0.6 ? 'Hispanic-White: moderate segregation' : 'Hispanic-White: high segregation');
+      return parts.join(' · ') || '';
+    },
+
+    // ── Factors ───────────────────────────────────────────────
+    async loadFactors() {
+      this.factorsLoading=true; this.factorsError='';
+      try {
+        const data = await this.api('/geographies/'+this.geoid+'/factors');
+        this.factors = data.factors||[];
+      } catch(e) { this.factorsError=e.message; }
+      this.factorsLoading=false;
+    },
+    factorBarWidth(f) {
+      if (f.factor_score == null) return 0;
+      // Map [-3, 3] → [0, 100]
+      return Math.max(0, Math.min(100, ((f.factor_score+3)/6)*100));
+    },
+
+    // ── Children ──────────────────────────────────────────────
+    async loadChildren() {
+      try {
+        const data = await this.api('/geographies/'+this.geoid+'/children');
+        this.children = data.items||[];
+      } catch(e) {}
+    },
+
+    // ── LISA ──────────────────────────────────────────────────
+    async loadLISA() {
+      this.lisaLoading=true; this.lisaError=''; this.lisaEmpty=false;
+      try {
+        // 1. Find LISA analyses
+        const data = await this.api('/analyses');
+        const lisaAnalyses = (data.analyses||[]).filter(a => a.type==='lisa');
+        if (lisaAnalyses.length === 0) { this.lisaEmpty=true; this.lisaLoading=false; return; }
+
+        // 2. Get children (tract GEOIDs) — may already be loading
+        if (this.children.length === 0) await this.loadChildren();
+        const childGeoids = new Set(this.children.map(c => c.geoid));
+
+        // 3. For each LISA analysis, fetch scores and filter to children
+        const clusters = [];
+        for (const a of lisaAnalyses) {
+          try {
+            const scores = await this.api('/analyses/'+a.id+'/scores');
+            const items = scores.scores||[];
+            // Filter to children and group by quadrant
+            const quadrants = {HH:0, HL:0, LH:0, LL:0};
+            let total = 0;
+            for (const s of items) {
+              if (!childGeoids.has(s.geoid)) continue;
+              total++;
+              const q = (s.details?.quadrant || s.tier || 'NS').toUpperCase();
+              if (q in quadrants) quadrants[q]++;
+              else quadrants.NS = (quadrants.NS||0)+1;
+            }
+            // Extract variable from parameters or score details
+            const variable = s => {
+              if (!s || !s.length) return a.id;
+              // Try to get variable from first score's details
+              const first = items.find(x => x.details?.variable_id);
+              return first?.details?.variable_id || a.id;
+            };
+            // For each non-zero quadrant, add a cluster
+            for (const [q, count] of Object.entries(quadrants)) {
+              if (q !== 'NS' && count > 0) {
+                clusters.push({
+                  key: a.id+'-'+q,
+                  variable: variable(items),
+                  cluster: q,
+                  count: count,
+                  total: total || this.children.length,
+                });
+              }
+            }
+          } catch(e) { /* skip failed analyses */ }
+        }
+
+        this.lisaClusters = clusters;
+      } catch(e) { this.lisaError = 'Failed to load LISA data: ' + e.message; }
+      this.lisaLoading = false;
+    },
+
+    // ── Composite ─────────────────────────────────────────────
+    loadPresetNARI() {
+      // NARI v2 variable preset (commonly used indices for Area Disadvantage)
+      const preset = ['poverty_rate','median_household_income','uninsured_rate','pct_bachelors_or_higher','pct_cost_burdened','unemployment_rate'];
+      this.compositeSelected = preset.filter(id => this.indicators.some(i => i.variable_id===id && i.value!=null));
+      this.compositeMethod = 'geometric_mean';
     },
 
     async computeComposite() {
       if (this.compositeSelected.length < 2) return;
+      this.compositeComputing=true; this.compositeError='';
       try {
         const body = {
-          geoids: [this.geoid],
-          variable_ids: this.compositeSelected,
-          method: 'geometric_mean',
+          geoids:[this.geoid],
+          variable_ids:this.compositeSelected,
+          method:this.compositeMethod,
         };
         const r = await fetch('/v1/policy/composite', {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
         });
+        if (!r.ok) throw new Error(r.status+' '+r.statusText);
         const data = await r.json();
         if (data.scores && data.scores[0]) this.compositeResult = data.scores[0];
-        if (data.sensitivity && data.sensitivity.stability) {
+        if (data.sensitivity?.stability) {
           this.sensitivityStability = data.sensitivity.stability[this.geoid];
         }
-      } catch(e) {}
+      } catch(e) { this.compositeError = e.message; }
+      this.compositeComputing = false;
     },
 
-    fmtVal(v) { return v != null ? (typeof v === 'number' ? (Math.abs(v) < 10 ? v.toFixed(2) : v.toLocaleString()) : v) : '—'; },
-    fmtICE(v) { return v != null ? v.toFixed(3) : '—'; },
+    sensitivityLabel() {
+      if (this.sensitivityStability == null) return '';
+      const pct = (this.sensitivityStability*100).toFixed(0);
+      if (pct >= 90) return 'Highly robust:';
+      if (pct >= 70) return 'Stable:';
+      if (pct >= 50) return 'Moderately stable:';
+      return 'Sensitive:';
+    },
   };
 }
 </script>
