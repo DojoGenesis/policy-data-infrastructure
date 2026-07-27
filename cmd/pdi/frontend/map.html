@@ -1,158 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LISA Cluster Map — Policy Data Infrastructure</title>
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map — LISA Clusters | PDI</title>
 <meta name="description" content="Interactive LISA cluster map showing spatial autocorrelation of policy indicators across Wisconsin census tracts.">
 <link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
-<script src="/static/choropleth.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
+
+  /* ── Local spinner (index.html convention, not in shared styles.css) ── */
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media(prefers-reduced-motion:reduce){.spinner{animation:none;}}
 
   /* ── Map page layout ──────────────────────────────────────────── */
   .map-page {
     display: flex;
     flex-direction: column;
     gap: clamp(16px, 2.5vw, 28px);
+    padding-top: clamp(24px, 4vw, 40px);
+    padding-bottom: clamp(48px, 8vw, 96px);
   }
 
-  .map-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: clamp(10px, 2vw, 16px);
+  /* ── Map header ───────────────────────────────────────────────── */
+  .map-hero { margin-bottom: clamp(12px, 2vw, 20px); }
+  .map-hero h1 {
+    font-size: clamp(1.4rem, 3.8vw, 2rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
   }
-
-  .map-controls label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  .map-hero-subtitle {
+    font-size: 0.85rem;
     color: var(--muted);
   }
 
-  .map-controls select {
-    font-family: var(--font-sans);
-    font-size: 0.85rem;
-    padding: 0.45em 2em 0.45em 0.75em;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-badge);
-    background: var(--surface);
-    color: var(--text);
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9aa8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.55em center;
-  }
-  .map-controls select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
-  }
-
-  .map-controls .var-status {
-    font-size: 0.7rem;
-    color: var(--subtle);
-    margin-left: 4px;
-  }
-
-  /* Toggle switches */
-  .toggle-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .toggle-wrap input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  .toggle-track {
-    position: relative;
-    width: 38px;
-    height: 22px;
-    background: var(--subtle);
-    border-radius: 999px;
-    transition: background-color 180ms ease;
-  }
-  .toggle-track::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    background: var(--text);
-    border-radius: 50%;
-    transition: transform 180ms ease;
-  }
-  .toggle-wrap input:checked + .toggle-track {
-    background: var(--accent);
-  }
-  .toggle-wrap input:checked + .toggle-track::after {
-    transform: translateX(16px);
-  }
-  .toggle-label {
-    font-size: 0.8rem;
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  /* ── Map grid: map + sidebar on desktop ───────────────────────── */
-  .map-grid {
-    display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: clamp(16px, 2.5vw, 24px);
-  }
-  @media (max-width: 900px) {
-    .map-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  /* ── Map container ────────────────────────────────────────────── */
-  .map-container {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
+  /* ── Map card overrides for SVG choropleth ───────────────────── */
+  .chart-card.map-card {
+    padding: 0;
     overflow: hidden;
     position: relative;
-    min-height: 400px;
+    min-height: 420px;
   }
-
-  .map-container svg {
+  .chart-card.map-card svg {
     display: block;
     width: 100%;
     height: auto;
   }
 
-  /* Tract polygons */
-  .map-container .tract-poly {
+  /* ── Tract polygons ──────────────────────────────────────────── */
+  .tract-poly {
     cursor: pointer;
     transition: opacity 120ms ease, filter 120ms ease;
   }
-  .map-container .tract-poly:hover {
+  .tract-poly:hover {
     opacity: 0.85;
     filter: brightness(1.25);
   }
-  .map-container .tract-poly.tract-missing {
+  .tract-poly.tract-missing {
     cursor: default;
     opacity: 0.5;
   }
-  .map-container .tract-poly.tract-missing:hover {
+  .tract-poly.tract-missing:hover {
     opacity: 0.65;
     filter: brightness(1.1);
   }
-  /* Loading skeleton tracts */
-  .map-container .tract-skel {
-    fill: var(--surface-active);
+
+  /* ── Skeleton tracts during loading ──────────────────────────── */
+  .tract-skel {
+    fill: var(--surface);
     stroke: var(--border);
     stroke-width: 0.4;
     animation: pulse-subtle 1.8s ease-in-out infinite;
@@ -161,33 +87,9 @@
     0%, 100% { opacity: 0.3; }
     50% { opacity: 0.55; }
   }
+  @media (prefers-reduced-motion: reduce) { .tract-skel { animation: none; opacity: 0.4; } }
 
-  /* County boundaries */
-  .county-boundary {
-    fill: none;
-    stroke: var(--border-strong);
-    stroke-width: 1.5;
-    pointer-events: stroke;
-    cursor: pointer;
-  }
-  .county-boundary:hover {
-    stroke: var(--accent);
-    stroke-width: 2.5;
-  }
-  .county-label-bg {
-    fill: var(--raised);
-    opacity: 0.85;
-    pointer-events: none;
-  }
-  .county-label-text {
-    fill: var(--text);
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 600;
-    pointer-events: none;
-  }
-
-  /* ── Tooltip (hover) ──────────────────────────────────────────── */
+  /* ── Hover tooltip ───────────────────────────────────────────── */
   .tract-tooltip {
     position: absolute;
     background: var(--raised);
@@ -217,7 +119,7 @@
   }
   .tract-tooltip-row strong { color: var(--text); }
 
-  /* ── Popup (click) ────────────────────────────────────────────── */
+  /* ── Click popup ─────────────────────────────────────────────── */
   .tract-popup {
     position: absolute;
     background: var(--raised);
@@ -234,8 +136,7 @@
   }
   .tract-popup-close {
     position: absolute;
-    top: 6px;
-    right: 8px;
+    top: 6px; right: 8px;
     background: none;
     border: none;
     color: var(--muted);
@@ -258,15 +159,38 @@
     font-size: 0.75rem;
     color: var(--muted);
   }
-  .tract-popup-row strong {
-    color: var(--text);
-  }
+  .tract-popup-row strong { color: var(--text); }
   .tract-popup-detail {
     font-size: 0.68rem;
     color: var(--subtle);
     margin-top: 4px;
     border-top: 1px solid var(--border);
     padding-top: 4px;
+  }
+
+  /* ── County boundaries ───────────────────────────────────────── */
+  .county-boundary {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 1.5;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  .county-boundary:hover {
+    stroke: var(--accent);
+    stroke-width: 2.5;
+  }
+  .county-label-bg {
+    fill: var(--raised);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .county-label-text {
+    fill: var(--text);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
   }
 
   /* ── Legend ────────────────────────────────────────────────────── */
@@ -289,6 +213,58 @@
     height: 14px;
     border-radius: 3px;
     flex-shrink: 0;
+  }
+
+  /* ── Toggle switch ───────────────────────────────────────────── */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-wrap input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+  }
+  .toggle-track {
+    position: relative;
+    width: 38px; height: 22px;
+    background: var(--subtle);
+    border-radius: 999px;
+    transition: background-color 180ms ease;
+  }
+  .toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: var(--text);
+    border-radius: 50%;
+    transition: transform 180ms ease;
+  }
+  .toggle-wrap input:checked + .toggle-track {
+    background: var(--accent);
+  }
+  .toggle-wrap input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+  .toggle-label {
+    font-size: 0.8rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ── Map grid: map + sidebar on desktop ───────────────────────── */
+  .map-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: clamp(16px, 2.5vw, 24px);
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .map-grid { grid-template-columns: 1fr; }
   }
 
   /* ── Stats panel ───────────────────────────────────────────────── */
@@ -335,10 +311,14 @@
   }
   .stats-table td {
     padding: 4px 8px 4px 0;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
     color: var(--text);
   }
-  .stats-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .stats-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
   .stats-dot {
     display: inline-block;
     width: 10px;
@@ -349,131 +329,60 @@
     flex-shrink: 0;
   }
 
-  /* ── State panels ─────────────────────────────────────────────── */
-  .map-loader-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--bg) 70%, transparent);
-    z-index: 10;
-  }
-  .map-loader-content {
-    text-align: center;
-  }
-  .loader-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin: 0 auto;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Toolbar buttons ──────────────────────────────────────────── */
-  .map-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: clamp(10px, 1.5vw, 16px);
-  }
-
-  /* ── Map header ───────────────────────────────────────────────── */
-  .map-hero {
-    margin-bottom: clamp(12px, 2vw, 20px);
-  }
-  .map-hero h1 {
-    font-size: clamp(1.4rem, 3.8vw, 2rem);
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.01em;
-    margin-bottom: 4px;
-  }
-  .map-hero-subtitle {
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-
-  /* ── Analysis badge ───────────────────────────────────────────── */
-  .analysis-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--live);
-    background: color-mix(in srgb, var(--live) 12%, transparent);
-    padding: 0.25em 0.7em;
-    border-radius: var(--r-badge);
-  }
-
-  /* ── Responsive ───────────────────────────────────────────────────────────────── */
+  /* ── Responsive ───────────────────────────────────────────────── */
   @media (max-width: 600px) {
-    .map-controls {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .lisa-legend {
-      gap: 8px;
-    }
+    .lisa-legend { gap: 8px; }
   }
 </style>
 </head>
 <body>
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
 
-<!-- ===== NAVIGATION ===== -->
+<!-- ═══════════════ SITE HEADER ═══════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
-    </a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="/">Counties</a>
-      <a href="/county">Profile</a>
+    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
+    <nav class="site-nav">
+      <a href="/">Explorer</a>
       <a href="/compare">Compare</a>
-      <a href="/evidence">Evidence</a>
       <a href="/map" aria-current="page">Map</a>
+      <a href="/chat">Chat</a>
       <a href="/about">About</a>
     </nav>
   </div>
 </header>
 
-<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<main class="wrap map-page" style="padding-top: clamp(24px, 4vw, 40px); padding-bottom: clamp(48px, 8vw, 96px);"
-      x-data="lisaMap()" x-init="init()">
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main id="main" x-data="lisaMap()" x-init="init()" class="wrap map-page">
 
-  <!-- ═══ BACK LINK ═══ -->
-  <a href="/" class="btn btn-ghost" style="margin-bottom: 0;">
+  <!-- ── Back link ── -->
+  <a href="/" class="btn btn-ghost" style="margin-bottom:0;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
     Back to counties
   </a>
 
-  <!-- ═══ HERO ═══ -->
+  <!-- ── Header ── -->
   <div class="map-hero">
     <span class="section-tag">LISA Cluster Map</span>
     <h1>Wisconsin Census Tracts</h1>
     <p class="map-hero-subtitle">
-      <span x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020-2024') : ''"></span>
-      <span x-show="variablesLoaded > 0" class="analysis-badge" style="margin-left:10px;">
+      <span x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020–2024') : ''"></span>
+      <span x-show="variablesLoaded > 0" class="badge badge-info" style="margin-left:10px;">
         <span x-text="variablesLoaded"></span> LISA analyses loaded
       </span>
     </p>
   </div>
 
-  <!-- ═══ CONTROLS ═══ -->
-  <div class="map-controls">
+  <!-- ── Controls ── -->
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:clamp(10px,2vw,16px);margin-bottom:clamp(4px,1vw,8px);">
     <div style="display:flex;align-items:center;gap:8px;">
-      <label for="var-select">Indicator</label>
+      <label for="var-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">Indicator</label>
       <select id="var-select" x-model="selectedVariable" @change="onVariableChange()">
         <template x-for="v in availableVariables" :key="v.id">
           <option :value="v.id" x-text="v.label + (analysisMap[v.id] ? '' : ' (no data)')"></option>
         </template>
       </select>
-      <span class="var-status" x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]"></span>
+      <span x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]" style="font-size:0.7rem;color:var(--subtle);margin-left:4px;"></span>
     </div>
 
     <label class="toggle-wrap">
@@ -482,44 +391,45 @@
       <span class="toggle-label">County borders</span>
     </label>
 
-    <button class="btn btn-ghost" @click="downloadPNG()" :disabled="!mapReady"
-            style="font-size:0.8rem;" title="Download as PNG">
+    <button class="btn btn-ghost" @click="downloadPNG()" :disabled="!mapReady" style="font-size:0.8rem;"
+            title="Download as PNG">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       PNG
     </button>
   </div>
 
-  <!-- ═══ LOADING ═══ -->
+  <!-- ── LOADING: skeleton SVG ── -->
   <div x-show="mapLoading" x-cloak>
-    <div class="map-container" id="map-loading-container" style="min-height:420px;">
-      <!-- Skeleton tracts rendered while loading -->
+    <div class="chart-card map-card" style="min-height:420px;">
       <div id="skeleton-map"></div>
-      <div class="map-loader-overlay">
-        <div class="map-loader-content">
-          <div class="loader-spinner"></div>
-          <p style="margin-top:12px;font-size:0.85rem;color:var(--muted);" x-text="loadingMessage"></p>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--bg) 70%, transparent);z-index:10;">
+        <div style="text-align:center;">
+          <div class="loader"><div class="spinner"></div></div>
+          <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);" x-text="loadingMessage"></p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ ERROR ═══ -->
+  <!-- ── ERROR ── -->
   <div x-show="mapError && !mapLoading" x-cloak class="state-error">
-    <span x-text="mapError"></span>
-    <button @click="init()" class="btn btn-ghost" style="font-size:0.8rem;margin-left:1em;">Retry</button>
+    <p x-text="mapError"></p>
+    <button @click="init()" class="btn btn-secondary">Retry</button>
   </div>
 
-  <!-- ═══ EMPTY ═══ -->
+  <!-- ── EMPTY ── -->
   <div x-show="!mapLoading && !mapError && !mapReady" x-cloak class="state-empty">
     <p>No LISA data computed. Run spatial analysis first.</p>
   </div>
 
-  <!-- ═══ MAP + SIDEBAR ═══ -->
+  <!-- ── MAP + SIDEBAR ── -->
   <div x-show="!mapLoading && !mapError && mapReady" x-cloak class="map-grid">
+
     <!-- Map card -->
     <div>
-      <div class="map-container" id="map-container" style="position:relative;">
+      <div class="chart-card map-card" id="map-container" style="position:relative;">
         <div id="choropleth-map"></div>
+
         <!-- Hover tooltip -->
         <div class="tract-tooltip" id="tract-tooltip" x-show="tooltip.visible" x-cloak
              :style="'left:' + tooltip.x + 'px; top:' + tooltip.y + 'px;'">
@@ -533,6 +443,7 @@
             <strong x-text="tooltip.cluster"></strong>
           </div>
         </div>
+
         <!-- Click popup -->
         <div class="tract-popup" id="tract-popup" x-show="popup.visible" x-cloak
              :style="'left:' + popup.x + 'px; top:' + popup.y + 'px;'">
@@ -557,7 +468,7 @@
         </div>
       </div>
 
-      <!-- ═══ LEGEND ═══ -->
+      <!-- ── LEGEND ── -->
       <div class="lisa-legend">
         <template x-for="item in legendItems" :key="item.tier">
           <div class="lisa-legend-item">
@@ -569,17 +480,19 @@
       </div>
     </div>
 
-    <!-- ═══ STATS PANEL ═══ -->
+    <!-- ── STATS PANEL ── -->
     <div class="stats-panel">
       <h3>Cluster Distribution</h3>
       <div class="stats-summary">
-        <span x-text="stats.significant + ' of ' + stats.total + ' tracts significant (p&lt;0.05)'"></span>
+        <span x-text="stats.significant + ' of ' + stats.total + ' tracts significant (p &lt; 0.05)'"></span>
         <br>
-        <span style="font-size:0.7rem;color:var(--subtle);" x-text="stats.missingTracts > 0 ? stats.missingTracts + ' tracts with no score data' : ''"></span>
+        <span style="font-size:0.7rem;color:var(--subtle);" x-show="stats.missingTracts > 0"
+              x-text="stats.missingTracts + ' tracts with no score data'"></span>
       </div>
       <table class="stats-table">
         <thead>
-          <tr><th>Tier</th><th>Count</th></tr>        </thead>
+          <tr><th>Tier</th><th>Count</th></tr>
+        </thead>
         <tbody>
           <template x-for="row in stats.rows" :key="row.tier">
             <tr>
@@ -592,10 +505,10 @@
           </template>
         </tbody>
       </table>
-      <div style="font-size:0.65rem;color:var(--subtle);line-height:1.4;">
-        <p style="margin:4px 0;"><strong>HH</strong> — High value, neighbors also high</p>
+      <div style="font-size:0.65rem;color:var(--subtle);line-height:1.5;">
+        <p style="margin:4px 0;"><strong>HH</strong> — High value, neighbors also high (concentrated)</p>
         <p style="margin:4px 0;"><strong>HL</strong> — High value, neighbors low (outlier)</p>
-        <p style="margin:4px 0;"><strong>LL</strong> — Low value, neighbors also low</p>
+        <p style="margin:4px 0;"><strong>LL</strong> — Low value, neighbors also low (concentrated)</p>
         <p style="margin:4px 0;"><strong>LH</strong> — Low value, neighbors high (outlier)</p>
         <p style="margin:4px 0;"><strong>NS</strong> — No significant spatial pattern</p>
       </div>
@@ -619,33 +532,24 @@ function lisaMap() {
     tractCount: 0,
     variablesLoaded: 0,
 
-    // Per-variable data
-    analysisMap: {},       // variable_id -> { analysisId, vintage, computedAt }
-    scoresByVariable: {},  // variable_id -> { geoid -> { cluster, score, moran_i, p_value } }
-    analysisStatus: {},    // variable_id -> status string
+    analysisMap: {},       // variable_id → {analysisId, vintage, computedAt}
+    scoresByVariable: {},  // variable_id → {geoid → {cluster, score, moran_i, p_value}}
+    analysisStatus: {},    // variable_id → status string
 
     tractGeoJSON: null,
     countyGeoJSON: null,
-    // Cached projection function (rebuilt on each render)
+
     _project: null,
     _viewBox: { W: 900, H: 620 },
 
-    // Popup state (click)
-    popup: { visible: false, x: 0, y: 0, geoid: '', name: '', value: '', cluster: '', clusterColor: '', moran_i: null, p_value: null },
-    // Tooltip state (hover)
+    popup:   { visible: false, x: 0, y: 0, geoid: '', name: '', value: '', cluster: '', clusterColor: '', moran_i: null, p_value: null },
     tooltip: { visible: false, x: 0, y: 0, name: '', value: '', cluster: '' },
 
-    // Stats
-    stats: {
-      total: 0,
-      significant: 0,
-      missingTracts: 0,
-      rows: []
-    },
+    stats: { total: 0, significant: 0, missingTracts: 0, rows: [] },
 
-    /* ── Color scale (diverging, 5-tier) per spec ────────────── */
+    /* ── Color scale (5-tier diverging) ───────────────────────── */
     clusterColors: {
-      'HH': '#d97706',   // amber-600 — concentrated disadvantage
+      'HH': '#d97706',   // amber-600 — concentrated
       'HL': '#7c3aed',   // violet-600 — high-value outlier
       'LL': '#0d9488',   // teal-600 — concentrated advantage
       'LH': '#f59e0b',   // amber-500 — low-value outlier
@@ -655,39 +559,28 @@ function lisaMap() {
 
     clusterLabels: {
       'HH': 'High-High', 'HL': 'High-Low', 'LL': 'Low-Low',
-      'LH': 'Low-High', 'NS': 'Not Significant'
-    },
-
-    clusterDescs: {
-      'HH': 'High value, neighbors also high (concentrated)',
-      'HL': 'High value, neighbors low (outlier)',
-      'LL': 'Low value, neighbors also low (concentrated)',
-      'LH': 'Low value, neighbors high (outlier)',
-      'NS': 'No significant spatial pattern'
+      'LH': 'Low-High',  'NS': 'Not Significant'
     },
 
     legendItems: [
       { tier: 'HH', color: '#d97706', label: 'High-High', desc: 'concentrated disadvantage' },
-      { tier: 'HL', color: '#7c3aed', label: 'High-Low', desc: 'high-value outlier' },
-      { tier: 'LL', color: '#0d9488', label: 'Low-Low', desc: 'concentrated advantage' },
-      { tier: 'LH', color: '#f59e0b', label: 'Low-High', desc: 'low-value outlier' },
+      { tier: 'HL', color: '#7c3aed', label: 'High-Low',  desc: 'high-value outlier' },
+      { tier: 'LL', color: '#0d9488', label: 'Low-Low',   desc: 'concentrated advantage' },
+      { tier: 'LH', color: '#f59e0b', label: 'Low-High',  desc: 'low-value outlier' },
       { tier: 'NS', color: '#3f3f46', label: 'Not Significant', desc: 'no spatial pattern' }
     ],
 
     availableVariables: [
       { id: 'poverty_rate',        label: 'Poverty Rate' },
       { id: 'median_hh_income',    label: 'Median Household Income' },
-      { id: 'pct_cost_burdened',    label: 'Housing Cost Burden' },
-      { id: 'uninsured_rate',       label: 'Uninsured Rate' },
-      { id: 'pct_poc',              label: 'Percent People of Color' }
+      { id: 'pct_cost_burdened',   label: 'Housing Cost Burden' },
+      { id: 'uninsured_rate',      label: 'Uninsured Rate' },
+      { id: 'pct_poc',             label: 'Percent People of Color' }
     ],
 
     varUnits: {
-      'poverty_rate': '%',
-      'median_hh_income': '$',
-      'pct_cost_burdened': '%',
-      'uninsured_rate': '%',
-      'pct_poc': '%'
+      'poverty_rate': '%', 'median_hh_income': '$', 'pct_cost_burdened': '%',
+      'uninsured_rate': '%', 'pct_poc': '%'
     },
 
     get varLabel() {
@@ -695,24 +588,16 @@ function lisaMap() {
       return v ? v.label : this.selectedVariable;
     },
 
-    // ── Init ──────────────────────────────────────────────────
+    // ═══════════════ INIT ═══════════════
     async init() {
-      this.mapLoading = true;
-      this.mapError = '';
+      this.mapLoading = true; this.mapError = '';
       this.loadingMessage = 'Loading LISA analyses…';
 
       try {
-        // 1. Fetch GeoJSON first (so we can show skeleton while loading)
         await this.fetchGeoJSON();
         this.renderSkeleton();
-
-        // 2. Discover all LISA analyses and map them to variables
         await this.discoverAnalyses();
-
-        // 3. Fetch scores for all discovered variables in parallel
         await this.fetchAllScores();
-
-        // 4. Render
         this.renderMap();
         this.updateStats();
         this.mapReady = true;
@@ -724,7 +609,7 @@ function lisaMap() {
       }
     },
 
-    // ── Show skeleton (gray tract outlines) while loading ─────
+    // ═══════════════ SKELETON ══════════
     renderSkeleton() {
       const container = document.getElementById('skeleton-map');
       if (!container || !this.tractGeoJSON) return;
@@ -734,19 +619,39 @@ function lisaMap() {
       const project = this.buildProjection(fc, W, H);
 
       let paths = '';
-      fc.features.forEach((f) => {
+      fc.features.forEach(f => {
         const coords = f.geometry.coordinates;
         if (!coords || !coords[0] || coords[0].length < 3) return;
-        const d = this.ringToD(coords[0], project);
-        paths += `<path class="tract-skel" d="${d}"/>`;
+        paths += `<path class="tract-skel" d="${this.ringToD(coords[0], project)}"/>`;
       });
 
-      container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`
+      container.innerHTML =
+        `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`
         + `<rect width="${W}" height="${H}" fill="var(--bg)"/>`
         + `<g>${paths}</g></svg>`;
     },
 
-    // ── Discover LISA analyses ────────────────────────────────
+    // ═══════════════ GEOJSON FETCH ═════
+    async fetchGeoJSON() {
+      this.loadingMessage = 'Loading tract boundaries…';
+      try {
+        const resp = await fetch('/static/tracts.geojson');
+        if (!resp.ok) throw new Error(`GeoJSON: ${resp.status}`);
+        this.tractGeoJSON = await resp.json();
+        this.tractCount = (this.tractGeoJSON.features || []).length;
+      } catch (e) {
+        throw new Error(`Failed to load tract boundaries: ${e.message}`);
+      }
+
+      try {
+        const resp = await fetch('/static/counties.geojson');
+        if (resp.ok) { this.countyGeoJSON = await resp.json(); }
+      } catch (e) {
+        console.warn('County boundaries not available:', e.message);
+      }
+    },
+
+    // ═══════════════ DISCOVER ANALYSES ═
     async discoverAnalyses() {
       try {
         const resp = await fetch('/v1/policy/analyses');
@@ -754,47 +659,42 @@ function lisaMap() {
         const data = await resp.json();
         const allAnalyses = data.analyses || [];
 
-        // Filter to LISA analyses only
         const lisaAnalyses = allAnalyses.filter(
           a => a.type === 'lisa' || (a.type || '').toLowerCase().includes('lisa')
         );
 
         if (lisaAnalyses.length === 0) {
-          console.warn('No LISA analyses found, available types:', allAnalyses.map(a => a.type));
+          console.warn('No LISA analyses found');
           this.loadingMessage = 'No LISA analyses found — rendering tracts without cluster colors';
           return;
         }
 
         this.loadingMessage = `Mapping ${lisaAnalyses.length} LISA analyses to variables…`;
 
-        // Fetch details for each LISA analysis to get the variable name from parameters
-        const detailPromises = lisaAnalyses.map(async (a) => {
+        const detailPromises = lisaAnalyses.map(async a => {
           try {
             const dr = await fetch(`/v1/policy/analyses/${encodeURIComponent(a.id)}`);
             if (!dr.ok) return null;
             const detail = await dr.json();
-            // The analysis detail returns parameters at top level
             const params = detail.parameters || {};
             const variable = params.variable || params.variable_id || null;
             if (!variable) {
               console.warn(`Analysis ${a.id} has no variable in parameters:`, Object.keys(params));
             }
             return {
-              id: a.id,
-              type: a.type,
+              id: a.id, type: a.type,
               vintage: a.vintage || detail.vintage || '',
               computedAt: a.computed_at || '',
               variable: variable
             };
           } catch (e) {
-            console.warn(`Failed to fetch detail for analysis ${a.id}:`, e.message);
+            console.warn(`Failed to fetch detail for ${a.id}:`, e.message);
             return null;
           }
         });
 
         const details = (await Promise.all(detailPromises)).filter(Boolean);
 
-        // Group by variable, keeping the latest (newest computed_at)
         const byVar = {};
         for (const d of details) {
           const v = d.variable;
@@ -808,10 +708,9 @@ function lisaMap() {
         this.variablesLoaded = Object.keys(this.analysisMap).length;
 
         if (this.variablesLoaded > 0) {
-          this.analysisVintage = Object.values(this.analysisMap)[0].vintage || 'ACS 2020-2024';
+          this.analysisVintage = Object.values(this.analysisMap)[0].vintage || 'ACS 2020–2024';
         }
 
-        // If selected variable isn't in the map, switch to first available
         if (this.variablesLoaded > 0 && !this.analysisMap[this.selectedVariable]) {
           this.selectedVariable = Object.keys(this.analysisMap)[0];
         }
@@ -822,7 +721,7 @@ function lisaMap() {
       }
     },
 
-    // ── Fetch scores for all variables ────────────────────────
+    // ═══════════════ FETCH ALL SCORES ═
     async fetchAllScores() {
       const vars = Object.keys(this.analysisMap);
       if (vars.length === 0) {
@@ -832,7 +731,7 @@ function lisaMap() {
 
       this.loadingMessage = `Fetching scores for ${vars.length} variables…`;
 
-      const scorePromises = vars.map(async (variableId) => {
+      const scorePromises = vars.map(async variableId => {
         const info = this.analysisMap[variableId];
         this.analysisStatus[variableId] = 'loading…';
         try {
@@ -841,7 +740,6 @@ function lisaMap() {
           const data = await resp.json();
           const scores = data.scores || [];
 
-          // Index scores by GEOID
           const geoidMap = {};
           for (const s of scores) {
             const geoid = (s.geoid || '').toString().trim();
@@ -876,38 +774,21 @@ function lisaMap() {
       console.log(`Fetched scores for ${loadedCount}/${vars.length} variables`);
     },
 
-    // ── Fetch GeoJSON ─────────────────────────────────────────
-    async fetchGeoJSON() {
-      this.loadingMessage = 'Loading tract boundaries…';
-      try {
-        const resp = await fetch('/static/tracts.geojson');
-        if (!resp.ok) throw new Error(`GeoJSON: ${resp.status}`);
-        this.tractGeoJSON = await resp.json();
-        this.tractCount = (this.tractGeoJSON.features || []).length;
-      } catch (e) {
-        throw new Error(`Failed to load tract boundaries: ${e.message}`);
-      }
-
-      // Try to load county boundaries
-      try {
-        const resp = await fetch('/static/counties.geojson');
-        if (resp.ok) {
-          this.countyGeoJSON = await resp.json();
-        }
-      } catch (e) {
-        console.warn('County boundaries not available:', e.message);
-      }
+    // ═══════════════ VARIABLE CHANGE ═══
+    onVariableChange() {
+      this.popup.visible = false;
+      this.tooltip.visible = false;
+      this.renderMap();
+      this.updateStats();
     },
 
-    // ── Build projection ──────────────────────────────────────
+    // ═══════════════ PROJECTION ════════
     buildProjection(fc, W, H, pad) {
       pad = pad || 20;
       const allPts = [];
       fc.features.forEach(f => {
         const coords = f.geometry.coordinates;
-        if (coords && coords[0]) {
-          coords[0].forEach(pt => allPts.push(pt));
-        }
+        if (coords && coords[0]) coords[0].forEach(pt => allPts.push(pt));
       });
 
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -918,46 +799,27 @@ function lisaMap() {
 
       const spanX = Math.max(1e-6, maxX - minX);
       const spanY = Math.max(1e-6, maxY - minY);
-      const availW = W - pad * 2;
-      const availH = H - pad * 2;
+      const availW = W - pad * 2, availH = H - pad * 2;
       const scale = Math.min(availW / spanX, availH / spanY);
       const offX = pad + (availW - spanX * scale) / 2;
       const offY = pad + (availH - spanY * scale) / 2;
 
-      return (pt) => [
-        offX + (pt[0] - minX) * scale,
-        offY + (maxY - pt[1]) * scale  // flip Y for SVG
-      ];
+      return pt => [offX + (pt[0] - minX) * scale, offY + (maxY - pt[1]) * scale];  // flip Y for SVG
     },
 
     ringToD(ring, project) {
-      const pts = ring.map(p => {
-        const q = project(p);
-        return q[0].toFixed(1) + ',' + q[1].toFixed(1);
-      });
+      const pts = ring.map(p => { const q = project(p); return q[0].toFixed(1) + ',' + q[1].toFixed(1); });
       return 'M' + pts.join('L') + 'Z';
     },
 
-    // ── Compute polygon centroid (vertex average) ─────────────
     centroidOfRing(ring, project) {
       const n = ring.length;
       let cx = 0, cy = 0;
-      for (let i = 0; i < n; i++) {
-        const q = project(ring[i]);
-        cx += q[0]; cy += q[1];
-      }
+      for (let i = 0; i < n; i++) { const q = project(ring[i]); cx += q[0]; cy += q[1]; }
       return [cx / n, cy / n];
     },
 
-    // ── Variable change ───────────────────────────────────────
-    onVariableChange() {
-      this.popup.visible = false;
-      this.tooltip.visible = false;
-      this.renderMap();
-      this.updateStats();
-    },
-
-    // ── Render map ────────────────────────────────────────────
+    // ═══════════════ RENDER MAP ════════
     renderMap() {
       if (!this.tractGeoJSON) return;
 
@@ -966,29 +828,23 @@ function lisaMap() {
 
       const fc = this.tractGeoJSON;
       const { W, H } = this._viewBox;
-      const pad = 20;
-      const project = this.buildProjection(fc, W, H, pad);
+      const project = this.buildProjection(fc, W, H, 20);
       this._project = project;
 
-      // Get scores for currently selected variable
       const currentScores = this.scoresByVariable[this.selectedVariable] || {};
       const hasScores = Object.keys(currentScores).length > 0;
+      const self = this; const esc = this._esc;
 
-      const self = this;
-      const esc = this._esc;
       let tractPaths = '';
 
       fc.features.forEach((f, idx) => {
         const props = f.properties || {};
         const geoid = (props.GEOID || '').toString().trim();
         const name = props.tract_name || props.NAME || geoid;
-
         const scoreInfo = currentScores[geoid] || null;
-        // Determine tier and color
-        let cluster = 'NS';
-        let color = this.MISSING_COLOR;
-        let moranI = null, pVal = null, scoreVal = null;
-        let isMissing = true;
+
+        let cluster = 'NS', color = this.MISSING_COLOR;
+        let moranI = null, pVal = null, scoreVal = null, isMissing = true;
 
         if (scoreInfo) {
           isMissing = false;
@@ -998,12 +854,10 @@ function lisaMap() {
           pVal = scoreInfo.p_value;
           scoreVal = scoreInfo.score;
         } else if (!hasScores) {
-          // No scores loaded at all — use neutral gray
-          color = 'var(--surface-active)';
+          color = 'var(--surface)';
           isMissing = true;
         }
 
-        // Indicator value from GeoJSON properties
         const indicatorVal = props[this.selectedVariable];
         const unit = this.varUnits[this.selectedVariable] || '';
         let valStr = '—';
@@ -1022,7 +876,6 @@ function lisaMap() {
         if (!coords || !coords[0] || coords[0].length < 3) return;
 
         const d = this.ringToD(coords[0], project);
-
         const cls = isMissing && hasScores ? 'tract-poly tract-missing' : 'tract-poly';
 
         tractPaths += `<path class="${cls}" d="${d}" fill="${color}" stroke="var(--bg)" stroke-width="0.5"`
@@ -1033,22 +886,21 @@ function lisaMap() {
           + ` data-missing="${isMissing ? '1' : '0'}">`
           + `<title>${esc(name)}: ${esc(valStr)} — ${esc(clusterLabel)}</title></path>`;
 
-        // Handle holes (inner rings)
+        // Inner rings (holes)
         if (coords.length > 1) {
           for (let r = 1; r < coords.length; r++) {
             if (coords[r].length >= 3) {
-              const holeD = this.ringToD(coords[r], project);
-              tractPaths += `<path d="${holeD}" fill="var(--bg)" stroke="none" pointer-events="none"/>`;
+              tractPaths += `<path d="${this.ringToD(coords[r], project)}" fill="var(--bg)" stroke="none" pointer-events="none"/>`;
             }
           }
         }
       });
 
-      // County boundaries + labels
+      // County boundaries
       let countyPaths = '';
       let countyLabels = '';
       if (this.countyGeoJSON) {
-        this.countyGeoJSON.features.forEach((f, cidx) => {
+        this.countyGeoJSON.features.forEach(f => {
           const cprops = f.properties || {};
           const cname = cprops.NAME || cprops.county_name || '';
           const coords = f.geometry.coordinates;
@@ -1058,9 +910,9 @@ function lisaMap() {
             countyPaths += `<path class="county-boundary" d="${d}" data-layer="county" data-county="${esc(cname)}">`
               + `<title>${esc(cname)}</title></path>`;
 
-            // County label at centroid
             const [cx, cy] = this.centroidOfRing(coords[0], project);
-            countyLabels += `<rect class="county-label-bg" x="${(cx - cname.length * 3.5).toFixed(1)}" y="${(cy - 8).toFixed(1)}"`
+            countyLabels +=
+              `<rect class="county-label-bg" x="${(cx - cname.length * 3.5).toFixed(1)}" y="${(cy - 8).toFixed(1)}"`
               + ` width="${(cname.length * 7).toFixed(1)}" height="16" rx="3" data-layer="county-label"/>`
               + `<text class="county-label-text" x="${cx.toFixed(1)}" y="${(cy + 3).toFixed(1)}"`
               + ` text-anchor="middle" data-layer="county-label">${esc(cname)}</text>`;
@@ -1077,15 +929,15 @@ function lisaMap() {
 
       container.innerHTML = svg;
 
-      // ── Attach event handlers via delegation ──────────────
+      // ── Event delegation ──
       container.addEventListener('mousemove', function(e) {
         const tractPoly = e.target.closest('.tract-poly');
         if (tractPoly) {
           const name = tractPoly.getAttribute('data-name');
           const value = tractPoly.getAttribute('data-value');
           const cluster = tractPoly.getAttribute('data-cluster');
-          const containerEl = document.getElementById('map-container');
-          const rect = containerEl.getBoundingClientRect();
+          const mapEl = document.getElementById('map-container');
+          const rect = mapEl.getBoundingClientRect();
           const x = e.clientX - rect.left + 14;
           const y = e.clientY - rect.top - 10;
 
@@ -1093,9 +945,7 @@ function lisaMap() {
             visible: true,
             x: Math.min(x, rect.width - 160),
             y: Math.max(6, y - 60),
-            name: name,
-            value: value,
-            cluster: cluster
+            name: name, value: value, cluster: cluster
           };
         } else {
           self.tooltip.visible = false;
@@ -1113,8 +963,8 @@ function lisaMap() {
           const moranI = tractPoly.getAttribute('data-moran-i');
           const pVal = tractPoly.getAttribute('data-p-value');
 
-          const containerEl = document.getElementById('map-container');
-          const rect = containerEl.getBoundingClientRect();
+          const mapEl = document.getElementById('map-container');
+          const rect = mapEl.getBoundingClientRect();
           const x = e.clientX - rect.left + 12;
           const y = e.clientY - rect.top - 10;
 
@@ -1122,10 +972,7 @@ function lisaMap() {
             visible: true,
             x: Math.min(x, rect.width - 240),
             y: Math.max(10, y - 160),
-            geoid: geoid,
-            name: name,
-            value: value,
-            cluster: cluster,
+            geoid: geoid, name: name, value: value, cluster: cluster,
             clusterColor: self.clusterColors[clusterCode] || self.clusterColors['NS'],
             moran_i: moranI && moranI !== '' ? moranI : null,
             p_value: pVal && pVal !== '' ? pVal : null
@@ -1136,14 +983,12 @@ function lisaMap() {
         }
       });
 
-      // County hover → show county name in title (native SVG title already handles this)
-      // Close popup on Escape
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') { self.popup.visible = false; self.tooltip.visible = false; }
       }, { once: false });
     },
 
-    // ── Update stats panel ────────────────────────────────────
+    // ═══════════════ UPDATE STATS ══════
     updateStats() {
       const currentScores = this.scoresByVariable[this.selectedVariable] || {};
       const scoreEntries = Object.values(currentScores);
@@ -1159,45 +1004,69 @@ function lisaMap() {
         else counts['NS']++;
       });
 
-      const self = this;
       this.stats = {
         total: total,
         significant: significant,
         missingTracts: missingTracts,
         rows: ['HH', 'HL', 'LL', 'LH', 'NS'].map(tier => ({
-          tier: tier,
-          label: self.clusterLabels[tier],
-          color: self.clusterColors[tier],
-          count: counts[tier]
+          tier, label: this.clusterLabels[tier], color: this.clusterColors[tier], count: counts[tier]
         }))
       };
     },
 
-    // ── Toggle county overlay ─────────────────────────────────
+    // ═══════════════ COUNTY OVERLAY TOGGLE
     renderOverlay() {
       const container = document.getElementById('choropleth-map');
       if (!container) return;
       const display = this.showCounties ? 'block' : 'none';
       const layers = container.querySelectorAll('[data-layer="county"], [data-layer="county-label"]');
       layers.forEach(el => { el.style.display = display; });
-
-      // Also toggle the group layers
       const countiesGroup = container.querySelector('.counties-layer');
       const labelsGroup = container.querySelector('.county-labels-layer');
       if (countiesGroup) countiesGroup.style.display = display;
       if (labelsGroup) labelsGroup.style.display = display;
     },
 
-    // ── Download PNG ──────────────────────────────────────────
+    // ═══════════════ DOWNLOAD PNG ═════
     downloadPNG() {
-      alert('PNG download coming soon.');
+      const svgEl = document.querySelector('#choropleth-map svg');
+      if (!svgEl) { alert('No map to download.'); return; }
+
+      const clone = svgEl.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+      const bgRect = clone.querySelector('rect');
+      if (bgRect) {
+        const cs = getComputedStyle(document.documentElement);
+        bgRect.setAttribute('fill', cs.getPropertyValue('--bg').trim() || '#0a0a0f');
+      }
+
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const canvas = document.createElement('canvas');
+      const { W, H } = this._viewBox;
+      canvas.width = W * 2; canvas.height = H * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+
+      const img = new Image();
+      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.download = `lisa-map-${this.selectedVariable}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = url;
     },
 
-    // ── HTML escape helper ────────────────────────────────────
+    // ═══════════════ HELPERS ══════════
     _esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-      });
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     },
 
     fmtVal(v) {
