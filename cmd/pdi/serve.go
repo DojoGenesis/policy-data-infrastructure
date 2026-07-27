@@ -154,6 +154,39 @@ func runServe(port int) error {
 	})
 	r.GET("/static/*filepath", gin.WrapH(http.StripPrefix("/static", http.FileServer(http.FS(feFS)))))
 
+	// Clean URL routing: /page → page.html (no .html extension in URL).
+	htmlPages := []struct{ route, file string }{
+		{"/county", "county.html"},
+		{"/compare", "compare.html"},
+		{"/evidence", "evidence.html"},
+		{"/candidates", "candidates.html"},
+		{"/map", "map.html"},
+		{"/narrative", "narrative.html"},
+		{"/about", "about.html"},
+		{"/composite", "composites.html"},
+		{"/chat", "chat.html"},
+	}
+	for _, p := range htmlPages {
+		html, err := fs.ReadFile(feFS, p.file)
+		if err != nil {
+			continue // file not yet built; skip route
+		}
+		r.GET(p.route, func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", html)
+		})
+	}
+
+	// Spanish twin pages: /es/<page> → es/<page>.html
+	r.GET("/es/*page", func(c *gin.Context) {
+		page := c.Param("page")
+		html, err := fs.ReadFile(feFS, "es/"+page+".html")
+		if err != nil {
+			c.String(http.StatusNotFound, "page not found")
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", html)
+	})
+
 	addr := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
 		Addr:         addr,

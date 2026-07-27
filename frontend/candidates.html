@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidate Policy Tracker — PDI</title>
+<meta name="description" content="Candidate Policy Tracker — explore candidate policy positions grouped by equity dimension with indicator match bars from the Policy Data Infrastructure platform.">
+
+<!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
+<link rel="stylesheet" href="/static/tokens.css">
+
+<!-- PDI layout layer — cards, tables, badges, nav -->
+<link rel="stylesheet" href="/static/styles.css">
+
+<!-- Alpine.js — local, no CDN -->
+<script defer src="/static/alpine.min.js"></script>
+
+<style>
+  [x-cloak] { display: none !important; }
+
+  /* ── Candidates page-specific ───────────────────────────────── */
+  :root {
+    --candidates-gap: clamp(14px, 2vw, 20px);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────── */
+  .hero {
+    margin-bottom: clamp(20px, 3vw, 32px);
+  }
+
+  .hero h1 {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+
+  .hero-subtitle {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ── Back link ──────────────────────────────────────────────── */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    margin-bottom: clamp(16px, 2.5vw, 24px);
+    transition: color 160ms ease;
+  }
+  .back-link:hover { color: var(--text); text-decoration: none; }
+  .back-link svg { width: 14px; height: 14px; }
+
+  /* ── Candidate tabs ─────────────────────────────────────────── */
+  .candidate-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: var(--candidates-gap);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: clamp(10px, 1.5vw, 14px);
+  }
+
+  .candidate-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.45em 0.9em;
+    border-radius: var(--r-badge);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+
+  .candidate-tab:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--text);
+  }
+
+  .candidate-tab.active {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  .candidate-tab-count {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1em 0.5em;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+
+  .candidate-tab-placeholder {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .candidate-tab-placeholder:hover {
+    background: transparent;
+    color: var(--subtle);
+  }
+
+  /* ── Policy summary bar ─────────────────────────────────────── */
+  .summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(12px, 2vw, 20px);
+    margin-bottom: var(--candidates-gap);
+    padding: clamp(12px, 2vw, 18px);
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+  }
+
+  .summary-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .summary-stat-val {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-stat-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle);
+  }
+
+  /* ── Dimension section grouping ─────────────────────────────── */
+  .dimension-section {
+    margin-bottom: clamp(28px, 4vw, 44px);
+  }
+
+  .dimension-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: clamp(10px, 1.5vw, 16px);
+  }
+
+  .dimension-label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .dimension-priority {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15em 0.6em;
+    border-radius: var(--r-badge);
+  }
+
+  .priority-P1 { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .priority-P2 { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
+  .priority-P3 { background: color-mix(in srgb, var(--subtle) 16%, transparent); color: var(--subtle); }
+
+  .dimension-policy-count {
+    font-size: 0.7rem;
+    color: var(--subtle);
+    margin-left: auto;
+  }
+
+  /* ── Indicator match bar ────────────────────────────────────── */
+  .match-bar-wrap {
+    margin-bottom: clamp(10px, 1.5vw, 14px);
+  }
+
+  .match-bar-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .match-bar-title {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .match-bar-pct {
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+
+  .match-bar-pct.high { color: var(--live); }
+  .match-bar-pct.medium { color: var(--gated); }
+  .match-bar-pct.low { color: var(--muted); }
+
+  .match-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--plane-1);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .match-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 400ms ease, background-color 400ms ease;
+  }
+
+  .match-bar-fill.high { background: var(--live); }
+  .match-bar-fill.medium { background: var(--gated); }
+  .match-bar-fill.low { background: var(--muted); }
+
+  .match-bar-indicators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .match-indicator-chip {
+    font-size: 0.6rem;
+    font-family: var(--font-mono);
+    padding: 0.15em 0.5em;
+    border-radius: var(--r-badge);
+    border: 1px solid var(--border);
+    color: var(--subtle);
+    background: var(--plane-base);
+    white-space: nowrap;
+  }
+
+  .match-indicator-chip.matched {
+    color: var(--live);
+    border-color: color-mix(in srgb, var(--live) 35%, transparent);
+    background: color-mix(in srgb, var(--live) 8%, transparent);
+  }
+
+  /* ── Policy cards ───────────────────────────────────────────── */
+  .policy-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(10px, 1.5vw, 14px);
+  }
+
+  .policy-card {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.2vw, 12px);
+    cursor: default;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .policy-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--lift-hover);
+  }
+
+  .policy-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .policy-card-id {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .policy-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+    margin: 0;
+    flex: 1;
+  }
+
+  .policy-card-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .policy-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .policy-card-meta .badge {
+    font-size: 0.62rem;
+    padding: 0.15em 0.55em;
+  }
+
+  .evidence-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 0.2em 0.6em;
+    border-radius: var(--r-badge);
+    background: color-mix(in srgb, var(--live) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--live) 20%, transparent);
+    color: var(--live);
+  }
+
+  .evidence-count-chip-val {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Skeleton state ─────────────────────────────────────────── */
+  .skeleton-dimension {
+    margin-bottom: clamp(28px, 4vw, 44px);
+  }
+
+  .skeleton-dimension .skeleton-line {
+    height: 0.8em;
+    border-radius: 4px;
+  }
+
+  .skeleton-dimension .skeleton-line:first-child {
+    width: 35%;
+    margin-bottom: 14px;
+  }
+
+  .skeleton-dimension .skeleton-line:nth-child(2) {
+    width: 100%;
+    height: 6px;
+    margin-bottom: 18px;
+  }
+
+  .skeleton-card-inline {
+    margin-bottom: 10px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .skeleton-card-inline .skeleton-line {
+    height: 0.75em;
+    border-radius: 4px;
+  }
+
+  .skeleton-card-inline .skeleton-line:first-child {
+    width: 80%;
+  }
+
+  .skeleton-card-inline .skeleton-line:nth-child(2) {
+    width: 60%;
+  }
+
+  /* ── Empty state ────────────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: clamp(40px, 6vw, 72px) clamp(16px, 3vw, 32px);
+    color: var(--muted);
+  }
+
+  .empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.3em;
+    opacity: 0.4;
+  }
+
+  .empty-state h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.3em;
+  }
+
+  .empty-state p {
+    font-size: 0.8rem;
+    color: var(--subtle);
+    max-width: 42ch;
+    margin-inline: auto;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: clamp(32px, 5vw, 56px);
+    padding: clamp(16px, 2.5vw, 24px) 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--subtle);
+  }
+
+  .site-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .candidate-tabs {
+      flex-direction: column;
+    }
+
+    .summary-bar {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .dimension-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .dimension-policy-count {
+      margin-left: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Data Explorer
+    </a>
+
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/">Counties</a>
+      <a href="/compare">Compare</a>
+      <a href="/evidence">Evidence</a>
+      <a href="/candidates" aria-current="page">Candidates</a>
+      <a href="/map">Map</a>
+      <a href="/about">About</a>
+    </nav>
+
+    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
+<main class="wrap" x-data="candidateTracker()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+
+  <!-- ── Back link ─────────────────────────────────────────────── -->
+  <a href="/" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Back to County Explorer
+  </a>
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <div class="hero">
+    <h1>Candidate Policy Tracker</h1>
+    <p class="hero-subtitle">
+      Explore candidate policy positions grouped by equity dimension with linked PDI indicators
+    </p>
+  </div>
+
+  <!-- ── Loading state ─────────────────────────────────────────── -->
+  <div x-show="loading" x-cloak>
+    <!-- Tabs skeleton -->
+    <div style="display:flex;gap:6px;margin-bottom:var(--candidates-gap);padding-bottom:clamp(10px,1.5vw,14px);border-bottom:1px solid var(--border);">
+      <div class="skeleton skeleton-line" style="width:140px;height:2em;border-radius:var(--r-badge);"></div>
+      <div class="skeleton skeleton-line" style="width:140px;height:2em;border-radius:var(--r-badge);opacity:0.4;"></div>
+    </div>
+    <!-- Summary skeleton -->
+    <div class="skeleton" style="height:60px;border-radius:var(--r-card);margin-bottom:var(--candidates-gap);"></div>
+    <!-- Dimension skeletons -->
+    <div class="skeleton-dimension">
+      <div class="skeleton-line skeleton"></div>
+      <div class="skeleton-line skeleton"></div>
+      <template x-for="i in 3" :key="'skel'+i">
+        <div class="card skeleton skeleton-card-inline">
+          <div class="skeleton-line skeleton"></div>
+          <div class="skeleton-line skeleton"></div>
+        </div>
+      </template>
+    </div>
+    <div class="skeleton-dimension">
+      <div class="skeleton-line skeleton"></div>
+      <div class="skeleton-line skeleton"></div>
+      <template x-for="i in 3" :key="'skel2'+i">
+        <div class="card skeleton skeleton-card-inline">
+          <div class="skeleton-line skeleton"></div>
+          <div class="skeleton-line skeleton"></div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Error state ───────────────────────────────────────────── -->
+  <div x-show="error" x-cloak class="state-error" style="padding:clamp(16px,2.5vw,28px);border-radius:var(--r-card);">
+    <span x-text="error"></span>
+    <button class="btn btn-ghost" @click="loadPolicies()" style="margin-left:1em">Retry</button>
+  </div>
+
+  <!-- ── Empty state ───────────────────────────────────────────── -->
+  <div x-show="!loading && !error && candidates.length === 0" x-cloak class="empty-state">
+    <div class="empty-state-icon">🗳️</div>
+    <h2>No candidates seeded yet</h2>
+    <p>Candidate policies will appear here as they are added to the policy database. Check back soon for the first candidate profiles.</p>
+  </div>
+
+  <!-- ── Loaded state ──────────────────────────────────────────── -->
+  <div x-show="!loading && !error && candidates.length > 0" x-cloak>
+
+    <!-- ── Candidate tabs ──────────────────────────────────────── -->
+    <div class="candidate-tabs">
+      <template x-for="c in candidates" :key="c.key">
+        <button
+          class="candidate-tab"
+          :class="{ active: selectedCandidate === c.key, 'candidate-tab-placeholder': c.placeholder }"
+          :disabled="c.placeholder"
+          @click="!c.placeholder && selectCandidate(c.key)"
+        >
+          <span x-text="c.name"></span>
+          <span x-show="!c.placeholder" class="candidate-tab-count" x-text="c.policyCount"></span>
+        </button>
+      </template>
+    </div>
+
+    <!-- ── Summary bar ─────────────────────────────────────────── -->
+    <div class="summary-bar">
+      <div class="summary-stat">
+        <span class="summary-stat-val" x-text="selectedPolicies.length"></span>
+        <span class="summary-stat-label">Policies</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val" x-text="selectedDimensions.length"></span>
+        <span class="summary-stat-label">Equity Dimensions</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val" x-text="selectedCategories.length"></span>
+        <span class="summary-stat-label">Categories</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val" x-text="selectedTotalEvidence"></span>
+        <span class="summary-stat-label">Est. Evidence Cards</span>
+      </div>
+    </div>
+
+    <!-- ── Dimension sections ──────────────────────────────────── -->
+    <template x-for="dim in selectedDimensions" :key="dim.key">
+      <section class="dimension-section">
+        <div class="dimension-header">
+          <span class="dimension-label" x-text="dim.label"></span>
+          <span
+            class="dimension-priority"
+            :class="'priority-'+dim.priority"
+            x-text="dim.priority"
+          ></span>
+          <span class="dimension-policy-count" x-text="dim.policies.length + (dim.policies.length === 1 ? ' policy' : ' policies')"></span>
+        </div>
+
+        <!-- Indicator match bar -->
+        <div class="match-bar-wrap">
+          <div class="match-bar-label">
+            <span class="match-bar-title">Indicator Coverage</span>
+            <span
+              class="match-bar-pct"
+              :class="dim.matchPct >= 75 ? 'high' : dim.matchPct >= 40 ? 'medium' : 'low'"
+              x-text="dim.matchPct + '%'"
+            ></span>
+          </div>
+          <div class="match-bar-track">
+            <div
+              class="match-bar-fill"
+              :class="dim.matchPct >= 75 ? 'high' : dim.matchPct >= 40 ? 'medium' : 'low'"
+              :style="'width:' + dim.matchPct + '%'"
+            ></div>
+          </div>
+          <div class="match-bar-indicators" x-show="dim.indicators.length > 0">
+            <template x-for="ind in dim.indicators" :key="ind.id">
+              <span
+                class="match-indicator-chip"
+                :class="{ matched: ind.available }"
+                x-text="ind.id"
+                :title="ind.available ? 'Data available' : 'Data pending'"
+              ></span>
+            </template>
+          </div>
+        </div>
+
+        <!-- Policy cards -->
+        <div class="policy-card-grid">
+          <template x-for="pol in dim.policies" :key="pol.id">
+            <div class="card policy-card">
+              <div class="policy-card-header">
+                <span class="policy-card-id" x-text="pol.id"></span>
+                <h3 class="policy-card-title" x-text="pol.title"></h3>
+              </div>
+              <p
+                class="policy-card-desc"
+                x-show="pol.description"
+                x-text="pol.description"
+              ></p>
+              <div class="policy-card-meta">
+                <span class="badge badge-info" x-text="pol.category"></span>
+                <span
+                  class="badge"
+                  :class="'badge-'+ (dim.priority === 'P1' ? 'live' : dim.priority === 'P2' ? 'info' : 'subtle')"
+                  x-text="dim.label"
+                ></span>
+                <span x-show="pol.geographic_scope" class="badge" style="background:var(--plane-1);color:var(--subtle);" x-text="pol.geographic_scope"></span>
+                <!-- Evidence card count link -->
+                <span class="evidence-count-chip" x-show="dim.evidenceEstimate > 0">
+                  <span class="evidence-count-chip-val" x-text="dim.evidenceEstimatePerPolicy"></span>
+                  est. evidence cards
+                </span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+    </template>
+
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
+<!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<script>
+function candidateTracker() {
+  return {
+    // ── State ────────────────────────────────────────────────────
+    allPolicies: [],        // raw API response
+    candidates: [],         // [{key, name, placeholder, policyCount}]
+    selectedCandidate: '',
+    loading: false,
+    error: '',
+
+    // ── Crosswalk: equity dimension → indicators + priority ─────
+    // Seeded from wi_equity_crosswalk.json; used to build match bars.
+    crosswalk: {
+      food_access:            { label: 'Food Access',              indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P1' },
+      childcare_access:       { label: 'Childcare Access',         indicators: ['poverty_rate','total_population'],                                      priority: 'P1' },
+      education_funding:      { label: 'Education Funding',        indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P1' },
+      education_equity:       { label: 'Education Equity',         indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P1' },
+      education_access:       { label: 'Education Access',         indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P2' },
+      housing_affordability:  { label: 'Housing Affordability',    indicators: ['pct_cost_burdened','pct_severely_cost_burdened','median_hh_income'],     priority: 'P1' },
+      housing_stability:      { label: 'Housing Stability',        indicators: ['pct_cost_burdened','median_hh_income','poverty_rate'],                  priority: 'P1' },
+      housing_supply:         { label: 'Housing Supply',           indicators: ['pct_cost_burdened','median_hh_income','total_population'],              priority: 'P2' },
+      housing_transit:        { label: 'Housing & Transit',        indicators: ['total_population','poverty_rate'],                                      priority: 'P3' },
+      eviction_prevention:    { label: 'Eviction Prevention',      indicators: ['pct_cost_burdened','poverty_rate','median_hh_income'],                  priority: 'P1' },
+      transit_access:         { label: 'Transit Access',           indicators: ['total_population','poverty_rate'],                                      priority: 'P2' },
+      transit_safety:         { label: 'Transit Safety',           indicators: ['total_population','poverty_rate'],                                      priority: 'P3' },
+      health_access:          { label: 'Healthcare Access',        indicators: ['uninsured_rate','poverty_rate','total_population'],                     priority: 'P1' },
+      health_equity:          { label: 'Health Equity',            indicators: ['pct_poc','uninsured_rate','poverty_rate'],                              priority: 'P1' },
+      income_equity:          { label: 'Income Equity',            indicators: ['median_hh_income','poverty_rate','pct_poc'],                            priority: 'P1' },
+      economic_equity:        { label: 'Economic Equity',          indicators: ['median_hh_income','pct_cost_burdened','poverty_rate','pct_bachelors_or_higher'], priority: 'P1' },
+      economic_opportunity:   { label: 'Economic Opportunity',     indicators: ['median_hh_income','pct_bachelors_or_higher','poverty_rate'],            priority: 'P1' },
+      labor_rights:           { label: 'Labor Rights',             indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P2' },
+      labor_mobility:         { label: 'Labor Mobility',           indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
+      environmental_health:   { label: 'Environmental Health',     indicators: ['total_population','pct_poc'],                                            priority: 'P2' },
+      environmental_justice:  { label: 'Environmental Justice',    indicators: ['pct_poc','poverty_rate','total_population'],                             priority: 'P2' },
+      environmental_governance:{ label: 'Environmental Governance',indicators: ['total_population'],                                                      priority: 'P3' },
+      climate_equity:         { label: 'Climate Equity',           indicators: ['pct_cost_burdened','total_population'],                                  priority: 'P2' },
+      criminal_justice:       { label: 'Criminal Justice',         indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P1' },
+      legal_equity:           { label: 'Legal Equity',             indicators: ['pct_poc','poverty_rate'],                                                priority: 'P2' },
+      community_safety:       { label: 'Community Safety',         indicators: ['poverty_rate','total_population'],                                       priority: 'P3' },
+      fiscal_equity:          { label: 'Fiscal Equity',            indicators: ['median_hh_income','pct_cost_burdened'],                                 priority: 'P2' },
+      fiscal_autonomy:        { label: 'Fiscal Autonomy',          indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
+      care_quality:           { label: 'Care Quality',             indicators: ['uninsured_rate','poverty_rate'],                                         priority: 'P2' },
+      care_access:            { label: 'Care Access',              indicators: ['uninsured_rate','poverty_rate'],                                         priority: 'P2' },
+      care_workforce:         { label: 'Care Workforce',           indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
+      civil_rights:           { label: 'Civil Rights',             indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P2' },
+      reproductive_rights:    { label: 'Reproductive Rights',      indicators: ['uninsured_rate','poverty_rate','total_population'],                      priority: 'P3' },
+      immigration_rights:     { label: 'Immigration Rights',       indicators: ['pct_poc','poverty_rate'],                                                priority: 'P3' },
+      rural_equity:           { label: 'Rural Equity',             indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P2' },
+      land_preservation:      { label: 'Land Preservation',        indicators: ['total_population','poverty_rate'],                                       priority: 'P3' },
+      tribal_sovereignty:     { label: 'Tribal Sovereignty',       indicators: ['total_population','pct_poc'],                                            priority: 'P3' },
+      public_safety:          { label: 'Public Safety',            indicators: ['poverty_rate','total_population'],                                       priority: 'P3' }
+    },
+
+    // ── Simulation: which indicators are "available" in PDI ─────
+    // In production, this would come from the API (indicator catalog).
+    // For now, mark common indicators as available to show the match bar.
+    availableIndicators: new Set([
+      'median_hh_income', 'poverty_rate', 'total_population',
+      'pct_poc', 'pct_cost_burdened', 'uninsured_rate',
+      'pct_non_hispanic_black', 'pct_bachelors_or_higher'
+    ]),
+
+    // ── Computed ─────────────────────────────────────────────────
+    get selectedPolicies() {
+      if (!this.selectedCandidate) return [];
+      return this.allPolicies.filter(p => p.candidate === this.selectedCandidate);
+    },
+
+    get selectedDimensions() {
+      const policies = this.selectedPolicies;
+      if (policies.length === 0) return [];
+
+      // Group policies by equity_dimension
+      const grouped = {};
+      for (const p of policies) {
+        const dimKey = p.equity_dimension || 'uncategorized';
+        if (!grouped[dimKey]) grouped[dimKey] = [];
+        grouped[dimKey].push(p);
+      }
+
+      // Build dimension objects with match bar data
+      const dims = [];
+      for (const [dimKey, dimPolicies] of Object.entries(grouped)) {
+        const cw = this.crosswalk[dimKey] || { label: dimKey, indicators: [], priority: 'P3' };
+        const totalIndicators = cw.indicators.length;
+        const matchedIndicators = cw.indicators.filter(id => this.availableIndicators.has(id)).length;
+        const matchPct = totalIndicators > 0 ? Math.round((matchedIndicators / totalIndicators) * 100) : 0;
+
+        // Build indicator chip data
+        const indicators = cw.indicators.map(id => ({
+          id,
+          available: this.availableIndicators.has(id)
+        }));
+
+        // Estimate: ~3 evidence cards per policy per dimension (rough heuristic)
+        const evidenceEstimate = dimPolicies.length * 3;
+        const evidenceEstimatePerPolicy = 3;
+
+        dims.push({
+          key: dimKey,
+          label: cw.label,
+          priority: cw.priority,
+          policies: dimPolicies,
+          indicators,
+          totalIndicators,
+          matchedIndicators,
+          matchPct,
+          evidenceEstimate,
+          evidenceEstimatePerPolicy
+        });
+      }
+
+      // Sort: P1 first, then P2, then P3; within same priority, alphabetically
+      const priorityOrder = { P1: 0, P2: 1, P3: 2 };
+      dims.sort((a, b) => {
+        const pa = priorityOrder[a.priority] ?? 3;
+        const pb = priorityOrder[b.priority] ?? 3;
+        if (pa !== pb) return pa - pb;
+        return a.label.localeCompare(b.label);
+      });
+
+      return dims;
+    },
+
+    get selectedCategories() {
+      const cats = new Set();
+      for (const p of this.selectedPolicies) {
+        if (p.category) cats.add(p.category);
+      }
+      return [...cats].sort();
+    },
+
+    get selectedTotalEvidence() {
+      return this.selectedDimensions.reduce((sum, d) => sum + d.evidenceEstimate, 0);
+    },
+
+    // ── Init ─────────────────────────────────────────────────────
+    init() {
+      this.loadPolicies();
+    },
+
+    // ── Select candidate ─────────────────────────────────────────
+    selectCandidate(key) {
+      this.selectedCandidate = key;
+    },
+
+    // ── Load policies from API ───────────────────────────────────
+    async loadPolicies() {
+      this.loading = true;
+      this.error = '';
+
+      try {
+        // Fetch all policies — in production, could filter by candidate via ?candidate=
+        const resp = await fetch('/v1/policy/policies?limit=1000');
+        if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
+        const data = await resp.json();
+        this.allPolicies = data.policies || [];
+
+        // Derive candidate list from policy data
+        this.buildCandidates();
+
+        // Auto-select first candidate
+        if (this.candidates.length > 0 && !this.candidates[0].placeholder) {
+          this.selectedCandidate = this.candidates[0].key;
+        }
+      } catch (e) {
+        this.error = `Failed to load candidate policies: ${e.message}`;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // ── Build candidate list ─────────────────────────────────────
+    buildCandidates() {
+      const candidateMap = {};
+
+      // Count policies per candidate from API data
+      for (const p of this.allPolicies) {
+        const name = p.candidate || 'Unknown';
+        if (!candidateMap[name]) {
+          candidateMap[name] = { name, key: name, placeholder: false, policyCount: 0 };
+        }
+        candidateMap[name].policyCount++;
+      }
+
+      const list = Object.values(candidateMap);
+
+      // If no candidates found in API, seed Francesca Hong as fallback
+      if (list.length === 0) {
+        list.push(
+          { name: 'Francesca Hong', key: 'Francesca Hong', placeholder: false, policyCount: 0 }
+        );
+      }
+
+      // Always add a placeholder for future candidates
+      list.push(
+        { name: 'More candidates coming soon…', key: '_placeholder', placeholder: true, policyCount: 0 }
+      );
+
+      this.candidates = list;
+    }
+  };
+}
+</script>
+
+</body>
+</html>
