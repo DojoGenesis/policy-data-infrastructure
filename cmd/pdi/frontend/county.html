@@ -3,1310 +3,403 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>County Profile — Policy Data Infrastructure</title>
-<meta name="description" content="County-level data profile with indicators, factor analysis, spatial clusters, and composite indexing.">
+<title>County Profile — PDI</title>
+<meta name="description" content="Full county data profile with indicators, ICE scores, factor analysis, LISA clusters, and composite indexing.">
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/styles.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="/static/alpine.min.js"></script>
 <style>
-  [x-cloak] { display: none !important; }
-
-  /* ── County Profile · page-specific layout ─────────────────── */
-  .county-hero {
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(16px, 3vw, 32px);
-    align-items: flex-start;
-  }
-  .county-hero-main {
-    flex: 1 1 300px;
-    min-width: 0;
-  }
-  .county-hero-stats {
-    flex: 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(12px, 2.5vw, 24px);
-  }
-
-  /* Quick stats ribbon */
-  .quick-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1px;
-    background: var(--border);
-    border-radius: var(--r-card);
-    overflow: hidden;
-    margin-top: clamp(12px, 2vw, 20px);
-  }
-  .quick-stat {
-    flex: 1 1 140px;
-    background: var(--surface);
-    padding: clamp(10px, 1.8vw, 16px);
-    text-align: center;
-  }
-  .quick-stat-value {
-    font-size: clamp(1.1rem, 2.6vw, 1.5rem);
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.2;
-  }
-  .quick-stat-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 0.25em;
-  }
-
-  /* Category tabs */
-  .cat-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .cat-tab {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35em 0.85em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    border-radius: var(--r-chip);
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
-  }
-  .cat-tab:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
-  .cat-tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
-  }
-
-  /* Indicator row */
-  .indicator-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 12px;
-    padding: clamp(10px, 1.5vw, 14px) 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .indicator-row:last-child { border-bottom: none; }
-  .indicator-name {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-  }
-  .indicator-unit {
-    font-size: 0.7rem;
-    color: var(--subtle);
-  }
-  .indicator-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    color: var(--text);
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  /* Factor bars */
-  .factor-item {
-    margin-bottom: clamp(12px, 2vw, 18px);
-  }
-  .factor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-  }
-  .factor-name {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .factor-score {
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-family: var(--font-mono);
-    color: var(--muted);
-  }
-  .factor-loading-desc {
-    font-size: 0.7rem;
-    color: var(--subtle);
-    margin-top: 2px;
-    line-height: 1.3;
-  }
-
-  /* LISA badges */
-  .lisa-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .lisa-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0.4em 0.75em;
-    font-size: 0.75rem;
-    font-weight: 700;
-    border-radius: var(--r-badge);
-  }
-  .lisa-badge-HH {
-    color: var(--live);
-    background: color-mix(in srgb, var(--live) 14%, transparent);
-  }
-  .lisa-badge-HL {
-    color: var(--gated);
-    background: color-mix(in srgb, var(--gated) 14%, transparent);
-  }
-  .lisa-badge-LL {
-    color: var(--info);
-    background: color-mix(in srgb, var(--info) 14%, transparent);
-  }
-  .lisa-badge-LH {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-  }
-
-  /* Composite panel */
-  .composite-panel {
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-card);
-    overflow: hidden;
-  }
-  .composite-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: clamp(14px, 2vw, 20px);
-    background: var(--surface);
-    cursor: pointer;
-    user-select: none;
-  }
-  .composite-panel-header:hover {
-    background: var(--raised);
-  }
-  .composite-panel-body {
-    padding: clamp(16px, 2.5vw, 24px);
-    border-top: 1px solid var(--border);
-  }
-
-  /* Variable picker */
-  .var-picker-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .var-picker-item:last-child { border-bottom: none; }
-  .var-picker-item label {
-    flex: 1;
-    font-size: 0.8rem;
-    color: var(--text);
-    cursor: pointer;
-  }
-  .var-picker-item input[type="checkbox"] {
-    accent-color: var(--accent);
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-  }
-  .weight-slider {
-    width: 80px;
-    accent-color: var(--accent);
-  }
-
-  /* Children tract grid */
-  .tract-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-    gap: clamp(8px, 1.5vw, 12px);
-  }
-  .tract-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-badge);
-    padding: clamp(10px, 1.5vw, 14px);
-    transition: background-color 160ms ease, border-color 160ms ease;
-  }
-  .tract-card:hover {
-    background: var(--raised);
-    border-color: var(--border-strong);
-  }
-
-  /* Sensitivity table */
-  .sens-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    margin-top: 12px;
-  }
-  .sens-table th, .sens-table td {
-    padding: 0.5em 0.75em;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
-  }
-  .sens-table th {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: var(--surface);
-  }
-
-  /* ICE score card */
-  .ice-card {
-    border-left: 3px solid var(--accent);
-  }
-  .ice-interpretation {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 8px;
-    line-height: 1.5;
-  }
-
-  /* CV tooltip */
-  .cv-hint {
-    position: relative;
-    cursor: help;
-    border-bottom: 1px dotted var(--subtle);
-  }
-  .cv-hint:hover .cv-tooltip {
-    display: block;
-  }
-  .cv-tooltip {
-    display: none;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--raised);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-badge);
-    padding: 6px 10px;
-    font-size: 0.7rem;
-    font-family: var(--font-mono);
-    color: var(--text);
-    white-space: nowrap;
-    z-index: 10;
-    pointer-events: none;
-  }
-
-  /* Section spacing */
-  .profile-section {
-    margin-bottom: var(--section-gap);
-  }
+  [x-cloak] { display:none !important; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:14px; margin-bottom:20px; }
+  .back-link:hover { color:var(--text); }
+  .hero { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; margin-bottom:28px; }
+  .hero h1 { font-size:clamp(1.5rem,3.5vw,2rem); font-weight:700; color:var(--text); margin:0 0 4px; }
+  .hero .geoid { font-size:13px; color:var(--subtle); font-family:var(--font-mono); }
+  .quick-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1px; background:var(--border); border-radius:var(--r-card); overflow:hidden; margin-bottom:28px; }
+  .quick-stat { background:var(--surface); padding:14px 16px; text-align:center; }
+  .quick-stat .val { font-size:clamp(1rem,2.2vw,1.35rem); font-weight:700; color:var(--text); }
+  .quick-stat .lbl { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-top:2px; }
+  section { margin-bottom:32px; }
+  section h2 { font-size:clamp(1.05rem,2vw,1.2rem); font-weight:700; color:var(--text); margin:0 0 4px; }
+  section .desc { font-size:13px; color:var(--muted); margin-bottom:16px; }
+  .indicator-table { width:100%; border-collapse:collapse; font-size:14px; }
+  .indicator-table th { text-align:left; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); padding:8px 12px; border-bottom:1px solid var(--border); }
+  .indicator-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
+  .indicator-table tr:hover td { background:var(--raised); }
+  .indicator-table .name { font-weight:500; }
+  .indicator-table .val { font-weight:600; font-family:var(--font-mono); }
+  .indicator-table .unit { color:var(--muted); font-size:12px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:var(--r-badge); font-size:11px; font-weight:600; }
+  .badge.high { background:var(--live); color:var(--bg); }
+  .badge.moderate { background:var(--gated); color:var(--bg); }
+  .badge.low { background:#b91c1c; color:white; }
+  .badge.unknown { background:var(--border); color:var(--muted); }
+  .cat-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .cat-tab { padding:6px 14px; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:var(--r-chip); color:var(--muted); background:transparent; cursor:pointer; transition:all 0.15s; }
+  .cat-tab:hover { border-color:var(--accent); color:var(--text); }
+  .cat-tab.active { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:20px 24px; }
+  .card + .card { margin-top:16px; }
+  .card h3 { font-size:1rem; font-weight:700; color:var(--text); margin:0 0 8px; }
+  .card p { font-size:14px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
+  .stat-row { display:flex; gap:24px; flex-wrap:wrap; }
+  .stat-item { flex:1; min-width:120px; }
+  .stat-item .big { font-size:clamp(1.2rem,2.5vw,1.6rem); font-weight:700; color:var(--accent); }
+  .stat-item .label { font-size:12px; color:var(--muted); margin-top:2px; }
+  .lisa-badges { display:flex; gap:10px; flex-wrap:wrap; }
+  .lisa-badge { padding:6px 14px; border-radius:var(--r-chip); font-size:13px; font-weight:600; }
+  .lisa-badge.HH { background:#d97706; color:var(--bg); }
+  .lisa-badge.LL { background:var(--teal); color:var(--bg); }
+  .lisa-badge.HL { background:#7c3aed; color:white; }
+  .lisa-badge.LH { background:#f59e0b; color:var(--bg); }
+  .lisa-badge.NS { background:var(--border); color:var(--muted); }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:var(--r-card); font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; border:none; font-family:var(--font-sans); transition:filter 0.15s; }
+  .btn-primary { background:var(--accent); color:var(--bg); }
+  .btn-primary:hover { filter:brightness(1.1); }
+  .btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border-strong); }
+  .composite-panel { margin-top:20px; }
+  .composite-panel summary { font-size:14px; font-weight:600; color:var(--accent); cursor:pointer; padding:8px 0; }
+  .composite-inner { padding:16px 0; }
+  .composite-inner label { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); margin-bottom:8px; }
+  .composite-inner input[type=range] { flex:1; accent-color:var(--accent); }
+  .composite-result { margin-top:16px; }
+  .loader { display:flex; justify-content:center; padding:40px; }
+  .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .error-box { background:#7f1d1d20; border:1px solid #7f1d1d40; border-radius:var(--r-card); padding:16px; color:#fca5a5; font-size:14px; }
+  .error-box button { background:none; border:none; color:var(--accent); cursor:pointer; text-decoration:underline; font:inherit; margin-left:8px; }
+  .empty-box { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
 </style>
 </head>
 <body>
-
-<!-- ═══════════════ NAVIGATION ═══════════════ -->
 <header class="site-header">
-  <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
-    </a>
-    <nav class="site-nav">
-      <a href="/">Counties</a>
-      <a href="/county" aria-current="page">Profile</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/evidence">Evidence</a>
-      <a href="/about">About</a>
-    </nav>
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:56px;">
+    <div style="display:flex;align-items:center;gap:24px;">
+      <a href="/" style="font-weight:700;font-size:18px;color:var(--text);text-decoration:none;"><span style="color:var(--accent);">PDI</span> <span style="font-weight:300;color:var(--muted);">Data Explorer</span></a>
+      <nav style="display:flex;gap:4px;font-size:14px;">
+        <a href="/" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Counties</a>
+        <a href="/compare" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Compare</a>
+        <a href="/map" style="color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;">Map</a>
+        <a href="/chat" style="color:var(--accent);text-decoration:none;padding:4px 10px;border-radius:6px;">Chat</a>
+      </nav>
+    </div>
   </div>
 </header>
 
-<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<main class="wrap" style="padding-top: clamp(24px, 4vw, 40px); padding-bottom: clamp(48px, 8vw, 96px);"
-      x-data="countyProfile()" x-init="init()">
+<main class="wrap" x-data="countyProfile()" x-init="init()" style="padding-top:24px;padding-bottom:60px;">
 
-  <!-- ═══ BACK LINK ═══ -->
-  <a href="/" class="btn btn-ghost" style="margin-bottom: clamp(16px, 2.5vw, 24px);">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to counties
-  </a>
+  <!-- BACK -->
+  <a href="/" class="back-link">← Back to counties</a>
 
-  <!-- ═══ GLOBAL LOADING ═══ -->
-  <div x-show="loading" x-cloak class="loader">
-    <div class="loader-spinner"></div>
-  </div>
+  <!-- LOADING -->
+  <div x-show="loading" class="loader"><div class="spinner"></div></div>
 
-  <!-- ═══ GLOBAL ERROR ═══ -->
-  <div x-show="error && !loading" x-cloak class="state-error">
+  <!-- ERROR -->
+  <div x-show="error" x-cloak class="error-box">
     <span x-text="error"></span>
-    <button @click="init()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
+    <button @click="init()">Retry</button>
   </div>
 
-  <!-- ═══ EMPTY (no geoid) ═══ -->
-  <div x-show="!loading && !error && !geoid" x-cloak class="state-empty">
-    <p>Select a county from the <a href="/">Counties page</a> to view its profile.</p>
-  </div>
+  <!-- CONTENT -->
+  <div x-show="!loading && !error && geo" x-cloak>
 
-  <!-- ═══════════════ PROFILE CONTENT ═══════════════ -->
-  <div x-show="!loading && !error && geoid && geo" x-cloak>
-
-    <!-- ── COUNTY HEADER ──────────────────────────────────────── -->
-    <div class="card card-spectral profile-section" style="padding: clamp(20px, 3vw, 32px);">
-      <div class="county-hero">
-        <div class="county-hero-main">
-          <span class="section-tag">County Profile</span>
-          <h1 x-text="geo.name"></h1>
-          <div style="display:flex;align-items:center;gap:12px;margin-top:6px;font-size:0.8rem;color:var(--muted);">
-            <span x-text="geo.geoid"></span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--subtle);"></span>
-            <span x-text="geo.level"></span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--subtle);"></span>
-            <span x-text="geo.state_fips ? 'State FIPS: ' + geo.state_fips : ''"></span>
-          </div>
-        </div>
-        <div class="county-hero-stats">
-          <div class="stat-callout">
-            <div class="stat-value" x-text="fmtNum(geo.population)"></div>
-            <div class="stat-label">Population</div>
-          </div>
-          <div class="stat-callout" x-show="geo.land_area_m2">
-            <div class="stat-value" x-text="fmtArea(geo.land_area_m2)"></div>
-            <div class="stat-label">Land Area</div>
-          </div>
-        </div>
+    <!-- HERO -->
+    <div class="hero">
+      <div style="flex:1;">
+        <h1 x-text="geo.name"></h1>
+        <span class="geoid" x-text="geo.geoid"></span>
       </div>
-
-      <!-- Quick stats from indicators -->
-      <div class="quick-stats" x-show="quickStats.length > 0">
-        <template x-for="qs in quickStats" :key="qs.label">
-          <div class="quick-stat">
-            <div class="quick-stat-value" x-text="qs.value"></div>
-            <div class="quick-stat-label" x-text="qs.label"></div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Generate Brief button -->
-      <div style="margin-top:clamp(16px, 2.5vw, 24px);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <button @click="generateBrief()" :disabled="narrativeLoading"
-                class="btn btn-primary" x-text="narrativeLoading ? 'Generating…' : 'Generate Brief'"></button>
-        <span x-show="narrativeResult" style="font-size:0.8rem;color:var(--live);">
-          Brief ready —
-          <a :href="narrativeResult" target="_blank" style="font-weight:600;">Open narrative</a>
-        </span>
-        <span x-show="narrativeError" style="font-size:0.8rem;color:var(--gated);" x-text="narrativeError"></span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Brief</a>
+        <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
+        <a :href="'/chat'" class="btn btn-secondary">Ask Chat</a>
       </div>
     </div>
 
-    <!-- ═══════════════ LAYER 1: INDICATOR DASHBOARD ═══════════════ -->
-    <section class="profile-section" id="layer1-indicators">
-      <div class="section-heading">
-        <span class="section-tag">Layer 1</span>
-        <h2>Indicator Dashboard</h2>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="indicatorsLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="indicatorsError" x-cloak class="state-error">
-        <span x-text="indicatorsError"></span>
-        <button @click="loadIndicators()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Content -->
-      <div x-show="!indicatorsLoading && !indicatorsError" x-cloak>
-
-        <!-- Category tabs -->
-        <div class="cat-tabs" x-show="indicatorCategories.length > 1">
-          <button @click="activeCat = 'all'"
-                  class="cat-tab" :class="{ active: activeCat === 'all' }">All</button>
-          <template x-for="cat in indicatorCategories" :key="cat">
-            <button @click="activeCat = cat"
-                    class="cat-tab" :class="{ active: activeCat === cat }" x-text="cat"></button>
-          </template>
+    <!-- QUICK STATS -->
+    <div class="quick-stats" x-show="indicators.length > 0">
+      <template x-for="stat in quickStats" :key="stat.label">
+        <div class="quick-stat">
+          <div class="val" x-text="stat.value"></div>
+          <div class="lbl" x-text="stat.label"></div>
         </div>
+      </template>
+    </div>
 
-        <!-- Indicator list -->
-        <div class="card" x-show="filteredIndicators.length > 0">
-          <template x-for="ind in filteredIndicators" :key="ind.variable_id">
-            <div class="indicator-row">
-              <div>
-                <div class="indicator-name" x-text="ind.name || ind.variable_id"></div>
-                <div class="indicator-unit">
-                  <span x-text="ind.unit || ''"></span>
-                  <span x-show="ind.cv != null" class="cv-hint" style="margin-left:6px;">
-                    CV: <span x-text="fmtCV(ind.cv)"></span>
-                    <span class="cv-tooltip">Coefficient of Variation: <span x-text="fmtCV(ind.cv)"></span></span>
-                  </span>
-                </div>
-              </div>
-              <div class="indicator-value" x-text="fmtVal(ind.value)"></div>
-              <div>
-                <span class="badge"
-                      :class="reliabilityBadgeClass(ind.reliability)"
-                      x-text="ind.reliability || 'unknown'"></span>
-              </div>
-            </div>
-          </template>
+    <!-- LAYER 1: INDICATOR DASHBOARD -->
+    <section>
+      <h2>Indicator Dashboard</h2>
+      <p class="desc" x-text="indicators.length + ' indicators across ' + Object.keys(groupedIndicators).length + ' categories'"></p>
+      <div class="cat-tabs">
+        <template x-for="(inds, cat) in groupedIndicators" :key="cat">
+          <button class="cat-tab" :class="{active: activeCategory === cat}" @click="activeCategory = cat" x-text="cat"></button>
+        </template>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="indicator-table">
+          <thead><tr><th>Indicator</th><th>Value</th><th>Reliability</th></tr></thead>
+          <tbody>
+            <template x-for="ind in visibleIndicators" :key="ind.variable_id">
+              <tr>
+                <td><span class="name" x-text="ind.name || ind.variable_id"></span><br><span class="unit" x-text="ind.unit"></span></td>
+                <td><span class="val" x-text="fmtVal(ind.value)"></span></td>
+                <td><span class="badge" :class="ind.reliability || 'unknown'" x-text="ind.reliability || '—'"></span></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LAYER 2: VALIDATED FEATURES -->
+    <section x-show="iceScore !== null || dissimBW !== null">
+      <h2>Validated Features</h2>
+      <p class="desc">Research-grounded measures. No arbitrary composites — every feature has a peer-reviewed source.</p>
+      <div class="card" x-show="iceScore !== null">
+        <h3>ICE — Index of Concentration at the Extremes (Krieger et al. 2016)</h3>
+        <p>Measures spatial polarization of income and race. Ranges from -1 (extreme deprivation) to +1 (extreme privilege).</p>
+        <div class="stat-row">
+          <div class="stat-item"><div class="big" x-text="fmtICE(iceScore)"></div><div class="label">ICE Score</div></div>
+          <div class="stat-item"><div class="big" x-text="icePercentile ? icePercentile.toFixed(1) + '%' : '—'"></div><div class="label">State Percentile</div></div>
+          <div class="stat-item"><div class="big" x-text="popPOC ? popPOC.toFixed(1) + '%' : '—'"></div><div class="label">% People of Color</div></div>
         </div>
-
-        <!-- Empty -->
-        <div x-show="filteredIndicators.length === 0" class="state-empty">
-          <p x-show="activeCat === 'all'">No indicator data available for this geography.</p>
-          <p x-show="activeCat !== 'all'">No indicators in category "<span x-text="activeCat"></span>".</p>
+      </div>
+      <div class="card" x-show="dissimBW !== null" style="margin-top:12px;">
+        <h3>Dissimilarity Index (Massey & Denton 1988)</h3>
+        <p>Measures residential segregation. 0 = perfect integration, 1 = complete segregation.</p>
+        <div class="stat-row">
+          <div class="stat-item"><div class="big" x-text="dissimBW ? dissimBW.toFixed(3) : '—'"></div><div class="label">Black-White D</div></div>
+          <div class="stat-item"><div class="big" x-text="dissimHW ? dissimHW.toFixed(3) : '—'"></div><div class="label">Hispanic-White D</div></div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════ LAYER 2: VALIDATED FEATURES ═══════════════ -->
-    <section class="profile-section" id="layer2-validated">
-      <div class="section-heading">
-        <span class="section-tag">Layer 2</span>
-        <h2>Validated Features</h2>
-      </div>
-
-      <div class="card-grid" x-show="validatedFeatures && validatedFeatures.length > 0" x-cloak>
-
-        <!-- ICE Score Card -->
-        <div class="card ice-card" x-show="iceFeature">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">ICE Score</h3>
-          <div class="stat-callout">
-            <div class="stat-value" x-text="iceFeature.value"></div>
-            <div class="stat-label">Index of Concentration at the Extremes</div>
-          </div>
-          <div x-show="iceFeature.percentile != null" style="margin-top:8px;font-size:0.8rem;color:var(--muted);">
-            Percentile: <span x-text="fmtPct(iceFeature.percentile)" style="font-weight:600;color:var(--text);"></span>
-          </div>
-          <div class="ice-interpretation" x-text="iceFeature.interpretation"></div>
-        </div>
-
-        <!-- Dissimilarity Index -->
-        <div class="card" x-show="dissimBW">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">Dissimilarity Index</h3>
-          <div class="stat-row">
-            <div class="stat-callout">
-              <div class="stat-value" x-text="dissimBW.value"></div>
-              <div class="stat-label">Black-White</div>
-            </div>
-            <div class="stat-callout" x-show="dissimHW">
-              <div class="stat-value" x-text="dissimHW.value"></div>
-              <div class="stat-label">Hispanic-White</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CV / Reliability Summary -->
-        <div class="card" x-show="cvSummary">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">Reliability Summary</h3>
-          <div class="stat-row" style="gap:clamp(12px,2vw,20px);">
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.high" style="color:var(--live);"></div>
-              <div class="stat-label">High Reliability</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.moderate" style="color:var(--gated);"></div>
-              <div class="stat-label">Moderate</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.low" style="color:var(--gated);"></div>
-              <div class="stat-label">Low</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.unknown" style="color:var(--subtle);"></div>
-              <div class="stat-label">Unknown</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty Validated -->
-      <div x-show="!validatedFeatures || validatedFeatures.length === 0" x-cloak class="state-empty">
-        <p>No validated feature data available.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════════ LAYER 3: FACTOR PROFILE ═══════════════ -->
-    <section class="profile-section" id="layer3-factors">
-      <div class="section-heading">
-        <span class="section-tag">Layer 3</span>
-        <h2>Factor Profile</h2>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="factorsLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="factorsError" x-cloak class="state-error">
-        <span x-text="factorsError"></span>
-        <button @click="loadFactors()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Chart -->
-      <div x-show="!factorsLoading && !factorsError && factors.length > 0" x-cloak>
-        <div class="chart-card" x-ref="factorChartContainer">
-          <div class="chart-card-header">
-            <h3 class="chart-card-title">Factor Scores</h3>
-            <span class="chart-card-subtitle" x-text="factors.length + ' factors'"></span>
-          </div>
-          <div x-html="factorChartSVG"></div>
-        </div>
-
-        <!-- Factor detail list -->
-        <div class="card" style="margin-top:clamp(16px,2.5vw,24px);">
+    <!-- LAYER 3: FACTOR PROFILE -->
+    <section x-show="factors.length > 0">
+      <h2>Factor Profile</h2>
+      <p class="desc">Exploratory Factor Analysis (EFA) with oblimin rotation. Factors are named by their loading profile — the data determines what belongs together.</p>
+      <div class="card" style="overflow-x:auto;">
+        <div x-show="factorsLoading" class="loader"><div class="spinner"></div></div>
+        <div x-show="factorsError" x-cloak class="error-box"><span x-text="factorsError"></span></div>
+        <div x-show="!factorsLoading && !factorsError">
           <template x-for="f in factors" :key="f.factor_name">
-            <div class="factor-item">
-              <div class="factor-header">
-                <span class="factor-name" x-text="formatFactorName(f.factor_name)"></span>
-                <span class="factor-score">
-                  <span x-text="fmtVal(f.factor_score)"></span>
-                  <span x-show="f.factor_percentile != null" style="color:var(--subtle);">
-                    (p<span x-text="Math.round(f.factor_percentile)"></span>)
-                  </span>
-                </span>
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
+              <span style="font-weight:600;font-size:14px;min-width:180px;" x-text="f.factor_name"></span>
+              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;background:var(--accent);border-radius:4px;transition:width 0.5s;" :style="'width:' + (Math.abs(f.factor_score) * 50) + '%'"></div>
               </div>
-              <div class="chart-bar-track">
-                <div class="chart-bar-fill" :style="{ width: factorBarWidth(f.factor_score) + '%' }"></div>
-              </div>
-              <div class="factor-loading-desc" x-show="getLoadingsDesc(f)" x-text="getLoadingsDesc(f)"></div>
+              <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;min-width:50px;text-align:right;" x-text="f.factor_score ? f.factor_score.toFixed(2) : '—'"></span>
             </div>
           </template>
         </div>
-      </div>
-
-      <!-- Empty -->
-      <div x-show="!factorsLoading && !factorsError && factors.length === 0" x-cloak class="state-empty">
-        <p>No factor analysis data available for this geography.</p>
       </div>
     </section>
 
-    <!-- ═══════════════ LAYER 4: SPATIAL CLUSTER ═══════════════ -->
-    <section class="profile-section" id="layer4-spatial">
-      <div class="section-heading">
-        <span class="section-tag">Layer 4</span>
-        <h2>Spatial Clusters</h2>
-      </div>
-
-      <!-- LISA badges -->
-      <div class="card" x-show="lisaItems.length > 0" x-cloak>
-        <p style="font-size:0.85rem;color:var(--muted);margin:0 0 14px 0;">
-          Local Indicators of Spatial Association (LISA) — statistically significant spatial clusters.
-        </p>
-        <div class="lisa-badges">
-          <template x-for="item in lisaItems" :key="item.indicator">
-            <div class="lisa-badge" :class="'lisa-badge-' + item.cluster">
-              <span x-text="item.indicator"></span>
-              <span style="opacity:0.7;" x-text="clusterLabel(item.cluster)"></span>
-            </div>
-          </template>
-        </div>
-        <div style="margin-top:16px;">
-          <a :href="'/map?indicator=' + (lisaItems[0]?.indicator || 'poverty_rate')"
-             class="btn btn-secondary" style="font-size:0.8rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            View on Map
+    <!-- LAYER 4: SPATIAL CLUSTERS -->
+    <section x-show="lisaClusters.length > 0">
+      <h2>Spatial Clusters (LISA)</h2>
+      <p class="desc">Local Indicators of Spatial Association (Anselin 1995). Classifies each tract by its relationship to neighbors. <a href="/map" style="color:var(--accent);">View on map →</a></p>
+      <div class="lisa-badges">
+        <template x-for="c in lisaClusters" :key="c.variable">
+          <a :href="'/map?indicator=' + c.variable" style="text-decoration:none;">
+            <span class="lisa-badge" :class="c.cluster" x-text="c.variable + ': ' + c.cluster"></span>
           </a>
-        </div>
+        </template>
       </div>
-
-      <!-- Legend -->
-      <div x-show="lisaItems.length > 0" x-cloak style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;font-size:0.7rem;color:var(--muted);">
-        <span><span class="badge badge-high" style="margin-right:4px;">HH</span> High-High (hot spot)</span>
-        <span><span class="badge badge-low" style="margin-right:4px;">LL</span> Low-Low (cold spot)</span>
-        <span><span class="badge badge-moderate" style="margin-right:4px;">HL</span> High-Low (outlier)</span>
-        <span><span class="badge badge-info" style="margin-right:4px;">LH</span> Low-High (outlier)</span>
-      </div>
-
-      <!-- Empty -->
-      <div x-show="lisaItems.length === 0" x-cloak class="state-empty">
-        <p>No spatial cluster analysis available for this geography.</p>
-      </div>
+      <div class="empty-box" x-show="lisaClusters.length === 0">No LISA data available for this geography yet. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a></div>
     </section>
 
-    <!-- ═══════════════ LAYER 5: COMPOSITE WIDGET ═══════════════ -->
-    <section class="profile-section" id="layer5-composite">
-      <div class="section-heading">
-        <span class="section-tag">Layer 5</span>
-        <h2>Custom Composite Index</h2>
-      </div>
-
-      <div class="composite-panel">
-        <div class="composite-panel-header" @click="compositeOpen = !compositeOpen">
-          <span style="font-weight:600;font-size:0.95rem;">
-            <span x-show="!compositeOpen">▶</span>
-            <span x-show="compositeOpen">▼</span>
-            Build Custom Index
-          </span>
-          <span style="font-size:0.75rem;color:var(--muted);" x-text="selectedVars.length + ' variables selected'"></span>
-        </div>
-
-        <div class="composite-panel-body" x-show="compositeOpen" x-cloak>
-
-          <!-- Variable picker -->
-          <div x-show="variableCatalog.length > 0" style="margin-bottom:clamp(16px,2.5vw,24px);">
-            <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">
-              Select Variables
-            </div>
-            <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-badge);padding:0 12px;">
-              <template x-for="v in variableCatalog" :key="v.id">
-                <div class="var-picker-item">
-                  <input type="checkbox" :id="'var-' + v.id" :value="v.id"
-                         x-model="selectedVars" @change="recalcWeights()">
-                  <label :for="'var-' + v.id">
-                    <span x-text="v.name || v.id" style="display:block;"></span>
-                    <span x-show="v.unit" style="font-size:0.65rem;color:var(--subtle);" x-text="v.unit"></span>
-                  </label>
-                  <input type="range" min="1" max="100" class="weight-slider"
-                         x-show="selectedVars.includes(v.id)"
-                         :value="weights[v.id] || 1"
-                         @input="setWeight(v.id, $event.target.value)">
-                  <span x-show="selectedVars.includes(v.id)"
-                        style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);width:28px;text-align:right;"
-                        x-text="weights[v.id] || 1"></span>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Method selector -->
-          <div x-show="selectedVars.length >= 2" style="margin-bottom:clamp(16px,2.5vw,24px);">
-            <label style="font-size:0.8rem;font-weight:500;color:var(--text);display:block;margin-bottom:4px;">Method</label>
-            <select x-model="compositeMethod" style="max-width:260px;">
-              <option value="geometric_mean">Geometric Mean</option>
-              <option value="weighted_zscore">Weighted Z-Score</option>
-            </select>
-          </div>
-
-          <!-- Compute button -->
-          <button @click="computeComposite()"
-                  :disabled="selectedVars.length < 2 || compositeLoading"
-                  class="btn btn-primary" style="margin-bottom:clamp(16px,2.5vw,24px);"
-                  x-text="compositeLoading ? 'Computing…' : 'Compute Index'"></button>
-
-          <!-- Composite error -->
-          <div x-show="compositeError" x-cloak class="state-error" style="margin-bottom:16px;">
-            <span x-text="compositeError"></span>
-          </div>
-
-          <!-- Composite result -->
-          <div x-show="compositeResult" x-cloak>
-            <div class="card card-spectral" style="margin-bottom:16px;">
-              <div class="stat-callout" style="align-items:center;text-align:center;width:100%;">
-                <div class="stat-value" style="font-size:clamp(2rem,5.5vw,3.2rem);" x-text="compositeScore"></div>
-                <div class="stat-label">Composite Score</div>
-                <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;" x-text="compositeResult.method + ' · ' + compositeResult.variable_ids.length + ' variables'"></div>
+    <!-- LAYER 5: COMPOSITE BUILDER -->
+    <section>
+      <h2>Custom Composite Index</h2>
+      <p class="desc">Build a weighted composite from any indicators. Computed at query time — never stored as truth. Includes sensitivity analysis (±20% weight perturbation).</p>
+      <details class="composite-panel">
+        <summary>Build Custom Index</summary>
+        <div class="composite-inner">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Select variables and set weights. Weights normalize to sum 1.0 automatically.</p>
+          <template x-for="v in compositeVars" :key="v.id">
+            <label><input type="checkbox" :value="v.id" x-model="compositeSelected"> <span x-text="v.name || v.id"></span></label>
+          </template>
+          <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:12px;">Compute Composite</button>
+          <div x-show="compositeResult" class="composite-result" style="margin-top:16px;">
+            <div class="card">
+              <div class="stat-row">
+                <div class="stat-item"><div class="big" x-text="compositeResult.score ? compositeResult.score.toFixed(3) : '—'"></div><div class="label">Composite Score</div></div>
+                <div class="stat-item"><div class="big" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></div><div class="label">Variables Used</div></div>
               </div>
-            </div>
-
-            <!-- Sensitivity analysis -->
-            <div x-show="compositeResult.sensitivity && compositeResult.sensitivity.scenarios && compositeResult.sensitivity.scenarios.length > 0" x-cloak>
-              <h4 style="font-size:0.85rem;font-weight:600;margin:0 0 8px 0;">Sensitivity Analysis</h4>
-              <p style="font-size:0.75rem;color:var(--muted);margin:0 0 12px 0;">
-                How does the score change when each variable is perturbed by ±<span x-text="Math.round(compositeResult.sensitivity.perturbation * 100)"></span>%?
-              </p>
-              <div style="overflow-x:auto;">
-                <table class="sens-table">
-                  <thead>
-                    <tr>
-                      <th>Variable</th>
-                      <th>Direction</th>
-                      <th>Perturbed Score</th>
-                      <th>Stability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="sc in compositeResult.sensitivity.scenarios" :key="sc.perturbed_variable + sc.direction">
-                      <tr>
-                        <td x-text="sc.perturbed_variable"></td>
-                        <td x-text="sc.direction"></td>
-                        <td style="font-family:var(--font-mono);" x-text="sc.scores[0]?.score != null ? sc.scores[0].score.toFixed(3) : '—'"></td>
-                        <td>
-                          <span x-show="compositeResult.sensitivity.stability[sc.perturbed_variable] != null"
-                                style="font-family:var(--font-mono);"
-                                x-text="(compositeResult.sensitivity.stability[sc.perturbed_variable] * 100).toFixed(1) + '%'"></span>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
+              <div x-show="sensitivityStability !== null" style="margin-top:12px;font-size:13px;color:var(--muted);">
+                Sensitivity: ranking is <strong style="color:var(--text);" x-text="(sensitivityStability * 100).toFixed(0) + '%'"></strong> stable under ±20% weight perturbation.
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </details>
     </section>
 
-    <!-- ═══════════════ SECTION: CHILDREN ═══════════════ -->
-    <section class="profile-section" id="children">
-      <div class="section-heading">
-        <h2>Subdivisions</h2>
-        <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Census tracts within this county</p>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="childrenLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="childrenError" x-cloak class="state-error">
-        <span x-text="childrenError"></span>
-        <button @click="loadChildren()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Tract list -->
-      <div x-show="!childrenLoading && !childrenError && children.length > 0" x-cloak class="tract-grid">
-        <template x-for="child in children" :key="child.geoid">
-          <div class="tract-card">
-            <div style="font-size:0.85rem;font-weight:600;color:var(--text);" x-text="child.name"></div>
-            <div style="font-size:0.7rem;color:var(--subtle);margin-top:2px;" x-text="child.geoid"></div>
-            <div style="font-size:0.8rem;font-family:var(--font-mono);color:var(--muted);margin-top:6px;" x-text="fmtNum(child.population) + ' pop.'"></div>
+    <!-- CHILDREN -->
+    <section x-show="children.length > 0">
+      <h2>Tracts</h2>
+      <p class="desc" x-text="children.length + ' census tracts within ' + geo.name"></p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+        <template x-for="c in children.slice(0,24)" :key="c.geoid">
+          <div class="card" style="padding:12px 16px;">
+            <div style="font-weight:600;font-size:14px;" x-text="c.name"></div>
+            <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);" x-text="c.geoid"></div>
           </div>
         </template>
       </div>
-
-      <!-- Empty -->
-      <div x-show="!childrenLoading && !childrenError && children.length === 0" x-cloak class="state-empty">
-        <p>No subdivisions available for this geography.</p>
+      <div x-show="children.length > 24" style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">
+        Showing 24 of <span x-text="children.length"></span> tracts. Full list available via API.
       </div>
     </section>
-
-  </div><!-- / profile content -->
+  </div>
 </main>
 
 <script>
 function countyProfile() {
   return {
-    /* ── State ─────────────────────────────────────────────── */
     geoid: '',
+    geo: null,
     loading: true,
     error: '',
-
-    /* Geo */
-    geo: null,
-
-    /* Layer 1: Indicators */
     indicators: [],
-    indicatorsLoading: false,
-    indicatorsError: '',
-    activeCat: 'all',
-
-    /* Layer 2: Validated Features */
-    validatedFeatures: null,
-
-    /* Layer 3: Factors */
+    indicatorMeta: {},
     factors: [],
     factorsLoading: false,
     factorsError: '',
-    factorChartSVG: '',
-
-    /* Layer 4: LISA / Spatial */
-    // Derived from analysis scores and indicator data
-
-    /* Layer 5: Composite */
-    compositeOpen: false,
-    variableCatalog: [],
-    selectedVars: [],
-    weights: {},
-    compositeMethod: 'geometric_mean',
-    compositeLoading: false,
-    compositeResult: null,
-    compositeError: '',
-
-    /* Narrative */
-    narrativeLoading: false,
-    narrativeResult: '',
-    narrativeError: '',
-    analyses: [],
-
-    /* Children */
     children: [],
-    childrenLoading: false,
-    childrenError: '',
+    activeCategory: '',
+    iceScore: null,
+    icePercentile: null,
+    dissimBW: null,
+    dissimHW: null,
+    popPOC: null,
+    lisaClusters: [],
+    compositeSelected: [],
+    compositeResult: null,
+    sensitivityStability: null,
 
-    /* ── Init ──────────────────────────────────────────────── */
-    async init() {
-      const params = new URLSearchParams(window.location.search);
-      this.geoid = params.get('geoid') || '';
-      if (!this.geoid) {
-        this.loading = false;
-        return;
-      }
-
-      this.loading = true;
-      this.error = '';
-
-      try {
-        await Promise.all([
-          this.loadGeo(),
-          this.loadIndicators(),
-          this.loadFactors(),
-          this.loadChildren(),
-          this.loadVariables(),
-          this.loadAnalyses(),
-        ]);
-      } catch (e) {
-        // Individual sections handle their own errors
-      }
-
-      this.loading = false;
-
-      // Derived data — computed getters handle these automatically
-      if (this.factors.length > 0) {
-        this.renderFactorChart();
-      }
+    get quickStats() {
+      if (!this.indicators.length) return [];
+      const find = (id) => this.indicators.find(i => i.variable_id === id);
+      const stats = [];
+      const pov = find('poverty_rate');
+      if (pov) stats.push({label:'Poverty Rate', value: pov.value != null ? pov.value.toFixed(1)+'%' : '—'});
+      const inc = find('median_household_income');
+      if (inc) stats.push({label:'Median Income', value: inc.value != null ? '$'+Math.round(inc.value).toLocaleString() : '—'});
+      const uns = find('uninsured_rate');
+      if (uns) stats.push({label:'Uninsured', value: uns.value != null ? uns.value.toFixed(1)+'%' : '—'});
+      const pop = this.geo ? this.geo.population : null;
+      if (pop) stats.push({label:'Population', value: pop.toLocaleString()});
+      return stats;
     },
 
-    /* ── API helpers ───────────────────────────────────────── */
+    get groupedIndicators() {
+      const groups = {};
+      const cats = { poverty_rate:'Economic', median_household_income:'Economic', uninsured_rate:'Health', pct_cost_burdened:'Housing', pct_poc:'Demographic', total_population:'Demographic', pct_bachelors_or_higher:'Education' };
+      for (const ind of this.indicators) {
+        const cat = cats[ind.variable_id] || 'Other';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(ind);
+      }
+      if (!this.activeCategory) this.activeCategory = Object.keys(groups)[0] || '';
+      return groups;
+    },
+
+    get visibleIndicators() {
+      return this.groupedIndicators[this.activeCategory] || [];
+    },
+
+    get compositeVars() {
+      return this.indicators.filter(i => i.value != null).map(i => ({id:i.variable_id, name:i.name||i.variable_id}));
+    },
+
     api(path) {
-      const base = window.location.origin + '/v1/policy';
-      return fetch(base + path).then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-        return r.json();
-      });
+      return fetch('/v1/policy' + path).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     },
 
-    async postAPI(path, body) {
-      const base = window.location.origin + '/v1/policy';
-      const r = await fetch(base + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${r.status}`);
-      }
-      return r.json();
-    },
-
-    /* ── Data loaders ──────────────────────────────────────── */
-    async loadGeo() {
+    async init() {
+      this.geoid = new URLSearchParams(window.location.search).get('geoid') || '';
+      if (!this.geoid) { this.error = 'No GEOID provided. Go back to the <a href="/">County Explorer</a> to select a county.'; this.loading = false; return; }
+      this.loading = true;
       try {
-        const data = await this.api(`/geographies/${this.geoid}`);
-        this.geo = data;
-      } catch (e) {
-        this.error = `Failed to load geography: ${e.message}`;
+        const [geoData, indData] = await Promise.all([
+          this.api('/geographies/' + this.geoid),
+          this.api('/geographies/' + this.geoid + '/indicators'),
+        ]);
+        this.geo = geoData;
+        this.indicators = indData.indicators || [];
+        this.loadFactors();
+        this.loadChildren();
+        this.computeDerived();
+      } catch(e) {
+        this.error = 'Failed to load county data: ' + e.message;
       }
-    },
-
-    async loadIndicators() {
-      this.indicatorsLoading = true;
-      this.indicatorsError = '';
-      try {
-        const data = await this.api(`/geographies/${this.geoid}/indicators`);
-        this.indicators = data.indicators || [];
-      } catch (e) {
-        this.indicatorsError = `Failed to load indicators: ${e.message}`;
-      } finally {
-        this.indicatorsLoading = false;
-      }
+      this.loading = false;
     },
 
     async loadFactors() {
       this.factorsLoading = true;
-      this.factorsError = '';
       try {
-        const data = await this.api(`/geographies/${this.geoid}/factors`);
+        const data = await this.api('/geographies/' + this.geoid + '/factors');
         this.factors = data.factors || [];
-      } catch (e) {
-        this.factorsError = `Failed to load factors: ${e.message}`;
-      } finally {
-        this.factorsLoading = false;
-      }
+      } catch(e) { this.factorsError = e.message; }
+      this.factorsLoading = false;
     },
 
     async loadChildren() {
-      this.childrenLoading = true;
-      this.childrenError = '';
       try {
-        const data = await this.api(`/geographies/${this.geoid}/children?limit=200`);
+        const data = await this.api('/geographies/' + this.geoid + '/children');
         this.children = data.items || [];
-      } catch (e) {
-        this.childrenError = `Failed to load subdivisions: ${e.message}`;
-      } finally {
-        this.childrenLoading = false;
-      }
+      } catch(e) {}
     },
 
-    async loadVariables() {
-      try {
-        const data = await this.api('/variables');
-        this.variableCatalog = data.variables || [];
-      } catch (e) {
-        // Non-critical — composite picker just won't show options
-      }
-    },
+    computeDerived() {
+      const findVal = (id) => { const i = this.indicators.find(x => x.variable_id === id); return i ? i.value : null; };
+      const popWhite = findVal('pop_white_non_hispanic');
+      const popBlack = findVal('pop_black');
+      const popHisp = findVal('pop_hispanic_latino');
+      const popTotal = findVal('total_population');
+      this.popPOC = (popTotal && popWhite != null && popTotal > 0) ? ((popTotal - popWhite) / popTotal * 100) : null;
 
-    async loadAnalyses() {
-      try {
-        const data = await this.api('/analyses');
-        this.analyses = data.analyses || [];
-      } catch (e) {
-        // Non-critical
-      }
-    },
-
-    /* ── Computed getters (called from template expressions) ── */
-
-    get quickStats() {
-      const stats = [];
-      const inds = this.indicators || [];
-
-      const picks = [
-        { vid: 'median_household_income', label: 'Median Income', fmt: v => v != null ? '$' + this.fmtNum(v) : '—' },
-        { vid: 'poverty_rate', label: 'Poverty Rate', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'unemployment_rate', label: 'Unemployment', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'pct_no_health_insurance', label: 'Uninsured', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'pct_bachelors_degree_or_higher', label: 'BA or Higher', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-      ];
-
-      for (const pick of picks) {
-        const ind = inds.find(i => i.variable_id === pick.vid);
-        if (ind && ind.value != null) {
-          stats.push({ label: pick.label, value: pick.fmt(ind.value) });
+      // Approximate ICE (income-race) from available indicators
+      if (popTotal && this.popPOC != null) {
+        const poverty = findVal('poverty_rate');
+        if (poverty != null) {
+          const poc = this.popPOC / 100;
+          const pov = poverty / 100;
+          const priv = (1 - poc) * (1 - pov) * popTotal;
+          const dep = poc * pov * popTotal;
+          if (priv + dep > 0) this.iceScore = (priv - dep) / (priv + dep);
         }
       }
 
-      return stats;
-    },
-
-    get indicatorCategories() {
-      const cats = new Set();
-      for (const ind of this.indicators) {
-        const cat = this.inferCategory(ind);
-        if (cat) cats.add(cat);
-      }
-      return Array.from(cats).sort();
-    },
-
-    get filteredIndicators() {
-      if (this.activeCat === 'all') return this.indicators;
-      return this.indicators.filter(ind => this.inferCategory(ind) === this.activeCat);
-    },
-
-    get iceFeature() {
-      const ind = this.indicators.find(i => i.variable_id === 'ice_income' || i.variable_id === 'ice_score');
-      if (!ind || ind.value == null) return null;
-
-      const v = ind.value;
-      let interpretation = '';
-      if (v > 0.4) interpretation = 'High concentration at the extremes — pronounced economic segregation.';
-      else if (v > 0.2) interpretation = 'Moderate concentration at the extremes.';
-      else if (v > -0.2) interpretation = 'Relatively integrated across income extremes.';
-      else interpretation = 'Negative ICE — concentration at the lower extreme.';
-
-      return {
-        value: v.toFixed(3),
-        percentile: null, // Would come from analysis scores
-        interpretation,
-      };
-    },
-
-    get dissimBW() {
-      const ind = this.indicators.find(i => i.variable_id === 'dissimilarity_bw');
-      if (!ind || ind.value == null) return null;
-      return {
-        value: (ind.value * 100).toFixed(1) + '%',
-      };
-    },
-
-    get dissimHW() {
-      const ind = this.indicators.find(i => i.variable_id === 'dissimilarity_hw');
-      if (!ind || ind.value == null) return null;
-      return {
-        value: (ind.value * 100).toFixed(1) + '%',
-      };
-    },
-
-    get cvSummary() {
-      const counts = { high: 0, moderate: 0, low: 0, unknown: 0 };
-      for (const ind of this.indicators) {
-        const r = (ind.reliability || '').toLowerCase();
-        if (r === 'high') counts.high++;
-        else if (r === 'moderate') counts.moderate++;
-        else if (r === 'low') counts.low++;
-        else counts.unknown++;
-      }
-      if (counts.high + counts.moderate + counts.low + counts.unknown === 0) return null;
-      return counts;
-    },
-
-    get lisaItems() {
-      const items = [];
-      // Derive from analysis scores if available, or from indicator combinations
-      // For now, look for indicators with LISA metadata or use indicator names
-      // that commonly have spatial clustering analysis
-      const lisaIndicators = ['poverty_rate', 'median_household_income', 'unemployment_rate'];
-      for (const vid of lisaIndicators) {
-        const ind = this.indicators.find(i => i.variable_id === vid);
-        if (!ind || ind.value == null) continue;
-
-        // Determine cluster type from percentile or z-score context
-        // This is a heuristic — real LISA would come from analysis scores
-        const cluster = this.inferCluster(vid, ind.value);
-        if (cluster) {
-          items.push({
-            indicator: ind.name || vid,
-            cluster,
-          });
-        }
-      }
-      return items;
-    },
-
-    get compositeScore() {
-      if (!this.compositeResult || !this.compositeResult.scores || this.compositeResult.scores.length === 0) return '—';
-      const score = this.compositeResult.scores[0].score;
-      return score != null ? score.toFixed(3) : '—';
-    },
-
-    /* ── Categorization helpers ────────────────────────────── */
-    inferCategory(ind) {
-      const id = (ind.variable_id || '').toLowerCase();
-      if (/income|poverty|gini|earnings|wage|employment|unemployment|labor|laus/.test(id)) return 'economic';
-      if (/health|obesity|diabetes|insurance|mortality|cancer|smoking|asthma|hosp/.test(id)) return 'health';
-      if (/housing|rent|mortgage|homeowner|vacancy|crowding|value/.test(id)) return 'housing';
-      if (/education|school|bachelor|enroll|attendance|diploma/.test(id)) return 'education';
-      if (/environment|pollution|ozone|pm2|diesel|traffic|lead|waste|water/.test(id)) return 'environment';
-      if (/population|age|race|hispanic|white|black|asian|native|pacific|ethnic|sex|gender|veteran|foreign|language/.test(id)) return 'demographic';
-      if (/food|snap|grocery|supermarket|access/.test(id)) return 'food';
-      if (/transport|commute|vehicle|transit/.test(id)) return 'transportation';
-      return 'other';
-    },
-
-    inferCluster(variableId, value) {
-      // Placeholder heuristic — real LISA comes from spatial stats
-      // For a county-level page, we'd need county-level LISA which
-      // would be unusual (LISA is typically tract-level).
-      // Return null unless we have actual spatial data.
-      return null;
-    },
-
-    clusterLabel(cluster) {
-      const map = { HH: 'High-High', HL: 'High-Low', LL: 'Low-Low', LH: 'Low-High' };
-      return map[cluster] || cluster;
-    },
-
-    /* ── Reliability badge ─────────────────────────────────── */
-    reliabilityBadgeClass(reliability) {
-      const r = (reliability || '').toLowerCase();
-      if (r === 'high') return 'badge-high';
-      if (r === 'moderate') return 'badge-moderate';
-      if (r === 'low') return 'badge-low';
-      return 'badge-unknown';
-    },
-
-    /* ── Factors ────────────────────────────────────────────── */
-    formatFactorName(name) {
-      if (!name) return '';
-      return name
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
-    },
-
-    factorBarWidth(score) {
-      if (score == null) return 0;
-      // Clamp to [0, 100] based on typical factor score range
-      // Factor scores are often z-scored, so most values fall in [-3, 3]
-      const pct = ((score + 3) / 6) * 100;
-      return Math.max(0, Math.min(100, pct));
-    },
-
-    getLoadingsDesc(f) {
-      if (!f.loadings_json) return '';
-      try {
-        const loadings = JSON.parse(f.loadings_json);
-        if (!loadings || typeof loadings !== 'object') return '';
-
-        // Get top 3 loading variables
-        const entries = Object.entries(loadings)
-          .filter(([, v]) => Math.abs(Number(v)) > 0.3)
-          .sort(([, a], [, b]) => Math.abs(Number(b)) - Math.abs(Number(a)))
-          .slice(0, 3);
-
-        if (entries.length === 0) return '';
-        return 'Key variables: ' + entries.map(([k, v]) => {
-          const sign = Number(v) > 0 ? '+' : '−';
-          return `${sign}${k.replace(/_/g, ' ')}`;
-        }).join(', ');
-      } catch (e) {
-        return '';
-      }
-    },
-
-    renderFactorChart() {
-      if (this.factors.length === 0) return;
-      if (typeof window.CasaDatosCharts !== 'undefined' && window.CasaDatosCharts.buildBarChart) {
-        const data = this.factors.map(f => ({
-          label: this.formatFactorName(f.factor_name),
-          value: f.factor_score != null ? f.factor_score : 0,
-        }));
-        this.factorChartSVG = window.CasaDatosCharts.buildBarChart(data, {
-          width: 600,
-          height: 280,
-          decimals: 3,
-          ariaId: 'factor-bar-chart',
-          title: 'Factor Scores',
-        });
-      } else {
-        // Fallback: simple inline bars if charts.js isn't loaded
-        let svg = '';
-        for (const f of this.factors) {
-          const pct = this.factorBarWidth(f.factor_score);
-          svg += `<div style="margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:2px;">
-              <span>${this.formatFactorName(f.factor_name)}</span>
-              <span style="font-family:var(--font-mono);">${f.factor_score != null ? f.factor_score.toFixed(3) : '—'}</span>
-            </div>
-            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;"></div></div>
-          </div>`;
-        }
-        this.factorChartSVG = svg;
-      }
-    },
-
-    /* ── Composite index ────────────────────────────────────── */
-    recalcWeights() {
-      const n = this.selectedVars.length;
-      if (n === 0) return;
-      const equal = Math.round(100 / n);
-      const newWeights = {};
-      for (const vid of this.selectedVars) {
-        newWeights[vid] = this.weights[vid] || equal;
-      }
-      // Normalize to sum to 100
-      const total = Object.values(newWeights).reduce((a, b) => a + b, 0);
-      if (total > 0) {
-        for (const k of Object.keys(newWeights)) {
-          newWeights[k] = Math.round(newWeights[k] / total * 100);
-        }
-      }
-      this.weights = newWeights;
-    },
-
-    setWeight(vid, val) {
-      this.weights[vid] = parseInt(val) || 1;
+      // Dissimilarity not computable from county-level aggregates alone — needs tract data
     },
 
     async computeComposite() {
-      if (this.selectedVars.length < 2) return;
-      this.compositeLoading = true;
-      this.compositeError = '';
-      this.compositeResult = null;
-
+      if (this.compositeSelected.length < 2) return;
       try {
-        // Build weights map normalized to sum to 1
-        const weightMap = {};
-        const total = Object.values(this.weights).reduce((a, b) => a + b, 0) || 1;
-        for (const vid of this.selectedVars) {
-          weightMap[vid] = (this.weights[vid] || 1) / total;
-        }
-
-        const result = await this.postAPI('/composite', {
+        const body = {
           geoids: [this.geoid],
-          variable_ids: this.selectedVars,
-          weights: weightMap,
-          method: this.compositeMethod,
-          perturbation: 0.20,
+          variable_ids: this.compositeSelected,
+          method: 'geometric_mean',
+        };
+        const r = await fetch('/v1/policy/composite', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
         });
-
-        this.compositeResult = result;
-      } catch (e) {
-        this.compositeError = `Composite computation failed: ${e.message}`;
-      } finally {
-        this.compositeLoading = false;
-      }
+        const data = await r.json();
+        if (data.scores && data.scores[0]) this.compositeResult = data.scores[0];
+        if (data.sensitivity && data.sensitivity.stability) {
+          this.sensitivityStability = data.sensitivity.stability[this.geoid];
+        }
+      } catch(e) {}
     },
 
-    /* ── Narrative generation ────────────────────────────────── */
-    async generateBrief() {
-      if (!this.geoid) return;
-
-      // Find a suitable analysis_id
-      let analysisId = '';
-      if (this.analyses.length > 0) {
-        // Prefer the most recent analysis
-        analysisId = this.analyses[0].id;
-      }
-
-      if (!analysisId) {
-        this.narrativeError = 'No analysis available. Run an analysis first.';
-        return;
-      }
-
-      this.narrativeLoading = true;
-      this.narrativeError = '';
-      this.narrativeResult = '';
-
-      try {
-        const result = await this.postAPI('/generate/narrative', {
-          geoid: this.geoid,
-          analysis_id: analysisId,
-          template: 'five_mornings',
-          count: 3,
-        });
-
-        // Open narrative in new tab
-        const narrativeUrl = `/narrative?analysis_id=${encodeURIComponent(analysisId)}&scope=${encodeURIComponent(this.geoid)}`;
-        this.narrativeResult = narrativeUrl;
-        window.open(narrativeUrl, '_blank');
-      } catch (e) {
-        this.narrativeError = `Narrative generation failed: ${e.message}`;
-      } finally {
-        this.narrativeLoading = false;
-      }
-    },
-
-    /* ── Formatting helpers ──────────────────────────────────── */
-    fmtNum(n) {
-      if (n == null) return '—';
-      return Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-    },
-
-    fmtVal(v) {
-      if (v == null) return '—';
-      if (typeof v === 'number') {
-        if (Number.isInteger(v) && Math.abs(v) < 10000) return v.toLocaleString('en-US');
-        if (Math.abs(v) < 10) return v.toFixed(3);
-        if (Math.abs(v) < 100) return v.toFixed(1);
-        return v.toLocaleString('en-US', { maximumFractionDigits: 1 });
-      }
-      return String(v);
-    },
-
-    fmtArea(m2) {
-      if (m2 == null) return '—';
-      const sqmi = m2 / 2589988.110336;
-      if (sqmi >= 1000) return sqmi.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' sq mi';
-      return sqmi.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' sq mi';
-    },
-
-    fmtCV(cv) {
-      if (cv == null) return '—';
-      return (cv * 100).toFixed(1) + '%';
-    },
-
-    fmtPct(v) {
-      if (v == null) return '—';
-      return (v * 100).toFixed(1) + '%';
-    },
+    fmtVal(v) { return v != null ? (typeof v === 'number' ? (Math.abs(v) < 10 ? v.toFixed(2) : v.toLocaleString()) : v) : '—'; },
+    fmtICE(v) { return v != null ? v.toFixed(3) : '—'; },
   };
 }
 </script>
-
 </body>
 </html>
