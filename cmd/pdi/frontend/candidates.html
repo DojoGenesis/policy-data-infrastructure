@@ -67,39 +67,14 @@
     padding-bottom: clamp(10px, 1.5vw, 14px);
   }
 
-  .candidate-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    padding: 0.45em 0.9em;
-    border-radius: var(--r-badge);
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--muted);
-    background: transparent;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-  }
-
-  .candidate-tab:hover {
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
-    color: var(--text);
-  }
-
-  .candidate-tab.active {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-    color: var(--text);
-    border-color: var(--accent);
-  }
-
   .candidate-tab-count {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    padding: 0.1em 0.5em;
+    padding: 0.1em 0.45em;
     border-radius: 999px;
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     color: var(--accent);
+    margin-left: 0.35em;
   }
 
   .candidate-tab-placeholder {
@@ -108,8 +83,9 @@
   }
 
   .candidate-tab-placeholder:hover {
-    background: transparent;
-    color: var(--subtle);
+    border-color: var(--border) !important;
+    color: var(--subtle) !important;
+    background: transparent !important;
   }
 
   /* ── Policy summary bar ─────────────────────────────────────── */
@@ -173,9 +149,9 @@
     border-radius: var(--r-badge);
   }
 
-  .priority-P1 { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
-  .priority-P2 { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
-  .priority-P3 { background: color-mix(in srgb, var(--subtle) 16%, transparent); color: var(--subtle); }
+  .priority-P1 { background: color-mix(in srgb, var(--live) 14%, transparent); color: var(--live); }
+  .priority-P2 { background: color-mix(in srgb, var(--info) 14%, transparent); color: var(--info); }
+  .priority-P3 { background: color-mix(in srgb, var(--subtle) 14%, transparent); color: var(--subtle); }
 
   .dimension-policy-count {
     font-size: 0.7rem;
@@ -183,19 +159,15 @@
     margin-left: auto;
   }
 
-  /* ── Indicator match bar ────────────────────────────────────── */
-  .match-bar-wrap {
-    margin-bottom: clamp(10px, 1.5vw, 14px);
-  }
-
-  .match-bar-label {
+  /* ── Match bar label row ────────────────────────────────────── */
+  .match-label-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
   }
 
-  .match-bar-title {
+  .match-label-heading {
     font-size: 0.68rem;
     font-weight: 600;
     color: var(--muted);
@@ -203,36 +175,22 @@
     letter-spacing: 0.05em;
   }
 
-  .match-bar-pct {
+  .match-label-pct {
     font-size: 0.68rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     font-family: var(--font-mono);
   }
 
-  .match-bar-pct.high { color: var(--live); }
-  .match-bar-pct.medium { color: var(--gated); }
-  .match-bar-pct.low { color: var(--muted); }
+  .match-label-pct--high { color: var(--live); }
+  .match-label-pct--medium { color: var(--gated); }
+  .match-label-pct--low { color: var(--muted); }
 
-  .match-bar-track {
-    width: 100%;
-    height: 6px;
-    background: var(--plane-1);
-    border-radius: 999px;
-    overflow: hidden;
+  .match-bar-wrap {
+    margin-bottom: clamp(10px, 1.5vw, 14px);
   }
 
-  .match-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 400ms ease, background-color 400ms ease;
-  }
-
-  .match-bar-fill.high { background: var(--live); }
-  .match-bar-fill.medium { background: var(--gated); }
-  .match-bar-fill.low { background: var(--muted); }
-
-  .match-bar-indicators {
+  .match-indicator-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
@@ -250,19 +208,13 @@
     white-space: nowrap;
   }
 
-  .match-indicator-chip.matched {
+  .match-indicator-chip--matched {
     color: var(--live);
     border-color: color-mix(in srgb, var(--live) 35%, transparent);
     background: color-mix(in srgb, var(--live) 8%, transparent);
   }
 
   /* ── Policy cards ───────────────────────────────────────────── */
-  .policy-card-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: clamp(10px, 1.5vw, 14px);
-  }
-
   .policy-card {
     display: flex;
     flex-direction: column;
@@ -290,6 +242,7 @@
     font-family: var(--font-mono);
     letter-spacing: 0.02em;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .policy-card-title {
@@ -305,10 +258,8 @@
     font-size: 0.78rem;
     color: var(--muted);
     line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin: 0;
+    /* clamp to 3 lines for readability; expand on hover handled via title attr */
   }
 
   .policy-card-meta {
@@ -323,7 +274,7 @@
     padding: 0.15em 0.55em;
   }
 
-  .evidence-count-chip {
+  .evidence-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.3em;
@@ -336,7 +287,7 @@
     color: var(--live);
   }
 
-  .evidence-count-chip-val {
+  .evidence-chip-count {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
@@ -532,7 +483,7 @@
   <!-- ── Error state ───────────────────────────────────────────── -->
   <div x-show="error" x-cloak class="state-error" style="padding:clamp(16px,2.5vw,28px);border-radius:var(--r-card);">
     <span x-text="error"></span>
-    <button class="btn btn-ghost" @click="loadPolicies()" style="margin-left:1em">Retry</button>
+    <button class="btn btn-ghost" @click="loadAll()" style="margin-left:1em">Retry</button>
   </div>
 
   <!-- ── Empty state ───────────────────────────────────────────── -->
@@ -545,11 +496,11 @@
   <!-- ── Loaded state ──────────────────────────────────────────── -->
   <div x-show="!loading && !error && candidates.length > 0" x-cloak>
 
-    <!-- ── Candidate tabs ──────────────────────────────────────── -->
+    <!-- ── Candidate tabs (.filter-chip from styles.css) ──────── -->
     <div class="candidate-tabs">
       <template x-for="c in candidates" :key="c.key">
         <button
-          class="candidate-tab"
+          class="filter-chip"
           :class="{ active: selectedCandidate === c.key, 'candidate-tab-placeholder': c.placeholder }"
           :disabled="c.placeholder"
           @click="!c.placeholder && selectCandidate(c.key)"
@@ -575,8 +526,8 @@
         <span class="summary-stat-label">Categories</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-stat-val" x-text="selectedTotalEvidence"></span>
-        <span class="summary-stat-label">Est. Evidence Cards</span>
+        <span class="summary-stat-val" x-text="avgIndicatorCoverage + '%'"></span>
+        <span class="summary-stat-label">Avg Indicator Coverage</span>
       </div>
     </div>
 
@@ -585,67 +536,62 @@
       <section class="dimension-section">
         <div class="dimension-header">
           <span class="dimension-label" x-text="dim.label"></span>
-          <span
-            class="dimension-priority"
-            :class="'priority-'+dim.priority"
-            x-text="dim.priority"
-          ></span>
+          <span class="dimension-priority" :class="'priority-'+dim.priority" x-text="dim.priority"></span>
           <span class="dimension-policy-count" x-text="dim.policies.length + (dim.policies.length === 1 ? ' policy' : ' policies')"></span>
         </div>
 
-        <!-- Indicator match bar -->
+        <!-- Indicator match bar (.chart-bar-track / .chart-bar-fill from styles.css) -->
         <div class="match-bar-wrap">
-          <div class="match-bar-label">
-            <span class="match-bar-title">Indicator Coverage</span>
+          <div class="match-label-row">
+            <span class="match-label-heading">Indicator Coverage</span>
             <span
-              class="match-bar-pct"
-              :class="dim.matchPct >= 75 ? 'high' : dim.matchPct >= 40 ? 'medium' : 'low'"
+              class="match-label-pct"
+              :class="dim.matchPct >= 75 ? 'match-label-pct--high' : dim.matchPct >= 40 ? 'match-label-pct--medium' : 'match-label-pct--low'"
               x-text="dim.matchPct + '%'"
             ></span>
           </div>
-          <div class="match-bar-track">
+          <div class="chart-bar-track">
             <div
-              class="match-bar-fill"
-              :class="dim.matchPct >= 75 ? 'high' : dim.matchPct >= 40 ? 'medium' : 'low'"
+              class="chart-bar-fill"
+              :class="dim.matchPct >= 75 ? 'chart-bar-fill--live' : dim.matchPct >= 40 ? 'chart-bar-fill--gated' : ''"
               :style="'width:' + dim.matchPct + '%'"
             ></div>
           </div>
-          <div class="match-bar-indicators" x-show="dim.indicators.length > 0">
+          <div class="match-indicator-chips" x-show="dim.indicators.length > 0">
             <template x-for="ind in dim.indicators" :key="ind.id">
               <span
                 class="match-indicator-chip"
-                :class="{ matched: ind.available }"
+                :class="{ 'match-indicator-chip--matched': ind.available }"
                 x-text="ind.id"
-                :title="ind.available ? 'Data available' : 'Data pending'"
+                :title="ind.available ? 'Data available in PDI' : 'Not yet available in PDI'"
               ></span>
             </template>
           </div>
         </div>
 
-        <!-- Policy cards -->
-        <div class="policy-card-grid">
+        <!-- Policy cards (.card + .card-grid from styles.css) -->
+        <div class="card-grid">
           <template x-for="pol in dim.policies" :key="pol.id">
             <div class="card policy-card">
               <div class="policy-card-header">
                 <span class="policy-card-id" x-text="pol.id"></span>
                 <h3 class="policy-card-title" x-text="pol.title"></h3>
               </div>
-              <p
-                class="policy-card-desc"
-                x-show="pol.description"
-                x-text="pol.description"
-              ></p>
+              <p class="policy-card-desc" x-show="pol.description" x-text="pol.description"></p>
               <div class="policy-card-meta">
+                <!-- Category badge -->
                 <span class="badge badge-info" x-text="pol.category"></span>
+                <!-- Equity dimension badge -->
                 <span
                   class="badge"
-                  :class="'badge-'+ (dim.priority === 'P1' ? 'live' : dim.priority === 'P2' ? 'info' : 'subtle')"
+                  :class="dim.priority === 'P1' ? 'badge-high' : dim.priority === 'P2' ? 'badge-moderate' : 'badge-low'"
                   x-text="dim.label"
                 ></span>
-                <span x-show="pol.geographic_scope" class="badge" style="background:var(--plane-1);color:var(--subtle);" x-text="pol.geographic_scope"></span>
-                <!-- Evidence card count link -->
-                <span class="evidence-count-chip" x-show="dim.evidenceEstimate > 0">
-                  <span class="evidence-count-chip-val" x-text="dim.evidenceEstimatePerPolicy"></span>
+                <!-- Geographic scope badge -->
+                <span x-show="pol.geographic_scope" class="badge badge-unknown" x-text="pol.geographic_scope"></span>
+                <!-- Evidence estimate -->
+                <span class="evidence-chip" x-show="dim.evidenceEstimate > 0">
+                  <span class="evidence-chip-count" x-text="dim.evidenceEstimatePerPolicy"></span>
                   est. evidence cards
                 </span>
               </div>
@@ -671,63 +617,14 @@
 function candidateTracker() {
   return {
     // ── State ────────────────────────────────────────────────────
-    allPolicies: [],        // raw API response
-    candidates: [],         // [{key, name, placeholder, policyCount}]
+    allPolicies: [],          // raw API response: policies from GET /v1/policy/policies
+    candidates: [],           // [{key, name, placeholder, policyCount}]
     selectedCandidate: '',
+    crosswalk: {},            // loaded from /static/crosswalks/wi_equity_crosswalk.json
+    availableIndicators: new Set(),  // populated from GET /v1/policy/variables
     loading: false,
     error: '',
-
-    // ── Crosswalk: equity dimension → indicators + priority ─────
-    // Seeded from wi_equity_crosswalk.json; used to build match bars.
-    crosswalk: {
-      food_access:            { label: 'Food Access',              indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P1' },
-      childcare_access:       { label: 'Childcare Access',         indicators: ['poverty_rate','total_population'],                                      priority: 'P1' },
-      education_funding:      { label: 'Education Funding',        indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P1' },
-      education_equity:       { label: 'Education Equity',         indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P1' },
-      education_access:       { label: 'Education Access',         indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P2' },
-      housing_affordability:  { label: 'Housing Affordability',    indicators: ['pct_cost_burdened','pct_severely_cost_burdened','median_hh_income'],     priority: 'P1' },
-      housing_stability:      { label: 'Housing Stability',        indicators: ['pct_cost_burdened','median_hh_income','poverty_rate'],                  priority: 'P1' },
-      housing_supply:         { label: 'Housing Supply',           indicators: ['pct_cost_burdened','median_hh_income','total_population'],              priority: 'P2' },
-      housing_transit:        { label: 'Housing & Transit',        indicators: ['total_population','poverty_rate'],                                      priority: 'P3' },
-      eviction_prevention:    { label: 'Eviction Prevention',      indicators: ['pct_cost_burdened','poverty_rate','median_hh_income'],                  priority: 'P1' },
-      transit_access:         { label: 'Transit Access',           indicators: ['total_population','poverty_rate'],                                      priority: 'P2' },
-      transit_safety:         { label: 'Transit Safety',           indicators: ['total_population','poverty_rate'],                                      priority: 'P3' },
-      health_access:          { label: 'Healthcare Access',        indicators: ['uninsured_rate','poverty_rate','total_population'],                     priority: 'P1' },
-      health_equity:          { label: 'Health Equity',            indicators: ['pct_poc','uninsured_rate','poverty_rate'],                              priority: 'P1' },
-      income_equity:          { label: 'Income Equity',            indicators: ['median_hh_income','poverty_rate','pct_poc'],                            priority: 'P1' },
-      economic_equity:        { label: 'Economic Equity',          indicators: ['median_hh_income','pct_cost_burdened','poverty_rate','pct_bachelors_or_higher'], priority: 'P1' },
-      economic_opportunity:   { label: 'Economic Opportunity',     indicators: ['median_hh_income','pct_bachelors_or_higher','poverty_rate'],            priority: 'P1' },
-      labor_rights:           { label: 'Labor Rights',             indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P2' },
-      labor_mobility:         { label: 'Labor Mobility',           indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
-      environmental_health:   { label: 'Environmental Health',     indicators: ['total_population','pct_poc'],                                            priority: 'P2' },
-      environmental_justice:  { label: 'Environmental Justice',    indicators: ['pct_poc','poverty_rate','total_population'],                             priority: 'P2' },
-      environmental_governance:{ label: 'Environmental Governance',indicators: ['total_population'],                                                      priority: 'P3' },
-      climate_equity:         { label: 'Climate Equity',           indicators: ['pct_cost_burdened','total_population'],                                  priority: 'P2' },
-      criminal_justice:       { label: 'Criminal Justice',         indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P1' },
-      legal_equity:           { label: 'Legal Equity',             indicators: ['pct_poc','poverty_rate'],                                                priority: 'P2' },
-      community_safety:       { label: 'Community Safety',         indicators: ['poverty_rate','total_population'],                                       priority: 'P3' },
-      fiscal_equity:          { label: 'Fiscal Equity',            indicators: ['median_hh_income','pct_cost_burdened'],                                 priority: 'P2' },
-      fiscal_autonomy:        { label: 'Fiscal Autonomy',          indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
-      care_quality:           { label: 'Care Quality',             indicators: ['uninsured_rate','poverty_rate'],                                         priority: 'P2' },
-      care_access:            { label: 'Care Access',              indicators: ['uninsured_rate','poverty_rate'],                                         priority: 'P2' },
-      care_workforce:         { label: 'Care Workforce',           indicators: ['median_hh_income','poverty_rate'],                                      priority: 'P3' },
-      civil_rights:           { label: 'Civil Rights',             indicators: ['pct_poc','pct_non_hispanic_black','poverty_rate'],                      priority: 'P2' },
-      reproductive_rights:    { label: 'Reproductive Rights',      indicators: ['uninsured_rate','poverty_rate','total_population'],                      priority: 'P3' },
-      immigration_rights:     { label: 'Immigration Rights',       indicators: ['pct_poc','poverty_rate'],                                                priority: 'P3' },
-      rural_equity:           { label: 'Rural Equity',             indicators: ['median_hh_income','poverty_rate','total_population'],                   priority: 'P2' },
-      land_preservation:      { label: 'Land Preservation',        indicators: ['total_population','poverty_rate'],                                       priority: 'P3' },
-      tribal_sovereignty:     { label: 'Tribal Sovereignty',       indicators: ['total_population','pct_poc'],                                            priority: 'P3' },
-      public_safety:          { label: 'Public Safety',            indicators: ['poverty_rate','total_population'],                                       priority: 'P3' }
-    },
-
-    // ── Simulation: which indicators are "available" in PDI ─────
-    // In production, this would come from the API (indicator catalog).
-    // For now, mark common indicators as available to show the match bar.
-    availableIndicators: new Set([
-      'median_hh_income', 'poverty_rate', 'total_population',
-      'pct_poc', 'pct_cost_burdened', 'uninsured_rate',
-      'pct_non_hispanic_black', 'pct_bachelors_or_higher'
-    ]),
+    crosswalkError: '',
 
     // ── Computed ─────────────────────────────────────────────────
     get selectedPolicies() {
@@ -747,16 +644,20 @@ function candidateTracker() {
         grouped[dimKey].push(p);
       }
 
-      // Build dimension objects with match bar data
+      // Build dimension objects with match bar data from crosswalk
       const dims = [];
       for (const [dimKey, dimPolicies] of Object.entries(grouped)) {
-        const cw = this.crosswalk[dimKey] || { label: dimKey, indicators: [], priority: 'P3' };
-        const totalIndicators = cw.indicators.length;
-        const matchedIndicators = cw.indicators.filter(id => this.availableIndicators.has(id)).length;
+        const cw = (this.crosswalk.dimensions && this.crosswalk.dimensions[dimKey])
+          || { label: dimKey, indicators: [], priority: 'P3' };
+
+        const totalIndicators = cw.indicators ? cw.indicators.length : 0;
+        const matchedIndicators = totalIndicators > 0
+          ? cw.indicators.filter(id => this.availableIndicators.has(id)).length
+          : 0;
         const matchPct = totalIndicators > 0 ? Math.round((matchedIndicators / totalIndicators) * 100) : 0;
 
         // Build indicator chip data
-        const indicators = cw.indicators.map(id => ({
+        const indicators = (cw.indicators || []).map(id => ({
           id,
           available: this.availableIndicators.has(id)
         }));
@@ -768,7 +669,7 @@ function candidateTracker() {
         dims.push({
           key: dimKey,
           label: cw.label,
-          priority: cw.priority,
+          priority: cw.priority || 'P3',
           policies: dimPolicies,
           indicators,
           totalIndicators,
@@ -799,27 +700,73 @@ function candidateTracker() {
       return [...cats].sort();
     },
 
-    get selectedTotalEvidence() {
-      return this.selectedDimensions.reduce((sum, d) => sum + d.evidenceEstimate, 0);
+    get avgIndicatorCoverage() {
+      const dims = this.selectedDimensions;
+      if (dims.length === 0) return 0;
+      const total = dims.reduce((sum, d) => sum + d.matchPct, 0);
+      return Math.round(total / dims.length);
     },
 
     // ── Init ─────────────────────────────────────────────────────
     init() {
-      this.loadPolicies();
+      this.loadAll();
     },
 
-    // ── Select candidate ─────────────────────────────────────────
-    selectCandidate(key) {
-      this.selectedCandidate = key;
-    },
-
-    // ── Load policies from API ───────────────────────────────────
-    async loadPolicies() {
+    // ── Load everything ──────────────────────────────────────────
+    async loadAll() {
       this.loading = true;
       this.error = '';
 
       try {
-        // Fetch all policies — in production, could filter by candidate via ?candidate=
+        // Load crosswalk, variables, and policies in parallel
+        await Promise.all([
+          this.loadCrosswalk(),
+          this.loadIndicatorCatalog(),
+        ]);
+
+        await this.loadPolicies();
+      } catch (e) {
+        // Individual loaders set their own errors; if we get here
+        // it's an unexpected failure
+        if (!this.error) {
+          this.error = `Failed to initialize: ${e.message}`;
+        }
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // ── Load crosswalk from static JSON ─────────────────────────
+    async loadCrosswalk() {
+      try {
+        const resp = await fetch('/static/crosswalks/wi_equity_crosswalk.json');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        this.crosswalk = await resp.json();
+      } catch (e) {
+        this.crosswalkError = `Crosswalk unavailable: ${e.message}`;
+        // Fallback to empty — dimensions will use raw keys as labels
+        this.crosswalk = { dimensions: {} };
+      }
+    },
+
+    // ── Load indicator catalog to determine availability ─────────
+    async loadIndicatorCatalog() {
+      try {
+        const resp = await fetch('/v1/policy/variables?limit=1000');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const vars = data.variables || [];
+        this.availableIndicators = new Set(vars.map(v => v.variable_id));
+      } catch (e) {
+        // If variable catalog fails, fall back to empty set
+        // (all indicators show as unavailable)
+        this.availableIndicators = new Set();
+      }
+    },
+
+    // ── Load policies from API ───────────────────────────────────
+    async loadPolicies() {
+      try {
         const resp = await fetch('/v1/policy/policies?limit=1000');
         if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
@@ -834,8 +781,6 @@ function candidateTracker() {
         }
       } catch (e) {
         this.error = `Failed to load candidate policies: ${e.message}`;
-      } finally {
-        this.loading = false;
       }
     },
 
@@ -854,12 +799,15 @@ function candidateTracker() {
 
       const list = Object.values(candidateMap);
 
-      // If no candidates found in API, seed Francesca Hong as fallback
+      // If no candidates found in API, seed fallback entries
       if (list.length === 0) {
         list.push(
           { name: 'Francesca Hong', key: 'Francesca Hong', placeholder: false, policyCount: 0 }
         );
       }
+
+      // Sort by policy count descending
+      list.sort((a, b) => b.policyCount - a.policyCount);
 
       // Always add a placeholder for future candidates
       list.push(
@@ -867,6 +815,11 @@ function candidateTracker() {
       );
 
       this.candidates = list;
+    },
+
+    // ── Select candidate ─────────────────────────────────────────
+    selectCandidate(key) {
+      this.selectedCandidate = key;
     }
   };
 }

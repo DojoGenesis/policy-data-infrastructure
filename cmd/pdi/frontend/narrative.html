@@ -19,11 +19,69 @@
   [x-cloak] { display: none !important; }
 
   /* ── Narrative Reader · page-specific ───────────────────────────── */
-  :root {
-    --narrative-nav-h: 52px;
+
+  /* ── Two-column layout: sidebar + prose ─────────────────────────── */
+  .narrative-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+    max-width: calc(var(--wrap-narrow, 880px) + 220px + 48px);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 3vw, 24px);
   }
 
-  /* ── Toolbar ──────────────────────────────────────────────────── */
+  /* ── Chapter Sidebar ────────────────────────────────────────────── */
+  .chapter-sidebar {
+    position: sticky;
+    top: clamp(80px, 10vw, 100px); /* below site header + some breathing room */
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .chapter-sidebar .sidebar-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 0.6em;
+  }
+
+  .chapter-sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .chapter-link {
+    display: block;
+    padding: 0.45em 0.65em;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: var(--r-badge);
+    border-left: 2px solid transparent;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .chapter-link:hover {
+    color: var(--text);
+    background: var(--surface);
+    border-left-color: var(--border-strong);
+  }
+  .chapter-link.active {
+    color: var(--text);
+    font-weight: 600;
+    border-left-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .chapter-link-num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    margin-right: 0.35em;
+  }
+
+  /* ── Toolbar (between header and prose) ─────────────────────────── */
   .toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -51,57 +109,9 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Chapter Navigation · top sticky bar ──────────────────────── */
-  .chapter-nav {
-    position: sticky;
-    top: clamp(48px, 7vw, 64px); /* below site header */
-    z-index: 40;
-    background: color-mix(in srgb, var(--bg) 96%, transparent);
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .chapter-nav::-webkit-scrollbar { display: none; }
-
-  .chapter-nav-inner {
-    display: flex;
-    gap: 2px;
-    max-width: var(--wrap-narrow);
-    margin-inline: auto;
-    padding: 0 clamp(16px, 3vw, 24px);
-  }
-
-  .chapter-nav-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    padding: 0.5em 0.85em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
-    transition: color 160ms ease, border-color 160ms ease;
-  }
-  .chapter-nav-item:hover {
-    color: var(--text);
-    border-bottom-color: var(--border-strong);
-  }
-  .chapter-nav-item.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
-  }
-  .chapter-nav-num {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--accent);
-  }
-
   /* ── Prose container ──────────────────────────────────────────── */
   .prose {
-    padding: clamp(20px, 3vw, 36px) 0 clamp(48px, 8vw, 96px);
+    padding: 0 0 clamp(48px, 8vw, 96px);
   }
 
   /* The narrative HTML is self-styled but we override its root to
@@ -431,6 +441,8 @@
   /* ── Skeleton loader ──────────────────────────────────────────── */
   .prose-skeleton {
     padding-top: clamp(24px, 4vw, 40px);
+    max-width: 72ch;
+    margin-inline: auto;
   }
   .prose-skeleton .skeleton-line {
     height: 0.85em;
@@ -449,6 +461,36 @@
   .prose-skeleton .skeleton-line:nth-child(10) { width: 65%; }
 
   /* ── Responsive ───────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .narrative-layout {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .chapter-sidebar {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
+      margin-bottom: clamp(16px, 3vw, 24px);
+      padding-bottom: clamp(12px, 2vw, 16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .chapter-sidebar nav {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .chapter-link {
+      border-left: none;
+      border-bottom: 2px solid transparent;
+      font-size: 0.72rem;
+      padding: 0.35em 0.55em;
+    }
+    .chapter-link.active {
+      border-left: none;
+      border-bottom-color: var(--accent);
+    }
+  }
+
   @media (max-width: 600px) {
     .toolbar {
       flex-direction: column;
@@ -465,9 +507,14 @@
   /* ── Print ────────────────────────────────────────────────────── */
   @media print {
     .site-header,
-    .chapter-nav,
+    .chapter-sidebar,
     .toolbar {
       display: none !important;
+    }
+    .narrative-layout {
+      display: block;
+      max-width: none;
+      padding-inline: 0;
     }
     .prose .cover {
       background: #fff !important;
@@ -512,19 +559,18 @@
 </header>
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main class="wrap-narrow"
-      x-data="narrativeReader()" x-init="init()"
+<main x-data="narrativeReader()" x-init="init()"
       style="padding-top:clamp(24px,4vw,40px);padding-bottom:clamp(48px,8vw,96px);">
 
   <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-  <div class="toolbar" x-show="!loading && !error && narrativeHTML">
+  <div class="toolbar wrap-narrow" x-show="!loading && !error && narrativeHTML">
     <button @click="printPDF()" class="btn btn-secondary">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 6 2 18 2 18 9"/>
         <path d="M6 12H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-2"/>
         <rect x="6" y="14" width="12" height="8"/>
       </svg>
-      Download PDF
+      Print
     </button>
 
     <button @click="shareLink()" class="btn btn-ghost">
@@ -538,19 +584,6 @@
 
     <span x-show="copied" x-cloak class="copy-toast">Link copied!</span>
   </div>
-
-  <!-- ── Chapter Navigation ──────────────────────────────────────── -->
-  <nav class="chapter-nav" x-show="chapters.length > 1" x-cloak>
-    <div class="chapter-nav-inner">
-      <template x-for="ch in chapters" :key="ch.id">
-        <a :href="'#' + ch.id"
-           class="chapter-nav-item"
-           :class="{ active: activeChapter === ch.id }"
-           x-text="ch.label"
-           @click.prevent="scrollToChapter(ch.id)"></a>
-      </template>
-    </div>
-  </nav>
 
   <!-- ── Loading · skeleton ──────────────────────────────────────── -->
   <div x-show="loading" x-cloak class="prose-skeleton">
@@ -580,10 +613,29 @@
     </p>
   </div>
 
-  <!-- ── Narrative prose ─────────────────────────────────────────── -->
-  <div class="prose" x-show="!loading && !error && narrativeHTML" x-cloak
-       x-ref="proseContainer"
-       x-html="narrativeHTML"></div>
+  <!-- ── Narrative + Sidebar ──────────────────────────────────────── -->
+  <div class="narrative-layout" x-show="!loading && !error && narrativeHTML" x-cloak>
+
+    <!-- Chapter Navigation Sidebar -->
+    <aside class="chapter-sidebar" x-show="chapters.length > 1">
+      <span class="section-tag">Chapters</span>
+      <nav aria-label="Chapter navigation">
+        <template x-for="ch in chapters" :key="ch.id">
+          <a :href="'#' + ch.id"
+             class="chapter-link"
+             :class="{ active: activeChapter === ch.id }"
+             @click.prevent="scrollToChapter(ch.id)">
+            <span class="chapter-link-num" x-text="ch.num"></span>
+            <span x-text="ch.name"></span>
+          </a>
+        </template>
+      </nav>
+    </aside>
+
+    <!-- Prose content -->
+    <div class="prose" x-ref="proseContainer" x-html="narrativeHTML"></div>
+
+  </div>
 
 </main>
 
@@ -659,15 +711,17 @@ function narrativeReader() {
       const chapterEls = container.querySelectorAll('.chapter[id]');
       if (chapterEls.length === 0) return;
 
-      this.chapters = Array.from(chapterEls).map(el => {
+      this.chapters = Array.from(chapterEls).map((el, i) => {
         const id = el.id;
         const h2 = el.querySelector('h2');
         const numSpan = el.querySelector('.chapter-number');
-        const numText = numSpan ? numSpan.textContent.replace(/^Chapter\s*/i, '').trim() : '';
+        const numText = numSpan ? numSpan.textContent.replace(/^Chapter\s*/i, '').trim() : String(i + 1);
         const name = h2 ? h2.textContent.replace(/\s*<[^>]*>.*/, '').trim() : '';
 
         return {
           id,
+          num: numText,
+          name: name || id,
           label: numText ? `${numText} · ${name}` : (name || id),
         };
       });
@@ -681,7 +735,7 @@ function narrativeReader() {
       if (this.observer) this.observer.disconnect();
 
       const options = {
-        rootMargin: '-120px 0px -60% 0px',
+        rootMargin: '-100px 0px -60% 0px',
         threshold: 0,
       };
 
@@ -702,14 +756,13 @@ function narrativeReader() {
       const el = document.getElementById(id);
       if (el) {
         const headerH = 64;  // approximate site-header height
-        const navH = 52;     // chapter-nav height
-        const top = el.getBoundingClientRect().top + window.pageYOffset - headerH - navH - 16;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
         window.scrollTo({ top, behavior: 'smooth' });
         this.activeChapter = id;
       }
     },
 
-    /* ── Download PDF ─────────────────────────────────────────── */
+    /* ── Print ────────────────────────────────────────────────── */
     printPDF() {
       window.print();
     },
