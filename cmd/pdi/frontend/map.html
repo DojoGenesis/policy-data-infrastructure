@@ -7,6 +7,7 @@
 <meta name="description" content="Interactive LISA cluster map showing spatial autocorrelation of policy indicators across Wisconsin census tracts.">
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/styles.css">
+<script src="/static/choropleth.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
@@ -974,6 +975,7 @@ function lisaMap() {
       const hasScores = Object.keys(currentScores).length > 0;
 
       const self = this;
+      const esc = this._esc;
       let tractPaths = '';
 
       fc.features.forEach((f, idx) => {
@@ -1020,7 +1022,6 @@ function lisaMap() {
         if (!coords || !coords[0] || coords[0].length < 3) return;
 
         const d = this.ringToD(coords[0], project);
-        const esc = this._esc;
 
         const cls = isMissing && hasScores ? 'tract-poly tract-missing' : 'tract-poly';
 
