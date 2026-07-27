@@ -54,6 +54,12 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
+  .map-controls .var-status {
+    font-size: 0.7rem;
+    color: var(--subtle);
+    margin-left: 4px;
+  }
+
   /* Toggle switches */
   .toggle-wrap {
     display: flex;
@@ -144,7 +150,7 @@
     pointer-events: none;
     z-index: 20;
     box-shadow: var(--lift-hover);
-    min-width: 180px;
+    min-width: 200px;
     line-height: 1.5;
   }
   .tract-popup-name {
@@ -161,6 +167,13 @@
   }
   .tract-popup-row strong {
     color: var(--text);
+  }
+  .tract-popup-detail {
+    font-size: 0.68rem;
+    color: var(--subtle);
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
   }
 
   /* ── Legend ────────────────────────────────────────────────────── */
@@ -218,6 +231,19 @@
     color: var(--muted);
   }
 
+  /* ── Analysis badge ───────────────────────────────────────────── */
+  .analysis-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--live);
+    background: color-mix(in srgb, var(--live) 12%, transparent);
+    padding: 0.25em 0.7em;
+    border-radius: var(--r-badge);
+  }
+
   /* ── Responsive ───────────────────────────────────────────────── */
   @media (max-width: 600px) {
     .map-controls {
@@ -263,20 +289,24 @@
   <div class="map-hero">
     <span class="section-tag">LISA Cluster Map</span>
     <h1>Wisconsin Census Tracts</h1>
-    <p class="map-hero-subtitle" x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020-2024') : ''"></p>
+    <p class="map-hero-subtitle">
+      <span x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020-2024') : ''"></span>
+      <span x-show="variablesLoaded > 0" class="analysis-badge" style="margin-left:10px;">
+        <span x-text="variablesLoaded"></span> LISA analyses loaded
+      </span>
+    </p>
   </div>
 
   <!-- ═══ CONTROLS ═══ -->
   <div class="map-controls">
     <div style="display:flex;align-items:center;gap:8px;">
       <label for="var-select">Indicator</label>
-      <select id="var-select" x-model="selectedVariable" @change="renderMap()">
-        <option value="poverty_rate">Poverty Rate</option>
-        <option value="median_hh_income">Median Household Income</option>
-        <option value="pct_cost_burdened">Housing Cost Burden</option>
-        <option value="uninsured_rate">Uninsured Rate</option>
-        <option value="pct_poc">Percent People of Color</option>
+      <select id="var-select" x-model="selectedVariable" @change="onVariableChange()">
+        <template x-for="v in availableVariables" :key="v.id">
+          <option :value="v.id" x-text="v.label + (analysisMap[v.id] ? '' : ' (no data)')"></option>
+        </template>
       </select>
+      <span class="var-status" x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]"></span>
     </div>
 
     <label class="toggle-wrap">
@@ -327,38 +357,25 @@
           <strong x-text="popup.value"></strong>
         </div>
         <div class="tract-popup-row">
-          <span>LISA Cluster</span>
+          <span>LISA Tier</span>
           <strong x-text="popup.cluster"></strong>
         </div>
-        <div class="tract-popup-row" x-show="popup.ice != null">
-          <span>ICE Score</span>
-          <strong x-text="popup.ice"></strong>
+        <div class="tract-popup-detail" x-show="popup.moran_i != null">
+          Moran's I: <strong x-text="popup.moran_i"></strong>
+          &middot; p: <strong x-text="popup.p_value"></strong>
         </div>
       </div>
     </div>
 
     <!-- ═══ LEGEND ═══ -->
     <div class="lisa-legend">
-      <div class="lisa-legend-item">
-        <span class="lisa-swatch" style="background:var(--tp-cat-3);"></span>
-        High-High <span style="font-size:0.65rem;color:var(--subtle);margin-left:2px;">(concentrated disadvantage)</span>
-      </div>
-      <div class="lisa-legend-item">
-        <span class="lisa-swatch" style="background:var(--tp-teal);"></span>
-        Low-Low <span style="font-size:0.65rem;color:var(--subtle);margin-left:2px;">(concentrated advantage)</span>
-      </div>
-      <div class="lisa-legend-item">
-        <span class="lisa-swatch" style="background:var(--tp-cat-8);"></span>
-        High-Low <span style="font-size:0.65rem;color:var(--subtle);margin-left:2px;">(outlier)</span>
-      </div>
-      <div class="lisa-legend-item">
-        <span class="lisa-swatch" style="background:var(--tp-amber);"></span>
-        Low-High <span style="font-size:0.65rem;color:var(--subtle);margin-left:2px;">(outlier)</span>
-      </div>
-      <div class="lisa-legend-item">
-        <span class="lisa-swatch" style="background:var(--subtle);"></span>
-        Not Significant
-      </div>
+      <template x-for="item in legendItems" :key="item.tier">
+        <div class="lisa-legend-item">
+          <span class="lisa-swatch" :style="'background:' + item.color"></span>
+          <span x-text="item.label"></span>
+          <span style="font-size:0.65rem;color:var(--subtle);margin-left:2px;" x-text="item.desc"></span>
+        </div>
+      </template>
     </div>
   </div>
 
@@ -371,44 +388,59 @@ function lisaMap() {
     // ── State ──────────────────────────────────────────────────
     selectedVariable: 'poverty_rate',
     showCounties: false,
-    analysisId: '',
     analysisVintage: '',
     mapLoading: true,
     mapError: '',
     mapReady: false,
-    loadingMessage: 'Loading LISA cluster data…',
+    loadingMessage: 'Loading LISA analyses…',
     tractCount: 0,
-    lisaData: {},
+    variablesLoaded: 0,
+
+    // Per-variable data: analysisMap[variable_id] = { analysisId, vintage, computedAt }
+    analysisMap: {},
+    // Per-variable scores: scoresByVariable[variable_id] = { geoid -> { cluster, score, rank, percentile, moran_i, p_value } }
+    scoresByVariable: {},
+    // Track loading status per variable
+    analysisStatus: {},
+
     tractGeoJSON: null,
     countyGeoJSON: null,
 
     // Popup state
-    popup: { visible: false, x: 0, y: 0, name: '', value: '', cluster: '', ice: null },
+    popup: { visible: false, x: 0, y: 0, name: '', value: '', cluster: '', moran_i: null, p_value: null },
 
-    // Cluster colors (diverging categorical)
+    // Cluster colors per task spec: HH=amber, HL=purple, LL=teal, LH=orange, NS=gray
     clusterColors: {
-      'HH': 'var(--tp-cat-3)',
-      'LL': 'var(--tp-teal)',
-      'HL': 'var(--tp-cat-8)',
-      'LH': 'var(--tp-amber)',
-      'NS': 'var(--subtle)'
+      'HH': '#d97706',
+      'HL': '#7c3aed',
+      'LL': '#0e7490',
+      'LH': '#f59e0b',
+      'NS': '#3f3f46'
     },
 
     clusterLabels: {
       'HH': 'High-High',
-      'LL': 'Low-Low',
       'HL': 'High-Low',
+      'LL': 'Low-Low',
       'LH': 'Low-High',
       'NS': 'Not Significant'
     },
 
-    varLabels: {
-      'poverty_rate': 'Poverty Rate',
-      'median_hh_income': 'Median HH Income',
-      'pct_cost_burdened': 'Housing Cost Burden',
-      'uninsured_rate': 'Uninsured Rate',
-      'pct_poc': 'People of Color'
-    },
+    legendItems: [
+      { tier: 'HH', color: '#d97706', label: 'High-High', desc: '(concentrated disadvantage)' },
+      { tier: 'HL', color: '#7c3aed', label: 'High-Low', desc: '(high-value outlier)' },
+      { tier: 'LL', color: '#0e7490', label: 'Low-Low', desc: '(concentrated advantage)' },
+      { tier: 'LH', color: '#f59e0b', label: 'Low-High', desc: '(low-value outlier)' },
+      { tier: 'NS', color: '#3f3f46', label: 'Not Significant', desc: '' }
+    ],
+
+    availableVariables: [
+      { id: 'poverty_rate',        label: 'Poverty Rate' },
+      { id: 'median_hh_income',    label: 'Median Household Income' },
+      { id: 'pct_cost_burdened',    label: 'Housing Cost Burden' },
+      { id: 'uninsured_rate',       label: 'Uninsured Rate' },
+      { id: 'pct_poc',              label: 'Percent People of Color' }
+    ],
 
     varUnits: {
       'poverty_rate': '%',
@@ -419,21 +451,22 @@ function lisaMap() {
     },
 
     get varLabel() {
-      return this.varLabels[this.selectedVariable] || this.selectedVariable;
+      const v = this.availableVariables.find(x => x.id === this.selectedVariable);
+      return v ? v.label : this.selectedVariable;
     },
 
     // ── Init ──────────────────────────────────────────────────
     async init() {
       this.mapLoading = true;
       this.mapError = '';
-      this.loadingMessage = 'Loading LISA cluster data…';
+      this.loadingMessage = 'Loading LISA analyses…';
 
       try {
-        // 1. Discover latest LISA analysis
-        await this.discoverAnalysis();
+        // 1. Discover all LISA analyses and map them to variables
+        await this.discoverAnalyses();
 
-        // 2. Fetch LISA scores
-        await this.fetchScores();
+        // 2. Fetch scores for all discovered variables in parallel
+        await this.fetchAllScores();
 
         // 3. Fetch GeoJSON
         await this.fetchGeoJSON();
@@ -449,64 +482,126 @@ function lisaMap() {
       }
     },
 
-    async discoverAnalysis() {
+    async discoverAnalyses() {
       try {
         const resp = await fetch('/v1/policy/analyses');
         if (!resp.ok) throw new Error(`Analyses API: ${resp.status}`);
         const data = await resp.json();
-        const analyses = data.analyses || [];
+        const allAnalyses = data.analyses || [];
 
-        // Find a LISA-type analysis
-        const lisa = analyses.find(a => a.type === 'lisa' || (a.type || '').toLowerCase().includes('lisa'));
-        if (lisa) {
-          this.analysisId = lisa.id;
-          this.analysisVintage = lisa.vintage || '';
-        } else if (analyses.length > 0) {
-          // Fall back to most recent analysis
-          this.analysisId = analyses[0].id;
-          this.analysisVintage = analyses[0].vintage || '';
+        // Filter to LISA analyses only
+        const lisaAnalyses = allAnalyses.filter(
+          a => a.type === 'lisa' || (a.type || '').toLowerCase().includes('lisa')
+        );
+
+        if (lisaAnalyses.length === 0) {
+          console.warn('No LISA analyses found, available types:', allAnalyses.map(a => a.type));
+          this.loadingMessage = 'No LISA analyses found — rendering tracts without cluster colors';
+          return;
         }
-      } catch (e) {
-        console.warn('Analysis discovery failed, will try with empty ID:', e.message);
-        // Non-fatal: we'll still try to render without scores
-      }
-    },
 
-    async fetchScores() {
-      if (!this.analysisId) {
-        console.warn('No analysis ID available — rendering without LISA cluster colors');
-        return;
-      }
+        this.loadingMessage = `Mapping ${lisaAnalyses.length} LISA analyses to variables…`;
 
-      try {
-        const resp = await fetch(`/v1/policy/analyses/${this.analysisId}/scores`);
-        if (!resp.ok) throw new Error(`Scores API: ${resp.status}`);
-        const data = await resp.json();
-        const scores = data.scores || [];
-
-        // Index scores by GEOID for fast lookup
-        // ScoreResponse now includes GEOID at top level
-        this.lisaData = {};
-        for (const s of scores) {
-          const geoid = s.geoid || '';
-          if (geoid) {
-            this.lisaData[geoid] = {
-              cluster: s.tier || (s.details && s.details.cluster) || 'NS',
-              score: s.score,
-              rank: s.rank,
-              percentile: s.percentile,
-              ice: (s.details && s.details.ice) || null
+        // Fetch details for each LISA analysis to get the variable name from parameters
+        const detailPromises = lisaAnalyses.map(async (a) => {
+          try {
+            const dr = await fetch(`/v1/policy/analyses/${encodeURIComponent(a.id)}`);
+            if (!dr.ok) return null;
+            const detail = await dr.json();
+            return {
+              id: a.id,
+              type: a.type,
+              vintage: a.vintage || '',
+              computedAt: a.computed_at || '',
+              variable: (detail.parameters && detail.parameters.variable) || null
             };
+          } catch (e) {
+            console.warn(`Failed to fetch detail for analysis ${a.id}:`, e.message);
+            return null;
+          }
+        });
+
+        const details = (await Promise.all(detailPromises)).filter(Boolean);
+
+        // Group by variable, keeping the latest (newest computed_at)
+        const byVar = {};
+        for (const d of details) {
+          const v = d.variable;
+          if (!v) {
+            console.warn(`Analysis ${d.id} has no variable in parameters, skipping`);
+            continue;
+          }
+          if (!byVar[v] || (d.computedAt > byVar[v].computedAt)) {
+            byVar[v] = { analysisId: d.id, vintage: d.vintage, computedAt: d.computedAt };
           }
         }
 
-        if (Object.keys(this.lisaData).length > 0) {
-          console.log(`Loaded ${Object.keys(this.lisaData).length} LISA scores`);
+        this.analysisMap = byVar;
+        const count = Object.keys(this.analysisMap).length;
+        this.variablesLoaded = count;
+        if (count > 0) {
+          this.analysisVintage = Object.values(this.analysisMap)[0].vintage;
         }
+
+        console.log('Discovered LISA analyses per variable:', this.analysisMap);
       } catch (e) {
-        console.warn('Score fetch failed:', e.message);
-        // Non-fatal: render without cluster colors
+        console.warn('Analysis discovery failed:', e.message);
+        // Non-fatal: we'll still render without cluster colors
       }
+    },
+
+    async fetchAllScores() {
+      const vars = Object.keys(this.analysisMap);
+      if (vars.length === 0) {
+        this.loadingMessage = 'No LISA analyses found — rendering tracts without cluster colors';
+        return;
+      }
+
+      this.loadingMessage = `Fetching scores for ${vars.length} variables…`;
+
+      const scorePromises = vars.map(async (variableId) => {
+        const info = this.analysisMap[variableId];
+        this.analysisStatus[variableId] = 'loading…';
+        try {
+          const resp = await fetch(`/v1/policy/analyses/${encodeURIComponent(info.analysisId)}/scores`);
+          if (!resp.ok) throw new Error(`Scores API: ${resp.status}`);
+          const data = await resp.json();
+          const scores = data.scores || [];
+
+          // Index scores by GEOID
+          const geoidMap = {};
+          for (const s of scores) {
+            const geoid = s.geoid || '';
+            if (geoid) {
+              const details = s.details || {};
+              geoidMap[geoid] = {
+                cluster: s.tier || details.cluster || 'NS',
+                score: s.score,
+                rank: s.rank,
+                percentile: s.percentile,
+                moran_i: details.moran_i != null ? details.moran_i : null,
+                p_value: details.p_value != null ? details.p_value : null,
+                variable_id: details.variable_id || variableId
+              };
+            }
+          }
+
+          this.scoresByVariable[variableId] = geoidMap;
+          const sigCount = Object.values(geoidMap).filter(s => s.cluster !== 'NS').length;
+          this.analysisStatus[variableId] = `${scores.length} tracts (${sigCount} sig)`;
+          console.log(`Loaded ${scores.length} scores for ${variableId} (${sigCount} significant)`);
+          return { variableId, count: scores.length };
+        } catch (e) {
+          console.warn(`Score fetch failed for ${variableId}:`, e.message);
+          this.scoresByVariable[variableId] = {};
+          this.analysisStatus[variableId] = 'failed';
+          return null;
+        }
+      });
+
+      await Promise.all(scorePromises);
+      const loadedCount = Object.values(this.scoresByVariable).filter(m => Object.keys(m).length > 0).length;
+      console.log(`Fetched scores for ${loadedCount}/${vars.length} variables`);
     },
 
     async fetchGeoJSON() {
@@ -529,6 +624,12 @@ function lisaMap() {
       } catch (e) {
         console.warn('County boundaries not available:', e.message);
       }
+    },
+
+    // ── Variable change handler ────────────────────────────────
+    onVariableChange() {
+      this.popup.visible = false;
+      this.renderMap();
     },
 
     // ── Render ────────────────────────────────────────────────
@@ -567,10 +668,9 @@ function lisaMap() {
       const offY = pad + (availH - spanY * scale) / 2;
 
       const project = (pt) => {
-        // x = lon mapped linearly, y = lat mapped and FLIPPED (screen y increases downward)
         return [
           offX + (pt[0] - minX) * scale,
-          offY + (maxY - pt[1]) * scale  // flip y
+          offY + (maxY - pt[1]) * scale
         ];
       };
 
@@ -580,10 +680,14 @@ function lisaMap() {
       };
 
       const esc = window.CasaDatosChoropleth ? window.CasaDatosChoropleth.esc : function(s) {
-        return String(s).replace(/[&<>"']/g, function(c) {
-          return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+        return String(s).replace(/[&<>\"']/g, function(c) {
+          return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];
         });
       };
+
+      // Get scores for the currently selected variable
+      const currentScores = this.scoresByVariable[this.selectedVariable] || {};
+      const hasScores = Object.keys(currentScores).length > 0;
 
       // Build tract polygons
       let tractPaths = '';
@@ -594,11 +698,11 @@ function lisaMap() {
         const geoid = props.GEOID || '';
         const name = props.tract_name || props.NAME || geoid;
         const indicatorVal = props[this.selectedVariable];
-        const lisaInfo = this.lisaData[geoid] || {};
-        const cluster = lisaInfo.cluster || 'NS';
+        const scoreInfo = currentScores[geoid] || {};
+        const cluster = scoreInfo.cluster || 'NS';
 
-        // Color: cluster-based categorical
-        const color = this.clusterColors[cluster] || 'var(--subtle)';
+        // Color: cluster-based categorical (use gray if no scores loaded)
+        const color = hasScores ? (this.clusterColors[cluster] || '#3f3f46') : 'var(--subtle)';
 
         // Value display
         const unit = this.varUnits[this.selectedVariable] || '';
@@ -607,12 +711,15 @@ function lisaMap() {
           valStr = unit === '$' ? '$' + Number(indicatorVal).toLocaleString() : Number(indicatorVal).toFixed(1) + unit;
         }
 
+        const moranI = scoreInfo.moran_i != null ? scoreInfo.moran_i.toFixed(4) : '';
+        const pVal = scoreInfo.p_value != null ? scoreInfo.p_value.toFixed(4) : '';
+
         const coords = f.geometry.coordinates;
         if (!coords || !coords[0] || coords[0].length < 3) return;
 
         const d = ringToD(coords[0]);
 
-        tractPaths += `<path class="tract-poly" d="${d}" fill="${color}" stroke="var(--bg)" stroke-width="0.6" data-idx="${idx}" data-geoid="${esc(geoid)}" data-name="${esc(name)}" data-value="${esc(valStr)}" data-cluster="${esc(this.clusterLabels[cluster] || cluster)}" data-ice="${esc(String(lisaInfo.ice != null ? lisaInfo.ice : ''))}"><title>${esc(name)}: ${esc(valStr)} — ${esc(this.clusterLabels[cluster] || cluster)}</title></path>`;
+        tractPaths += `<path class="tract-poly" d="${d}" fill="${color}" stroke="var(--bg)" stroke-width="0.6" data-idx="${idx}" data-geoid="${esc(geoid)}" data-name="${esc(name)}" data-value="${esc(valStr)}" data-cluster="${esc(this.clusterLabels[cluster] || cluster)}" data-moran-i="${esc(moranI)}" data-p-value="${esc(pVal)}"><title>${esc(name)}: ${esc(valStr)} — ${esc(this.clusterLabels[cluster] || cluster)}</title></path>`;
 
         // Handle holes (inner rings)
         if (coords.length > 1) {
@@ -653,7 +760,8 @@ function lisaMap() {
           const name = tractPoly.getAttribute('data-name');
           const value = tractPoly.getAttribute('data-value');
           const cluster = tractPoly.getAttribute('data-cluster');
-          const ice = tractPoly.getAttribute('data-ice');
+          const moranI = tractPoly.getAttribute('data-moran-i');
+          const pVal = tractPoly.getAttribute('data-p-value');
 
           const containerEl = document.getElementById('map-container');
           const rect = containerEl.getBoundingClientRect();
@@ -662,12 +770,13 @@ function lisaMap() {
 
           self2.popup = {
             visible: true,
-            x: Math.min(x, rect.width - 210),
-            y: Math.max(10, y - 120),
+            x: Math.min(x, rect.width - 220),
+            y: Math.max(10, y - 140),
             name: name,
             value: value,
             cluster: cluster,
-            ice: ice && ice !== 'null' && ice !== '' ? ice : null
+            moran_i: moranI && moranI !== '' ? moranI : null,
+            p_value: pVal && pVal !== '' ? pVal : null
           };
         } else {
           self2.popup.visible = false;
@@ -691,7 +800,6 @@ function lisaMap() {
 
     // ── Download PNG (placeholder) ────────────────────────────
     downloadPNG() {
-      // Future: implement via canvas/svg export
       alert('PNG download coming soon.');
     },
 
