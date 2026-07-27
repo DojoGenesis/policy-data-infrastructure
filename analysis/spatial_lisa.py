@@ -146,57 +146,47 @@ def compute_lisa(gdf: gpd.GeoDataFrame, variable_id: str) -> pd.DataFrame:
     return results
 
 
-def store_results(conn, results: pd.DataFrame, state_fips: str, vintage: str = "ACS-2024-5yr"):
-    """Store LISA results in the analysis_scores table."""
-    analysis_id = f"lisa-{state_fips}-{vintage}"
+def store_results(conn, results: pd.DataFrame, state_fips: str, variable_id: str, vintage: str = "ACS-2024-5yr"):
+    """Store LISA results for ONE variable in the analysis_scores table.
+    Each variable gets its own analysis record to avoid composite-key overwrites."""
+    import uuid
+    analysis_id = str(uuid.uuid4())
 
     with conn.cursor() as cur:
-        # Insert or update analysis record
         cur.execute("""
-            INSERT INTO analyses (id, type, scope_geoid, scope_level, parameters, results, vintage)
-            VALUES (%s, 'lisa', %s, 'state',
-                    %s::jsonb, %s::jsonb, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                parameters = EXCLUDED.parameters,
-                results = EXCLUDED.results,
-                computed_at = now()
+            INSERT INTO analyses (type, scope_geoid, scope_level, parameters, results, vintage)
+            VALUES ('lisa', %s, 'state'::geo_level, %s::jsonb, %s::jsonb, %s)
+            RETURNING id
         """, (
-            analysis_id,
             state_fips,
-            json.dumps({"variables": results["variable_id"].unique().tolist()}),
+            json.dumps({"variable": variable_id}),
             json.dumps({"tracts_analyzed": len(results)}),
             vintage,
         ))
+        analysis_id = cur.fetchone()[0]
 
-        # Store per-tract scores
+        geoid_col = "GEOID" if "GEOID" in results.columns else "geoid"
         for idx in range(len(results)):
             row = results.iloc[idx]
-            moran_val = row["moran_i"]
-            p_val = row["p_value"]
-            quad_val = row["quadrant"]
-
             cur.execute("""
                 INSERT INTO analysis_scores (analysis_id, geoid, score, percentile, tier, details)
                 VALUES (%s, %s, %s, 0, %s, %s::jsonb)
                 ON CONFLICT (analysis_id, geoid) DO UPDATE SET
-                    score = EXCLUDED.score,
-                    tier = EXCLUDED.tier,
-                    details = EXCLUDED.details
+                    score = EXCLUDED.score, tier = EXCLUDED.tier, details = EXCLUDED.details
             """, (
                 analysis_id,
-                row["geoid"],
-                float(moran_val) if not pd.isna(moran_val) else 0.0,
+                row[geoid_col],
+                float(row["moran_i"]) if not pd.isna(row["moran_i"]) else 0.0,
                 row["cluster"],
                 json.dumps({
-                    "variable_id": row["variable_id"],
-                    "moran_i": float(moran_val) if not pd.isna(moran_val) else None,
-                    "p_value": float(p_val) if not pd.isna(p_val) else None,
-                    "quadrant": int(quad_val) if not pd.isna(quad_val) else None,
+                    "variable_id": variable_id,
+                    "moran_i": float(row["moran_i"]) if not pd.isna(row["moran_i"]) else None,
+                    "p_value": float(row["p_value"]) if not pd.isna(row["p_value"]) else None,
+                    "quadrant": int(row["quadrant"]) if not pd.isna(row["quadrant"]) else None,
                 }),
             ))
-
     conn.commit()
-    print(f"Stored {len(results)} scores under analysis_id={analysis_id}")
+    print(f"  Stored {len(results)} scores for {variable_id} under analysis_id={analysis_id}")
 
 
 def main():
@@ -234,16 +224,18 @@ def main():
         print("No results to store.")
         sys.exit(0)
 
-    combined = pd.concat(all_results, ignore_index=True)
-    print(f"\nTotal: {len(combined)} LISA scores across {len(variable_ids)} variables")
+    print(f"\nTotal: {len(all_results)} variable(s) computed")
 
     if args.dry_run:
         print("\n[dry-run] Skipping database write.")
+        combined = pd.concat(all_results, ignore_index=True)
         print("Cluster distribution:")
         print(combined["cluster"].value_counts().to_string())
     else:
         conn = get_conn()
-        store_results(conn, combined, args.state, args.vintage)
+        for i, results in enumerate(all_results):
+            var_id = available_vars[i]
+            store_results(conn, results, args.state, var_id, args.vintage)
         conn.close()
 
     print("Done.")
