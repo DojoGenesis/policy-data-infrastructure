@@ -858,6 +858,7 @@ func (p *PolicyPlugin) handleGetAnalysisScores(c *gin.Context) {
 	for _, s := range scores {
 		items = append(items, ScoreResponse{
 			AnalysisID: s.AnalysisID,
+			GEOID:      s.GEOID,
 			Score:      s.Score,
 			Rank:       s.Rank,
 			Percentile: s.Percentile,
@@ -1123,6 +1124,7 @@ func (p *PolicyPlugin) geoFromStore(g geo.Geography, inds []store.Indicator, sco
 	for _, s := range scores {
 		resp.Scores = append(resp.Scores, ScoreResponse{
 			AnalysisID: s.AnalysisID,
+			GEOID:      s.GEOID,
 			Score:      s.Score,
 			Rank:       s.Rank,
 			Percentile: s.Percentile,

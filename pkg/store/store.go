@@ -69,7 +69,7 @@ type AnalysisScore struct {
 	AnalysisID string
 	GEOID      string
 	Score      float64
-	Rank       int
+		Rank       *int
 	Percentile float64
 	Tier       string
 	Details    map[string]interface{}

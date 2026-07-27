@@ -12,6 +12,7 @@ import (
 
 // fp returns a pointer to v — convenience for Indicator.Value fields.
 func fp(v float64) *float64 { return &v }
+func intPtr(v int) *int         { return &v }
 
 // testStore opens a PostgresStore against the test database, skipping if the
 // database is unavailable or if -short is passed. Tables are cleaned after
@@ -540,7 +541,7 @@ func TestPutQueryAnalysisScores(t *testing.T) {
 			AnalysisID: analysisID,
 			GEOID:      "55001",
 			Score:      0.33,
-			Rank:       3,
+			Rank:       intPtr(3),
 			Percentile: 33.0,
 			Tier:       "low",
 			Details:    map[string]interface{}{"note": "bottom third"},
@@ -549,7 +550,7 @@ func TestPutQueryAnalysisScores(t *testing.T) {
 			AnalysisID: analysisID,
 			GEOID:      "55025",
 			Score:      0.67,
-			Rank:       2,
+			Rank:       intPtr(2),
 			Percentile: 67.0,
 			Tier:       "mid",
 			Details:    map[string]interface{}{"note": "middle"},
@@ -558,7 +559,7 @@ func TestPutQueryAnalysisScores(t *testing.T) {
 			AnalysisID: analysisID,
 			GEOID:      "55079",
 			Score:      1.00,
-			Rank:       1,
+			Rank:       intPtr(1),
 			Percentile: 100.0,
 			Tier:       "high",
 			Details:    map[string]interface{}{"note": "top"},
@@ -579,14 +580,14 @@ func TestPutQueryAnalysisScores(t *testing.T) {
 	}
 
 	// Results are ordered by rank ASC; rank 1 should be first.
-	if got[0].Rank != 1 {
-		t.Errorf("first result rank: expected 1, got %d", got[0].Rank)
+	if got[0].Rank == nil || *got[0].Rank != 1 {
+		t.Errorf("first result rank: expected 1, got %v", got[0].Rank)
 	}
 	if got[0].GEOID != "55079" {
 		t.Errorf("first result GEOID: expected 55079, got %q", got[0].GEOID)
 	}
-	if got[2].Rank != 3 {
-		t.Errorf("last result rank: expected 3, got %d", got[2].Rank)
+	if got[2].Rank == nil || *got[2].Rank != 3 {
+		t.Errorf("last result rank: expected 3, got %v", got[2].Rank)
 	}
 }
 

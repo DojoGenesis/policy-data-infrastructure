@@ -111,8 +111,9 @@ type VariableListResponse struct {
 // ScoreResponse is a single analysis score in a response.
 type ScoreResponse struct {
 	AnalysisID string                 `json:"analysis_id"`
+	GEOID      string                 `json:"geoid"`
 	Score      float64                `json:"score"`
-	Rank       int                    `json:"rank"`
+	Rank       *int   `json:"rank"`
 	Percentile float64                `json:"percentile"`
 	Tier       string                 `json:"tier,omitempty"`
 	Details    map[string]interface{} `json:"details,omitempty"`

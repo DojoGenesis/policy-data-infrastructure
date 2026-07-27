@@ -150,6 +150,7 @@ type mockStore struct {
 }
 
 func newMockStore() *mockStore {
+	rank1, rank2, rank3 := 1, 2, 3
 	return &mockStore{
 		geographies: map[string]*geo.Geography{
 			"55025000100": {
@@ -178,9 +179,9 @@ func newMockStore() *mockStore {
 			},
 		},
 		scores: []store.AnalysisScore{
-			{AnalysisID: "test-analysis", GEOID: "55025000100", Score: 92.0, Rank: 1, Percentile: 97.0, Tier: "critical"},
-			{AnalysisID: "test-analysis", GEOID: "55025000200", Score: 78.0, Rank: 2, Percentile: 85.0, Tier: "high"},
-			{AnalysisID: "test-analysis", GEOID: "55025000300", Score: 18.0, Rank: 3, Percentile: 3.0, Tier: "on_track"},
+			{AnalysisID: "test-analysis", GEOID: "55025000100", Score: 92.0, Rank: &rank1, Percentile: 97.0, Tier: "critical"},
+			{AnalysisID: "test-analysis", GEOID: "55025000200", Score: 78.0, Rank: &rank2, Percentile: 85.0, Tier: "high"},
+			{AnalysisID: "test-analysis", GEOID: "55025000300", Score: 18.0, Rank: &rank3, Percentile: 3.0, Tier: "on_track"},
 		},
 		indicators: []store.Indicator{
 			{GEOID: "55025000100", VariableID: "median_household_income", Value: ptr(42000.0)},

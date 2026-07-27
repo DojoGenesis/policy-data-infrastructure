@@ -237,11 +237,12 @@ func runCompositeAnalysis(
 		if sc != nil {
 			scoreVal = *sc
 		}
+		rank := i + 1
 		analysisScores = append(analysisScores, store.AnalysisScore{
 			AnalysisID: dbID,
 			GEOID:      geoid,
 			Score:      scoreVal,
-			Rank:       i + 1,
+			Rank:       &rank,
 			Percentile: scoreVal,
 			Tier:       tierAssign[i],
 		})
@@ -251,7 +252,8 @@ func runCompositeAnalysis(
 		return analysisScores[i].Score > analysisScores[j].Score
 	})
 	for i := range analysisScores {
-		analysisScores[i].Rank = i + 1
+		r := i + 1
+		analysisScores[i].Rank = &r
 	}
 
 	if err := s.PutAnalysisScores(ctx, analysisScores); err != nil {
