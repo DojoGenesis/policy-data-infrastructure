@@ -14,7 +14,7 @@ The rebuild (Waves 1-4, July 27) completed the backend. This ADR defines the fro
 
 ## Decision: Multi-Page Data Platform with TresPies Night Shift Design
 
-Build the frontend as a set of distinct, purpose-built HTML pages — not a collapsed single-page shell — each serving a specific audience task. All pages share the Night Shift v4 design system and are embedded in the Go binary via `//go:embed frontend/*`. Navigation is hash-routed through Alpine.js, per ADR-001.
+Build the frontend as a set of distinct, purpose-built HTML pages — not a collapsed single-page shell — each serving a specific audience task. All pages share the Night Shift v4 design system and are embedded in the Go binary via `//go:embed frontend/*`. Navigation uses native `<a href>` links between pages, following the `casa-datos` stack pattern.
 
 ### Design Stack
 
@@ -174,7 +174,8 @@ This is the richest page — it surfaces all five statistical layers.
 
 **Audience task:** "Where are the spatial clusters of disadvantage and advantage?"
 
-- Leaflet map centered on Wisconsin, 72 counties + 1,542 tracts
+- SVG choropleth map centered on Wisconsin, 72 counties + 1,542 tracts
+- Renders via `choropleth.js` — hand-rolled SVG, token-driven palette, zero external dependencies
 - Fetches tract GeoJSON from `/static/tracts.geojson` (or API endpoint)
 - Fetches LISA analysis scores from `GET /analyses/:id/scores`
 - Variable selector dropdown (poverty, income, cost burden, uninsured, POC%)
@@ -227,11 +228,12 @@ This is the richest page — it surfaces all five statistical layers.
 
 ### Cross-Cutting Concerns
 
-**Navigation shell (`nav.js`):**
+**Navigation shell (shared header partial):**
 - Sticky top bar with Night Shift styling: PDI amber logo mark, nav links, chat toggle
-- Hash-based routing: parses `window.location.hash`, loads the correct page
-- Active page indicator
-- Shared across all pages via `//go:embed`
+- Native `<a href>` links: `/` (Explorer), `/compare`, `/evidence`, `/candidates`, `/map`, `/about`
+- Active page indicator via current path
+- Included in every page via a shared `<header>` snippet (or hand-copied per the stack's i18n kit pattern)
+- Same header appears in every `es/` twin with Spanish labels
 
 **Token system (`tokens.css`):**
 - Night Shift v4 custom properties
@@ -254,18 +256,21 @@ This is the richest page — it surfaces all five statistical layers.
 
 | File | Owned By | Depends On |
 |---|---|---|
-| `tokens.css` | Design agent (shared) | Nothing |
-| `nav.js` | Shell agent (shared) | `tokens.css` |
-| `index.html` | Explorer agent | `tokens.css`, `nav.js` |
-| `county.html` | Profile agent | `tokens.css`, `nav.js` |
-| `compare.html` | Compare agent | `tokens.css`, `nav.js` |
-| `evidence.html` | Evidence agent | `tokens.css`, `nav.js` |
-| `candidates.html` | Candidates agent | `tokens.css`, `nav.js` |
-| `map.html` | Map agent | `tokens.css`, `nav.js`, Leaflet CDN |
-| `narrative.html` | Narrative agent | `tokens.css`, `nav.js` |
-| `about.html` | About agent | `tokens.css`, `nav.js` |
-| `composites.html` | Composites agent | `tokens.css`, `nav.js` |
-| `chat.js` | Chat agent | Nothing |
+| `tokens.css` | Vendored (spine) — never edit | Nothing |
+| `charts.js` | Vendored (casa-datos) — never edit | `tokens.css` |
+| `choropleth.js` | Vendored (casa-datos) — never edit | `tokens.css` |
+| `styles.css` | Design agent (stack-owned) | `tokens.css` |
+| `index.html` | Explorer agent | Vendored kits, `styles.css` |
+| `county.html` | Profile agent | Vendored kits, `styles.css` |
+| `compare.html` | Compare agent | Vendored kits, `styles.css` |
+| `evidence.html` | Evidence agent | Vendored kits, `styles.css` |
+| `candidates.html` | Candidates agent | Vendored kits, `styles.css` |
+| `map.html` | Map agent | Vendored kits, `styles.css`, `choropleth.js` |
+| `narrative.html` | Narrative agent | Vendored kits, `styles.css` |
+| `about.html` | About agent | Vendored kits, `styles.css` |
+| `composites.html` | Composites agent | Vendored kits, `styles.css` |
+| `chat.js` | Chat agent | Nothing (self-contained drawer) |
+| `es/*` | i18n agent (after EN pages) | EN twins, `bilingual-data.js` |
 
 ## Build & Deploy
 
@@ -282,19 +287,19 @@ Served from `GET /` (index.html) and `GET /static/*` (all other assets). Deploy 
 
 | Track | Deliverable | Effort |
 |---|---|---|
-| 7A | `tokens.css` + `nav.js` — shared design system + navigation shell | 2h |
+| 7A | `styles.css` — PDI layout over Night Shift tokens | 2h |
 | 7B | `index.html` — County Explorer | 2h |
 | 7C | `county.html` — County Profile + full dashboard | 4h |
 | 7D | `compare.html` — Compare Tool | 2h |
 | 7E | `evidence.html` — Evidence Card Gallery | 2h |
 | 7F | `candidates.html` — Candidate Policy Tracker | 2h |
-| 7G | `map.html` — LISA Cluster Map (Leaflet) | 3h |
+| 7G | `map.html` — LISA Cluster Map (choropleth.js) | 3h |
 | 7H | `narrative.html` — Narrative Reader | 2h |
 | 7I | `about.html` — About + Methodology | 2h |
 | 7J | `composites.html` — Composite Builder | 2h |
 | 7K | `chat.js` — Grounded Chat Drawer | 2h |
-| 7L | Embed + build + deploy + verify | 1h |
-| **Total** | | **~30h** |
+| 7L | Go serve routing + embed + deploy + verify | 1h |
+| **Total** | | **~26h** |
 
 ## Chat Revamp: Intelligent Grounded Conversation
 
@@ -485,6 +490,52 @@ Suggestions change with the page context. Clicking one sends it as a message. Th
 - **Negative:** The expanded operation schema (time_series, correlation, what_if) requires new API endpoints or client-side computation. Some operations may be deferred to a second chat wave.
 - **Negative:** The model must now handle more context (page state, conversation history, expanded schema), which increases token usage. Mitigated by keeping the intent schema compact and the conversation window bounded (last 6 exchanges).
 
+## Manim Statistics Animations: Visual Explanations for the Platform
+
+The statistical engine is the platform's differentiator — but the concepts it uses (z-scores, ICE, LISA, bootstrap, quantile classification) are opaque to policy audiences who need to trust the results. Manim animations bridge that gap: short, mathematically precise visual explanations that live on the About/Methodology page and can be shared standalone.
+
+### What Gets Animated
+
+Six concepts, each a self-contained 60-90 second video. Priority order matches the five-layer architecture — the concepts a user encounters first on the platform get animated first.
+
+| # | Concept | Layer | Visual Arc | Data Source |
+|---|---|---|---|---|
+| 1 | **Z-score normalization** | Layer 1 | Bell curve with raw values sliding into standardized positions. Before: mixed units (dollars, percents, counts). After: comparable scale. | `pkg/stats/zscore.go` |
+| 2 | **ICE — Index of Concentration at the Extremes** | Layer 2 | Two bars pulling apart (privileged vs. deprived), anchored by total population. Scale from -1 (extreme deprivation) to +1 (extreme privilege). | `pkg/stats/features.go:10` |
+| 3 | **Bootstrap confidence intervals** | Layer 2 | Repeated resampling from a dataset. Histogram builds from 1,000 resamples. CI brackets (2.5th, 97.5th percentile) emerge. | `pkg/stats/bootstrap.go` |
+| 4 | **Quantile classification** | Layer 1 | Scatter of 1,542 dots on a number line → 5 color bands snap into place at natural breaks. Shows why arbitrary tier cutoffs were replaced. | `analysis/output/atlas/indicators.json` |
+| 5 | **LISA cluster classification** | Layer 4 | Wisconsin map → queen contiguity weights visualized as neighbor links → tracts color-coded HH/HL/LL/LH → clusters emerge. The most visually compelling. | `analysis/spatial_lisa.py` |
+| 6 | **Pipeline DAG** | All | 13 adapters feeding data → normalize → PostGIS → AnalyzeStage (ICE computation) → narrative engine → HTMLCraft deliverable. Nodes light up sequentially, parallel waves animate simultaneously. | `pkg/pipeline/pipeline.go` |
+
+### Style
+
+- **3Blue1Brown influence:** Clean dark background, deliberate pacing, color-coded elements, formula overlays, no voiceover — text labels and visual rhythm carry the explanation
+- **Night Shift palette:** Use `--bg` as the Manim background, `--accent` (amber) for highlights, Rainbow categorical for multi-element scenes
+- **Spanish versions:** Each animation has an ES variant with Spanish labels. The math is language-neutral; the explanatory text is not
+- **Resolution:** 1080p, 60fps. Output as MP4, embeddable in the About page via `<video>` tag (no CDN — video files vendored alongside frontend assets)
+
+### Technical
+
+- **Tool:** Manim CE (Community Edition), Python. Already installed in Hermes venv at `~/.hermes/hermes-agent/venv/bin/manim`
+- **Source:** `analysis/manim/` — one `.py` file per concept
+- **Build:** `manim -pqh scene.py SceneName` → outputs MP4 to `frontend/videos/`
+- **Embed:** `<video controls preload="metadata" src="/static/videos/zscore.mp4">` — no external player, no CDN
+- **Size budget:** ~5-8 MB per 90-second video at reasonable quality. Six videos ≈ 40 MB total, vendored alongside frontend assets in the Go binary
+
+### Effort
+
+| Track | Deliverable | Effort |
+|---|---|---|
+| 7U | Z-score animation | 2h |
+| 7V | ICE animation | 2h |
+| 7W | Bootstrap CI animation | 2h |
+| 7X | Quantile classification animation | 1.5h |
+| 7Y | LISA cluster map animation | 3h |
+| 7Z | Pipeline DAG animation | 2h |
+| 7AA | Spanish label variants (all 6) | 2h |
+| 7AB | Video embed + About page integration | 1h |
+| **Manim subtotal** | | **~15.5h** |
+
 ## Consequences
 
 ### Positive
@@ -492,7 +543,7 @@ Suggestions change with the page context. Clicking one sends it as a message. Th
 - **Full platform surface.** Every backend capability is accessible from a browser — no API docs required. Grant reviewers, policy analysts, and community stakeholders can explore the data directly.
 - **Audience-aligned pages.** Each page serves one clear task. A county commissioner comparing their county to the state average goes to Compare. A policy researcher looking for evidence-backed positions goes to Evidence. A data journalist looking for spatial patterns goes to Map.
 - **Coherent brand.** Night Shift v4 across every page. PDI reads as a TresPies product.
-- **Extensible.** Adding a new page means one new HTML file + one nav link. The hash router handles it. No framework migration.
+- **Extensible.** Adding a new page means one new HTML file + one nav link. No framework migration — copy an existing page as a template.
 - **Shared infrastructure.** Tokens and navigation are written once, shared everywhere. A design change to the accent color updates one file.
 
 ### Negative
