@@ -17,6 +17,7 @@ import (
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/geo"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/htmlcraft"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/narrative"
+	"github.com/DojoGenesis/policy-data-infrastructure/pkg/stats"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
 
@@ -902,6 +903,180 @@ func (p *PolicyPlugin) handleAggregate(c *gin.Context) {
 		"value":       result.Value,
 		"count":       result.Count,
 	})
+}
+
+// ── POST /composite ───────────────────────────────────────────────────────
+
+// handleComposite computes a query-time composite score across one or more
+// geographies with sensitivity analysis. Composites are never stored — they
+// are computed fresh on every request from raw indicator values.
+func (p *PolicyPlugin) handleComposite(c *gin.Context) {
+	var req CompositeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body", Detail: err.Error()})
+		return
+	}
+
+	if len(req.GEOIDs) < 1 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "at least one geoid is required"})
+		return
+	}
+	if len(req.VariableIDs) < 2 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "at least two variable_ids are required for a composite"})
+		return
+	}
+
+	method := req.Method
+	if method == "" {
+		method = "geometric_mean"
+	}
+	if method != "geometric_mean" && method != "weighted_zscore" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:  "unknown method",
+			Detail: "method must be 'geometric_mean' or 'weighted_zscore'",
+		})
+		return
+	}
+
+	perturbation := req.Perturbation
+	if perturbation == 0 {
+		perturbation = 0.20
+	}
+
+	ctx := c.Request.Context()
+
+	// 1. Fetch indicators for all requested geoids × variables.
+	indQ := store.IndicatorQuery{
+		GEOIDs:      req.GEOIDs,
+		VariableIDs: req.VariableIDs,
+		LatestOnly:  true,
+	}
+	allInds, err := p.store.QueryIndicators(ctx, indQ)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "indicator query failed", Detail: err.Error()})
+		return
+	}
+
+	// 2. Index indicators by geoid → variable_id → value.
+	geoValues := make(map[string]map[string]*float64)
+	for _, g := range req.GEOIDs {
+		geoValues[g] = make(map[string]*float64)
+	}
+	for _, ind := range allInds {
+		if m, ok := geoValues[ind.GEOID]; ok {
+			m[ind.VariableID] = ind.Value
+		}
+	}
+
+	// 3. Z-score each variable across all geographies.
+	// Build per-variable slices aligned with geoid order.
+	zScores := make(map[string]map[string]*float64) // variable_id → geoid → z-score
+	for _, varID := range req.VariableIDs {
+		values := make([]*float64, len(req.GEOIDs))
+		for i, geoid := range req.GEOIDs {
+			values[i] = geoValues[geoid][varID]
+		}
+		zs := stats.ZScore(values)
+		zMap := make(map[string]*float64, len(req.GEOIDs))
+		for i, geoid := range req.GEOIDs {
+			zMap[geoid] = zs[i]
+		}
+		zScores[varID] = zMap
+	}
+
+	// 4. Shift z-scores to be positive for geometric mean.
+	// Find the global minimum z-score across all variables and geographies.
+	minZ := 0.0
+	for _, zMap := range zScores {
+		for _, z := range zMap {
+			if z != nil && *z < minZ {
+				minZ = *z
+			}
+		}
+	}
+	shift := -minZ + 1.0 // ensures all values are ≥ 1
+
+	// 5. Build weights map. Default to equal weights if not provided.
+	weights := make(map[string]float64, len(req.VariableIDs))
+	if req.Weights != nil && len(req.Weights) > 0 {
+		for k, v := range req.Weights {
+			weights[k] = v
+		}
+	} else {
+		for _, varID := range req.VariableIDs {
+			weights[varID] = 1.0 / float64(len(req.VariableIDs))
+		}
+	}
+
+	// 6. Compute composite scores (geometric mean of shifted z-scores).
+	geoidInputs := make([]stats.CompositeInput, len(req.GEOIDs))
+	for i, geoid := range req.GEOIDs {
+		shiftedVals := make(map[string]*float64, len(req.VariableIDs))
+		for _, varID := range req.VariableIDs {
+			if z, ok := zScores[varID][geoid]; ok && z != nil {
+				s := *z + shift
+				shiftedVals[varID] = &s
+			}
+		}
+		geoidInputs[i] = stats.CompositeInput{
+			GEOID:  geoid,
+			Values: shiftedVals,
+		}
+	}
+
+	// 7. Run sensitivity analysis.
+	sensResult, err := stats.CompositeSensitivity(geoidInputs, weights, perturbation)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "sensitivity analysis failed", Detail: err.Error()})
+		return
+	}
+
+	// 8. Build response.
+	scores := make([]CompositeScoreEntry, len(sensResult.BaseScores))
+	for i, cs := range sensResult.BaseScores {
+		scores[i] = CompositeScoreEntry{
+			GEOID:       cs.GEOID,
+			Score:       cs.Score,
+			ContribVars: cs.ContribVars,
+			MissingVars: cs.MissingVars,
+		}
+	}
+
+	var sensInfo *SensitivityInfo
+	if len(sensResult.Scenarios) > 0 {
+		scenarioEntries := make([]PerturbedScenarioEntry, len(sensResult.Scenarios))
+		for i, sc := range sensResult.Scenarios {
+			scoresForScenario := make([]CompositeScoreEntry, len(sc.Scores))
+			for j, cs := range sc.Scores {
+				scoresForScenario[j] = CompositeScoreEntry{
+					GEOID:       cs.GEOID,
+					Score:       cs.Score,
+					ContribVars: cs.ContribVars,
+					MissingVars: cs.MissingVars,
+				}
+			}
+			scenarioEntries[i] = PerturbedScenarioEntry{
+				PerturbedVar: sc.PerturbedVar,
+				Direction:    sc.Direction,
+				Perturbation: sc.Perturbation,
+				Scores:       scoresForScenario,
+			}
+		}
+		sensInfo = &SensitivityInfo{
+			Perturbation: sensResult.Perturbation,
+			Stability:    sensResult.Stability,
+			Scenarios:    scenarioEntries,
+		}
+	}
+
+	resp := CompositeResponse{
+		Scores:      scores,
+		Sensitivity: sensInfo,
+		Method:      method,
+		VariableIDs: req.VariableIDs,
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // ── Internal helpers ────────────────────────────────────────────────────────

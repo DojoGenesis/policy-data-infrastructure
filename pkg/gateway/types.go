@@ -216,6 +216,46 @@ type PolicyResponse struct {
 	GeographicScope string `json:"geographic_scope,omitempty"`
 }
 
+// CompositeRequest is the body for POST /composite.
+type CompositeRequest struct {
+	GEOIDs      []string          `json:"geoids" binding:"required"`
+	VariableIDs []string          `json:"variable_ids" binding:"required"`
+	Weights     map[string]float64 `json:"weights"`
+	Method      string            `json:"method"` // "geometric_mean" (default) or "weighted_zscore"
+	Perturbation float64           `json:"perturbation"` // sensitivity perturbation (default 0.20)
+}
+
+// CompositeResponse is the response body for POST /composite.
+type CompositeResponse struct {
+	Scores      []CompositeScoreEntry  `json:"scores"`
+	Sensitivity *SensitivityInfo       `json:"sensitivity,omitempty"`
+	Method      string                 `json:"method"`
+	VariableIDs []string               `json:"variable_ids"`
+}
+
+// CompositeScoreEntry is a single per-geoid score in a composite response.
+type CompositeScoreEntry struct {
+	GEOID       string   `json:"geoid"`
+	Score       *float64 `json:"score"`
+	ContribVars []string `json:"contributing_variables,omitempty"`
+	MissingVars []string `json:"missing_variables,omitempty"`
+}
+
+// SensitivityInfo holds sensitivity-analysis metadata.
+type SensitivityInfo struct {
+	Perturbation float64                `json:"perturbation"`
+	Stability    map[string]float64     `json:"stability"`
+	Scenarios    []PerturbedScenarioEntry `json:"scenarios,omitempty"`
+}
+
+// PerturbedScenarioEntry is one perturbation direction.
+type PerturbedScenarioEntry struct {
+	PerturbedVar string                 `json:"perturbed_variable"`
+	Direction    string                 `json:"direction"`
+	Perturbation float64                `json:"perturbation"`
+	Scores       []CompositeScoreEntry  `json:"scores"`
+}
+
 // PolicyListResponse is the response body for GET /policies.
 type PolicyListResponse struct {
 	Policies []PolicyResponse `json:"policies"`

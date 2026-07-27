@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Policy Data Infrastructure — Data Explorer</title>
+<meta name="description" content="Open-source national policy data platform. Explore Wisconsin county indicators, compare geographies, and browse evidence-backed policy cards.">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Source Sans 3"', 'system-ui', 'sans-serif'],
+        serif: ['Merriweather', 'Georgia', 'serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
+      colors: {
+        navy:  { DEFAULT: '#1a2744', light: '#243456', lighter: '#2d4060' },
+        cream: '#faf8f4',
+        amber: { DEFAULT: '#d97706', light: '#fef3c7' },
+        teal:  { DEFAULT: '#0e7490', dark: '#0a5c73', light: '#ecfeff' },
+      }
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  [x-cloak] { display: none !important; }
+  .page-transition { transition: opacity 0.15s ease; }
+  .card-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .stat-bar { transition: width 0.5s ease; }
+  .reliability-high { background: #15803d; }
+  .reliability-moderate { background: #d97706; }
+  .reliability-low { background: #b91c1c; }
+  .reliability-unknown { background: #94a3b8; }
+  .delta-positive { color: #15803d; }
+  .delta-negative { color: #b91c1c; }
+  .loading-spinner {
+    border: 3px solid #e2e8f0; border-top: 3px solid #0e7490;
+    border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .nav-link.active { background: rgba(255,255,255,0.12); color: white; }
+  .nav-link:hover { background: rgba(255,255,255,0.08); }
+</style>
+</head>
+<body class="h-full bg-cream font-sans text-gray-800" x-data="app()" x-init="init()">
+
+<!-- ═══════════════ NAVIGATION ═══════════════ -->
+<nav class="bg-navy text-white sticky top-0 z-50 shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center justify-between h-14">
+      <div class="flex items-center gap-2">
+        <a href="#/" @click.prevent="navigate('/')" class="font-bold text-lg tracking-tight">
+          <span class="text-amber-400">PDI</span> <span class="hidden sm:inline text-white/80 font-light">Data Explorer</span>
+        </a>
+      </div>
+      <div class="flex items-center gap-1 text-sm font-medium">
+        <a href="#/" @click.prevent="navigate('/')"
+           class="nav-link px-3 py-1.5 rounded-md transition-colors"
+           :class="{ active: page === 'explorer' }">Counties</a>
+        <a href="#/compare" @click.prevent="navigate('/compare')"
+           class="nav-link px-3 py-1.5 rounded-md transition-colors"
+           :class="{ active: page === 'compare' }">Compare</a>
+        <a href="#/evidence" @click.prevent="navigate('/evidence')"
+           class="nav-link px-3 py-1.5 rounded-md transition-colors"
+           :class="{ active: page === 'evidence' }">Evidence</a>
+        <a href="#/about" @click.prevent="navigate('/about')"
+           class="nav-link px-3 py-1.5 rounded-md transition-colors"
+           :class="{ active: page === 'about' }">About</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+
+  <!-- ────────── PAGE: COUNTY EXPLORER (#/ or #/explorer) ────────── -->
+  <div x-show="page === 'explorer'" x-cloak class="page-transition">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-navy">Wisconsin County Explorer</h1>
+      <p class="text-gray-500 text-sm mt-1">72 counties · Select a county to view detailed indicators</p>
+    </div>
+
+    <!-- Search -->
+    <div class="mb-5">
+      <input type="text" x-model="countySearch" placeholder="Search counties by name..."
+             class="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal focus:border-teal outline-none transition-shadow">
+    </div>
+
+    <!-- Loading state -->
+    <div x-show="countiesLoading" class="flex justify-center py-12">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Error state -->
+    <div x-show="countiesError" class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+      <span x-text="countiesError"></span>
+      <button @click="loadCounties()" class="ml-3 underline font-medium">Retry</button>
+    </div>
+
+    <!-- County grid -->
+    <div x-show="!countiesLoading && !countiesError" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <template x-for="c in filteredCounties" :key="c.geoid">
+        <div @click="navigate('/county/' + c.geoid)"
+             class="card-hover bg-white border border-gray-200 rounded-lg p-3.5 cursor-pointer transition-all">
+          <div class="text-sm font-semibold text-navy truncate" x-text="c.name"></div>
+          <div class="text-xs text-gray-400 mt-0.5" x-text="c.geoid"></div>
+          <div class="mt-2 flex items-baseline gap-1">
+            <span class="text-lg font-bold text-navy" x-text="fmtPop(c.population)"></span>
+            <span class="text-xs text-gray-400">pop.</span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!countiesLoading && !countiesError && filteredCounties.length === 0 && countySearch" class="text-center py-12 text-gray-400">
+      <p class="text-lg">No counties match "<span x-text="countySearch"></span>"</p>
+    </div>
+  </div>
+
+  <!-- ────────── PAGE: COUNTY PROFILE (#/county/:geoid) ────────── -->
+  <div x-show="page === 'profile'" x-cloak class="page-transition">
+    <!-- Back -->
+    <a href="#/" @click.prevent="navigate('/')" class="inline-flex items-center gap-1 text-sm text-teal hover:underline mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Back to counties
+    </a>
+
+    <!-- Loading -->
+    <div x-show="profileLoading" class="flex justify-center py-16">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Error -->
+    <div x-show="profileError" class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+      <span x-text="profileError"></span>
+      <button @click="loadProfile(currentGEOID)" class="ml-3 underline font-medium">Retry</button>
+    </div>
+
+    <!-- Profile content -->
+    <div x-show="!profileLoading && !profileError && profile" x-cloak>
+      <!-- County header -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 mb-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-navy" x-text="profile.name"></h1>
+            <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+              <span x-text="profile.geoid"></span>
+              <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+              <span x-text="profile.level"></span>
+            </div>
+          </div>
+          <div class="flex gap-4 text-right">
+            <div>
+              <div class="text-2xl font-bold text-navy" x-text="fmtPop(profile.population)"></div>
+              <div class="text-xs text-gray-400 uppercase tracking-wide">Population</div>
+            </div>
+            <div x-show="profile.land_area_m2">
+              <div class="text-2xl font-bold text-navy" x-text="fmtArea(profile.land_area_m2)"></div>
+              <div class="text-xs text-gray-400 uppercase tracking-wide">Land Area</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicator dashboard -->
+      <div x-show="profile.indicators && profile.indicators.length > 0">
+        <h2 class="text-lg font-semibold text-navy mb-3" x-text="profile.indicators.length + ' Indicators'"></h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <template x-for="ind in profile.indicators" :key="ind.variable_id">
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <div class="text-sm font-semibold text-navy" x-text="ind.name || ind.variable_id"></div>
+                  <div class="text-xs text-gray-400" x-text="ind.unit || ''"></div>
+                </div>
+                <span class="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full"
+                      :class="reliabilityClass(ind.reliability)"
+                      x-text="ind.reliability || 'unknown'"></span>
+              </div>
+
+              <!-- Value -->
+              <div class="text-2xl font-bold text-navy mb-2" x-text="fmtVal(ind.value)"></div>
+
+              <!-- Bar chart vs state median -->
+              <div class="mb-1" x-show="stateMedians && stateMedians[ind.variable_id] != null">
+                <div class="flex items-center gap-2 text-xs text-gray-500 mb-0.5">
+                  <span>State median</span>
+                  <span class="font-semibold text-gray-600" x-text="fmtVal(stateMedians[ind.variable_id])"></span>
+                </div>
+                <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-700"
+                       :style="{ width: barWidth(ind.variable_id, ind.value) + '%' }"
+                       :class="barColor(ind.variable_id, ind.value)"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                  <span>0</span>
+                  <span x-text="fmtVal(stateMedians[ind.variable_id]) + ' (median)'"></span>
+                  <span x-text="fmtVal(stateMaxs ? stateMaxs[ind.variable_id] : null)"></span>
+                </div>
+              </div>
+
+              <!-- MOE -->
+              <div x-show="ind.margin_of_error != null" class="text-xs text-gray-400 mt-1">
+                MOE: ±<span x-text="fmtVal(ind.margin_of_error)"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- No indicators -->
+      <div x-show="!profile.indicators || profile.indicators.length === 0" class="text-center py-12 text-gray-400">
+        <p>No indicator data available for this geography.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────── PAGE: COMPARE TOOL (#/compare) ────────── -->
+  <div x-show="page === 'compare'" x-cloak class="page-transition">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-navy">Compare Counties</h1>
+      <p class="text-gray-500 text-sm mt-1">Select two counties to compare indicator values side-by-side</p>
+    </div>
+
+    <!-- County selectors -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">County 1</label>
+        <select x-model="compareGEOID1" @change="clearCompare()"
+                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal focus:border-teal outline-none">
+          <option value="">Select a county...</option>
+          <template x-for="c in allCounties" :key="c.geoid">
+            <option :value="c.geoid" x-text="c.name + ' (' + c.geoid + ')'"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">County 2</label>
+        <select x-model="compareGEOID2" @change="clearCompare()"
+                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal focus:border-teal outline-none">
+          <option value="">Select a county...</option>
+          <template x-for="c in allCounties" :key="c.geoid">
+            <option :value="c.geoid" x-text="c.name + ' (' + c.geoid + ')'"></option>
+          </template>
+        </select>
+      </div>
+    </div>
+
+    <button @click="runCompare()" :disabled="!compareGEOID1 || !compareGEOID2 || compareLoading"
+            class="px-6 py-2.5 bg-teal text-white rounded-lg text-sm font-semibold hover:bg-teal-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-6">
+      Compare
+    </button>
+
+    <!-- Loading -->
+    <div x-show="compareLoading" class="flex justify-center py-12">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Error -->
+    <div x-show="compareError" class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mb-6">
+      <span x-text="compareError"></span>
+    </div>
+
+    <!-- Results -->
+    <div x-show="compareResult" x-cloak class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-navy text-white">
+              <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider">Indicator</th>
+              <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" x-text="compareResult.geography1?.name || 'County 1'"></th>
+              <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" x-text="compareResult.geography2?.name || 'County 2'"></th>
+              <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider">Diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(diff, i) in compareResult.differences" :key="diff.variable_id">
+              <tr :class="i % 2 === 0 ? 'bg-gray-50/50' : ''">
+                <td class="px-4 py-2.5">
+                  <span class="font-medium text-navy" x-text="diff.variable_id"></span>
+                </td>
+                <td class="text-right px-4 py-2.5 tabular-nums" x-text="fmtVal(diff.value1)"></td>
+                <td class="text-right px-4 py-2.5 tabular-nums" x-text="fmtVal(diff.value2)"></td>
+                <td class="text-right px-4 py-2.5 tabular-nums font-medium">
+                  <span x-show="diff.diff != null"
+                        :class="diff.diff > 0 ? 'delta-positive' : (diff.diff < 0 ? 'delta-negative' : 'text-gray-400')"
+                        x-text="fmtDiff(diff.diff, diff.pct_diff)"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div x-show="!compareResult.differences || compareResult.differences.length === 0"
+           class="text-center py-8 text-gray-400">
+        No comparable indicators found between these geographies.
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────── PAGE: EVIDENCE CARD GALLERY (#/evidence) ────────── -->
+  <div x-show="page === 'evidence'" x-cloak class="page-transition">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-navy">Evidence Card Gallery</h1>
+      <p class="text-gray-500 text-sm mt-1" x-text="cardStats()"></p>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="cardsLoading" class="flex justify-center py-12">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Error -->
+    <div x-show="cardsError" class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mb-5">
+      <span x-text="cardsError"></span>
+      <button @click="loadCards()" class="ml-3 underline font-medium">Retry</button>
+    </div>
+
+    <div x-show="!cardsLoading && !cardsError && evidenceCards.length > 0" x-cloak>
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mb-5">
+        <button @click="cardFilter = 'All'"
+                class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
+                :class="cardFilter === 'All' ? 'bg-teal text-white border-teal' : 'bg-white border-gray-300 text-gray-600 hover:border-teal'">
+          All
+        </button>
+        <template x-for="cat in cardCategories" :key="cat">
+          <button @click="cardFilter = cat"
+                  class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
+                  :class="cardFilter === cat ? 'bg-teal text-white border-teal' : 'bg-white border-gray-300 text-gray-600 hover:border-teal'"
+                  x-text="cat"></button>
+        </template>
+      </div>
+
+      <!-- Card list -->
+      <div class="space-y-3">
+        <template x-for="card in filteredCards" :key="card.policy_id">
+          <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all cursor-pointer"
+               @click="selectedCard = (selectedCard && selectedCard.policy_id === card.policy_id) ? null : card">
+            <div class="flex items-start gap-3">
+              <span class="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mt-0.5"
+                    :class="qualityBadgeClass(card.data_quality)"
+                    x-text="card.data_quality"></span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-mono text-gray-400" x-text="card.policy_id"></span>
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-navy/5 text-navy font-medium" x-text="card.category"></span>
+                </div>
+                <h3 class="font-semibold text-navy mt-1" x-text="card.policy_title"></h3>
+                <p class="text-sm text-gray-500 mt-1 line-clamp-2" x-text="card.key_finding"></p>
+
+                <!-- Expanded detail -->
+                <div x-show="selectedCard && selectedCard.policy_id === card.policy_id" x-cloak class="mt-4 pt-4 border-t border-gray-100">
+                  <div class="text-sm text-gray-700" x-text="card.key_finding"></div>
+
+                  <!-- Top need counties -->
+                  <div class="mt-3" x-show="card.top_need_counties && card.top_need_counties.length > 0">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Highest Need Counties</div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="c in card.top_need_counties.slice(0, 5)" :key="c.geoid">
+                        <span @click.stop="navigate('/county/' + c.geoid)"
+                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-red-50 text-red-700 font-medium cursor-pointer hover:bg-red-100 transition-colors">
+                          <span x-text="c.county_name"></span>
+                          <span class="opacity-60" x-text="c.display_value != null ? c.display_value : ''"></span>
+                        </span>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Statewide context -->
+                  <div x-show="card.statewide_context" class="mt-3">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Statewide Context</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <template x-for="(ctx, metric) in card.statewide_context" :key="metric">
+                        <div class="bg-gray-50 rounded p-2 text-center">
+                          <div class="text-sm font-bold text-navy" x-text="ctx.mean != null ? fmtVal(ctx.mean) : '—'"></div>
+                          <div class="text-[10px] text-gray-400" x-text="metric.replace(/_/g, ' ') + ' (mean)'"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div x-show="!cardsLoading && !cardsError && filteredCards.length === 0" class="text-center py-12 text-gray-400">
+      <p>No cards match the selected filter.</p>
+    </div>
+  </div>
+
+  <!-- ────────── PAGE: ABOUT (#/about) ────────── -->
+  <div x-show="page === 'about'" x-cloak class="page-transition">
+    <div class="max-w-3xl mx-auto font-serif text-[17px] leading-relaxed">
+
+      <!-- Cover -->
+      <div class="bg-gradient-to-br from-navy via-teal-dark to-teal text-white rounded-2xl p-10 sm:p-16 mb-10 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_65%,rgba(217,119,6,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_75%_25%,rgba(14,116,144,0.06)_0%,transparent_45%)]"></div>
+        <div class="relative">
+          <div class="text-xs font-semibold tracking-[2.5px] uppercase text-white/50 mb-6 font-sans">Open Source · Apache-2.0</div>
+          <h1 class="text-4xl sm:text-5xl font-bold leading-tight mb-6">Policy Data</br><span class="text-amber-300">Infrastructure</span></h1>
+          <p class="text-xl font-light text-white/85 max-w-lg mb-8">From raw public data to the stories that change how decisions are made.</p>
+          <div class="text-sm text-white/30 font-sans">DojoGenesis · Open Source · Madison, WI</div>
+        </div>
+      </div>
+
+      <!-- Five Mornings excerpt -->
+      <section class="mb-10">
+        <div class="text-xs font-bold tracking-[2px] uppercase text-teal font-sans mb-1">What It Produces</div>
+        <h2 class="text-2xl font-bold text-navy mb-1">Five Mornings in Dane County</h2>
+        <div class="w-10 h-1 bg-amber my-3"></div>
+        <p class="text-lg text-gray-600 mb-6">PDI generates narrative documents from tract-level data. This excerpt was produced by the pipeline for a real census tract in south Madison.</p>
+
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div class="bg-navy text-white px-6 py-5">
+            <div class="text-xs font-bold tracking-[2px] uppercase text-amber font-sans mb-1">Household One</div>
+            <div class="text-xl font-bold">The Garcias</div>
+            <div class="text-sm text-white/60 font-sans mt-1">South Madison · Census Tract 14.01</div>
+          </div>
+          <div class="p-6 text-base leading-relaxed">
+            <p class="mb-4">Maria Garcia wakes at 5:40. Her shift at the food processing plant starts at 7:00. Her two children, ages 6 and 9, attend an elementary school 2.3 miles away. There is no before-school childcare in her census tract — it is designated a childcare desert, with zero licensed providers within walking distance. The nearest bus stop is a 12-minute walk, and during the AM peak, buses arrive <span class="font-bold text-red-600 font-sans">fewer than 2 times per hour</span>.</p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="border-l-[3px] border-red-600 bg-red-50 rounded-r-lg p-3"><div class="text-xl font-bold text-navy font-sans">$38K</div><div class="text-[10px] text-gray-500 uppercase tracking-wide font-sans">Household Income</div></div>
+              <div class="border-l-[3px] border-amber bg-amber-light rounded-r-lg p-3"><div class="text-xl font-bold text-navy font-sans">14</div><div class="text-[10px] text-gray-500 uppercase tracking-wide font-sans">Missed School Days</div></div>
+              <div class="border-l-[3px] border-teal bg-teal-light rounded-r-lg p-3"><div class="text-xl font-bold text-navy font-sans">31</div><div class="text-[10px] text-gray-500 uppercase tracking-wide font-sans">Tracts / Zero Bus Stops</div></div>
+              <div class="border-l-[3px] border-red-600 bg-red-50 rounded-r-lg p-3"><div class="text-xl font-bold text-navy font-sans">0</div><div class="text-[10px] text-gray-500 uppercase tracking-wide font-sans">Licensed Childcare</div></div>
+            </div>
+
+            <p>Maria earns <span class="font-bold font-sans">$38,000</span>. Her neighborhood's median household income is <span class="font-bold text-red-600 font-sans">$42,000</span>, placing it in the lowest income bin in the Atlas. Schools serving neighborhoods below $45,000 show an average chronic absence rate of <span class="font-bold text-red-600 font-sans">27.8%</span> — compared to <span class="font-bold text-green-600 font-sans">17.6%</span> in neighborhoods above $100,000. The infrastructure is the difference.</p>
+          </div>
+          <div class="border-t border-gray-200 px-6 py-3 font-sans text-xs text-gray-500 bg-cream">
+            Generated from Census ACS 5-Year, WI DPI attendance data, and Metro Transit GTFS. The names are invented. The numbers are not.
+          </div>
+        </div>
+      </section>
+
+      <!-- Data sources -->
+      <section class="mb-10">
+        <div class="text-xs font-bold tracking-[2px] uppercase text-teal font-sans mb-1">Data & Landscape</div>
+        <h2 class="text-2xl font-bold text-navy mb-1">Twelve Sources. One Platform.</h2>
+        <div class="w-10 h-1 bg-amber my-3"></div>
+
+        <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+          <table class="w-full text-sm font-sans">
+            <thead><tr class="bg-navy text-white"><th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Source</th><th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Category</th><th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Status</th><th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Level</th></tr></thead>
+            <tbody>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">Census ACS 5-Year</td><td class="px-4 py-2.5">Demographic</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">Tract</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">TIGER/Line</td><td class="px-4 py-2.5">Geographic</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">All</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">CDC PLACES</td><td class="px-4 py-2.5">Health</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">Tract</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">EPA EJScreen</td><td class="px-4 py-2.5">Environment</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">Tract</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">USDA Food Access</td><td class="px-4 py-2.5">Food</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">Tract</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">BLS LAUS</td><td class="px-4 py-2.5">Employment</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">County</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">WI DPI</td><td class="px-4 py-2.5">Education</td><td class="px-4 py-2.5 text-green-600 font-semibold">Live</td><td class="px-4 py-2.5">District</td></tr>
+              <tr><td class="px-4 py-2.5">HUD CHAS · Eviction Lab · HRSA HPSA · GTFS · NCES</td><td class="px-4 py-2.5" colspan="3"><span class="text-gray-400">Planned</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Origin -->
+      <section class="bg-navy text-white rounded-2xl p-8 sm:p-12">
+        <div class="text-xs font-bold tracking-[2px] uppercase text-amber font-sans mb-1">Where This Comes From</div>
+        <h2 class="text-2xl font-bold mb-1">From 125 Tracts to 85,000</h2>
+        <div class="w-10 h-1 bg-amber my-3"></div>
+        <p class="mb-4 text-white/85">PDI began as the Madison Equity Atlas — a 22-layer GIS platform analyzing 125 census tracts in Dane County, Wisconsin. The Atlas produced <em>Five Mornings in Madison</em>, 70 evidence cards, a founding partnership proposal, and a field guide for decision makers.</p>
+        <p class="mb-6 text-white/85">The Atlas proved that when tract-level data is structured right, it produces stories that move people and evidence that informs campaigns. PDI generalizes that methodology to run for any county in America.</p>
+        <p class="text-sm text-white/40 font-sans">
+          Go + Python + PostgreSQL/PostGIS · 17 REST endpoints · Apache-2.0<br>
+          <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" class="font-semibold text-amber-300 hover:underline mt-2 inline-block">GitHub → DojoGenesis/policy-data-infrastructure</a>
+        </p>
+      </section>
+
+      <!-- Methodology -->
+      <section class="mt-10" x-data="{ mtab: 'reliability' }">
+        <div class="text-xs font-bold tracking-[2px] uppercase text-teal font-sans mb-1">The Methodology, Explained</div>
+        <h2 class="text-2xl font-bold text-navy mb-1">How the Infrastructure Thinks</h2>
+        <div class="w-10 h-1 bg-amber my-3"></div>
+        <p class="text-gray-600 mb-5">Six methods. Each one grounded in peer-reviewed research.</p>
+
+        <div class="flex flex-wrap gap-1 mb-0 bg-navy rounded-t-xl p-3">
+          <button @click="mtab='reliability'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='reliability'?'bg-cream text-navy':'text-white/60 hover:text-white'">Reliability</button>
+          <button @click="mtab='composites'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='composites'?'bg-cream text-navy':'text-white/60 hover:text-white'">Composites</button>
+          <button @click="mtab='ice'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='ice'?'bg-cream text-navy':'text-white/60 hover:text-white'">ICE</button>
+          <button @click="mtab='factors'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='factors'?'bg-cream text-navy':'text-white/60 hover:text-white'">Factor Analysis</button>
+          <button @click="mtab='spatial'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='spatial'?'bg-cream text-navy':'text-white/60 hover:text-white'">Spatial</button>
+          <button @click="mtab='thresholds'" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  :class="mtab==='thresholds'?'bg-cream text-navy':'text-white/60 hover:text-white'">Thresholds</button>
+        </div>
+
+        <div class="bg-white border border-gray-200 border-t-0 rounded-b-xl p-6 text-base">
+          <!-- Reliability -->
+          <div x-show="mtab === 'reliability'">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">Not All Data Is Equally Trustworthy</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Census Bureau ACS General Handbook, Chapter 7 (2018)</div>
+            <p class="mb-3">The Census Bureau's American Community Survey estimates come with a margin of error. At the tract level, a poverty rate of 12.4% might have a true rate anywhere from 4% to 20%.</p>
+            <div class="bg-cream border border-gray-200 rounded-lg p-4 mb-3">
+              <div class="text-xs font-bold text-red-600 uppercase tracking-wide font-sans mb-2">Example: Tract with CV = 0.40</div>
+              <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="border-l-[3px] border-teal bg-teal-light rounded-r-lg p-2"><div class="text-xl font-bold text-navy font-sans">12.4%</div><div class="text-[10px] text-gray-500 uppercase font-sans">Poverty Rate</div></div>
+                <div class="border-l-[3px] border-amber bg-amber-light rounded-r-lg p-2"><div class="text-xl font-bold text-navy font-sans">±8.1%</div><div class="text-[10px] text-gray-500 uppercase font-sans">Margin of Error</div></div>
+                <div class="border-l-[3px] border-red-600 bg-red-50 rounded-r-lg p-2"><div class="text-xl font-bold text-red-600 font-sans">0.40</div><div class="text-[10px] text-gray-500 uppercase font-sans">CV (Low Reliability)</div></div>
+              </div>
+              <p class="text-sm text-gray-500 mt-3 mb-0">PDI flags this automatically. CV &lt; 0.15 = <span class="text-green-600 font-bold">high</span>, 0.15–0.30 = <span class="text-amber font-bold">moderate</span>, &gt; 0.30 = <span class="text-red-600 font-bold">low</span>.</p>
+            </div>
+          </div>
+
+          <!-- Composites -->
+          <div x-show="mtab === 'composites'" x-data="{ showRaw: false }">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">What Composite Scores Hide</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Stiglitz-Sen-Fitoussi Commission (2009) · PMC (2022, 2023, 2025)</div>
+            <p class="mb-3">Most tools combine indicators into a single "vulnerability score." The CDC Social Vulnerability Index predicts only <strong>38.9%</strong> of COVID case variability (PMC, 2022).</p>
+            <div class="flex gap-2 mb-3">
+              <button @click="showRaw=false" class="px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
+                      :class="!showRaw?'bg-amber text-white':'bg-cream text-gray-500 border border-gray-300'">Composite Score</button>
+              <button @click="showRaw=true" class="px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
+                      :class="showRaw?'bg-teal text-white':'bg-cream text-gray-500 border border-gray-300'">Raw Indicators</button>
+            </div>
+            <div class="bg-cream border border-gray-200 rounded-lg p-4" x-show="!showRaw">
+              <div class="text-xs font-bold text-amber uppercase tracking-wide font-sans mb-2">Tract 14.01 — Composite</div>
+              <div class="flex items-baseline gap-3"><span class="text-5xl font-extrabold text-navy font-sans">87</span><span class="text-base text-gray-500 font-sans">out of 100 · "Very High Risk"</span></div>
+              <p class="text-sm text-gray-500 mt-2 mb-0">Is it poverty? Housing? Transit? Health? The score does not say. A program officer cannot tell whether housing is the problem.</p>
+            </div>
+            <div class="bg-cream border border-gray-200 rounded-lg p-4" x-show="showRaw">
+              <div class="text-xs font-bold text-teal uppercase tracking-wide font-sans mb-2">Tract 14.01 — Raw Indicators</div>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="bg-red-50 rounded p-2 text-center"><div class="text-lg font-bold text-red-600 font-sans">42.1%</div><div class="text-[10px] text-gray-500 font-sans">Chronic Absence</div></div>
+                <div class="bg-red-50 rounded p-2 text-center"><div class="text-lg font-bold text-red-600 font-sans">0</div><div class="text-[10px] text-gray-500 font-sans">Bus Stops</div></div>
+                <div class="bg-amber-light rounded p-2 text-center"><div class="text-lg font-bold text-amber font-sans">48.2%</div><div class="text-[10px] text-gray-500 font-sans">Cost Burdened</div></div>
+                <div class="bg-amber-light rounded p-2 text-center"><div class="text-lg font-bold text-amber font-sans">$38K</div><div class="text-[10px] text-gray-500 font-sans">Income</div></div>
+                <div class="bg-amber-light rounded p-2 text-center"><div class="text-lg font-bold text-amber font-sans">23.1%</div><div class="text-[10px] text-gray-500 font-sans">Uninsured</div></div>
+                <div class="bg-green-50 rounded p-2 text-center"><div class="text-lg font-bold text-green-600 font-sans">4.2%</div><div class="text-[10px] text-gray-500 font-sans">Diabetes</div></div>
+              </div>
+              <p class="text-sm text-gray-500 mt-2 mb-0">Transit is the crisis. Housing burden is severe. Diabetes is low. The composite told you none of this.</p>
+            </div>
+          </div>
+
+          <!-- ICE -->
+          <div x-show="mtab === 'ice'">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">Measuring Polarization Without Collapsing It</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Krieger N, Waterman PD, et al. Health & Place, 2016</div>
+            <p class="mb-3">Race and income are too correlated in the US to "control for" one while studying the other. The ICE measures both simultaneously:</p>
+            <div class="bg-cream border border-gray-200 rounded-lg p-5 text-center mb-3">
+              <div class="text-xl font-light text-navy font-sans tracking-wide mb-4">ICE = (Privileged − Deprived) ÷ Total</div>
+              <div class="grid grid-cols-3 gap-4 text-sm text-gray-500 font-sans">
+                <div><div class="font-bold text-green-600 text-lg">+1.0</div>Entirely privileged</div>
+                <div><div class="font-bold text-gray-600 text-lg">0.0</div>Equal distribution</div>
+                <div><div class="font-bold text-red-600 text-lg">−1.0</div>Entirely deprived</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Factors -->
+          <div x-show="mtab === 'factors'">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">Letting the Data Name Its Own Dimensions</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Kolak et al., JAMA Network Open, 2020 — 72K tracts, 71% variance explained</div>
+            <p class="mb-3">With 50 indicators, which ones belong together? EFA examines the correlations and finds clusters that actually co-occur.</p>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div class="border-l-[3px] border-teal bg-teal-light rounded-r-lg p-3"><div class="font-bold text-sm text-navy font-sans">Socioeconomic Advantage</div><div class="text-xs text-gray-500">Income, education, employment</div></div>
+              <div class="border-l-[3px] border-amber bg-amber-light rounded-r-lg p-3"><div class="font-bold text-sm text-navy font-sans">Limited Mobility</div><div class="text-xs text-gray-500">Vehicle access, aging, disability</div></div>
+              <div class="border-l-[3px] border-green-600 bg-green-50 rounded-r-lg p-3"><div class="font-bold text-sm text-navy font-sans">Urban Core Opportunity</div><div class="text-xs text-gray-500">Density, transit, amenities</div></div>
+              <div class="border-l-[3px] border-purple-600 bg-purple-50 rounded-r-lg p-3"><div class="font-bold text-sm text-navy font-sans">Immigrant Cohesion</div><div class="text-xs text-gray-500">Language, foreign-born, multigenerational</div></div>
+            </div>
+          </div>
+
+          <!-- Spatial -->
+          <div x-show="mtab === 'spatial'">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">Where Disadvantage Concentrates</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Anselin L. Local Indicators of Spatial Association. 1995</div>
+            <p class="mb-3">Drawing a line at the 80th percentile is arbitrary. LISA identifies clusters by actual spatial pattern — which tracts are surrounded by tracts like them.</p>
+            <div class="grid grid-cols-4 text-center mb-3">
+              <div class="bg-red-50 p-3"><div class="text-2xl font-extrabold text-red-600 font-sans">HH</div><div class="text-[10px] text-gray-500 font-sans mt-1">Concentrated disadvantage</div></div>
+              <div class="bg-green-50 p-3"><div class="text-2xl font-extrabold text-green-600 font-sans">LL</div><div class="text-[10px] text-gray-500 font-sans mt-1">Concentrated advantage</div></div>
+              <div class="bg-amber-light p-3"><div class="text-2xl font-extrabold text-amber font-sans">HL</div><div class="text-[10px] text-gray-500 font-sans mt-1">Spatial outlier</div></div>
+              <div class="bg-gray-50 p-3"><div class="text-2xl font-extrabold text-gray-500 font-sans">NS</div><div class="text-[10px] text-gray-500 font-sans mt-1">Not clustered</div></div>
+            </div>
+            <p>The <span class="font-bold text-red-600 font-sans">HH</span> cluster is where policy should focus — not because an analyst drew a line, but because the pattern is statistically significant.</p>
+          </div>
+
+          <!-- Thresholds -->
+          <div x-show="mtab === 'thresholds'">
+            <h3 class="text-lg font-bold text-navy font-sans mb-1">Finding Where Outcomes Change</h3>
+            <div class="text-xs text-teal font-semibold font-sans mb-4">Segmented regression · Madison Equity Atlas, 2026</div>
+            <p class="mb-3">Policy needs thresholds: "at what poverty rate does chronic absence spike?" Segmented regression finds the breakpoint.</p>
+            <div class="bg-cream border border-gray-200 rounded-lg p-4">
+              <div class="text-xs font-bold text-red-600 uppercase tracking-wide font-sans mb-2">Finding: The $100K Threshold</div>
+              <p class="text-sm text-gray-600 mb-0">Below <strong class="text-navy text-lg font-sans">$100K</strong> median household income, chronic absence rises sharply — a <strong class="text-red-600">10.4pp gap</strong> at the threshold. Above $100K, attendance stabilizes.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Competitor comparison -->
+      <section class="mt-10">
+        <div class="text-xs font-bold tracking-[2px] uppercase text-teal font-sans mb-1">Landscape</div>
+        <h2 class="text-2xl font-bold text-navy mb-1">Where PDI Fits</h2>
+        <div class="w-10 h-1 bg-amber my-3"></div>
+        <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+          <table class="w-full text-sm font-sans">
+            <thead><tr class="bg-navy text-white">
+              <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Platform</th>
+              <th class="text-center px-4 py-3 text-xs font-bold uppercase tracking-wider">Open Source</th>
+              <th class="text-center px-4 py-3 text-xs font-bold uppercase tracking-wider">National</th>
+              <th class="text-center px-4 py-3 text-xs font-bold uppercase tracking-wider">API</th>
+              <th class="text-center px-4 py-3 text-xs font-bold uppercase tracking-wider">Narrative</th>
+              <th class="text-center px-4 py-3 text-xs font-bold uppercase tracking-wider">Raw-First</th>
+            </tr></thead>
+            <tbody>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">Census Reporter</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">COI 3.0</td><td class="text-center px-4 py-2.5 text-amber font-medium">Docs</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td><td class="text-center px-4 py-2.5 text-gray-400">Download</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-gray-400">Composite</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">National Equity Atlas</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-amber font-medium">Metro</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-amber font-medium">Dashboard</td></tr>
+              <tr class="border-b border-gray-100"><td class="px-4 py-2.5">Opportunity Insights</td><td class="text-center px-4 py-2.5 text-amber font-medium">Code</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td><td class="text-center px-4 py-2.5 text-gray-400">Download</td><td class="text-center px-4 py-2.5 text-gray-400">No</td><td class="text-center px-4 py-2.5 text-green-600 font-semibold">Yes</td></tr>
+              <tr class="bg-teal-light"><td class="px-4 py-2.5 font-bold text-navy">PDI</td><td class="text-center px-4 py-2.5 text-green-600 font-bold">Yes</td><td class="text-center px-4 py-2.5 text-green-600 font-bold">Yes</td><td class="text-center px-4 py-2.5 text-green-600 font-bold">REST+SSE</td><td class="text-center px-4 py-2.5 text-green-600 font-bold">Go tmpl</td><td class="text-center px-4 py-2.5 text-green-600 font-bold">Yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-400 font-sans">
+  Policy Data Infrastructure · <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" class="text-teal hover:underline">DojoGenesis</a> · Apache-2.0
+</footer>
+
+<!-- ═══════════════ APP LOGIC ═══════════════ -->
+<script>
+function app() {
+  return {
+    // ── Routing ──
+    page: 'explorer',
+    currentGEOID: '',
+
+    init() {
+      this.handleRoute();
+      window.addEventListener('hashchange', () => this.handleRoute());
+      this.loadCounties();
+      this.loadCards();
+    },
+
+    navigate(path) {
+      window.location.hash = path;
+    },
+
+    handleRoute() {
+      const hash = window.location.hash.slice(1) || '/';
+      if (hash === '/' || hash === '/explorer' || hash === '') {
+        this.page = 'explorer';
+        this.currentGEOID = '';
+        if (this.allCounties.length === 0 && !this.countiesLoading) this.loadCounties();
+      } else if (hash.startsWith('/county/')) {
+        this.page = 'profile';
+        const geoid = hash.split('/county/')[1];
+        if (geoid && geoid !== this.currentGEOID) {
+          this.currentGEOID = geoid;
+          this.loadProfile(geoid);
+        }
+      } else if (hash === '/compare') {
+        this.page = 'compare';
+        this.currentGEOID = '';
+        if (this.allCounties.length === 0 && !this.countiesLoading) this.loadCounties();
+      } else if (hash === '/evidence') {
+        this.page = 'evidence';
+        this.currentGEOID = '';
+      } else if (hash === '/about') {
+        this.page = 'about';
+        this.currentGEOID = '';
+      }
+    },
+
+    // ── County Explorer ──
+    allCounties: [],
+    countiesLoading: false,
+    countiesError: '',
+    countySearch: '',
+
+    get filteredCounties() {
+      if (!this.countySearch.trim()) return this.allCounties;
+      const q = this.countySearch.toLowerCase();
+      return this.allCounties.filter(c => c.name.toLowerCase().includes(q));
+    },
+
+    async loadCounties() {
+      this.countiesLoading = true;
+      this.countiesError = '';
+      try {
+        const resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=100');
+        if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
+        const data = await resp.json();
+        this.allCounties = data.items || [];
+      } catch (e) {
+        this.countiesError = `Failed to load counties: ${e.message}`;
+      } finally {
+        this.countiesLoading = false;
+      }
+    },
+
+    // ── County Profile ──
+    profile: null,
+    profileLoading: false,
+    profileError: '',
+    stateMedians: null,
+    stateMaxs: null,
+
+    async loadProfile(geoid) {
+      this.profileLoading = true;
+      this.profileError = '';
+      this.profile = null;
+      this.stateMedians = null;
+      this.stateMaxs = null;
+      try {
+        const resp = await fetch(`/v1/policy/geographies/${geoid}`);
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        this.profile = await resp.json();
+
+        // Compute state medians from all counties
+        if (this.profile.indicators && this.profile.indicators.length > 0) {
+          await this.computeStateStats();
+        }
+      } catch (e) {
+        this.profileError = `Failed to load profile: ${e.message}`;
+      } finally {
+        this.profileLoading = false;
+      }
+    },
+
+    async computeStateStats() {
+      if (this.allCounties.length === 0) await this.loadCounties();
+      if (this.allCounties.length === 0) return;
+
+      // Fetch indicators for all counties to compute medians
+      try {
+        const geoids = this.allCounties.map(c => c.geoid);
+        // Use POST /query to batch-load indicators
+        const resp = await fetch('/v1/policy/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level: 'county',
+            state_fips: '55',
+            limit: 100,
+            variable_ids: this.profile.indicators.map(i => i.variable_id)
+          })
+        });
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        // Build per-variable value arrays
+        const valsByVar = {};
+        for (const geo of (data.items || [])) {
+          for (const ind of (geo.indicators || [])) {
+            if (ind.value != null) {
+              if (!valsByVar[ind.variable_id]) valsByVar[ind.variable_id] = [];
+              valsByVar[ind.variable_id].push(ind.value);
+            }
+          }
+        }
+
+        // Compute medians and maxes
+        this.stateMedians = {};
+        this.stateMaxs = {};
+        for (const [vid, vals] of Object.entries(valsByVar)) {
+          vals.sort((a, b) => a - b);
+          const mid = Math.floor(vals.length / 2);
+          this.stateMedians[vid] = vals.length % 2 === 0 ? (vals[mid - 1] + vals[mid]) / 2 : vals[mid];
+          this.stateMaxs[vid] = vals[vals.length - 1];
+        }
+      } catch (e) {
+        // Silently fail — state median comparison is optional
+      }
+    },
+
+    barWidth(variableId, value) {
+      if (value == null || !this.stateMaxs || !this.stateMaxs[variableId]) return 0;
+      const max = this.stateMaxs[variableId];
+      if (max === 0) return 0;
+      return Math.min(100, Math.max(0, (value / max) * 100));
+    },
+
+    barColor(variableId, value) {
+      if (value == null || !this.stateMedians || !this.stateMedians[variableId]) return 'bg-teal';
+      const median = this.stateMedians[variableId];
+      if (value > median * 1.5) return 'bg-red-500';
+      if (value > median) return 'bg-amber';
+      return 'bg-teal';
+    },
+
+    // ── Compare Tool ──
+    compareGEOID1: '',
+    compareGEOID2: '',
+    compareLoading: false,
+    compareError: '',
+    compareResult: null,
+
+    clearCompare() {
+      this.compareResult = null;
+      this.compareError = '';
+    },
+
+    async runCompare() {
+      if (!this.compareGEOID1 || !this.compareGEOID2) return;
+      if (this.compareGEOID1 === this.compareGEOID2) {
+        this.compareError = 'Please select two different counties.';
+        return;
+      }
+      this.compareLoading = true;
+      this.compareError = '';
+      this.compareResult = null;
+      try {
+        const resp = await fetch('/v1/policy/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ geoid1: this.compareGEOID1, geoid2: this.compareGEOID2 })
+        });
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        this.compareResult = await resp.json();
+      } catch (e) {
+        this.compareError = `Comparison failed: ${e.message}`;
+      } finally {
+        this.compareLoading = false;
+      }
+    },
+
+    // ── Evidence Cards ──
+    evidenceCards: [],
+    cardsLoading: false,
+    cardsError: '',
+    cardFilter: 'All',
+    selectedCard: null,
+
+    get cardCategories() {
+      return [...new Set(this.evidenceCards.map(c => c.category))].sort();
+    },
+
+    get filteredCards() {
+      if (this.cardFilter === 'All') return this.evidenceCards;
+      return this.evidenceCards.filter(c => c.category === this.cardFilter);
+    },
+
+    cardStats() {
+      if (!this.evidenceCards.length) return 'Loading evidence cards...';
+      const cats = new Set(this.evidenceCards.map(c => c.category));
+      return `${this.evidenceCards.length} cards · ${cats.size} categories`;
+    },
+
+    async loadCards() {
+      this.cardsLoading = true;
+      this.cardsError = '';
+      try {
+        const resp = await fetch('/static/evidence_cards.json');
+        if (!resp.ok) throw new Error(`Failed to load cards: ${resp.status}`);
+        this.evidenceCards = await resp.json();
+      } catch (e) {
+        this.cardsError = `Failed to load evidence cards: ${e.message}`;
+      } finally {
+        this.cardsLoading = false;
+      }
+    },
+
+    // ── Utility ──
+    fmtPop(n) {
+      if (n == null) return '—';
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return n.toLocaleString();
+    },
+
+    fmtArea(m2) {
+      if (m2 == null) return '—';
+      const mi2 = m2 / 2589988.11;
+      if (mi2 >= 1000) return (mi2 / 1000).toFixed(1) + 'K mi²';
+      return mi2.toFixed(0) + ' mi²';
+    },
+
+    fmtVal(v) {
+      if (v == null) return '—';
+      if (typeof v === 'number') {
+        if (Math.abs(v) >= 1000000) return v.toExponential(1);
+        if (Math.abs(v) >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+      }
+      return String(v);
+    },
+
+    fmtDiff(diff, pctDiff) {
+      const parts = [];
+      if (diff != null) parts.push((diff > 0 ? '+' : '') + this.fmtVal(diff));
+      if (pctDiff != null) parts.push((pctDiff > 0 ? '+' : '') + pctDiff.toFixed(1) + '%');
+      return parts.join(' ') || '—';
+    },
+
+    reliabilityClass(r) {
+      if (!r) return 'bg-gray-200 text-gray-600';
+      const lower = r.toLowerCase();
+      if (lower === 'high' || lower === 'strong') return 'bg-green-100 text-green-700';
+      if (lower === 'moderate') return 'bg-amber-light text-amber';
+      if (lower === 'low' || lower === 'weak') return 'bg-red-100 text-red-700';
+      return 'bg-gray-200 text-gray-600';
+    },
+
+    qualityBadgeClass(q) {
+      if (!q) return 'bg-gray-100 text-gray-600';
+      const lower = q.toLowerCase();
+      if (lower === 'strong' || lower === 'high') return 'bg-green-100 text-green-700';
+      if (lower === 'moderate') return 'bg-amber-light text-amber';
+      return 'bg-red-100 text-red-700';
+    }
+  }
+}
+</script>
+
+</body>
+</html>

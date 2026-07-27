@@ -81,6 +81,9 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	// Aggregation.
 	group.POST("/aggregate", p.handleAggregate)
 
+	// Composite computation (query-time only, never stored).
+	group.POST("/composite", p.handleComposite)
+
 	// Data source info.
 	group.GET("/sources", p.handleListSources)
 
