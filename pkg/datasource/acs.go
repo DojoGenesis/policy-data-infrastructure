@@ -52,6 +52,7 @@ import (
 	"time"
 
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
+	"github.com/DojoGenesis/policy-data-infrastructure/pkg/stats"
 )
 
 // acsVariable pairs a Census variable code with its human-readable metadata.
@@ -78,7 +79,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B03002_001E",
+		code:    "B03002_001E",
+		moeCode: "B03002_001M",
 		varDef: VariableDef{
 			ID:          "total_population_race",
 			Name:        "Total Population (Race Table)",
@@ -89,7 +91,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B03002_003E",
+		code:    "B03002_003E",
+		moeCode: "B03002_003M",
 		varDef: VariableDef{
 			ID:          "pop_white_non_hispanic",
 			Name:        "White Alone, Not Hispanic or Latino",
@@ -100,7 +103,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B03002_004E",
+		code:    "B03002_004E",
+		moeCode: "B03002_004M",
 		varDef: VariableDef{
 			ID:          "pop_black",
 			Name:        "Black or African American Alone",
@@ -111,7 +115,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B03002_012E",
+		code:    "B03002_012E",
+		moeCode: "B03002_012M",
 		varDef: VariableDef{
 			ID:          "pop_hispanic_latino",
 			Name:        "Hispanic or Latino",
@@ -122,7 +127,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "S1701_C03_001E",
+		code:    "S1701_C03_001E",
+		moeCode: "S1701_C03_001M",
 		varDef: VariableDef{
 			ID:          "poverty_rate",
 			Name:        "Poverty Rate",
@@ -133,7 +139,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B01001_001E",
+		code:    "B01001_001E",
+		moeCode: "B01001_001M",
 		varDef: VariableDef{
 			ID:          "total_population",
 			Name:        "Total Population",
@@ -144,7 +151,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "S2701_C05_001E",
+		code:    "S2701_C05_001E",
+		moeCode: "S2701_C05_001M",
 		varDef: VariableDef{
 			ID:          "uninsured_rate",
 			Name:        "Uninsured Rate",
@@ -155,7 +163,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_001E",
+		code:    "B25106_001E",
+		moeCode: "B25106_001M",
 		varDef: VariableDef{
 			ID:          "housing_units_cost_burden",
 			Name:        "Total Housing Units (Cost Burden Table)",
@@ -166,7 +175,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_006E",
+		code:    "B25106_006E",
+		moeCode: "B25106_006M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_1",
 			Name:        "Owner Cost Burden >30% (Bracket 1)",
@@ -177,7 +187,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_010E",
+		code:    "B25106_010E",
+		moeCode: "B25106_010M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_2",
 			Name:        "Owner Cost Burden >30% (Bracket 2)",
@@ -188,7 +199,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_014E",
+		code:    "B25106_014E",
+		moeCode: "B25106_014M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_3",
 			Name:        "Owner Cost Burden >30% (Bracket 3)",
@@ -199,7 +211,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_018E",
+		code:    "B25106_018E",
+		moeCode: "B25106_018M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_4",
 			Name:        "Owner Cost Burden >30% (Bracket 4)",
@@ -210,7 +223,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_022E",
+		code:    "B25106_022E",
+		moeCode: "B25106_022M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_5",
 			Name:        "Owner Cost Burden >30% (Bracket 5)",
@@ -221,7 +235,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_024E",
+		code:    "B25106_024E",
+		moeCode: "B25106_024M",
 		varDef: VariableDef{
 			ID:          "renter_cost_burden_30pct_1",
 			Name:        "Renter Cost Burden >30% (Bracket 1)",
@@ -232,7 +247,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_028E",
+		code:    "B25106_028E",
+		moeCode: "B25106_028M",
 		varDef: VariableDef{
 			ID:          "renter_cost_burden_30pct_2",
 			Name:        "Renter Cost Burden >30% (Bracket 2)",
@@ -243,7 +259,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_032E",
+		code:    "B25106_032E",
+		moeCode: "B25106_032M",
 		varDef: VariableDef{
 			ID:          "renter_cost_burden_30pct_3",
 			Name:        "Renter Cost Burden >30% (Bracket 3)",
@@ -254,7 +271,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_036E",
+		code:    "B25106_036E",
+		moeCode: "B25106_036M",
 		varDef: VariableDef{
 			ID:          "renter_cost_burden_30pct_4",
 			Name:        "Renter Cost Burden >30% (Bracket 4)",
@@ -265,7 +283,8 @@ var acsVariables = []acsVariable{
 		},
 	},
 	{
-		code: "B25106_040E",
+		code:    "B25106_040E",
+		moeCode: "B25106_040M",
 		varDef: VariableDef{
 			ID:          "renter_cost_burden_30pct_5",
 			Name:        "Renter Cost Burden >30% (Bracket 5)",
@@ -675,6 +694,17 @@ func (s *acsSource) parseResponse(r io.Reader) ([]store.Indicator, error) {
 	for _, ind := range indicators {
 		if !strings.HasSuffix(ind.VariableID, "_moe") {
 			filtered = append(filtered, ind)
+		}
+	}
+
+	// Third pass: compute coefficient of variation and reliability for every
+	// indicator that has both a Value and MarginOfError.
+	for i := range filtered {
+		ind := &filtered[i]
+		if ind.Value != nil && ind.MarginOfError != nil {
+			cv := stats.CoefficientOfVariation(ind.Value, ind.MarginOfError)
+			ind.CV = cv
+			ind.Reliability = stats.ReliabilityLevel(cv)
 		}
 	}
 

@@ -86,6 +86,8 @@ type IndicatorResponse struct {
 	Vintage       string   `json:"vintage"`
 	Value         *float64 `json:"value"`
 	MarginOfError *float64 `json:"margin_of_error,omitempty"`
+	CV            *float64 `json:"cv,omitempty"`
+	Reliability   string   `json:"reliability,omitempty"`
 	RawValue      string   `json:"raw_value,omitempty"`
 }
 
@@ -189,6 +191,16 @@ type PipelineEvent struct {
 	Message string `json:"message,omitempty"`
 	Count   int    `json:"count,omitempty"`
 	Error   string `json:"error,omitempty"`
+}
+
+// FactorScoreResponse is a single factor score in a response.
+type FactorScoreResponse struct {
+	GEOID            string   `json:"geoid"`
+	FactorName       string   `json:"factor_name"`
+	FactorScore      *float64 `json:"factor_score,omitempty"`
+	FactorPercentile *float64 `json:"factor_percentile,omitempty"`
+	LoadingsJSON     string   `json:"loadings_json,omitempty"`
+	AnalysisVintage  string   `json:"analysis_vintage,omitempty"`
 }
 
 // PolicyResponse is a single policy record in a response.

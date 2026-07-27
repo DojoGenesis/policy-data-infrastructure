@@ -381,6 +381,8 @@ CREATE TEMP TABLE indicators_stage (
     vintage        TEXT,
     value          DOUBLE PRECISION,
     margin_of_error DOUBLE PRECISION,
+    cv             DOUBLE PRECISION,
+    reliability    TEXT,
     raw_value      TEXT
 ) ON COMMIT DROP`)
 	if err != nil {
@@ -395,6 +397,8 @@ CREATE TEMP TABLE indicators_stage (
 			ind.Vintage,
 			ind.Value,
 			ind.MarginOfError,
+			ind.CV,
+			ind.Reliability,
 			ind.RawValue,
 		})
 	}
@@ -402,7 +406,7 @@ CREATE TEMP TABLE indicators_stage (
 	_, err = tx.CopyFrom(
 		ctx,
 		pgx.Identifier{"indicators_stage"},
-		[]string{"geoid", "variable_id", "vintage", "value", "margin_of_error", "raw_value"},
+		[]string{"geoid", "variable_id", "vintage", "value", "margin_of_error", "cv", "reliability", "raw_value"},
 		pgx.CopyFromRows(rows),
 	)
 	if err != nil {
@@ -410,12 +414,14 @@ CREATE TEMP TABLE indicators_stage (
 	}
 
 	_, err = tx.Exec(ctx, `
-INSERT INTO indicators (geoid, variable_id, vintage, value, margin_of_error, raw_value)
-SELECT geoid, variable_id, vintage, value, margin_of_error, raw_value
+INSERT INTO indicators (geoid, variable_id, vintage, value, margin_of_error, cv, reliability, raw_value)
+SELECT geoid, variable_id, vintage, value, margin_of_error, cv, reliability, raw_value
 FROM indicators_stage
 ON CONFLICT (geoid, variable_id, vintage) DO UPDATE SET
     value           = EXCLUDED.value,
     margin_of_error = EXCLUDED.margin_of_error,
+    cv              = EXCLUDED.cv,
+    reliability     = EXCLUDED.reliability,
     raw_value       = EXCLUDED.raw_value,
     fetched_at      = now()`)
 	if err != nil {
@@ -491,14 +497,18 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 	}
 
 	rawValueExpr := "COALESCE(raw_value, '')"
+	cvExpr := "cv"
+	reliabilityExpr := "reliability::text"
 	if table == "indicators_latest" {
 		rawValueExpr = "''" // indicators_latest materialized view has no raw_value column
+		cvExpr = "NULL::double precision"
+		reliabilityExpr = "NULL::text"
 	}
 	sql := fmt.Sprintf(`
-SELECT geoid, variable_id, vintage, value, margin_of_error, %s
+SELECT geoid, variable_id, vintage, value, margin_of_error, %s, %s, %s
 FROM %s
 %s
-ORDER BY geoid, variable_id, vintage`, rawValueExpr, table, whereClause)
+ORDER BY geoid, variable_id, vintage`, rawValueExpr, cvExpr, reliabilityExpr, table, whereClause)
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {
@@ -511,7 +521,7 @@ ORDER BY geoid, variable_id, vintage`, rawValueExpr, table, whereClause)
 		var ind Indicator
 		if err := rows.Scan(
 			&ind.GEOID, &ind.VariableID, &ind.Vintage,
-			&ind.Value, &ind.MarginOfError, &ind.RawValue,
+			&ind.Value, &ind.MarginOfError, &ind.CV, &ind.Reliability, &ind.RawValue,
 		); err != nil {
 			return nil, fmt.Errorf("store: QueryIndicators scan: %w", err)
 		}
@@ -926,6 +936,114 @@ ORDER BY a.computed_at DESC`
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("store: ListAnalyses rows: %w", err)
+	}
+	return result, nil
+}
+
+// --- Factor & validated feature operations ---
+
+// PutFactorScores bulk-upserts FactorScore records using a pgx Batch.
+// ON CONFLICT (geoid, factor_name, analysis_vintage) DO UPDATE refreshes
+// all mutable columns.
+func (s *PostgresStore) PutFactorScores(ctx context.Context, scores []FactorScore) error {
+	if len(scores) == 0 {
+		return nil
+	}
+
+	const upsertSQL = `
+INSERT INTO factor_scores (geoid, factor_name, factor_score, factor_percentile, loadings_json, analysis_vintage)
+VALUES ($1, $2, $3, $4, NULLIF($5, '')::jsonb, NULLIF($6, ''))
+ON CONFLICT (geoid, factor_name, analysis_vintage) DO UPDATE SET
+    factor_score      = EXCLUDED.factor_score,
+    factor_percentile = EXCLUDED.factor_percentile,
+    loadings_json     = EXCLUDED.loadings_json`
+
+	batch := &pgx.Batch{}
+	for _, fs := range scores {
+		batch.Queue(upsertSQL,
+			fs.GEOID,
+			fs.FactorName,
+			fs.FactorScore,
+			fs.FactorPercentile,
+			fs.LoadingsJSON,
+			fs.AnalysisVintage,
+		)
+	}
+
+	br := s.pool.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for i, fs := range scores {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("store: PutFactorScores[%d] geoid=%s factor=%s: %w",
+				i, fs.GEOID, fs.FactorName, err)
+		}
+	}
+	return nil
+}
+
+// QueryFactorScores returns all factor scores for a single geography,
+// ordered by factor_name. An empty result set returns an empty slice.
+func (s *PostgresStore) QueryFactorScores(ctx context.Context, geoid string) ([]FactorScore, error) {
+	const q = `
+SELECT geoid, factor_name, factor_score, factor_percentile,
+       COALESCE(loadings_json::text, ''), COALESCE(analysis_vintage, '')
+FROM factor_scores
+WHERE geoid = $1
+ORDER BY factor_name`
+
+	rows, err := s.pool.Query(ctx, q, geoid)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryFactorScores: %w", err)
+	}
+	defer rows.Close()
+
+	var result []FactorScore
+	for rows.Next() {
+		var fs FactorScore
+		if err := rows.Scan(
+			&fs.GEOID, &fs.FactorName, &fs.FactorScore, &fs.FactorPercentile,
+			&fs.LoadingsJSON, &fs.AnalysisVintage,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryFactorScores scan: %w", err)
+		}
+		result = append(result, fs)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryFactorScores rows: %w", err)
+	}
+	return result, nil
+}
+
+// QueryValidatedFeatures returns all validated features for a given scope
+// GEOID, ordered by feature_name. An empty result set returns an empty slice.
+func (s *PostgresStore) QueryValidatedFeatures(ctx context.Context, scopeGEOID string) ([]ValidatedFeature, error) {
+	const q = `
+SELECT geoid, feature_name, feature_value,
+       COALESCE(source_citation, ''), COALESCE(analysis_vintage, '')
+FROM validated_features
+WHERE geoid = $1
+ORDER BY feature_name`
+
+	rows, err := s.pool.Query(ctx, q, scopeGEOID)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryValidatedFeatures: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ValidatedFeature
+	for rows.Next() {
+		var vf ValidatedFeature
+		if err := rows.Scan(
+			&vf.GEOID, &vf.FeatureName, &vf.FeatureValue,
+			&vf.SourceCitation, &vf.AnalysisVintage,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryValidatedFeatures scan: %w", err)
+		}
+		result = append(result, vf)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryValidatedFeatures rows: %w", err)
 	}
 	return result, nil
 }

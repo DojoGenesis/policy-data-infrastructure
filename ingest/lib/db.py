@@ -120,7 +120,7 @@ def bulk_load_geographies(conn: psycopg.Connection, features: list[dict]) -> int
             name = props.get("NAMELSAD") or props.get("NAME") or props.get("name") or geoid
             state_fips = (props.get("STATEFP") or "").zfill(2) or None
             county_fips_raw = props.get("COUNTYFP") or props.get("county_fips")
-            county_fips = (state_fips + county_fips_raw.zfill(3)) if county_fips_raw and state_fips else None
+            county_fips = county_fips_raw.zfill(3) if county_fips_raw else None
             level = _infer_geo_level(geoid)
             aland = props.get("ALAND")
             awater = props.get("AWATER")
@@ -128,20 +128,19 @@ def bulk_load_geographies(conn: psycopg.Connection, features: list[dict]) -> int
             geom_json = json.dumps(geometry) if geometry else None
 
             cur.execute("""
-                INSERT INTO geographies (geoid, level, name, state_fips, county_fips, land_area_sqm, water_area_sqm, geom)
+                INSERT INTO geographies (geoid, level, name, state_fips, county_fips, land_area_m2, boundary)
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s,
-                    CASE WHEN %s IS NOT NULL THEN ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326) ELSE NULL END
+                    %s, %s, %s, %s, %s, %s::double precision,
+                    CASE WHEN %s::text IS NOT NULL THEN ST_SetSRID(ST_GeomFromGeoJSON(%s::text), 4326) ELSE NULL END
                 )
                 ON CONFLICT (geoid) DO UPDATE SET
                     name          = EXCLUDED.name,
-                    land_area_sqm = EXCLUDED.land_area_sqm,
-                    water_area_sqm = EXCLUDED.water_area_sqm,
-                    geom          = EXCLUDED.geom,
+                    land_area_m2  = EXCLUDED.land_area_m2,
+                    boundary      = EXCLUDED.boundary,
                     updated_at    = now()
             """, (
                 geoid, level, name, state_fips, county_fips,
-                aland, awater,
+                aland,
                 geom_json, geom_json,
             ))
             count += cur.rowcount

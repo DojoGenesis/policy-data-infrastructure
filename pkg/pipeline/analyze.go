@@ -19,7 +19,6 @@ var correlationVariables = []string{
 	"pct_poc",
 	"uninsured_rate",
 	"pct_cost_burdened",
-	"total_population",
 }
 
 // AnalyzeStage is Stage 04: queries indicators for all tracts in scope,
@@ -137,6 +136,158 @@ func (a *AnalyzeStage) Run(ctx context.Context, s store.Store, cfg *Config) erro
 	// stats.CoefficientOfVariation(estimate, moe) and stats.ReliabilityLevel(cv)
 	// for each indicator. For now, log placeholder.
 	log.Printf("analyze: CV/reliability computation deferred — MOE data not yet ingested")
+
+	// 4b. Compute Dissimilarity Index (Massey & Denton, 1988) per county.
+	// Group tracts by county FIPS (first 5 chars of GEOID).
+	countyTracts := make(map[string][]int) // countyFIPS -> tract indices
+	for i, geoid := range tractGEOIDs {
+		if len(geoid) >= 5 {
+			cfips := geoid[:5]
+			countyTracts[cfips] = append(countyTracts[cfips], i)
+		}
+	}
+	log.Printf("analyze: computing dissimilarity index across %d counties", len(countyTracts))
+
+	type dissimResult struct {
+		countyFIPS     string
+		blackWhiteD    *float64
+		hispanicWhiteD *float64
+	}
+	var dissimResults []dissimResult
+
+	for cfips, indices := range countyTracts {
+		n := len(indices)
+		popBlack := make([]*float64, n)
+		popWhite := make([]*float64, n)
+		popHispanic := make([]*float64, n)
+
+		for j, idx := range indices {
+			geoid := tractGEOIDs[idx]
+			popBlack[j] = indicatorIdx[ikey{geoid, "pop_black"}]
+			popWhite[j] = indicatorIdx[ikey{geoid, "pop_white_non_hispanic"}]
+			popHispanic[j] = indicatorIdx[ikey{geoid, "pop_hispanic_latino"}]
+		}
+
+		bwD, err := stats.DissimilarityIndex(popBlack, popWhite)
+		if err != nil {
+			log.Printf("analyze: DissimilarityIndex error for county %s (Black-White): %v", cfips, err)
+		}
+
+		hwD, err := stats.DissimilarityIndex(popHispanic, popWhite)
+		if err != nil {
+			log.Printf("analyze: DissimilarityIndex error for county %s (Hispanic-White): %v", cfips, err)
+		}
+
+		if bwD != nil || hwD != nil {
+			dissimResults = append(dissimResults, dissimResult{
+				countyFIPS:     cfips,
+				blackWhiteD:    bwD,
+				hispanicWhiteD: hwD,
+			})
+		}
+	}
+
+	// Persist dissimilarity index results.
+	if len(dissimResults) > 0 {
+		dissimScopeGEOID := cfg.StateFIPS
+		dissimScopeLevel := string(geo.State)
+		if cfg.CountyFIPS != "" {
+			dissimScopeGEOID = cfg.StateFIPS + cfg.CountyFIPS
+			dissimScopeLevel = string(geo.County)
+		}
+
+		// Black-White dissimilarity analysis.
+		bwAnalysisID := fmt.Sprintf("dissimilarity-bw-%s-%s", dissimScopeGEOID, cfg.Vintage)
+		bwResult := store.AnalysisResult{
+			ID:         bwAnalysisID,
+			Type:       "dissimilarity_index",
+			ScopeGEOID: dissimScopeGEOID,
+			ScopeLevel: dissimScopeLevel,
+			Parameters: map[string]interface{}{
+				"metric":    "black_white",
+				"algorithm": "massey_denton_1988",
+				"vintage":   cfg.Vintage,
+			},
+			Results: map[string]interface{}{
+				"counties_analyzed": len(dissimResults),
+			},
+			Vintage: cfg.Vintage,
+		}
+
+		bwDBID, err := s.PutAnalysis(ctx, bwResult)
+		if err != nil {
+			return fmt.Errorf("analyze: PutAnalysis (dissimilarity-bw): %w", err)
+		}
+
+		bwScores := make([]store.AnalysisScore, 0, len(dissimResults))
+		for _, dr := range dissimResults {
+			if dr.blackWhiteD != nil {
+				bwScores = append(bwScores, store.AnalysisScore{
+					AnalysisID: bwDBID,
+					GEOID:      dr.countyFIPS,
+					Score:      *dr.blackWhiteD,
+					Details: map[string]interface{}{
+						"metric": "black_white",
+					},
+				})
+			}
+		}
+		if err := s.PutAnalysisScores(ctx, bwScores); err != nil {
+			return fmt.Errorf("analyze: PutAnalysisScores (dissimilarity-bw): %w", err)
+		}
+
+		// Hispanic-White dissimilarity analysis.
+		hwAnalysisID := fmt.Sprintf("dissimilarity-hw-%s-%s", dissimScopeGEOID, cfg.Vintage)
+		hwResult := store.AnalysisResult{
+			ID:         hwAnalysisID,
+			Type:       "dissimilarity_index",
+			ScopeGEOID: dissimScopeGEOID,
+			ScopeLevel: dissimScopeLevel,
+			Parameters: map[string]interface{}{
+				"metric":    "hispanic_white",
+				"algorithm": "massey_denton_1988",
+				"vintage":   cfg.Vintage,
+			},
+			Results: map[string]interface{}{
+				"counties_analyzed": len(dissimResults),
+			},
+			Vintage: cfg.Vintage,
+		}
+
+		hwDBID, err := s.PutAnalysis(ctx, hwResult)
+		if err != nil {
+			return fmt.Errorf("analyze: PutAnalysis (dissimilarity-hw): %w", err)
+		}
+
+		hwScores := make([]store.AnalysisScore, 0, len(dissimResults))
+		for _, dr := range dissimResults {
+			if dr.hispanicWhiteD != nil {
+				hwScores = append(hwScores, store.AnalysisScore{
+					AnalysisID: hwDBID,
+					GEOID:      dr.countyFIPS,
+					Score:      *dr.hispanicWhiteD,
+					Details: map[string]interface{}{
+						"metric": "hispanic_white",
+					},
+				})
+			}
+		}
+		if err := s.PutAnalysisScores(ctx, hwScores); err != nil {
+			return fmt.Errorf("analyze: PutAnalysisScores (dissimilarity-hw): %w", err)
+		}
+
+		var bwCount, hwCount int
+		for _, dr := range dissimResults {
+			if dr.blackWhiteD != nil {
+				bwCount++
+			}
+			if dr.hispanicWhiteD != nil {
+				hwCount++
+			}
+		}
+		log.Printf("analyze: dissimilarity index complete — %d counties, %d Black-White scores, %d Hispanic-White scores",
+			len(dissimResults), bwCount, hwCount)
+	}
 
 	// 5. Build scope GEOID for the analysis record.
 	scopeGEOID := cfg.StateFIPS

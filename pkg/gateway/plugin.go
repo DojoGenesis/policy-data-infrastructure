@@ -87,4 +87,7 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	// Policy positions.
 	group.GET("/policies", p.handleListPolicies)
 	group.GET("/policies/:id", p.handleGetPolicy)
+
+	// Factor scores.
+	group.GET("/geographies/:geoid/factors", geoidMW, p.handleGetFactors)
 }

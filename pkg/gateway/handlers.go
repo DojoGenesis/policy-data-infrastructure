@@ -238,6 +238,36 @@ func (p *PolicyPlugin) handleGetIndicators(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"geoid": geoid, "indicators": items, "total": len(items)})
 }
 
+// ── GET /geographies/:geoid/factors ──────────────────────────────────────
+
+// handleGetFactors returns factor scores for a single geography.
+func (p *PolicyPlugin) handleGetFactors(c *gin.Context) {
+	geoid := c.Param("geoid")
+
+	scores, err := p.store.QueryFactorScores(c.Request.Context(), geoid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:  "factor score query failed",
+			Detail: err.Error(),
+		})
+		return
+	}
+
+	items := make([]FactorScoreResponse, 0, len(scores))
+	for _, fs := range scores {
+		items = append(items, FactorScoreResponse{
+			GEOID:            fs.GEOID,
+			FactorName:       fs.FactorName,
+			FactorScore:      fs.FactorScore,
+			FactorPercentile: fs.FactorPercentile,
+			LoadingsJSON:     fs.LoadingsJSON,
+			AnalysisVintage:  fs.AnalysisVintage,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"geoid": geoid, "factors": items, "total": len(items)})
+}
+
 // ── POST /query ─────────────────────────────────────────────────────────────
 
 // handleQuery runs a flexible geography query with optional inline indicator
@@ -884,6 +914,8 @@ func (p *PolicyPlugin) indicatorToResponse(ind store.Indicator) IndicatorRespons
 		Vintage:       ind.Vintage,
 		Value:         ind.Value,
 		MarginOfError: ind.MarginOfError,
+		CV:            ind.CV,
+		Reliability:   ind.Reliability,
 		RawValue:      ind.RawValue,
 	}
 	if meta, ok := p.varMeta[ind.VariableID]; ok {

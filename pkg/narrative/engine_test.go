@@ -267,6 +267,13 @@ func (m *mockStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]sto
 func (m *mockStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (m *mockStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error { return nil }
+func (m *mockStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (m *mockStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
+	return nil, nil
+}
 func (m *mockStore) Ping(_ context.Context) error          { return nil }
 func (m *mockStore) Migrate(_ context.Context) error       { return nil }
 func (m *mockStore) RefreshViews(_ context.Context) error  { return nil }

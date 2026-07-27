@@ -65,6 +65,15 @@ func (m *mockValidateStore) QueryPolicies(_ context.Context, _ store.PolicyQuery
 func (m *mockValidateStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error {
+	return nil
+}
+func (m *mockValidateStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
+	return nil, nil
+}
 func (m *mockValidateStore) Ping(_ context.Context) error         { return nil }
 func (m *mockValidateStore) Migrate(_ context.Context) error      { return nil }
 func (m *mockValidateStore) RefreshViews(_ context.Context) error { return nil }

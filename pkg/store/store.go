@@ -29,6 +29,8 @@ type Indicator struct {
 	Vintage       string
 	Value         *float64
 	MarginOfError *float64
+	CV            *float64 // coefficient of variation
+	Reliability   string   // "high", "moderate", "low", or ""
 	RawValue      string
 }
 
@@ -99,6 +101,27 @@ type AggregateResult struct {
 	GroupBy string
 }
 
+// FactorScore represents one factor score for a geography from a statistical
+// factor analysis (e.g. PCA). LoadingsJSON carries per-variable loadings as raw JSON.
+type FactorScore struct {
+	GEOID            string
+	FactorName       string
+	FactorScore      *float64
+	FactorPercentile *float64
+	LoadingsJSON     string
+	AnalysisVintage  string
+}
+
+// ValidatedFeature represents a verified data point with an explicit source
+// citation, providing an audited alternative to raw indicators.
+type ValidatedFeature struct {
+	GEOID           string
+	FeatureName     string
+	FeatureValue    *float64
+	SourceCitation  string
+	AnalysisVintage string
+}
+
 // PolicyRecord represents a single policy position for a candidate.
 type PolicyRecord struct {
 	ID                string
@@ -145,6 +168,11 @@ type Store interface {
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 	ListAnalyses(ctx context.Context) ([]AnalysisSummary, error)
+
+	// Factor & validated feature operations
+	PutFactorScores(ctx context.Context, scores []FactorScore) error
+	QueryFactorScores(ctx context.Context, geoid string) ([]FactorScore, error)
+	QueryValidatedFeatures(ctx context.Context, scopeGEOID string) ([]ValidatedFeature, error)
 
 	// Policy operations
 	PutPolicies(ctx context.Context, policies []PolicyRecord) error

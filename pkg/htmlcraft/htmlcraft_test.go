@@ -59,6 +59,13 @@ func (s *stubStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]sto
 func (s *stubStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (s *stubStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error { return nil }
+func (s *stubStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (s *stubStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
+	return nil, nil
+}
 func (s *stubStore) Ping(_ context.Context) error         { return nil }
 func (s *stubStore) Migrate(_ context.Context) error      { return nil }
 func (s *stubStore) RefreshViews(_ context.Context) error { return nil }
