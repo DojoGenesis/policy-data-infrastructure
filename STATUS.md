@@ -7,12 +7,15 @@
 
 | Item | Value |
 |------|-------|
-| HEAD | `adc6dc9` (pending: frontend rebuild uncommitted — 11 files) |
-| Branch | `main` |
+| HEAD | `c14cc0e` — frontend rebuild, committed + deployed 2026-07-28 |
+| Branch | `cruz/pip-115-pdi-frontend-rebuild` (pushed; **not yet merged to `main`**) |
 | Build | Clean (`go build` ✅ `go vet` ✅ `go test -short` 10/10 ✅) |
-| Tests | 380+ pass, 0 fail |
-| VPS | `5.161.84.125` — `pdi.service` active, binary deployed 2026-07-27 (**predates the frontend rebuild — redeploy needed**) |
+| Tests | 380+ pass, 0 fail · smoke test 24/24 against live |
+| VPS | `5.161.84.125` — `pdi.service` active. Binary `/usr/local/bin/pdi` 59,234,392 bytes, deployed 2026-07-28 19:44 UTC |
+| Rollback | `/usr/local/bin/pdi.bak-20260728-194401` (47,403,170 bytes, the pre-rebuild binary) |
+| Deploy method | `scp` to `/tmp/pdi-new` → `systemctl stop` → `install -o dojo -g dojo -m 755` → `systemctl start`. SSH via the `dojo-gateway` alias (key `~/.ssh/hetzner_deploy_ed25519`); `root@5.161.84.125` direct does **not** authenticate |
 | Live API | `https://api.policydatainfrastructure.com` — all 11 routes 200 |
+| Live verification | All 10 pages byte-identical live vs local; every page has lang-toggle, theme-toggle, footer, and the 9-link nav |
 | Route form | **Extensionless**: `/county?geoid=`, `/map`, `/composite` (singular). `.html` paths 404 — do not test with them |
 | Static Site | `https://policydatainfrastructure.com` (GitHub Pages marketing page only, not the app) |
 | PostGIS | 72 counties, **1,669 tracts** (stale vintage), 51 variables, 17 adapters |
