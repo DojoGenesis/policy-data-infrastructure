@@ -13,11 +13,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/leaflet/leaflet.css">
 <script defer src="/static/alpine.min.js"></script>
+<script defer src="/static/leaflet/leaflet.js"></script>
 <style>
   [x-cloak] { display: none !important; }
 
-  /* ── Local spinner (index.html convention, not in shared styles.css) ── */
+  /* ── Local spinner (index.html convention) ── */
   .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   @media(prefers-reduced-motion:reduce){.spinner{animation:none;}}
@@ -45,152 +47,93 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--muted);
   }
 
-  /* ── Map card overrides for SVG choropleth ───────────────────── */
+  /* ── Map card — Leaflet container ─────────────────────────────── */
   .chart-card.map-card {
     padding: 0;
     overflow: hidden;
     position: relative;
-    min-height: 420px;
+    min-height: 480px;
+    background: var(--bg);
   }
-  .chart-card.map-card svg {
-    display: block;
+  #leaflet-map {
     width: 100%;
-    height: auto;
+    height: 100%;
+    min-height: 480px;
+    background: var(--bg);
   }
 
-  /* ── Tract polygons ──────────────────────────────────────────── */
-  .tract-poly {
-    cursor: pointer;
-    transition: opacity 120ms ease, filter 120ms ease;
+  /* ── Leaflet theming — match Night Shift ─────────────────────── */
+  .leaflet-container {
+    background: var(--bg) !important;
+    font-family: var(--font-sans) !important;
   }
-  .tract-poly:hover {
-    opacity: 0.85;
-    filter: brightness(1.25);
+  .leaflet-control-zoom a {
+    background: var(--raised) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-strong) !important;
   }
-  .tract-poly.tract-missing {
-    cursor: default;
-    opacity: 0.5;
+  .leaflet-control-zoom a:hover {
+    background: var(--surface) !important;
   }
-  .tract-poly.tract-missing:hover {
-    opacity: 0.65;
-    filter: brightness(1.1);
+  .leaflet-control-attribution {
+    background: rgba(10,10,15,0.85) !important;
+    color: var(--subtle) !important;
+    font-size: 0.65rem !important;
   }
-
-  /* ── Skeleton tracts during loading ──────────────────────────── */
-  .tract-skel {
-    fill: var(--surface);
-    stroke: var(--border);
-    stroke-width: 0.4;
-    animation: pulse-subtle 1.8s ease-in-out infinite;
+  .leaflet-control-attribution a {
+    color: var(--muted) !important;
   }
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.55; }
+  .leaflet-popup-content-wrapper {
+    background: var(--raised) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--r-badge) !important;
+    box-shadow: var(--lift-hover) !important;
+    font-family: var(--font-sans) !important;
   }
-  @media (prefers-reduced-motion: reduce) { .tract-skel { animation: none; opacity: 0.4; } }
-
-  /* ── Hover tooltip ───────────────────────────────────────────── */
-  .tract-tooltip {
-    position: absolute;
-    background: var(--raised);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-badge);
-    padding: 8px 12px;
-    font-size: 0.75rem;
+  .leaflet-popup-tip {
+    background: var(--raised) !important;
+  }
+  .leaflet-popup-content {
+    margin: 10px 14px !important;
+    font-size: 0.78rem !important;
+    line-height: 1.55 !important;
+    min-width: 180px;
+  }
+  .leaflet-popup-content strong {
     color: var(--text);
-    pointer-events: none;
-    z-index: 21;
-    box-shadow: var(--lift-hover);
-    min-width: 140px;
-    line-height: 1.4;
-    white-space: nowrap;
-  }
-  .tract-tooltip-name {
     font-weight: 700;
-    font-size: 0.78rem;
+  }
+  .leaflet-popup-content .popup-geoid {
+    color: var(--muted);
+    font-size: 0.68rem;
     margin-bottom: 2px;
   }
-  .tract-tooltip-row {
+  .leaflet-popup-content .popup-row {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    font-size: 0.7rem;
     color: var(--muted);
+    font-size: 0.72rem;
   }
-  .tract-tooltip-row strong { color: var(--text); }
-
-  /* ── Click popup ─────────────────────────────────────────────── */
-  .tract-popup {
-    position: absolute;
-    background: var(--raised);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-badge);
-    padding: 12px 16px;
-    font-size: 0.8rem;
+  .leaflet-popup-content .popup-row span:last-child {
+    font-weight: 600;
     color: var(--text);
-    pointer-events: auto;
-    z-index: 20;
-    box-shadow: var(--lift-hover);
-    min-width: 220px;
-    line-height: 1.5;
   }
-  .tract-popup-close {
-    position: absolute;
-    top: 6px; right: 8px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 2px 6px;
-    line-height: 1;
-  }
-  .tract-popup-close:hover { color: var(--text); }
-  .tract-popup-name {
-    font-weight: 700;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-    padding-right: 18px;
-  }
-  .tract-popup-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    font-size: 0.75rem;
-    color: var(--muted);
-  }
-  .tract-popup-row strong { color: var(--text); }
-  .tract-popup-detail {
-    font-size: 0.68rem;
+  .leaflet-popup-content .popup-detail {
+    font-size: 0.65rem;
     color: var(--subtle);
     margin-top: 4px;
     border-top: 1px solid var(--border);
     padding-top: 4px;
   }
-
-  /* ── County boundaries ───────────────────────────────────────── */
-  .county-boundary {
-    fill: none;
-    stroke: var(--border-strong);
-    stroke-width: 1.5;
-    pointer-events: stroke;
-    cursor: pointer;
+  .leaflet-popup-close-button {
+    color: var(--muted) !important;
+    font-size: 1.1rem !important;
+    padding: 4px 8px !important;
   }
-  .county-boundary:hover {
-    stroke: var(--accent);
-    stroke-width: 2.5;
-  }
-  .county-label-bg {
-    fill: var(--raised);
-    opacity: 0.85;
-    pointer-events: none;
-  }
-  .county-label-text {
-    fill: var(--text);
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 600;
-    pointer-events: none;
+  .leaflet-popup-close-button:hover {
+    color: var(--text) !important;
   }
 
   /* ── Legend ────────────────────────────────────────────────────── */
@@ -329,9 +272,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     flex-shrink: 0;
   }
 
+  /* ── Loading / error overlays ─────────────────────────────────── */
+  .map-loadover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    z-index: 1000;
+    text-align: center;
+  }
+  .map-loadover .spinner { margin: 0 auto 10px; }
+
   /* ── Responsive ───────────────────────────────────────────────── */
   @media (max-width: 600px) {
     .lisa-legend { gap: 8px; }
+    .chart-card.map-card { min-height: 350px; }
+    #leaflet-map { min-height: 350px; }
   }
 </style>
 </head>
@@ -386,25 +344,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </div>
 
     <label class="toggle-wrap">
-      <input type="checkbox" x-model="showCounties" @change="renderOverlay()">
+      <input type="checkbox" x-model="showCounties" @change="toggleCounties()">
       <span class="toggle-track"></span>
       <span class="toggle-label">County borders</span>
     </label>
-
-    <button class="btn btn-ghost" @click="downloadPNG()" :disabled="!mapReady" style="font-size:0.8rem;"
-            title="Download as PNG">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      PNG
-    </button>
   </div>
 
-  <!-- ── LOADING: skeleton SVG ── -->
+  <!-- ── LOADING ── -->
   <div x-show="mapLoading" x-cloak>
-    <div class="chart-card map-card" style="min-height:420px;">
-      <div id="skeleton-map"></div>
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--bg) 70%, transparent);z-index:10;">
-        <div style="text-align:center;">
-          <div class="loader"><div class="spinner"></div></div>
+    <div class="chart-card map-card" style="min-height:480px;">
+      <div id="leaflet-map" style="opacity:0.3;pointer-events:none;"></div>
+      <div class="map-loadover">
+        <div>
+          <div class="spinner"></div>
           <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);" x-text="loadingMessage"></p>
         </div>
       </div>
@@ -427,45 +379,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <!-- Map card -->
     <div>
-      <div class="chart-card map-card" id="map-container" style="position:relative;">
-        <div id="choropleth-map"></div>
-
-        <!-- Hover tooltip -->
-        <div class="tract-tooltip" id="tract-tooltip" x-show="tooltip.visible" x-cloak
-             :style="'left:' + tooltip.x + 'px; top:' + tooltip.y + 'px;'">
-          <div class="tract-tooltip-name" x-text="tooltip.name"></div>
-          <div class="tract-tooltip-row">
-            <span x-text="varLabel"></span>
-            <strong x-text="tooltip.value"></strong>
-          </div>
-          <div class="tract-tooltip-row">
-            <span>Tier</span>
-            <strong x-text="tooltip.cluster"></strong>
-          </div>
-        </div>
-
-        <!-- Click popup -->
-        <div class="tract-popup" id="tract-popup" x-show="popup.visible" x-cloak
-             :style="'left:' + popup.x + 'px; top:' + popup.y + 'px;'">
-          <button class="tract-popup-close" @click="popup.visible = false">&times;</button>
-          <div class="tract-popup-name" x-text="popup.name"></div>
-          <div class="tract-popup-row">
-            <span>GEOID</span>
-            <strong x-text="popup.geoid"></strong>
-          </div>
-          <div class="tract-popup-row">
-            <span x-text="varLabel"></span>
-            <strong x-text="popup.value"></strong>
-          </div>
-          <div class="tract-popup-row">
-            <span>LISA Tier</span>
-            <strong x-text="popup.cluster" :style="'color:' + popup.clusterColor"></strong>
-          </div>
-          <div class="tract-popup-detail" x-show="popup.moran_i != null">
-            Moran's I: <strong x-text="popup.moran_i"></strong>
-            &middot; p-value: <strong x-text="popup.p_value"></strong>
-          </div>
-        </div>
+      <div class="chart-card map-card" id="map-container">
+        <div id="leaflet-map"></div>
       </div>
 
       <!-- ── LEGEND ── -->
@@ -537,25 +452,24 @@ function lisaMap() {
     analysisStatus: {},    // variable_id → status string
 
     tractGeoJSON: null,
-    countyGeoJSON: null,
-
-    _project: null,
-    _viewBox: { W: 900, H: 620 },
-
-    popup:   { visible: false, x: 0, y: 0, geoid: '', name: '', value: '', cluster: '', clusterColor: '', moran_i: null, p_value: null },
-    tooltip: { visible: false, x: 0, y: 0, name: '', value: '', cluster: '' },
+    countyLayer: null,
 
     stats: { total: 0, significant: 0, missingTracts: 0, rows: [] },
 
-    /* ── Color scale (5-tier diverging) ───────────────────────── */
+    // Leaflet refs
+    _map: null,
+    _tractLayer: null,
+    _countyLayer: null,
+
+    /* ── Color scale (5-tier — clearly distinguishable) ──────── */
     clusterColors: {
-      'HH': '#d97706',   // amber-600 — concentrated
+      'HH': '#d97706',   // amber-600 — concentrated disadvantage
       'HL': '#7c3aed',   // violet-600 — high-value outlier
       'LL': '#0d9488',   // teal-600 — concentrated advantage
-      'LH': '#f59e0b',   // amber-500 — low-value outlier
-      'NS': '#3f3f46'    // zinc-700 — not significant
+      'LH': '#e11d48',   // rose-600 — low-value outlier (distinct from HH amber)
+      'NS': '#52525b'    // zinc-600 — not significant
     },
-    MISSING_COLOR: '#18181b',  // zinc-900 — no data
+    MISSING_COLOR: '#27272a',  // zinc-800 — no data
 
     clusterLabels: {
       'HH': 'High-High', 'HL': 'High-Low', 'LL': 'Low-Low',
@@ -566,8 +480,8 @@ function lisaMap() {
       { tier: 'HH', color: '#d97706', label: 'High-High', desc: 'concentrated disadvantage' },
       { tier: 'HL', color: '#7c3aed', label: 'High-Low',  desc: 'high-value outlier' },
       { tier: 'LL', color: '#0d9488', label: 'Low-Low',   desc: 'concentrated advantage' },
-      { tier: 'LH', color: '#f59e0b', label: 'Low-High',  desc: 'low-value outlier' },
-      { tier: 'NS', color: '#3f3f46', label: 'Not Significant', desc: 'no spatial pattern' }
+      { tier: 'LH', color: '#e11d48', label: 'Low-High',  desc: 'low-value outlier' },
+      { tier: 'NS', color: '#52525b', label: 'Not Significant', desc: 'no spatial pattern' }
     ],
 
     availableVariables: [
@@ -595,10 +509,10 @@ function lisaMap() {
 
       try {
         await this.fetchGeoJSON();
-        this.renderSkeleton();
+        this.initLeafletMap();
         await this.discoverAnalyses();
         await this.fetchAllScores();
-        this.renderMap();
+        this.renderGeoJSON();
         this.updateStats();
         this.mapReady = true;
       } catch (e) {
@@ -606,29 +520,49 @@ function lisaMap() {
         console.error('Map init failed:', e);
       } finally {
         this.mapLoading = false;
+        if (this._map) this._map.invalidateSize();
       }
     },
 
-    // ═══════════════ SKELETON ══════════
-    renderSkeleton() {
-      const container = document.getElementById('skeleton-map');
-      if (!container || !this.tractGeoJSON) return;
+    // ═══════════════ LEAFLET MAP INIT ══
+    initLeafletMap() {
+      // Fix Leaflet's default icon path
+      L.Icon.Default.imagePath = '/static/leaflet/images/';
 
-      const fc = this.tractGeoJSON;
-      const { W, H } = this._viewBox;
-      const project = this.buildProjection(fc, W, H);
+      const mapEl = document.getElementById('leaflet-map');
+      if (!mapEl) return;
 
-      let paths = '';
-      fc.features.forEach(f => {
-        const coords = f.geometry.coordinates;
-        if (!coords || !coords[0] || coords[0].length < 3) return;
-        paths += `<path class="tract-skel" d="${this.ringToD(coords[0], project)}"/>`;
+      this._map = L.map(mapEl, {
+        center: [44.5, -89.5],
+        zoom: 7,
+        minZoom: 6,
+        maxZoom: 14,
+        zoomControl: true,
+        attributionControl: true
       });
 
-      container.innerHTML =
-        `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`
-        + `<rect width="${W}" height="${H}" fill="var(--bg)"/>`
-        + `<g>${paths}</g></svg>`;
+      // Dark basemap — free, no key required
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(this._map);
+
+      // Empty GeoJSON layers (filled after data loads)
+      this._tractLayer = L.geoJSON(null, {
+        style: this.tractStyle.bind(this),
+        onEachFeature: this.onEachTract.bind(this)
+      }).addTo(this._map);
+
+      this._countyLayer = L.geoJSON(null, {
+        style: function() { return {
+          fill: false,
+          color: 'rgba(255,255,255,0.22)',
+          weight: 1.5,
+          interactive: false
+        }; }
+      });
+      // County layer starts hidden
     },
 
     // ═══════════════ GEOJSON FETCH ═════
@@ -643,9 +577,13 @@ function lisaMap() {
         throw new Error(`Failed to load tract boundaries: ${e.message}`);
       }
 
+      // Pre-fetch county boundaries
       try {
         const resp = await fetch('/static/counties.geojson');
-        if (resp.ok) { this.countyGeoJSON = await resp.json(); }
+        if (resp.ok) {
+          const countyData = await resp.json();
+          this._countyLayer.addData(countyData);
+        }
       } catch (e) {
         console.warn('County boundaries not available:', e.message);
       }
@@ -776,90 +714,54 @@ function lisaMap() {
 
     // ═══════════════ VARIABLE CHANGE ═══
     onVariableChange() {
-      this.popup.visible = false;
-      this.tooltip.visible = false;
-      this.renderMap();
+      this.renderGeoJSON();
       this.updateStats();
     },
 
-    // ═══════════════ PROJECTION ════════
-    buildProjection(fc, W, H, pad) {
-      pad = pad || 20;
-      const allPts = [];
-      fc.features.forEach(f => {
-        const coords = f.geometry.coordinates;
-        if (coords && coords[0]) coords[0].forEach(pt => allPts.push(pt));
-      });
+    // ═══════════════ RENDER GEOJSON ════
+    renderGeoJSON() {
+      if (!this._tractLayer || !this.tractGeoJSON) return;
 
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      allPts.forEach(p => {
-        minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
-        minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
-      });
-
-      const spanX = Math.max(1e-6, maxX - minX);
-      const spanY = Math.max(1e-6, maxY - minY);
-      const availW = W - pad * 2, availH = H - pad * 2;
-      const scale = Math.min(availW / spanX, availH / spanY);
-      const offX = pad + (availW - spanX * scale) / 2;
-      const offY = pad + (availH - spanY * scale) / 2;
-
-      return pt => [offX + (pt[0] - minX) * scale, offY + (maxY - pt[1]) * scale];  // flip Y for SVG
+      this._tractLayer.clearLayers();
+      this._tractLayer.addData(this.tractGeoJSON);
     },
 
-    ringToD(ring, project) {
-      const pts = ring.map(p => { const q = project(p); return q[0].toFixed(1) + ',' + q[1].toFixed(1); });
-      return 'M' + pts.join('L') + 'Z';
-    },
-
-    centroidOfRing(ring, project) {
-      const n = ring.length;
-      let cx = 0, cy = 0;
-      for (let i = 0; i < n; i++) { const q = project(ring[i]); cx += q[0]; cy += q[1]; }
-      return [cx / n, cy / n];
-    },
-
-    // ═══════════════ RENDER MAP ════════
-    renderMap() {
-      if (!this.tractGeoJSON) return;
-
-      const container = document.getElementById('choropleth-map');
-      if (!container) return;
-
-      const fc = this.tractGeoJSON;
-      const { W, H } = this._viewBox;
-      const project = this.buildProjection(fc, W, H, 20);
-      this._project = project;
-
+    // ═══════════════ TRACT STYLE ══════
+    tractStyle(feature) {
+      const props = feature.properties || {};
+      const geoid = (props.GEOID || '').toString().trim();
       const currentScores = this.scoresByVariable[this.selectedVariable] || {};
+      const scoreInfo = currentScores[geoid] || null;
       const hasScores = Object.keys(currentScores).length > 0;
-      const self = this; const esc = this._esc;
 
-      let tractPaths = '';
+      let color = this.MISSING_COLOR;
+      if (scoreInfo) {
+        color = this.clusterColors[scoreInfo.cluster] || this.clusterColors['NS'];
+      } else if (!hasScores) {
+        color = '#18181b';
+      }
 
-      fc.features.forEach((f, idx) => {
-        const props = f.properties || {};
-        const geoid = (props.GEOID || '').toString().trim();
-        const name = props.tract_name || props.NAME || geoid;
+      return {
+        fillColor: color,
+        weight: 0.5,
+        color: 'rgba(255,255,255,0.06)',
+        fillOpacity: 0.88
+      };
+    },
+
+    // ═══════════════ TRACT POPUPS ═════
+    onEachTract(feature, layer) {
+      const self = this;
+      const props = feature.properties || {};
+      const geoid = (props.GEOID || '').toString().trim();
+      const name = props.tract_name || props.NAME || geoid;
+
+      layer.on('click', function() {
+        const currentScores = self.scoresByVariable[self.selectedVariable] || {};
         const scoreInfo = currentScores[geoid] || null;
 
-        let cluster = 'NS', color = this.MISSING_COLOR;
-        let moranI = null, pVal = null, scoreVal = null, isMissing = true;
-
-        if (scoreInfo) {
-          isMissing = false;
-          cluster = scoreInfo.cluster || 'NS';
-          color = this.clusterColors[cluster] || this.clusterColors['NS'];
-          moranI = scoreInfo.moran_i;
-          pVal = scoreInfo.p_value;
-          scoreVal = scoreInfo.score;
-        } else if (!hasScores) {
-          color = 'var(--surface)';
-          isMissing = true;
-        }
-
-        const indicatorVal = props[this.selectedVariable];
-        const unit = this.varUnits[this.selectedVariable] || '';
+        const indicatorVal = props[self.selectedVariable];
+        const unit = self.varUnits[self.selectedVariable] || '';
         let valStr = '—';
         if (indicatorVal != null) {
           valStr = unit === '$'
@@ -867,125 +769,58 @@ function lisaMap() {
             : Number(indicatorVal).toFixed(1) + unit;
         }
 
-        const moranIStr = moranI != null ? moranI.toFixed(4) : '';
-        const pValStr = pVal != null ? pVal.toFixed(4) : '';
-        const scoreStr = scoreVal != null ? scoreVal.toFixed(4) : '';
-        const clusterLabel = this.clusterLabels[cluster] || cluster;
+        let popupHTML = '<div style="font-family:var(--font-sans);">';
+        popupHTML += '<strong>' + self._esc(name) + '</strong>';
+        popupHTML += '<div class="popup-geoid">GEOID: ' + self._esc(geoid) + '</div>';
 
-        const coords = f.geometry.coordinates;
-        if (!coords || !coords[0] || coords[0].length < 3) return;
+        if (scoreInfo) {
+          const tier = scoreInfo.cluster || 'NS';
+          const tierColor = self.clusterColors[tier] || self.clusterColors['NS'];
+          const tierLabel = self.clusterLabels[tier] || tier;
 
-        const d = this.ringToD(coords[0], project);
-        const cls = isMissing && hasScores ? 'tract-poly tract-missing' : 'tract-poly';
+          popupHTML += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
+          popupHTML += '<div class="popup-row"><span>LISA Tier</span><span style="color:' + tierColor + ';font-weight:700;">' + self._esc(tierLabel) + '</span></div>';
 
-        tractPaths += `<path class="${cls}" d="${d}" fill="${color}" stroke="var(--bg)" stroke-width="0.5"`
-          + ` data-idx="${idx}" data-geoid="${esc(geoid)}" data-name="${esc(name)}"`
-          + ` data-value="${esc(valStr)}" data-cluster="${esc(clusterLabel)}"`
-          + ` data-cluster-code="${esc(cluster)}" data-moran-i="${esc(moranIStr)}"`
-          + ` data-p-value="${esc(pValStr)}" data-score="${esc(scoreStr)}"`
-          + ` data-missing="${isMissing ? '1' : '0'}">`
-          + `<title>${esc(name)}: ${esc(valStr)} — ${esc(clusterLabel)}</title></path>`;
-
-        // Inner rings (holes)
-        if (coords.length > 1) {
-          for (let r = 1; r < coords.length; r++) {
-            if (coords[r].length >= 3) {
-              tractPaths += `<path d="${this.ringToD(coords[r], project)}" fill="var(--bg)" stroke="none" pointer-events="none"/>`;
+          if (scoreInfo.moran_i != null) {
+            popupHTML += '<div class="popup-detail">Moran\'s I: <strong>' + scoreInfo.moran_i.toFixed(4) + '</strong>';
+            if (scoreInfo.p_value != null) {
+              popupHTML += ' &middot; p-value: <strong>' + scoreInfo.p_value.toFixed(4) + '</strong>';
             }
+            popupHTML += '</div>';
           }
-        }
-      });
-
-      // County boundaries
-      let countyPaths = '';
-      let countyLabels = '';
-      if (this.countyGeoJSON) {
-        this.countyGeoJSON.features.forEach(f => {
-          const cprops = f.properties || {};
-          const cname = cprops.NAME || cprops.county_name || '';
-          const coords = f.geometry.coordinates;
-
-          if (coords && coords[0] && coords[0].length >= 3) {
-            const d = this.ringToD(coords[0], project);
-            countyPaths += `<path class="county-boundary" d="${d}" data-layer="county" data-county="${esc(cname)}">`
-              + `<title>${esc(cname)}</title></path>`;
-
-            const [cx, cy] = this.centroidOfRing(coords[0], project);
-            countyLabels +=
-              `<rect class="county-label-bg" x="${(cx - cname.length * 3.5).toFixed(1)}" y="${(cy - 8).toFixed(1)}"`
-              + ` width="${(cname.length * 7).toFixed(1)}" height="16" rx="3" data-layer="county-label"/>`
-              + `<text class="county-label-text" x="${cx.toFixed(1)}" y="${(cy + 3).toFixed(1)}"`
-              + ` text-anchor="middle" data-layer="county-label">${esc(cname)}</text>`;
-          }
-        });
-      }
-
-      const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LISA cluster map of Wisconsin census tracts">`
-        + `<rect width="${W}" height="${H}" fill="var(--bg)"/>`
-        + `<g class="tracts-layer">${tractPaths}</g>`
-        + `<g class="counties-layer" style="display:${this.showCounties ? 'block' : 'none'}">${countyPaths}</g>`
-        + `<g class="county-labels-layer" style="display:${this.showCounties ? 'block' : 'none'}">${countyLabels}</g>`
-        + `</svg>`;
-
-      container.innerHTML = svg;
-
-      // ── Event delegation ──
-      container.addEventListener('mousemove', function(e) {
-        const tractPoly = e.target.closest('.tract-poly');
-        if (tractPoly) {
-          const name = tractPoly.getAttribute('data-name');
-          const value = tractPoly.getAttribute('data-value');
-          const cluster = tractPoly.getAttribute('data-cluster');
-          const mapEl = document.getElementById('map-container');
-          const rect = mapEl.getBoundingClientRect();
-          const x = e.clientX - rect.left + 14;
-          const y = e.clientY - rect.top - 10;
-
-          self.tooltip = {
-            visible: true,
-            x: Math.min(x, rect.width - 160),
-            y: Math.max(6, y - 60),
-            name: name, value: value, cluster: cluster
-          };
         } else {
-          self.tooltip.visible = false;
+          popupHTML += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
+          popupHTML += '<div class="popup-detail">No LISA score data for this tract</div>';
+        }
+
+        popupHTML += '</div>';
+
+        layer.bindPopup(popupHTML, { maxWidth: 280, className: 'lisa-popup' }).openPopup();
+      });
+
+      layer.on('mouseover', function() {
+        layer.setStyle({ weight: 1.5, color: 'rgba(255,255,255,0.3)' });
+        if (!layer.isPopupOpen()) {
+          layer.bindTooltip(self._esc(name), { sticky: true, direction: 'top', className: 'lisa-tooltip' }).openTooltip();
         }
       });
 
-      container.addEventListener('click', function(e) {
-        const tractPoly = e.target.closest('.tract-poly');
-        if (tractPoly) {
-          const geoid = tractPoly.getAttribute('data-geoid');
-          const name = tractPoly.getAttribute('data-name');
-          const value = tractPoly.getAttribute('data-value');
-          const cluster = tractPoly.getAttribute('data-cluster');
-          const clusterCode = tractPoly.getAttribute('data-cluster-code');
-          const moranI = tractPoly.getAttribute('data-moran-i');
-          const pVal = tractPoly.getAttribute('data-p-value');
-
-          const mapEl = document.getElementById('map-container');
-          const rect = mapEl.getBoundingClientRect();
-          const x = e.clientX - rect.left + 12;
-          const y = e.clientY - rect.top - 10;
-
-          self.popup = {
-            visible: true,
-            x: Math.min(x, rect.width - 240),
-            y: Math.max(10, y - 160),
-            geoid: geoid, name: name, value: value, cluster: cluster,
-            clusterColor: self.clusterColors[clusterCode] || self.clusterColors['NS'],
-            moran_i: moranI && moranI !== '' ? moranI : null,
-            p_value: pVal && pVal !== '' ? pVal : null
-          };
-          e.stopPropagation();
-        } else if (!e.target.closest('.tract-popup') && !e.target.closest('.county-boundary')) {
-          self.popup.visible = false;
-        }
+      layer.on('mouseout', function() {
+        layer.setStyle({ weight: 0.5, color: 'rgba(255,255,255,0.06)' });
+        layer.unbindTooltip();
       });
+    },
 
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') { self.popup.visible = false; self.tooltip.visible = false; }
-      }, { once: false });
+    // ═══════════════ COUNTY TOGGLE ═════
+    toggleCounties() {
+      if (!this._map || !this._countyLayer) return;
+      if (this.showCounties) {
+        this._countyLayer.addTo(this._map);
+        // Ensure county layer is behind tracts
+        this._countyLayer.bringToBack();
+      } else {
+        this._map.removeLayer(this._countyLayer);
+      }
     },
 
     // ═══════════════ UPDATE STATS ══════
@@ -1012,55 +847,6 @@ function lisaMap() {
           tier, label: this.clusterLabels[tier], color: this.clusterColors[tier], count: counts[tier]
         }))
       };
-    },
-
-    // ═══════════════ COUNTY OVERLAY TOGGLE
-    renderOverlay() {
-      const container = document.getElementById('choropleth-map');
-      if (!container) return;
-      const display = this.showCounties ? 'block' : 'none';
-      const layers = container.querySelectorAll('[data-layer="county"], [data-layer="county-label"]');
-      layers.forEach(el => { el.style.display = display; });
-      const countiesGroup = container.querySelector('.counties-layer');
-      const labelsGroup = container.querySelector('.county-labels-layer');
-      if (countiesGroup) countiesGroup.style.display = display;
-      if (labelsGroup) labelsGroup.style.display = display;
-    },
-
-    // ═══════════════ DOWNLOAD PNG ═════
-    downloadPNG() {
-      const svgEl = document.querySelector('#choropleth-map svg');
-      if (!svgEl) { alert('No map to download.'); return; }
-
-      const clone = svgEl.cloneNode(true);
-      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-      const bgRect = clone.querySelector('rect');
-      if (bgRect) {
-        const cs = getComputedStyle(document.documentElement);
-        bgRect.setAttribute('fill', cs.getPropertyValue('--bg').trim() || '#0a0a0f');
-      }
-
-      const svgData = new XMLSerializer().serializeToString(clone);
-      const canvas = document.createElement('canvas');
-      const { W, H } = this._viewBox;
-      canvas.width = W * 2; canvas.height = H * 2;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(2, 2);
-
-      const img = new Image();
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-        const a = document.createElement('a');
-        a.download = `lisa-map-${this.selectedVariable}.png`;
-        a.href = canvas.toDataURL('image/png');
-        a.click();
-      };
-      img.src = url;
     },
 
     // ═══════════════ HELPERS ══════════

@@ -9,7 +9,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Compare Counties — PDI</title>
-<meta name="description" content="Side-by-side county comparison — compare indicators across Wisconsin counties with delta highlighting and statistical summaries.">
+<meta name="description" content="Side-by-side county comparison — compare indicators across Wisconsin counties with delta highlighting.">
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
@@ -17,24 +17,33 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
   [x-cloak] { display: none !important; }
 
-  /* ── Page hero ───────────────────────────────────────────── */
-  .compare-hero {
-    margin-bottom: clamp(20px, 3vw, 32px);
+  /* ── Page heading ──────────────────────────────────────────── */
+  .compare-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: clamp(16px, 2.5vw, 24px);
   }
-  .compare-hero h1 {
-    font-size: clamp(1.5rem, 4vw, 2.2rem);
+  .compare-toolbar h1 {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
     font-weight: 700;
     color: var(--text);
     letter-spacing: -0.01em;
-    margin-bottom: 6px;
-  }
-  .compare-hero-subtitle {
-    font-size: 0.875rem;
-    color: var(--muted);
     margin: 0;
   }
+  .compare-toolbar .back-link {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .compare-toolbar .back-link:hover { color: var(--text); }
 
-  /* ── County selectors ─────────────────────────────────────── */
+  /* ── Selector row ──────────────────────────────────────────── */
   .selector-row {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -42,13 +51,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     align-items: start;
     margin-bottom: clamp(16px, 2.5vw, 24px);
   }
+  .selector-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .selector-label {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 8px;
   }
   .selector-vs {
     font-size: 0.85rem;
@@ -58,86 +71,54 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     text-align: center;
   }
 
-  /* ── Selected county chip ─────────────────────────────────── */
-  .selected-county {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-badge);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.85rem;
-  }
-  .selected-county-name {
-    font-weight: 600;
-    color: var(--text);
-  }
-  .selected-county-geoid {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--subtle);
-  }
-  .selected-county-pop {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--accent);
-    font-weight: 600;
-    margin-left: auto;
-    flex-shrink: 0;
-  }
-  .selected-county-clear {
-    background: none;
-    border: none;
-    color: var(--subtle);
-    cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
-    padding: 0 2px;
-    flex-shrink: 0;
-  }
-  .selected-county-clear:hover { color: var(--gated); }
-
-  /* ── Autocomplete dropdown ────────────────────────────────── */
+  /* ── Autocomplete dropdown ─────────────────────────────────── */
   .autocomplete {
     position: relative;
   }
   .autocomplete input {
     width: 100%;
+    padding: 0.55em 0.75em;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    background: var(--plane-base);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    outline: none;
+    transition: border-color 140ms ease;
+  }
+  .autocomplete input:focus {
+    border-color: var(--accent);
+  }
+  .autocomplete input::placeholder {
+    color: var(--subtle);
   }
   .autocomplete-dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     left: 0;
     right: 0;
     z-index: 40;
-    max-height: 280px;
+    max-height: 260px;
     overflow-y: auto;
     background: var(--raised);
     border: 1px solid var(--border-strong);
     border-radius: var(--r-badge);
     box-shadow: var(--lift-hover);
-    margin-top: 4px;
   }
   .autocomplete-item {
-    padding: 10px 14px;
+    padding: 9px 12px;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     color: var(--text);
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 8px;
-    transition: background-color 120ms ease;
+    gap: 6px;
+    transition: background-color 100ms ease;
   }
-  .autocomplete-item:first-child {
-    border-radius: var(--r-badge) var(--r-badge) 0 0;
-  }
-  .autocomplete-item:last-child {
-    border-radius: 0 0 var(--r-badge) var(--r-badge);
-  }
+  .autocomplete-item:first-child { border-radius: var(--r-badge) var(--r-badge) 0 0; }
+  .autocomplete-item:last-child  { border-radius: 0 0 var(--r-badge) var(--r-badge); }
   .autocomplete-item:hover,
   .autocomplete-item.highlighted {
     background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -150,27 +131,27 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     white-space: nowrap;
   }
   .autocomplete-item .item-geoid {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--subtle);
     font-family: var(--font-mono);
     flex-shrink: 0;
   }
   .autocomplete-item .item-pop {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--accent);
     font-family: var(--font-mono);
-    flex-shrink: 0;
     font-weight: 500;
+    flex-shrink: 0;
   }
   .autocomplete-empty {
-    padding: 12px 14px;
-    font-size: 0.8rem;
+    padding: 10px 12px;
+    font-size: 0.78rem;
     color: var(--muted);
     text-align: center;
   }
   .autocomplete-loading {
-    padding: 12px 14px;
-    font-size: 0.8rem;
+    padding: 10px 12px;
+    font-size: 0.78rem;
     color: var(--muted);
     text-align: center;
     display: flex;
@@ -179,101 +160,125 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     gap: 8px;
   }
 
-  /* ── Spinner ─────────────────────────────────────────────── */
-  .selector-spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+  /* ── Selected county chip ──────────────────────────────────── */
+  .selected-county {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    font-size: 0.85rem;
   }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  .selected-county-name {
+    font-weight: 600;
+    color: var(--text);
   }
+  .selected-county-pop {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .selected-county-geoid {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--subtle);
+    flex-shrink: 0;
+  }
+  .selected-county-clear {
+    background: none;
+    border: none;
+    color: var(--subtle);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .selected-county-clear:hover { color: var(--gated); }
 
-  /* ── Compare button row ───────────────────────────────────── */
+  /* ── Compare button row ────────────────────────────────────── */
   .compare-action {
     text-align: center;
-    margin-bottom: clamp(24px, 4vw, 40px);
+    margin-bottom: clamp(20px, 3vw, 32px);
   }
 
-  /* ── Results header ───────────────────────────────────────── */
-  .results-header {
+  /* ── Stat summary line ─────────────────────────────────────── */
+  .compare-summary {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .results-title {
-    font-size: clamp(1.1rem, 2.6vw, 1.4rem);
-    font-weight: 600;
+    gap: 6px 16px;
+    margin-bottom: clamp(14px, 2vw, 22px);
+    padding: 10px 14px;
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    font-size: 0.82rem;
     color: var(--text);
-    margin: 0;
   }
-  .results-count {
-    font-size: 0.75rem;
+  .compare-summary .label {
     color: var(--muted);
-  }
-
-  /* ── Geo summary cards (extend .card) ──────────────────────── */
-  .geo-summary-card.card-a {
-    border-top: 2px solid var(--accent);
-  }
-  .geo-summary-card.card-b {
-    border-top: 2px solid var(--info);
-  }
-  .geo-summary-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(12px, 2vw, 20px);
-    margin-bottom: clamp(20px, 3vw, 32px);
-  }
-  .geo-summary-name {
-    font-size: 1.1rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .geo-summary-meta {
-    font-size: 0.7rem;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    margin-bottom: 8px;
-  }
-  .geo-summary-stat {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: 0.85rem;
-  }
-  .geo-summary-stat-label {
-    color: var(--muted);
-    font-size: 0.7rem;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
-  .geo-summary-stat-value {
+  .compare-summary .sep {
+    color: var(--border);
+    margin: 0 2px;
+  }
+  .compare-summary .lead {
     font-weight: 600;
+  }
+  .compare-summary .lead-a { color: var(--live); }
+  .compare-summary .lead-b { color: var(--gated); }
+
+  /* ── Category filter bar ───────────────────────────────────── */
+  .cat-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .cat-tab {
+    padding: 0.3em 0.7em;
+    font-size: 0.72rem;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 120ms ease;
+    white-space: nowrap;
+  }
+  .cat-tab:hover {
     color: var(--text);
+    border-color: var(--accent);
+  }
+  .cat-tab.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 
-  /* ── Compare table (extends .data-table) ───────────────────── */
+  /* ── Compare table ─────────────────────────────────────────── */
   .compare-table-wrap {
     overflow-x: auto;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-card);
-    margin-bottom: clamp(16px, 2.5vw, 24px);
   }
   .compare-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.825rem;
     font-variant-numeric: tabular-nums;
   }
   .compare-table thead {
@@ -282,9 +287,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     z-index: 1;
   }
   .compare-table th {
-    padding: 0.65em 0.85em;
+    padding: 0.6em 0.8em;
     text-align: left;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -294,46 +299,47 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     white-space: nowrap;
     cursor: pointer;
     user-select: none;
-    transition: color 140ms ease;
+    transition: color 120ms ease;
   }
-  .compare-table th:hover {
-    color: var(--text);
-  }
-  .compare-table th.sorted {
-    color: var(--accent);
-  }
+  .compare-table th:hover { color: var(--text); }
+  .compare-table th.sorted { color: var(--accent); }
   .compare-table th .sort-arrow {
-    font-size: 0.6rem;
-    margin-left: 3px;
+    font-size: 0.55rem;
+    margin-left: 2px;
     opacity: 0.5;
   }
-  .compare-table th.sorted .sort-arrow {
-    opacity: 1;
-  }
-  .compare-table th.num-header {
-    text-align: right;
-  }
+  .compare-table th.sorted .sort-arrow { opacity: 1; }
+  .compare-table th.num { text-align: right; }
   .compare-table td {
-    padding: 0.55em 0.85em;
+    padding: 0.5em 0.8em;
     border-bottom: 1px solid var(--border);
     vertical-align: baseline;
   }
   .compare-table tbody tr:nth-child(even) {
     background: color-mix(in srgb, var(--text) 2%, transparent);
   }
-  .compare-table tbody tr:last-child td {
-    border-bottom: none;
-  }
+  .compare-table tbody tr:last-child td { border-bottom: none; }
   .compare-table tbody tr:hover {
     background: color-mix(in srgb, var(--accent) 5%, transparent);
   }
+
+  /* ── Max-delta row highlight ───────────────────────────────── */
+  .compare-table tbody tr.row-max-delta {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
+  .compare-table tbody tr.row-max-delta:hover {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
   .compare-table .var-name {
     font-weight: 500;
     color: var(--text);
-    max-width: 280px;
+    max-width: 260px;
   }
   .compare-table .var-unit {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--subtle);
     display: block;
     margin-top: 1px;
@@ -349,7 +355,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 5px;
   }
   .compare-table .delta {
     text-align: right;
@@ -357,115 +363,23 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     white-space: nowrap;
   }
-  .compare-table .pct-delta {
-    text-align: right;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .delta-green {
-    color: var(--live);
-  }
-  .delta-red {
-    color: var(--gated);
-  }
-  .delta-neutral {
-    color: var(--subtle);
-  }
 
-  /* ── Reliability badges ───────────────────────────────────── */
-  .rel-badge {
+  .delta-green  { color: var(--live); }
+  .delta-red    { color: var(--gated); }
+  .delta-neutral { color: var(--subtle); }
+
+  /* ── Reliability dots ──────────────────────────────────────── */
+  .rel-dot {
     display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .rel-badge-high { background: var(--live); }
-  .rel-badge-moderate { background: var(--gated); }
-  .rel-badge-low { background: var(--gated); opacity: 0.5; }
-  .rel-badge-unknown { background: var(--subtle); }
-
-  /* ── Delta bar chart ───────────────────────────────────────── */
-  .delta-bar-card {
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .delta-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    font-size: 0.78rem;
-  }
-  .delta-bar-label {
-    width: 180px;
-    flex-shrink: 0;
-    text-align: right;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.76rem;
-  }
-  .delta-bar-wrap {
-    flex: 1;
-    min-width: 60px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .delta-bar-track {
-    flex: 1;
-    height: 10px;
-    background: color-mix(in srgb, var(--text) 8%, transparent);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-  }
-  .delta-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 500ms ease;
-    position: absolute;
-  }
-  .delta-bar-fill--a-better {
-    background: var(--live);
-    left: 50%;
-  }
-  .delta-bar-fill--b-better {
-    background: var(--gated);
-    right: 50%;
-  }
-  .delta-bar-val {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--muted);
-    min-width: 70px;
-    flex-shrink: 0;
-  }
-
-  /* ── Category filter tabs ──────────────────────────────────── */
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: clamp(8px, 1.5vw, 16px);
-    margin-bottom: clamp(12px, 2vw, 20px);
-  }
-
-  /* ── State messages ────────────────────────────────────────── */
-  .state-no-indicators {
-    padding: clamp(32px, 5vw, 56px) 0;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.95rem;
-  }
-  .selector-error {
-    font-size: 0.7rem;
-    color: var(--gated);
-    margin-top: 6px;
-  }
+  .rel-dot-high     { background: var(--live); }
+  .rel-dot-moderate { background: var(--gated); }
+  .rel-dot-low      { background: var(--gated); opacity: 0.5; }
+  .rel-dot-unknown  { background: var(--subtle); }
 
   /* ── Skeleton loading ──────────────────────────────────────── */
   .skeleton-table {
@@ -473,18 +387,31 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-collapse: collapse;
   }
   .skeleton-table td {
-    padding: 0.55em 0.85em;
+    padding: 0.5em 0.8em;
     border-bottom: 1px solid var(--border);
   }
   .skeleton-bar {
-    height: 12px;
-    border-radius: 4px;
+    height: 11px;
+    border-radius: 3px;
     background: color-mix(in srgb, var(--text) 8%, transparent);
     animation: skel-pulse 1.5s ease-in-out infinite;
   }
   @keyframes skel-pulse {
     0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.8; }
+    50%      { opacity: 0.8; }
+  }
+
+  /* ── State messages ────────────────────────────────────────── */
+  .state-no-results {
+    padding: clamp(32px, 5vw, 56px) 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .selector-error {
+    font-size: 0.68rem;
+    color: var(--gated);
+    margin-top: 4px;
   }
 
   /* ── Responsive ────────────────────────────────────────────── */
@@ -496,23 +423,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       padding-top: 0;
       padding-bottom: 4px;
     }
-    .geo-summary-row {
-      grid-template-columns: 1fr;
-    }
-    .filter-bar {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .delta-bar-label {
-      width: 100px;
-      font-size: 0.7rem;
-    }
     .compare-table .var-name {
-      max-width: 160px;
-      font-size: 0.8rem;
+      max-width: 140px;
+      font-size: 0.78rem;
     }
-    .stat-row {
-      grid-template-columns: 1fr 1fr;
+    .compare-summary {
+      font-size: 0.76rem;
     }
   }
 </style>
@@ -536,22 +452,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <!-- ══════════════════ MAIN ════════════════════ -->
 <main class="wrap" x-data="compareTool()" x-init="init()">
 
-  <!-- ── Back link ──────────────────────────────── -->
-  <a href="/" class="btn btn-ghost" style="margin-bottom:clamp(16px,2.5vw,24px);display:inline-flex;align-items:center;gap:6px;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to counties
-  </a>
-
-  <!-- ── Hero ──────────────────────────────────── -->
-  <div class="compare-hero reveal">
-    <h1>County Comparison</h1>
-    <p class="compare-hero-subtitle">Select two Wisconsin counties to compare indicators side by side</p>
+  <!-- ── Toolbar: heading + back link ──────────────── -->
+  <div class="compare-toolbar">
+    <h1>Compare Counties</h1>
+    <a href="/" class="back-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Explorer
+    </a>
   </div>
 
   <!-- ═════════════ SELECTORS ═════════════════════ -->
-  <div class="selector-row reveal">
+  <div class="selector-row">
     <!-- County A -->
-    <div>
+    <div class="selector-field">
       <div class="selector-label">County A</div>
       <div class="autocomplete" @click.outside="dropdown1 = false">
         <input
@@ -571,11 +484,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         >
         <div x-show="dropdown1" x-cloak class="autocomplete-dropdown" @click.stop="">
           <div x-show="countyListLoading" class="autocomplete-loading">
-            <span class="selector-spinner"></span> Loading counties…
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 0.6s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/></svg>
+            Loading counties…
           </div>
           <div x-show="countyListError" class="autocomplete-empty" style="color:var(--gated);">
             <span x-text="countyListError"></span>
-            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.7rem;margin-top:4px;">Retry</button>
+            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;">Retry</button>
           </div>
           <div x-show="!countyListLoading && !countyListError && filteredCounties1.length === 0" class="autocomplete-empty">
             No counties match "<span x-text="search1"></span>"
@@ -607,7 +521,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="selector-vs">vs</div>
 
     <!-- County B -->
-    <div>
+    <div class="selector-field">
       <div class="selector-label">County B</div>
       <div class="autocomplete" @click.outside="dropdown2 = false">
         <input
@@ -627,11 +541,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         >
         <div x-show="dropdown2" x-cloak class="autocomplete-dropdown" @click.stop="">
           <div x-show="countyListLoading" class="autocomplete-loading">
-            <span class="selector-spinner"></span> Loading counties…
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 0.6s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/></svg>
+            Loading counties…
           </div>
           <div x-show="countyListError" class="autocomplete-empty" style="color:var(--gated);">
             <span x-text="countyListError"></span>
-            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.7rem;margin-top:4px;">Retry</button>
+            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;">Retry</button>
           </div>
           <div x-show="!countyListLoading && !countyListError && filteredCounties2.length === 0" class="autocomplete-empty">
             No counties match "<span x-text="search2"></span>"
@@ -667,16 +582,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       @click="compare()"
       :disabled="compareLoading || !geoid1 || !geoid2"
       x-text="compareLoading ? 'Comparing…' : 'Compare Counties'"
-      style="font-size:0.95rem;padding:0.55em 1.8em;"
+      style="font-size:0.92rem;padding:0.5em 1.6em;"
     ></button>
-    <div x-show="compareError" x-cloak style="margin-top:10px;color:var(--gated);font-size:0.8rem;" x-text="compareError"></div>
+    <div x-show="compareError" x-cloak style="margin-top:8px;color:var(--gated);font-size:0.78rem;" x-text="compareError"></div>
   </div>
 
-  <!-- ═════════════ SKELETON (initial load) ═══════ -->
+  <!-- ═════════════ SKELETON (initial) ═══════════ -->
   <div x-show="initialSkeleton" x-cloak>
     <div class="compare-table-wrap">
       <table class="skeleton-table">
-        <thead><tr><th>Indicator</th><th class="num-header">County A</th><th class="num-header">County B</th><th class="num-header">Δ Abs</th><th class="num-header">Δ %</th></tr></thead>
+        <thead>
+          <tr>
+            <th style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;">Indicator</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">County A</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">County B</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">Δ Abs</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">Δ %</th>
+          </tr>
+        </thead>
         <tbody>
           <template x-for="i in 6" :key="i">
             <tr>
@@ -692,119 +615,46 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </div>
   </div>
 
-  <!-- ═════════════ COMPARE LOADING ═══════════════ -->
-  <div x-show="compareLoading" x-cloak class="loader" style="margin: clamp(40px, 5vw, 60px) 0;">
+  <!-- ═════════════ LOADING ═════════════════════ -->
+  <div x-show="compareLoading" x-cloak class="loader" style="margin:clamp(40px,5vw,60px) 0;">
     <div class="loader-spinner"></div>
-    <p style="margin-top:12px;color:var(--muted);font-size:0.85rem;">Comparing counties…</p>
+    <p style="margin-top:10px;color:var(--muted);font-size:0.82rem;">Comparing counties…</p>
   </div>
 
   <!-- ═══════════════ RESULTS ════════════════════ -->
   <div x-show="compared && !compareError" x-cloak>
 
-    <!-- ── Geography summary cards ────────────────── -->
-    <div class="geo-summary-row" x-show="geo1Name && geo2Name">
-      <div class="card card-spectral geo-summary-card card-a">
-        <div class="geo-summary-name" x-text="geo1Name"></div>
-        <div class="geo-summary-meta" x-text="geoid1"></div>
-        <div class="geo-summary-stat" x-show="geo1Pop">
-          <span class="geo-summary-stat-label">Population</span>
-          <span class="geo-summary-stat-value" x-text="fmtNum(geo1Pop)"></span>
-        </div>
-        <div class="geo-summary-stat" x-show="geo1IndicatorCount">
-          <span class="geo-summary-stat-label">Indicators</span>
-          <span class="geo-summary-stat-value" x-text="geo1IndicatorCount"></span>
-        </div>
-      </div>
-      <div class="card card-spectral geo-summary-card card-b">
-        <div class="geo-summary-name" x-text="geo2Name"></div>
-        <div class="geo-summary-meta" x-text="geoid2"></div>
-        <div class="geo-summary-stat" x-show="geo2Pop">
-          <span class="geo-summary-stat-label">Population</span>
-          <span class="geo-summary-stat-value" x-text="fmtNum(geo2Pop)"></span>
-        </div>
-        <div class="geo-summary-stat" x-show="geo2IndicatorCount">
-          <span class="geo-summary-stat-label">Indicators</span>
-          <span class="geo-summary-stat-value" x-text="geo2IndicatorCount"></span>
-        </div>
-      </div>
+    <!-- ── Stat summary line ─────────────────────────── -->
+    <div class="compare-summary" x-show="mergedDiffs.length > 0">
+      <span class="label">Summary</span>
+      <span class="sep">|</span>
+      <span x-show="geo1Name" class="lead lead-a" x-text="geo1Name + ': ' + leadACount + ' better'"></span>
+      <span class="sep" x-show="geo1Name && geo2Name">·</span>
+      <span x-show="geo2Name" class="lead lead-b" x-text="geo2Name + ': ' + leadBCount + ' better'"></span>
+      <span class="sep">·</span>
+      <span>Biggest gap: <strong x-text="statsBiggestGap"></strong></span>
+      <span class="sep">·</span>
+      <span x-text="mergedDiffs.length + ' indicators'"></span>
     </div>
 
-    <!-- ── Statistical Summary Card ────────────────── -->
-    <div class="card card-raised" style="margin-bottom:clamp(16px,2.5vw,24px);">
-      <h3 class="chart-card-title" style="margin-bottom:clamp(10px,1.5vw,16px);">Statistical Summary</h3>
-      <div class="stat-row">
-        <div class="stat-callout">
-          <span class="stat-value" x-text="leadACount"></span>
-          <span class="stat-label" x-text="geo1Name + ' leads in'"></span>
-          <span class="stat-delta stat-delta-up" x-show="leadACount > leadBCount"></span>
-        </div>
-        <div class="stat-callout">
-          <span class="stat-value" x-text="leadBCount"></span>
-          <span class="stat-label" x-text="geo2Name + ' leads in'"></span>
-          <span class="stat-delta stat-delta-up" x-show="leadBCount > leadACount"></span>
-        </div>
-        <div class="stat-callout">
-          <span class="stat-value" x-text="statsBiggestGapVal"></span>
-          <span class="stat-label">Biggest Gap</span>
-          <span class="stat-delta stat-delta-down" x-show="statsBiggestGapVal !== '—'"></span>
-        </div>
-        <div class="stat-callout">
-          <span class="stat-value" x-text="mergedDiffs.length"></span>
-          <span class="stat-label">Comparable Indicators</span>
-        </div>
-      </div>
-      <div style="margin-top:10px;font-size:0.78rem;color:var(--muted);">
-        <span x-text="statsLead"></span> ·
-        <span>Most similar: </span><span x-text="statsMostSimilar"></span>
-      </div>
-    </div>
-
-    <!-- ── Delta Bar Chart ─────────────────────────── -->
-    <div class="card card-spectral delta-bar-card" x-show="topDeltas.length > 0">
-      <h3 class="chart-card-title" style="margin-bottom:clamp(12px,2vw,20px);">Top 10 Largest Differences</h3>
-      <template x-for="d in topDeltas" :key="d.variable_id">
-        <div class="delta-bar-row">
-          <div class="delta-bar-label" x-text="d.name" :title="d.name"></div>
-          <div class="delta-bar-wrap">
-            <div class="delta-bar-track">
-              <div class="delta-bar-fill"
-                :class="d.directionClass === 'b-better' ? 'delta-bar-fill--b-better' : 'delta-bar-fill--a-better'"
-                :style="'width:' + d.barPct + '%'"></div>
-            </div>
-            <span class="delta-bar-val" :style="'color:' + (d.directionClass === 'b-better' ? 'var(--gated)' : 'var(--live)')" x-text="fmtDiffAbs(d.absDiff)"></span>
-          </div>
-        </div>
+    <!-- ── Category tabs ─────────────────────────────── -->
+    <div class="cat-bar" x-show="categories.length > 0">
+      <button
+        @click="activeCategory = 'all'"
+        class="cat-tab"
+        :class="{ active: activeCategory === 'all' }"
+      >All</button>
+      <template x-for="cat in categories" :key="cat">
+        <button
+          @click="activeCategory = cat"
+          class="cat-tab"
+          :class="{ active: activeCategory === cat }"
+          x-text="cat + ' (' + categoryCount(cat) + ')'"
+        ></button>
       </template>
     </div>
 
-    <!-- ── Results header ──────────────────────────── -->
-    <div class="results-header">
-      <div>
-        <h2 class="results-title">Indicator Comparison</h2>
-        <div class="results-count" x-text="displayedDiffs.length + ' of ' + mergedDiffs.length + ' indicators'"></div>
-      </div>
-    </div>
-
-    <!-- ── Category tabs ───────────────────────────── -->
-    <div class="filter-bar">
-      <div class="cat-tabs">
-        <button
-          @click="activeCategory = 'all'"
-          class="cat-tab"
-          :class="{ active: activeCategory === 'all' }"
-        >All</button>
-        <template x-for="cat in categories" :key="cat">
-          <button
-            @click="activeCategory = cat"
-            class="cat-tab"
-            :class="{ active: activeCategory === cat }"
-            x-text="cat + ' (' + categoryCount(cat) + ')'"
-          ></button>
-        </template>
-      </div>
-    </div>
-
-    <!-- ── Compare table ───────────────────────────── -->
+    <!-- ── Compare table ─────────────────────────────── -->
     <div class="compare-table-wrap" x-show="displayedDiffs.length > 0">
       <table class="compare-table">
         <thead>
@@ -813,19 +663,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               Indicator
               <span class="sort-arrow" x-show="sortCol === 'name'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }">
+            <th class="num" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }">
               <span x-text="geo1Name || 'County A'"></span>
               <span class="sort-arrow" x-show="sortCol === 'val1'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('val2')" :class="{ sorted: sortCol === 'val2' }">
+            <th class="num" @click="sortByCol('val2')" :class="{ sorted: sortCol === 'val2' }">
               <span x-text="geo2Name || 'County B'"></span>
               <span class="sort-arrow" x-show="sortCol === 'val2'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('delta')" :class="{ sorted: sortCol === 'delta' }">
+            <th class="num" @click="sortByCol('delta')" :class="{ sorted: sortCol === 'delta' }">
               Δ Abs
               <span class="sort-arrow" x-show="sortCol === 'delta'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
-            <th class="num-header" @click="sortByCol('pct')" :class="{ sorted: sortCol === 'pct' }">
+            <th class="num" @click="sortByCol('pct')" :class="{ sorted: sortCol === 'pct' }">
               Δ %
               <span class="sort-arrow" x-show="sortCol === 'pct'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
@@ -833,7 +683,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </thead>
         <tbody>
           <template x-for="d in displayedDiffs" :key="d.variable_id">
-            <tr>
+            <tr :class="{ 'row-max-delta': d.variable_id === maxDeltaId }">
               <td>
                 <div class="var-name" x-text="d.name || displayName(d.variable_id)"></div>
                 <div class="var-unit" x-text="d.unit || ''"></div>
@@ -841,48 +691,36 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <td class="val">
                 <span class="val-wrap">
                   <span x-text="fmtVal(d.value1, d.unit)"></span>
-                  <span class="rel-badge" :class="'rel-badge-' + (d.reliability1 || 'unknown')" :title="'Reliability: ' + (d.reliability1 || 'unknown')" x-show="d.reliability1"></span>
+                  <span class="rel-dot" :class="'rel-dot-' + (d.reliability1 || 'unknown')" :title="'Reliability: ' + (d.reliability1 || 'unknown')" x-show="d.reliability1"></span>
                 </span>
               </td>
               <td class="val">
                 <span class="val-wrap">
                   <span x-text="fmtVal(d.value2, d.unit)"></span>
-                  <span class="rel-badge" :class="'rel-badge-' + (d.reliability2 || 'unknown')" :title="'Reliability: ' + (d.reliability2 || 'unknown')" x-show="d.reliability2"></span>
+                  <span class="rel-dot" :class="'rel-dot-' + (d.reliability2 || 'unknown')" :title="'Reliability: ' + (d.reliability2 || 'unknown')" x-show="d.reliability2"></span>
                 </span>
               </td>
               <td class="delta" :class="deltaClass(d)" x-text="fmtDiff(d.diff)"></td>
-              <td class="pct-delta" :class="deltaClass(d)" x-text="fmtPct(d.pct_diff)"></td>
+              <td class="delta" :class="deltaClass(d)" x-text="fmtPct(d.pct_diff)"></td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
 
-    <!-- ── Empty states ────────────────────────────── -->
-    <div
-      x-show="displayedDiffs.length === 0 && mergedDiffs.length > 0"
-      x-cloak
-      class="state-no-indicators"
-    >
+    <!-- ── Empty states ──────────────────────────────── -->
+    <div x-show="displayedDiffs.length === 0 && mergedDiffs.length > 0" x-cloak class="state-no-results">
       <p>No indicators in category &ldquo;<span x-text="activeCategory"></span>&rdquo;.</p>
     </div>
 
-    <div
-      x-show="mergedDiffs.length === 0"
-      x-cloak
-      class="state-no-indicators"
-    >
+    <div x-show="mergedDiffs.length === 0" x-cloak class="state-no-results">
       <p>No indicator data available for this comparison.</p>
     </div>
+  </div>
 
-    <div
-      x-show="!compared && !initialSkeleton"
-      x-cloak
-      class="state-empty"
-      style="padding:clamp(48px,6vw,72px) 0;text-align:center;"
-    >
-      <p style="color:var(--muted);font-size:1rem;margin:0;">Select two counties above to compare.</p>
-    </div>
+  <!-- ── Prompt (no counties selected yet) ──────────── -->
+  <div x-show="!compared && !initialSkeleton && !compareLoading" x-cloak class="state-no-results" style="padding:clamp(48px,6vw,72px) 0;">
+    <p style="color:var(--muted);font-size:1rem;margin:0;">Select two counties above to compare.</p>
   </div>
 
 </main>
@@ -891,12 +729,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <script>
 function compareTool() {
   return {
-    // ── County list ──────────────────────────────────────
+    // ── County list ──────────────────────────────────────────
     countyList: [],
     countyListLoading: false,
     countyListError: '',
 
-    // ── Selector A state ─────────────────────────────────
+    // ── Selector A state ─────────────────────────────────────
     geoid1: '',
     search1: '',
     selectedName1: '',
@@ -905,7 +743,7 @@ function compareTool() {
     highlightA: -1,
     countyError1: '',
 
-    // ── Selector B state ─────────────────────────────────
+    // ── Selector B state ─────────────────────────────────────
     geoid2: '',
     search2: '',
     selectedName2: '',
@@ -914,29 +752,28 @@ function compareTool() {
     highlightB: -1,
     countyError2: '',
 
-    // ── Variable catalog ─────────────────────────────────
-    variablesMap: {},  // variable_id → {name, unit, direction, category}
+    // ── Variable catalog ─────────────────────────────────────
+    variablesMap: {},   // variable_id → {name, unit, direction, category}
 
-    // ── Compare results ──────────────────────────────────
+    // ── Compare results ──────────────────────────────────────
     result: null,
     compareLoading: false,
     compareError: '',
     compared: false,
     initialSkeleton: true,
 
-    // ── Filtering / sorting ──────────────────────────────
+    // ── Filtering / sorting ──────────────────────────────────
     activeCategory: 'all',
     sortCol: 'delta',
     sortAsc: false,
 
-    // ═══════════════ COMPUTED ═══════════════════════════
+    // ═══════════════ COMPUTED ═══════════════════════════════
 
     get filteredCounties1() {
       const q = this.search1.toLowerCase().trim();
       if (!q) return this.countyList;
       return this.countyList.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.geoid.includes(q)
+        c.name.toLowerCase().includes(q) || c.geoid.includes(q)
       );
     },
 
@@ -944,36 +781,18 @@ function compareTool() {
       const q = this.search2.toLowerCase().trim();
       if (!q) return this.countyList;
       return this.countyList.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.geoid.includes(q)
+        c.name.toLowerCase().includes(q) || c.geoid.includes(q)
       );
     },
 
     get geo1Name() {
       return this.result?.geography1?.name || this.selectedName1 || '';
     },
-
     get geo2Name() {
       return this.result?.geography2?.name || this.selectedName2 || '';
     },
 
-    get geo1Pop() {
-      return this.result?.geography1?.population || this.selectedPop1 || null;
-    },
-
-    get geo2Pop() {
-      return this.result?.geography2?.population || this.selectedPop2 || null;
-    },
-
-    get geo1IndicatorCount() {
-      return this.result?.geography1?.indicators?.length || 0;
-    },
-
-    get geo2IndicatorCount() {
-      return this.result?.geography2?.indicators?.length || 0;
-    },
-
-    // Merge differences with indicator metadata
+    // Merge differences with indicator metadata from embedded indicators
     get mergedDiffs() {
       const diffs = this.result?.differences || [];
       const inds1 = this.result?.geography1?.indicators || [];
@@ -1000,15 +819,7 @@ function compareTool() {
           category = this.inferCategory(d.variable_id, name);
         }
 
-        return {
-          ...d,
-          name,
-          unit,
-          direction,
-          reliability1,
-          reliability2,
-          category,
-        };
+        return { ...d, name, unit, direction, reliability1, reliability2, category };
       });
     },
 
@@ -1022,7 +833,6 @@ function compareTool() {
 
     get displayedDiffs() {
       let items = this.mergedDiffs;
-
       if (this.activeCategory !== 'all') {
         items = items.filter(d => d.category === this.activeCategory);
       }
@@ -1058,77 +868,38 @@ function compareTool() {
       return items;
     },
 
-    get topDeltas() {
-      const items = [...this.mergedDiffs]
-        .filter(d => d.diff != null)
-        .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
-        .slice(0, 10);
+    // ── Max-delta row highlighting ──────────────────────────
 
-      const maxAbs = items.length > 0 ? Math.max(...items.map(d => Math.abs(d.diff))) : 1;
-
-      return items.map(d => {
-        const absDiff = Math.abs(d.diff);
-        const pct = maxAbs > 0 ? (absDiff / maxAbs) * 100 : 0;
-        let directionClass = 'a-better';
-        if (d.direction === 'higher_is_better') {
-          directionClass = d.diff < 0 ? 'a-better' : 'b-better';
-        } else if (d.direction === 'lower_is_better') {
-          directionClass = d.diff > 0 ? 'a-better' : 'b-better';
-        }
-        return {
-          ...d,
-          absDiff,
-          barPct: pct,
-          directionClass,
-        };
-      });
+    get maxDeltaId() {
+      const diffs = this.mergedDiffs.filter(d => d.diff != null);
+      if (diffs.length === 0) return null;
+      let biggest = diffs[0];
+      for (const d of diffs) {
+        if (Math.abs(d.diff) > Math.abs(biggest.diff)) biggest = d;
+      }
+      return biggest.variable_id;
     },
 
-    // ── Statistical summary ────────────────────────────
+    // ── Statistical summary ─────────────────────────────────
 
     get leadACount() {
-      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
       let aBetter = 0;
-      for (const d of diffs) {
-        if (this.deltaClass(d) === 'delta-green') aBetter++;
+      for (const d of this.mergedDiffs) {
+        if (d.diff != null && d.direction && this.deltaClass(d) === 'delta-green') {
+          aBetter++;
+        }
       }
       return aBetter;
     },
 
     get leadBCount() {
-      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
       let bBetter = 0;
-      for (const d of diffs) {
-        if (this.deltaClass(d) === 'delta-red') bBetter++;
+      for (const d of this.mergedDiffs) {
+        if (d.diff != null && d.direction && this.deltaClass(d) === 'delta-red') {
+          bBetter++;
+        }
       }
       return bBetter;
-    },
-
-    get statsLead() {
-      const diffs = this.mergedDiffs.filter(d => d.diff != null && d.direction);
-      if (diffs.length === 0) return '—';
-      let aBetter = 0;
-      let bBetter = 0;
-      for (const d of diffs) {
-        if (this.deltaClass(d) === 'delta-green') aBetter++;
-        else if (this.deltaClass(d) === 'delta-red') bBetter++;
-      }
-      if (aBetter > bBetter) {
-        return this.geo1Name + ' leads in ' + aBetter + ' of ' + (aBetter + bBetter) + ' directional indicators';
-      } else if (bBetter > aBetter) {
-        return this.geo2Name + ' leads in ' + bBetter + ' of ' + (aBetter + bBetter) + ' directional indicators';
-      }
-      return 'Tied across ' + (aBetter + bBetter) + ' directional indicators';
-    },
-
-    get statsBiggestGapVal() {
-      const diffs = this.mergedDiffs.filter(d => d.diff != null);
-      if (diffs.length === 0) return '—';
-      let biggest = diffs[0];
-      for (const d of diffs) {
-        if (Math.abs(d.diff) > Math.abs(biggest.diff)) biggest = d;
-      }
-      return this.fmtDiffAbs(Math.abs(biggest.diff));
     },
 
     get statsBiggestGap() {
@@ -1139,23 +910,10 @@ function compareTool() {
         if (Math.abs(d.diff) > Math.abs(biggest.diff)) biggest = d;
       }
       const name = biggest.name || this.displayName(biggest.variable_id);
-      const absDiff = Math.abs(biggest.diff);
-      return name + ' (Δ ' + this.fmtDiffAbs(absDiff) + ')';
+      return name + ' (' + this.fmtDiffAbs(Math.abs(biggest.diff)) + ')';
     },
 
-    get statsMostSimilar() {
-      const diffs = this.mergedDiffs.filter(d => d.diff != null);
-      if (diffs.length === 0) return '—';
-      let smallest = diffs[0];
-      for (const d of diffs) {
-        if (Math.abs(d.diff) < Math.abs(smallest.diff)) smallest = d;
-      }
-      const name = smallest.name || this.displayName(smallest.variable_id);
-      const absDiff = Math.abs(smallest.diff);
-      return name + ' (Δ ' + this.fmtDiffAbs(absDiff) + ')';
-    },
-
-    // ═══════════════ METHODS ═══════════════════════════
+    // ═══════════════ METHODS ═══════════════════════════════
 
     async init() {
       const params = new URLSearchParams(window.location.search);
@@ -1166,15 +924,11 @@ function compareTool() {
 
       if (g1) {
         const c1 = this.countyList.find(c => c.geoid === g1);
-        if (c1) {
-          this.selectCountySilent('a', c1);
-        }
+        if (c1) this.selectCountySilent('a', c1);
       }
       if (g2) {
         const c2 = this.countyList.find(c => c.geoid === g2);
-        if (c2) {
-          this.selectCountySilent('b', c2);
-        }
+        if (c2) this.selectCountySilent('b', c2);
       }
 
       if (g1 && g2 && g1 !== g2) {
@@ -1185,7 +939,7 @@ function compareTool() {
         this.initialSkeleton = false;
       }
 
-      this.loadVariables();
+      this.loadVariables();  // fire-and-forget background load
     },
 
     async loadCounties() {
@@ -1221,12 +975,10 @@ function compareTool() {
           };
         }
         this.variablesMap = map;
-      } catch (_) {
-        // Non-fatal — display without names
-      }
+      } catch (_) { /* non-fatal */ }
     },
 
-    // ── Autocomplete dropdown management ──────────────
+    // ── Autocomplete dropdown management ─────────────────────
 
     openDropdown(which) {
       if (this.countyList.length === 0 && !this.countyListLoading) {
@@ -1272,7 +1024,6 @@ function compareTool() {
         this.dropdown1 = false;
         this.highlightA = -1;
         this.countyError1 = '';
-        this.syncURL();
       } else {
         this.geoid2 = county.geoid;
         this.selectedName2 = county.name;
@@ -1281,8 +1032,8 @@ function compareTool() {
         this.dropdown2 = false;
         this.highlightB = -1;
         this.countyError2 = '';
-        this.syncURL();
       }
+      this.syncURL();
     },
 
     selectCountySilent(which, county) {
@@ -1306,19 +1057,16 @@ function compareTool() {
         this.selectedName1 = '';
         this.selectedPop1 = null;
         this.highlightA = -1;
-        this.result = null;
-        this.compared = false;
-        this.compareError = '';
       } else {
         this.geoid2 = '';
         this.search2 = '';
         this.selectedName2 = '';
         this.selectedPop2 = null;
         this.highlightB = -1;
-        this.result = null;
-        this.compared = false;
-        this.compareError = '';
       }
+      this.result = null;
+      this.compared = false;
+      this.compareError = '';
       this.syncURL();
     },
 
@@ -1333,7 +1081,7 @@ function compareTool() {
       }
     },
 
-    // ── Compare ──────────────────────────────────────
+    // ── Compare ──────────────────────────────────────────────
 
     async compare() {
       if (!this.geoid1 || !this.geoid2) return;
@@ -1351,10 +1099,7 @@ function compareTool() {
         const resp = await fetch('/v1/policy/compare', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            geoid1: this.geoid1,
-            geoid2: this.geoid2,
-          }),
+          body: JSON.stringify({ geoid1: this.geoid1, geoid2: this.geoid2 }),
         });
 
         if (!resp.ok) {
@@ -1375,7 +1120,7 @@ function compareTool() {
       }
     },
 
-    // ── Sorting ──────────────────────────────────────
+    // ── Sorting ──────────────────────────────────────────────
 
     sortByCol(col) {
       if (this.sortCol === col) {
@@ -1390,7 +1135,7 @@ function compareTool() {
       return this.mergedDiffs.filter(d => d.category === cat).length;
     },
 
-    // ── Formatting ────────────────────────────────────
+    // ── Formatting ───────────────────────────────────────────
 
     fmtVal(value, unit) {
       if (value == null) return '—';
@@ -1398,47 +1143,27 @@ function compareTool() {
 
       if (unit) {
         const u = unit.toLowerCase();
-        if (u === 'percent' || u === '%') {
-          return value.toFixed(1) + '%';
-        }
+        if (u === 'percent' || u === '%') return value.toFixed(1) + '%';
         if (u === 'dollars' || u === '$') {
-          if (Math.abs(value) >= 1000000) {
-            return '$' + (value / 1000000).toFixed(1) + 'M';
-          }
-          if (Math.abs(value) >= 1000) {
-            return '$' + (value / 1000).toFixed(1) + 'K';
-          }
+          if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+          if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(1) + 'K';
           return '$' + Math.round(value).toLocaleString();
         }
-        if (u === 'ratio' || u === 'index') {
-          return value.toFixed(2);
-        }
+        if (u === 'ratio' || u === 'index') return value.toFixed(2);
       }
 
-      if (Math.abs(value) >= 1000000) {
-        return (value / 1000000).toFixed(1) + 'M';
-      }
-      if (Math.abs(value) >= 1000) {
-        return (value / 1000).toFixed(1) + 'K';
-      }
-      if (Number.isInteger(value)) {
-        return value.toLocaleString();
-      }
+      if (Math.abs(value) >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+      if (Math.abs(value) >= 1000) return (value / 1000).toFixed(1) + 'K';
+      if (Number.isInteger(value)) return value.toLocaleString();
       return value.toFixed(2);
     },
 
     fmtDiff(diff) {
       if (diff == null) return '—';
       const sign = diff > 0 ? '+' : '';
-      if (Math.abs(diff) >= 1000000) {
-        return sign + (diff / 1000000).toFixed(1) + 'M';
-      }
-      if (Math.abs(diff) >= 1000) {
-        return sign + (diff / 1000).toFixed(1) + 'K';
-      }
-      if (Number.isInteger(diff)) {
-        return sign + diff.toLocaleString();
-      }
+      if (Math.abs(diff) >= 1000000) return sign + (diff / 1000000).toFixed(1) + 'M';
+      if (Math.abs(diff) >= 1000) return sign + (diff / 1000).toFixed(1) + 'K';
+      if (Number.isInteger(diff)) return sign + diff.toLocaleString();
       return sign + diff.toFixed(2);
     },
 
@@ -1467,7 +1192,7 @@ function compareTool() {
       return varId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     },
 
-    // ── Delta coloring ───────────────────────────────
+    // ── Delta coloring ───────────────────────────────────────
     // diff = value2 - value1 (server-computed)
     // Green = County A better, Red = County A worse
     // higher_is_better: A better when diff < 0 (value1 > value2)
@@ -1484,11 +1209,10 @@ function compareTool() {
       if (dir === 'lower_is_better') {
         return diff > 0 ? 'delta-green' : (diff < 0 ? 'delta-red' : 'delta-neutral');
       }
-
       return 'delta-neutral';
     },
 
-    // ── Category inference ────────────────────────────
+    // ── Category inference ───────────────────────────────────
 
     inferCategory(varId, name) {
       const s = (varId + ' ' + (name || '')).toLowerCase();
@@ -1508,7 +1232,6 @@ function compareTool() {
           if (s.includes(term)) return cat;
         }
       }
-
       return 'other';
     },
   };
