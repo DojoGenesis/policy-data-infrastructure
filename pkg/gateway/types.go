@@ -289,3 +289,16 @@ type EvidenceCardListResponse struct {
 	Offset int                    `json:"offset"`
 }
 
+// LISAClusterEntryResponse is a single cluster entry in a LISA county profile.
+type LISAClusterEntryResponse struct {
+	Cluster string `json:"cluster"`
+	Count   int    `json:"count"`
+}
+
+// LISACountyProfileResponse is the response body for GET /geographies/:geoid/lisa-profile.
+type LISACountyProfileResponse struct {
+	GEOID       string                     `json:"geoid"`
+	Clusters    []LISAClusterEntryResponse `json:"clusters"`
+	TotalTracts int                        `json:"total_tracts"`
+}
+

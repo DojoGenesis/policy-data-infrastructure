@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -1031,6 +1032,90 @@ ORDER BY category, policy_id
 	return result, nil
 }
 
+// SeedEvidenceCardsFromJSON parses a JSON array of evidence card objects and
+// bulk-upserts them into the evidence_cards table. It skips seeding if the
+// table already has at least one row. The method accepts the raw JSON bytes
+// (typically from //go:embed) directly.
+func (s *PostgresStore) SeedEvidenceCardsFromJSON(ctx context.Context, jsonData []byte) error {
+	// Check if table already has data.
+	var count int
+	if err := s.pool.QueryRow(ctx, "SELECT COUNT(*) FROM evidence_cards").Scan(&count); err != nil {
+		return fmt.Errorf("store: SeedEvidenceCardsFromJSON count: %w", err)
+	}
+	if count > 0 {
+		return nil // already seeded
+	}
+
+	// Parse JSON array into intermediate struct.
+	type jsonCard struct {
+		PolicyID           string          `json:"policy_id"`
+		PolicyTitle        string          `json:"policy_title"`
+		Category           string          `json:"category"`
+		EquityDimension    string          `json:"equity_dimension"`
+		KeyFinding         string          `json:"key_finding"`
+		DataQuality        string          `json:"data_quality"`
+		Title              string          `json:"title"`
+		Findings           json.RawMessage `json:"findings"`
+		Indicators         json.RawMessage `json:"indicators"`
+		StatewideContext   json.RawMessage `json:"statewide_context"`
+		CountyVariation    json.RawMessage `json:"county_variation"`
+		TopNeedCounties    json.RawMessage `json:"top_need_counties"`
+		BottomNeedCounties json.RawMessage `json:"bottom_need_counties"`
+	}
+
+	var rawCards []jsonCard
+	if err := json.Unmarshal(jsonData, &rawCards); err != nil {
+		return fmt.Errorf("store: SeedEvidenceCardsFromJSON parse: %w", err)
+	}
+
+	cards := make([]EvidenceCard, 0, len(rawCards))
+	for _, rc := range rawCards {
+		// Default empty JSON arrays/objects for missing fields.
+		findings := rc.Findings
+		if findings == nil || string(findings) == "null" {
+			findings = json.RawMessage("[]")
+		}
+		indicators := rc.Indicators
+		if indicators == nil || string(indicators) == "null" {
+			indicators = json.RawMessage("[]")
+		}
+		statewideCtx := rc.StatewideContext
+		if statewideCtx == nil || string(statewideCtx) == "null" {
+			statewideCtx = json.RawMessage("{}")
+		}
+		countyVar := rc.CountyVariation
+		if countyVar == nil || string(countyVar) == "null" {
+			countyVar = json.RawMessage("{}")
+		}
+		topNeed := rc.TopNeedCounties
+		if topNeed == nil || string(topNeed) == "null" {
+			topNeed = json.RawMessage("[]")
+		}
+		bottomNeed := rc.BottomNeedCounties
+		if bottomNeed == nil || string(bottomNeed) == "null" {
+			bottomNeed = json.RawMessage("[]")
+		}
+
+		cards = append(cards, EvidenceCard{
+			PolicyID:           rc.PolicyID,
+			PolicyTitle:        rc.PolicyTitle,
+			Category:           rc.Category,
+			EquityDimension:    rc.EquityDimension,
+			Title:              rc.Title,
+			KeyFinding:         rc.KeyFinding,
+			DataQuality:        rc.DataQuality,
+			Findings:           findings,
+			Indicators:         indicators,
+			StatewideContext:   statewideCtx,
+			CountyVariation:    countyVar,
+			TopNeedCounties:    topNeed,
+			BottomNeedCounties: bottomNeed,
+		})
+	}
+
+	return s.PutEvidenceCards(ctx, cards)
+}
+
 // ListAnalyses returns a summary of all analysis runs ordered by computed_at
 // descending (most recent first). ScoreCount is populated via a correlated
 // subquery so no JOIN fanout occurs on the result set.
@@ -1112,19 +1197,23 @@ ON CONFLICT (geoid, factor_name, analysis_vintage) DO UPDATE SET
 
 // QueryFactorScores returns all factor scores for a single geography,
 // ordered by factor_name. An empty result set returns an empty slice.
+//
+// For county-level GEOIDs (5 characters, e.g. "55025") where no direct
+// match exists, the method auto-aggregates tract-level factor scores by
+// averaging per (county_geoid, factor_name, analysis_vintage).
 func (s *PostgresStore) QueryFactorScores(ctx context.Context, geoid string) ([]FactorScore, error) {
-	const q = `
+	// 1. Try exact match first.
+	const eq = `
 SELECT geoid, factor_name, factor_score, factor_percentile,
        COALESCE(loadings_json::text, ''), COALESCE(analysis_vintage, '')
 FROM factor_scores
 WHERE geoid = $1
 ORDER BY factor_name`
 
-	rows, err := s.pool.Query(ctx, q, geoid)
+	rows, err := s.pool.Query(ctx, eq, geoid)
 	if err != nil {
 		return nil, fmt.Errorf("store: QueryFactorScores: %w", err)
 	}
-	defer rows.Close()
 
 	var result []FactorScore
 	for rows.Next() {
@@ -1133,13 +1222,58 @@ ORDER BY factor_name`
 			&fs.GEOID, &fs.FactorName, &fs.FactorScore, &fs.FactorPercentile,
 			&fs.LoadingsJSON, &fs.AnalysisVintage,
 		); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("store: QueryFactorScores scan: %w", err)
 		}
 		result = append(result, fs)
 	}
+	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("store: QueryFactorScores rows: %w", err)
 	}
+
+	if len(result) > 0 {
+		return result, nil
+	}
+
+	// 2. If no exact match and GEOID is 5 characters (county level), aggregate from tracts.
+	if len(geoid) == 5 {
+		const agg = `
+SELECT
+    LEFT(fs.geoid, 5) AS county_geoid,
+    fs.factor_name,
+    AVG(fs.factor_score) AS factor_score,
+    NULL::double precision AS factor_percentile,
+    ''::text AS loadings_json,
+    COALESCE(fs.analysis_vintage, '') AS analysis_vintage
+FROM factor_scores fs
+WHERE LENGTH(fs.geoid) = 11
+  AND LEFT(fs.geoid, 5) = $1
+GROUP BY LEFT(fs.geoid, 5), fs.factor_name, fs.analysis_vintage
+ORDER BY fs.factor_name`
+
+		rows2, err := s.pool.Query(ctx, agg, geoid)
+		if err != nil {
+			return nil, fmt.Errorf("store: QueryFactorScores aggregate: %w", err)
+		}
+		defer rows2.Close()
+
+		for rows2.Next() {
+			var fs FactorScore
+			if err := rows2.Scan(
+				&fs.GEOID, &fs.FactorName, &fs.FactorScore, &fs.FactorPercentile,
+				&fs.LoadingsJSON, &fs.AnalysisVintage,
+			); err != nil {
+				return nil, fmt.Errorf("store: QueryFactorScores scan: %w", err)
+			}
+			result = append(result, fs)
+		}
+		if err := rows2.Err(); err != nil {
+			return nil, fmt.Errorf("store: QueryFactorScores rows: %w", err)
+		}
+		return result, nil
+	}
+
 	return result, nil
 }
 
@@ -1174,4 +1308,49 @@ ORDER BY feature_name`
 		return nil, fmt.Errorf("store: QueryValidatedFeatures rows: %w", err)
 	}
 	return result, nil
+}
+
+// QueryLISACountyProfile returns a county-level summary of LISA spatial
+// autocorrelation clusters by aggregating from tract-level analysis_scores.
+// The county GEOID is matched via prefix (tracts whose GEOID starts with
+// the county prefix). Only LISA analyses (type='lisa' in the analyses table)
+// are considered. The profile includes per-cluster counts and total tracts.
+func (s *PostgresStore) QueryLISACountyProfile(ctx context.Context, countyGEOID string) (*LISACountyProfile, error) {
+	const q = `
+SELECT
+    ascores.tier AS cluster,
+    COUNT(*) AS count
+FROM analysis_scores ascores
+JOIN analyses a ON a.id = ascores.analysis_id
+WHERE a.type = 'lisa'
+  AND ascores.geoid LIKE $1 || '%'
+  AND LENGTH(ascores.geoid) = 11
+  AND ascores.tier IS NOT NULL
+  AND ascores.tier != ''
+GROUP BY ascores.tier
+ORDER BY ascores.tier`
+
+	rows, err := s.pool.Query(ctx, q, countyGEOID)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryLISACountyProfile: %w", err)
+	}
+	defer rows.Close()
+
+	profile := &LISACountyProfile{
+		GEOID:   countyGEOID,
+		Clusters: make([]LISAClusterEntry, 0),
+	}
+
+	for rows.Next() {
+		var entry LISAClusterEntry
+		if err := rows.Scan(&entry.Cluster, &entry.Count); err != nil {
+			return nil, fmt.Errorf("store: QueryLISACountyProfile scan: %w", err)
+		}
+		profile.Clusters = append(profile.Clusters, entry)
+		profile.TotalTracts += entry.Count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryLISACountyProfile rows: %w", err)
+	}
+	return profile, nil
 }

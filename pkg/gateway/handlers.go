@@ -1364,3 +1364,44 @@ func formatInt(n int) string {
 	parts = append([]string{s}, parts...)
 	return strings.Join(parts, ",")
 }
+
+// ── GET /geographies/:geoid/lisa-profile ────────────────────────────────────
+
+// handleGetLISACountyProfile returns a county-level summary of LISA spatial
+// autocorrelation clusters aggregated from tract-level analysis_scores.
+// The GEOID must be a 5-character county FIPS code.
+func (p *PolicyPlugin) handleGetLISACountyProfile(c *gin.Context) {
+	geoid := c.Param("geoid")
+
+	// LISA profile only makes sense for county-level GEOIDs (tracts within county).
+	if len(geoid) != 5 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:  "invalid GEOID for LISA profile",
+			Detail: "LISA county profile requires a 5-character county GEOID",
+		})
+		return
+	}
+
+	profile, err := p.store.QueryLISACountyProfile(c.Request.Context(), geoid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:  "LISA profile query failed",
+			Detail: err.Error(),
+		})
+		return
+	}
+
+	clusters := make([]LISAClusterEntryResponse, 0, len(profile.Clusters))
+	for _, entry := range profile.Clusters {
+		clusters = append(clusters, LISAClusterEntryResponse{
+			Cluster: entry.Cluster,
+			Count:   entry.Count,
+		})
+	}
+
+	c.JSON(http.StatusOK, LISACountyProfileResponse{
+		GEOID:       profile.GEOID,
+		Clusters:    clusters,
+		TotalTracts: profile.TotalTracts,
+	})
+}

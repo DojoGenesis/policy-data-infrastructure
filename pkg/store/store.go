@@ -168,6 +168,22 @@ type EvidenceCard struct {
 	BottomNeedCounties []byte // JSONB
 }
 
+// LISACountyProfile summarizes LISA cluster membership for tracts
+// within a county. Each entry holds the cluster label and the count
+// of tracts in that cluster.
+type LISAClusterEntry struct {
+	Cluster string `json:"cluster"`
+	Count   int    `json:"count"`
+}
+
+// LISACountyProfile provides a county-level summary of LISA clusters
+// computed from tract-level analysis_scores.
+type LISACountyProfile struct {
+	GEOID   string            `json:"geoid"`
+	Clusters []LISAClusterEntry `json:"clusters"`
+	TotalTracts int           `json:"total_tracts"`
+}
+
 // EvidenceCardFilter provides optional query-parameter filters for
 // listing evidence cards.
 type EvidenceCardFilter struct {
@@ -212,6 +228,10 @@ type Store interface {
 	// Evidence card operations
 	PutEvidenceCards(ctx context.Context, cards []EvidenceCard) error
 	QueryEvidenceCards(ctx context.Context, filter EvidenceCardFilter) ([]EvidenceCard, error)
+	SeedEvidenceCardsFromJSON(ctx context.Context, jsonData []byte) error
+
+	// LISA county profile
+	QueryLISACountyProfile(ctx context.Context, countyGEOID string) (*LISACountyProfile, error)
 
 	// Metadata operations
 	QueryVariables(ctx context.Context) ([]VariableMeta, error)

@@ -71,6 +71,7 @@ func (m *mockValidateStore) PutEvidenceCards(_ context.Context, _ []store.Eviden
 func (m *mockValidateStore) QueryEvidenceCards(_ context.Context, _ store.EvidenceCardFilter) ([]store.EvidenceCard, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) SeedEvidenceCardsFromJSON(_ context.Context, _ []byte) error { return nil }
 func (m *mockValidateStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error {
 	return nil
 }
@@ -78,6 +79,9 @@ func (m *mockValidateStore) QueryFactorScores(_ context.Context, _ string) ([]st
 	return nil, nil
 }
 func (m *mockValidateStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) QueryLISACountyProfile(_ context.Context, _ string) (*store.LISACountyProfile, error) {
 	return nil, nil
 }
 func (m *mockValidateStore) Ping(_ context.Context) error         { return nil }

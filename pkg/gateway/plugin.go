@@ -96,4 +96,7 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 
 	// Factor scores.
 	group.GET("/geographies/:geoid/factors", geoidMW, p.handleGetFactors)
+
+	// LISA county profile.
+	group.GET("/geographies/:geoid/lisa-profile", geoidMW, p.handleGetLISACountyProfile)
 }

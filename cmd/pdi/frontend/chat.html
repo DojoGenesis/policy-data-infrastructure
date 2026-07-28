@@ -32,6 +32,78 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .suggest { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
   .suggest button { padding:5px 12px; font-size:0.75rem; background:var(--plane-base); border:1px solid var(--border); border-radius:var(--r-chip); color:var(--muted); cursor:pointer; transition:all 0.15s; font-family:inherit; }
   .suggest button:hover { border-color:var(--accent); color:var(--text); }
+
+  /* ── Rich Response Components ──────────────────────────────────────────── */
+
+  /* Stat callout: prominent key-number display */
+  .stat-callout {
+    display: inline-flex; flex-direction: column; align-items: center;
+    background: var(--plane-raised, #f0f4ff);
+    border: 1px solid var(--accent, #2563eb);
+    border-radius: 12px;
+    padding: 8px 18px;
+    margin: 4px 4px 12px;
+    min-width: 80px;
+    vertical-align: top;
+  }
+  .stat-callout .stat-value {
+    font-size: 1.3rem; font-weight: 700; color: var(--accent, #2563eb);
+    line-height: 1.2;
+  }
+  .stat-callout .stat-label {
+    font-size: 0.72rem; color: var(--muted); margin-top: 2px;
+    text-align: center; line-height: 1.3;
+  }
+
+  /* Mini horizontal bar chart */
+  .mini-chart {
+    display: block; width: 100%; max-width: 400px;
+    margin: 8px 0 12px; padding: 8px 12px;
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .mini-bar-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 5px;
+  }
+  .mini-bar-row:last-child { margin-bottom: 0; }
+  .mini-bar-label {
+    min-width: 90px; font-size: 0.78rem; color: var(--text);
+    text-align: right; flex-shrink: 0;
+  }
+  .mini-bar-track {
+    flex: 1; height: 12px; background: var(--border);
+    border-radius: 6px; overflow: hidden; min-width: 40px;
+  }
+  .mini-bar-fill {
+    height: 100%; background: var(--accent, #2563eb);
+    border-radius: 6px; transition: width 0.3s ease;
+    min-width: 2px;
+  }
+  .mini-bar-value {
+    min-width: 50px; font-size: 0.75rem; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Data table */
+  .data-table {
+    width: 100%; max-width: 480px; border-collapse: collapse;
+    margin: 8px 0 12px; font-size: 0.82rem;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .data-table thead { background: var(--plane-raised, #f0f4ff); }
+  .data-table th {
+    padding: 6px 10px; text-align: left; font-weight: 600;
+    color: var(--text); border-bottom: 2px solid var(--accent, #2563eb);
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .data-table td {
+    padding: 5px 10px; border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover { background: var(--plane-base); }
 </style>
 </head>
 <body>
@@ -64,40 +136,114 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 (function(){
   var msgs=document.getElementById('messages'), input=document.getElementById('input'), sendBtn=document.getElementById('send'), sug=document.getElementById('suggestions');
 
-  if(window.ChatAdapter&&ChatAdapter._placeholders){
-    ChatAdapter._placeholders.forEach(function(p){
-      var b=document.createElement('button');b.textContent=p.length>85?p.slice(0,82)+'…':p;
-      b.onclick=function(){input.value=p;send();};sug.appendChild(b);
+  function refreshSuggestions() {
+    sug.innerHTML = '';
+    var questions = [];
+    if (window.ChatAdapter && typeof ChatAdapter._getSuggestedQuestions === 'function') {
+      questions = ChatAdapter._getSuggestedQuestions();
+    } else if (window.ChatAdapter && ChatAdapter._placeholders) {
+      questions = ChatAdapter._placeholders;
+    }
+    questions.forEach(function(q) {
+      var b = document.createElement('button');
+      b.textContent = q.length > 85 ? q.slice(0, 82) + '\u2026' : q;
+      b.onclick = function() { input.value = q; send(); };
+      sug.appendChild(b);
     });
   }
 
-  function add(role,txt){
-    var d=document.createElement('div');d.className='msg '+role;
-    if(role==='asst')d.innerHTML=txt.replace(/\n/g,'<br>');else d.textContent=txt;
-    msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;
+  // Parse URL params to set page context — allows cross-page linking like
+  // /chat?page=county&geoid=55079&name=Milwaukee%20County
+  (function initPageContext() {
+    if (!window.ChatAdapter) return;
+    var params = new URLSearchParams(window.location.search);
+    var page = params.get('page');
+    if (!page) return;
+    var ctx = { page: page };
+    var fields = ['geoid', 'name', 'indicator', 'geoid1', 'geoid2', 'name1', 'name2'];
+    for (var i = 0; i < fields.length; i++) {
+      var val = params.get(fields[i]);
+      if (val !== null) ctx[fields[i]] = val;
+    }
+    ChatAdapter.setPageContext(ctx);
+  })();
+
+  refreshSuggestions();
+
+  function add(role, txt) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + role;
+    if (role === 'asst') {
+      // Parse rich response tokens into styled HTML components
+      var parsed = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
+        ? ChatAdapter._parseRichResponse(txt)
+        : txt;
+      d.innerHTML = parsed.replace(/\n/g, '<br>');
+    } else {
+      d.textContent = txt;
+    }
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+    return d;
   }
 
-  function thinking(show){
-    var el=document.getElementById('thinking');
-    if(show&&!el){el=document.createElement('div');el.id='thinking';el.className='thinking';el.innerHTML='<span class=dot></span><span class=dot></span><span class=dot></span> Thinking…';msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;}
-    if(!show&&el)el.remove();
+  function thinking(show) {
+    var el = document.getElementById('thinking');
+    if (show && !el) {
+      el = document.createElement('div');
+      el.id = 'thinking';
+      el.className = 'thinking';
+      el.innerHTML = '<span class=dot></span><span class=dot></span><span class=dot></span> Thinking\u2026';
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    if (!show && el) el.remove();
   }
 
-  async function send(){
-    var text=input.value.trim();if(!text||!window.ChatAdapter)return;
-    input.value='';sendBtn.disabled=true;add('user',text);thinking(true);
-    var asstEl,full='',first=true;
-    try{
+  async function send() {
+    var text = input.value.trim();
+    if (!text || !window.ChatAdapter) return;
+    input.value = '';
+    sendBtn.disabled = true;
+    add('user', text);
+    thinking(true);
+    var asstEl, full = '', first = true;
+    try {
       await ChatAdapter.send(text,
-        function(chunk){if(first){thinking(false);asstEl=add('asst','');first=false;}full+=chunk;if(asstEl)asstEl.innerHTML=full.replace(/\n/g,'<br>');msgs.scrollTop=msgs.scrollHeight;},
-        function(){sendBtn.disabled=false;input.focus();}
+        function(chunk) {
+          if (first) { thinking(false); asstEl = add('asst', ''); first = false; }
+          full += chunk;
+          if (asstEl) {
+            // Parse rich response tokens for inline streaming updates too
+            var parsed = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
+              ? ChatAdapter._parseRichResponse(full)
+              : full;
+            asstEl.innerHTML = parsed.replace(/\n/g, '<br>');
+          }
+          msgs.scrollTop = msgs.scrollHeight;
+        },
+        function() {
+          sendBtn.disabled = false;
+          input.focus();
+          // Refresh suggestions in case page context changed
+          refreshSuggestions();
+        }
       );
-      if(first){thinking(false);add('system','No response received. The chat service may be busy.');sendBtn.disabled=false;}
-    }catch(e){thinking(false);add('system','Error: '+e.message);sendBtn.disabled=false;}
+      if (first) { thinking(false); add('system', 'No response received. The chat service may be busy.'); sendBtn.disabled = false; }
+    } catch(e) { thinking(false); add('system', 'Error: ' + e.message); sendBtn.disabled = false; }
   }
 
-  document.getElementById('send').onclick=send;
-  input.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}};
+  document.getElementById('send').onclick = send;
+  input.onkeydown = function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+
+  // Listen for page-context changes from other pages (iframe/postMessage or direct set)
+  // Re-poll suggested questions when the page becomes visible
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) refreshSuggestions();
+  });
+
+  // Expose refresh so other pages can trigger it
+  window._pdiRefreshChatSuggestions = refreshSuggestions;
 })();
 </script>
 </body>

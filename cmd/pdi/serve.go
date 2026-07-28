@@ -52,6 +52,17 @@ func runServe(port int) error {
 
 	plugin := gateway.NewPlugin(s)
 
+	// Seed evidence cards from embedded JSON on first startup.
+	if seedFS, err := fs.Sub(frontendFS, "frontend"); err == nil {
+		if evidenceJSON, err2 := fs.ReadFile(seedFS, "evidence_cards.json"); err2 == nil {
+			if err2 := s.SeedEvidenceCardsFromJSON(ctx, evidenceJSON); err2 != nil {
+				fmt.Printf("  evidence-cards seed: %v\n", err2)
+			} else {
+				fmt.Println("  evidence-cards: seeded from embedded JSON")
+			}
+		}
+	}
+
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
