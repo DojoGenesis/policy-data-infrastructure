@@ -233,6 +233,26 @@
   color: var(--text);
 }
 
+/* ── Navigation pills (cross-page integration) ────────────────────────────── */
+.nav-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  margin: 2px 4px 2px 0;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.nav-pill:hover {
+  background: var(--accent);
+  color: var(--bg);
+  text-decoration: none;
+}
+
 /* ── Mobile: full-height panel ──────────────────────────────────────────── */
 @media (max-width: 600px) {
   .cd-panel {

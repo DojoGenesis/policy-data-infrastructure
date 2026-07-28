@@ -470,6 +470,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       grid-template-columns: repeat(2, 1fr);
     }
   }
+
+  /* ── Navigation pills (cross-page integration) ──────────────────────────── */
+  .nav-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    margin: 2px 4px 2px 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .nav-pill:hover {
+    background: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+  }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -680,13 +700,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <tbody>
                     <template x-for="c in card.top_need_counties" :key="c.geoid">
                       <tr>
-                        <td x-text="c.county_name"></td>
+                        <td><a :href="'/county?geoid=' + c.geoid" style="color:var(--accent);text-decoration:none;font-weight:500;" x-text="c.county_name" @mouseover="$el.style.textDecoration='underline'" @mouseout="$el.style.textDecoration='none'"></a></td>
                         <td class="county-geoid" x-text="c.geoid"></td>
                         <td class="county-val" x-text="fmtNum(c.display_value)"></td>
                       </tr>
                     </template>
                   </tbody>
                 </table>
+              </div>
+              <!-- Compare link: uses first and last of top_need -->
+              <div x-show="card.bottom_need_counties && card.bottom_need_counties.length && card.top_need_counties && card.top_need_counties.length" style="margin-top:10px;">
+                <a :href="'/compare?geoid1=' + card.top_need_counties[0].geoid + '&geoid2=' + card.bottom_need_counties[0].geoid" class="nav-pill" style="font-size:0.68rem;">Compare most vs least affected →</a>
               </div>
             </div>
 
@@ -705,7 +729,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <tbody>
                     <template x-for="c in card.bottom_need_counties" :key="c.geoid">
                       <tr>
-                        <td x-text="c.county_name"></td>
+                        <td><a :href="'/county?geoid=' + c.geoid" style="color:var(--accent);text-decoration:none;font-weight:500;" x-text="c.county_name" @mouseover="$el.style.textDecoration='underline'" @mouseout="$el.style.textDecoration='none'"></a></td>
                         <td class="county-geoid" x-text="c.geoid"></td>
                         <td class="county-val" x-text="fmtNum(c.display_value)"></td>
                       </tr>
@@ -766,6 +790,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </footer>
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function evidenceGallery() {
   return {
@@ -774,7 +799,7 @@ function evidenceGallery() {
     cardsError: '',
     searchQuery: '',
     categoryFilter: '',
-    equityFilter: '',
+    equityFilter: PDIDeepLink.getParam('dimension', ''),
     expandedCard: null,
 
     /* ── Derived ──────────────────────────────────────────────── */
@@ -822,7 +847,31 @@ function evidenceGallery() {
 
     /* ── Init ─────────────────────────────────────────────────── */
     init() {
+      // Read URL params for pre-filtering (cross-page links)
+      var params = new URLSearchParams(window.location.search);
+      var dim = params.get('dimension');
+      if (dim) { this.equityFilter = dim; }
+      var search = params.get('search');
+      if (search) { this.searchQuery = decodeURIComponent(search); }
+
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
+
       this.loadCards();
+
+      // Watch equity filter changes to sync URL
+      var self = this;
+      this.$watch('equityFilter', function (val) {
+        PDIDeepLink.syncURL({ dimension: val || '', search: self.searchQuery || '' });
+      });
+      // Watch search query changes to sync URL (debounced)
+      var searchTimer = null;
+      this.$watch('searchQuery', function (val) {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          PDIDeepLink.syncURL({ dimension: self.equityFilter || '', search: val || '' });
+        }, 500);
+      });
     },
 
     /* ── Data loading ─────────────────────────────────────────── */

@@ -624,13 +624,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </footer>
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function candidateTracker() {
   return {
     // ── State ────────────────────────────────────────────────────
     allPolicies: [],          // raw API response: policies from GET /v1/policy/policies
     candidates: [],           // [{key, name, placeholder, policyCount}]
-    selectedCandidate: '',
+    selectedCandidate: PDIDeepLink.getParam('candidate', ''),
     crosswalk: {},            // loaded from /static/crosswalks/wi_equity_crosswalk.json
     availableIndicators: new Set(),  // populated from GET /v1/policy/variables
     loading: false,
@@ -720,6 +721,8 @@ function candidateTracker() {
 
     // ── Init ─────────────────────────────────────────────────────
     init() {
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
       this.loadAll();
     },
 
@@ -786,9 +789,17 @@ function candidateTracker() {
         // Derive candidate list from policy data
         this.buildCandidates();
 
-        // Auto-select first candidate
-        if (this.candidates.length > 0 && !this.candidates[0].placeholder) {
-          this.selectedCandidate = this.candidates[0].key;
+        // Auto-select candidate from URL param or first
+        if (!this.selectedCandidate) {
+          if (this.candidates.length > 0 && !this.candidates[0].placeholder) {
+            this.selectedCandidate = this.candidates[0].key;
+          }
+        } else {
+          // Verify the URL candidate exists in the list
+          var found = this.candidates.some(function (c) { return c.key === this.selectedCandidate; }.bind(this));
+          if (!found && this.candidates.length > 0 && !this.candidates[0].placeholder) {
+            this.selectedCandidate = this.candidates[0].key;
+          }
         }
       } catch (e) {
         this.error = `Failed to load candidate policies: ${e.message}`;
@@ -831,6 +842,12 @@ function candidateTracker() {
     // ── Select candidate ─────────────────────────────────────────
     selectCandidate(key) {
       this.selectedCandidate = key;
+      // Sync URL with candidate param
+      if (key) {
+        PDIDeepLink.syncURL({ candidate: key });
+      } else {
+        PDIDeepLink.syncURL({});
+      }
     }
   };
 }

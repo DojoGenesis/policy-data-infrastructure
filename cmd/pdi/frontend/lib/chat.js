@@ -4,6 +4,8 @@ const ChatAdapter = {
   _proxyAvailable: null,
   _systemPrompt: null,  // Built lazily from live API data
   _pageContext: null,   // {page, geoid, name, indicator, geoid1, geoid2, name1, name2}
+  _narrateMode: false,  // True when narrate() is active — enables spatial system prompt
+  _navCommandsFound: [],  // Navigation commands extracted from last response
 
   setPageContext(ctx) {
     this._pageContext = ctx || null;
@@ -17,6 +19,7 @@ const ChatAdapter = {
   //   {{stat:value:label}}              → stat-callout card
   //   {{chart:name1=val1,name2=val2}}   → horizontal bar chart
   //   {{table:h1|h2|r1c1|r1c2|...}}    → data table
+  //   {{nav:label:url}}                 → navigation pill button
   // Plain text passes through unchanged (backward compatible).
   _parseRichResponse(text) {
     if (!text) return '';
@@ -55,6 +58,20 @@ const ChatAdapter = {
         // First row is headers; remaining cells split into rows of header-length
         // If only one row of data, treat all as a single-row table with first cells as headers
         return ChatAdapter._buildDataTable(cells);
+      }
+    );
+
+    // 4. Navigation pills: {{nav:label:url}}
+    //    Renders as a clickable button that navigates to the given URL.
+    html = html.replace(
+      /\{\{nav:\s*([^:}]+?)\s*:\s*([^}]*?)\s*\}\}/g,
+      function(match, label, url) {
+        var cleanLabel = label.trim();
+        var cleanUrl = url.trim();
+        return '<a href="' + ChatAdapter._escapeHtml(cleanUrl) +
+               '" class="nav-pill">' +
+               ChatAdapter._escapeHtml(cleanLabel) +
+               '</a>';
       }
     );
 
@@ -178,6 +195,57 @@ const ChatAdapter = {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   },
 
+  // ── Navigation Command Parsing ───────────────────────────────────────────────
+
+  // Extract navigation commands from response text. Returns {cleanText, commands}.
+  // Commands: {{scroll:layer-N}}, {{map:indicator=X&zoom=N}}, {{highlight:card-N}}
+  _parseNavigationCommands(text) {
+    if (!text) return { cleanText: text, commands: [] };
+    var commands = [];
+    var cleanText = text;
+
+    // 1. Scroll commands: {{scroll:layer-N}} or {{scroll:layer-N:description}}
+    var scrollRe = /\{\{scroll:\s*([^:}]+?)(?::\s*([^}]*?))?\s*\}\}/g;
+    cleanText = cleanText.replace(scrollRe, function(match, target, description) {
+      commands.push({ type: 'scroll', target: target.trim(), description: description ? description.trim() : null });
+      return '';  // Remove from displayed text
+    });
+
+    // 2. Map commands: {{map:indicator=X&zoom=N}} or {{map:geoid=X&zoom=N}}
+    var mapRe = /\{\{map:\s*([^}]+?)\s*\}\}/g;
+    cleanText = cleanText.replace(mapRe, function(match, params) {
+      var parsed = {};
+      var pairs = params.split('&');
+      for (var i = 0; i < pairs.length; i++) {
+        var eq = pairs[i].indexOf('=');
+        if (eq > 0) {
+          parsed[pairs[i].substring(0, eq).trim()] = pairs[i].substring(eq + 1).trim();
+        }
+      }
+      commands.push({ type: 'map', params: parsed });
+      return '';  // Remove from displayed text
+    });
+
+    // 3. Highlight commands: {{highlight:card-N}} or {{highlight:evidence-N}}
+    var hlRe = /\{\{highlight:\s*([^}]+?)\s*\}\}/g;
+    cleanText = cleanText.replace(hlRe, function(match, target) {
+      commands.push({ type: 'highlight', target: target.trim() });
+      return '';  // Remove from displayed text
+    });
+
+    // 4. Layer reveal commands (alternative format): {{layer:N}}
+    var layerRe = /\{\{layer:\s*(\d+)\s*\}\}/g;
+    cleanText = cleanText.replace(layerRe, function(match, num) {
+      commands.push({ type: 'scroll', target: 'layer-' + num });
+      return '';  // Remove from displayed text
+    });
+
+    // Clean up extra whitespace from removed commands
+    cleanText = cleanText.replace(/\n{3,}/g, '\n\n').trim();
+
+    return { cleanText: cleanText, commands: commands };
+  },
+
   // ── Suggested Questions ─────────────────────────────────────────────────────
 
   // Returns context-aware suggested question prompts for the current page.
@@ -187,28 +255,28 @@ const ChatAdapter = {
     switch (ctx && ctx.page) {
       case 'county':
         return [
+          'Walk me through ' + (ctx.name || 'this county'),
           'How does ' + (ctx.name || 'this county') + ' compare to the state average?',
-          'What are the biggest disparities within ' + (ctx.name || 'this county') + '?',
+          'Compare this county to the state average',
+          'What should I do about this?',
           'Which policies would help ' + (ctx.name || 'this county') + ' the most?',
-          'What is the distribution of poverty across tracts in ' + (ctx.name || 'this county') + '?',
-          'Is poverty correlated with health outcomes in ' + (ctx.name || 'this county') + '?',
-          'How has ' + (ctx.name || 'this county') + ' changed over time?'
+          'What are the biggest disparities within ' + (ctx.name || 'this county') + '?'
         ];
       case 'map':
         return [
-          'Where are the High-High clusters for ' + (ctx.indicator || 'this indicator') + '?',
-          'Which tracts are spatial outliers?',
-          'What correlates most strongly with ' + (ctx.indicator || 'this indicator') + '?',
+          'Why is this tract an outlier?',
+          'Where are the biggest clusters?',
           'Explain why some tracts cluster on ' + (ctx.indicator || 'this indicator'),
+          'What correlates most strongly with ' + (ctx.indicator || 'this indicator') + '?',
           'Show me the distribution of ' + (ctx.indicator || 'this indicator') + ' across all tracts'
         ];
       case 'compare':
         return [
-          'Which county has better health outcomes?',
+          'Why does ' + (ctx.name1 || 'County A') + ' lead on health?',
+          'What\'s the biggest gap between these two counties?',
           'Show me the biggest differences between ' + (ctx.name1 || 'County A') + ' and ' + (ctx.name2 || 'County B'),
           'What explains the differences between these two counties?',
-          'How do these counties rank on key indicators statewide?',
-          'Which policies target the disparities between these counties?'
+          'How do these counties rank on key indicators statewide?'
         ];
       default:
         // Explorer or standalone chat page
@@ -300,6 +368,24 @@ RICH FORMATTING TOKENS — Use these to present data visually. They render as st
 
 Use these tokens whenever presenting numeric comparisons, rankings, or key findings. Mix them with narrative text — don't put all tokens in a block. Place stat callouts inline with explanations, tables after comparisons, and charts for rankings of 3-6 items.
 
+SPATIAL NARRATION — When the user asks you to "walk through," "compare," "explain," or "recommend," act as a spatial narrator. You guide the user through the page, section by section, telling a story about the data:
+
+- WALK-THROUGH: When asked to "walk me through this county," narrate each layer (1-5) in order. For each layer, describe what the user is seeing, cite key values, and use {{scroll:layer-N}} to trigger the page to scroll to that section. Structure: introduce the county → Layer 1 (primary observation) → Layer 2 (research-grounded measures) → Layer 3 (derived structure) → Layer 4 (geography as signal) → Layer 5 (query-time construction) → evidence cards / policy levers. Keep each layer description to 2-3 sentences.
+
+- COMPARISON: When asked to compare, fetch or compute the comparison values. Use {{chart:...}} for visual side-by-side. Cite specific numbers — "Dane County's poverty rate is 9.2% vs the state average of 11.3%." If comparing to neighbors, list specific neighboring counties and their values. End with actionable insight: which direction the gap runs and what it means.
+
+- EXPLANATION: When asked "why is this tract an outlier/cluster," explain the LISA methodology: "A High-High cluster means both this tract AND its neighbors have high values — it's not just this tract being high, it's the neighborhood being high together." Cite the tract's specific value and its neighbors' values. Explain what spatial autocorrelation means in plain language.
+
+- RECOMMENDATION: When asked "what should I do about this," cross-reference the county's worst indicators with policy evidence cards. Match policy equity dimensions to the county's highest-burden areas. For each recommendation: (1) name the policy lever, (2) cite the specific county data that justifies it, (3) state the equity dimension it addresses. Use {{highlight:card-N}} to draw attention to relevant evidence cards.
+
+NAVIGATION COMMANDS — You can control the page the user sees. Use these tokens to guide attention:
+- {{scroll:layer-N}} — scrolls the page to Layer N (county profile sections). Use layer numbers 1-5.
+- {{map:indicator=X&zoom=N}} — updates the map view to show indicator X at zoom level N
+- {{highlight:card-N}} — highlights evidence card N on the page
+- {{layer:N}} — shorthand for {{scroll:layer-N}}
+
+Use navigation commands sparingly — only when they add value to the narrative. Don't spam them.
+
 EQUITY DIMENSION → INDICATOR MAPPING:
 - housing_affordability, housing_stability → poverty_rate, median_household_income (cost-burdened counties)
 - health_access, health_equity → uninsured_rate, poverty_rate (health underserved counties)
@@ -334,6 +420,63 @@ ${this._buildPageContextBlock()}`;
     "I can cross-reference 85 policy positions with 72 counties of indicator data. Ask me which policies address which problems in which places.",
     "Try: 'Explain which policies will make a difference in which counties, starting with the most money-saving interventions.'"
   ],
+
+  // ── Spatial Narrator ────────────────────────────────────────────────────────
+
+  // narrate(command, pageContext): The spatial narrator entry point.
+  // Sets page context, enhances the message with narration framing,
+  // delegates to send(), and returns navigation commands extracted from the response.
+  //
+  // command examples: "Walk me through this county", "Compare to state"
+  // pageContext: {page, geoid, name, indicator, ...} — same as setPageContext()
+  //
+  // Returns a promise resolving to {reply, navCommands} where:
+  //   reply: the full response HTML (rich-parsed)
+  //   navCommands: array of {type, target/params} extracted from response
+  async narrate(command, pageContext) {
+    this._narrateMode = true;
+    this._navCommandsFound = [];
+    if (pageContext) this.setPageContext(pageContext);
+
+    // Build narration-framed message
+    var narrationPrefix = '';
+    var ctx = this._pageContext;
+    if (ctx) {
+      switch (ctx.page) {
+        case 'county':
+          narrationPrefix = '[NARRATION MODE: The user is on the ' + (ctx.name || 'county') + ' profile page. They see 5 data layers plus evidence cards. Guide them spatially. Use {{scroll:layer-N}} to scroll the page.] ';
+          break;
+        case 'map':
+          narrationPrefix = '[NARRATION MODE: The user is on the LISA cluster map for ' + (ctx.indicator || 'an indicator') + '. Explain spatial patterns. Use {{map:...}} commands to zoom/recenter if helpful.] ';
+          break;
+        case 'compare':
+          narrationPrefix = '[NARRATION MODE: The user is comparing ' + (ctx.name1 || 'County A') + ' and ' + (ctx.name2 || 'County B') + '. Narrate differences and similarities. Use visual comparisons.] ';
+          break;
+        default:
+          narrationPrefix = '[NARRATION MODE: Guide the user through the data. Be spatial and contextual.] ';
+      }
+    }
+
+    var fullMessage = narrationPrefix + command;
+    var result = { reply: '', navCommands: [] };
+
+    await this.send(fullMessage,
+      function onChunk(chunk) {
+        result.reply += chunk;
+      },
+      function onDone() { /* resolved below */ }
+    );
+
+    // Parse navigation commands from the response
+    var parsed = ChatAdapter._parseRichResponse(result.reply);
+    var navResult = ChatAdapter._parseNavigationCommands(result.reply);
+    this._navCommandsFound = navResult.commands;
+    result.navCommands = navResult.commands;
+    result.reply = ChatAdapter._parseRichResponse(navResult.cleanText);
+
+    this._narrateMode = false;
+    return result;
+  },
 
   // ── Chat Send ──────────────────────────────────────────────────────────────
 

@@ -326,6 +326,148 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     .chart-card.map-card { min-height: 350px; }
     #leaflet-map { height: 60vh; min-height: 350px; }
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     MINI PROFILE PANEL — positioned over map on tract click
+     ═══════════════════════════════════════════════════════════ */
+
+  .mini-profile-panel {
+    display: none;
+    position: absolute;
+    z-index: 1010;
+    background: var(--raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-card);
+    box-shadow: var(--lift-hover);
+    padding: clamp(14px, 2vw, 20px);
+    min-width: 260px;
+    max-width: 340px;
+    pointer-events: auto;
+    animation: mp-enter 180ms ease;
+  }
+  .mini-profile-panel.visible { display: block; }
+  @keyframes mp-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .mp-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .mp-close:hover { color: var(--text); }
+
+  .mp-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-right: 20px;
+  }
+  .mp-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .mp-geoid {
+    font-size: 0.65rem;
+    color: var(--subtle);
+    font-family: var(--font-mono);
+  }
+
+  .mp-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mp-stat {
+    background: var(--plane-1);
+    border-radius: var(--r-badge);
+    padding: 6px 10px;
+    text-align: center;
+  }
+  .mp-stat-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-mono);
+  }
+  .mp-stat-lbl {
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtle);
+    margin-top: 1px;
+  }
+
+  .mp-lisa {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: var(--r-badge);
+    background: var(--plane-1);
+    border: 1px solid var(--border);
+  }
+  .mp-lisa-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .mp-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .mp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    border-radius: var(--r-badge);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+  }
+  .mp-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .mp-btn-primary {
+    background: var(--grad-cta);
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .mp-btn-primary:hover { opacity: 0.9; color: var(--bg); }
+
+  .mp-county-link {
+    font-size: 0.72rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+  .mp-county-link:hover { text-decoration: underline; }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -407,6 +549,52 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);" x-text="loadingMessage"></p>
         </div>
       </div>
+
+      <!-- Mini Profile Panel (shown on tract click) -->
+      <div class="mini-profile-panel" id="mini-profile" x-show="mpVisible" x-cloak>
+        <button class="mp-close" @click="mpVisible = false" aria-label="Close">&times;</button>
+        <template x-if="mpTract">
+          <div>
+            <div class="mp-header">
+              <span class="mp-name" x-text="mpTract.name"></span>
+            </div>
+            <div class="mp-geoid" x-text="'GEOID: ' + mpTract.geoid"></div>
+            <a x-show="mpTract.countyName" :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-county-link" x-text="mpTract.countyName + ' County →'"></a>
+
+            <div class="mp-stats">
+              <div class="mp-stat" x-show="mpTract.poverty != null">
+                <div class="mp-stat-val" x-text="mpTract.poverty"></div>
+                <div class="mp-stat-lbl">Poverty Rate</div>
+              </div>
+              <div class="mp-stat" x-show="mpTract.income != null">
+                <div class="mp-stat-val" x-text="mpTract.income"></div>
+                <div class="mp-stat-lbl">Median Income</div>
+              </div>
+              <div class="mp-stat" x-show="mpTract.poc != null">
+                <div class="mp-stat-val" x-text="mpTract.poc"></div>
+                <div class="mp-stat-lbl">% POC</div>
+              </div>
+              <div class="mp-stat" x-show="mpTract.uninsured != null">
+                <div class="mp-stat-val" x-text="mpTract.uninsured"></div>
+                <div class="mp-stat-lbl">Uninsured</div>
+              </div>
+            </div>
+
+            <div class="mp-lisa" x-show="mpTract.lisaTier">
+              <span class="mp-lisa-dot" :style="'background:' + _resolveColor(clusterColors[mpTract.lisaTier] || clusterColors['NS'])"></span>
+              <span x-text="(clusterLabels[mpTract.lisaTier] || mpTract.lisaTier) + ' — ' + varLabel"></span>
+            </div>
+            <div class="mp-lisa" x-show="!mpTract.lisaTier" style="color:var(--muted);">
+              <span>No LISA data for current indicator</span>
+            </div>
+
+            <div class="mp-actions">
+              <a :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-btn mp-btn-primary">View full profile →</a>
+              <button class="mp-btn" @click="askAboutTract()">💬 Ask about this tract</button>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- ── Legend ── -->
@@ -476,11 +664,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </main>
 
 <!-- ═══════════════ APP LOGIC ═══════════════ -->
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function lisaMap() {
   return {
     // ── State ──────────────────────────────────────────────────
-    selectedVariable: 'poverty_rate',
+    selectedVariable: PDIDeepLink.getParam('indicator', 'poverty_rate'),
     showCounties: false,
     analysisVintage: '',
     mapLoading: true,
@@ -498,6 +687,10 @@ function lisaMap() {
     countyGeoJSON: null,
 
     stats: { total: 0, significant: 0, missingTracts: 0, rows: [] },
+
+    // Mini profile panel state
+    mpVisible: false,
+    mpTract: null,
 
     // Leaflet refs
     _map: null,
@@ -562,14 +755,68 @@ function lisaMap() {
       this.mapLoading = true; this.mapError = '';
       this.loadingMessage = 'Loading LISA analyses…';
 
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
+
+      // Read map view params from URL
+      var latParam = parseFloat(PDIDeepLink.getParam('lat', ''));
+      var lngParam = parseFloat(PDIDeepLink.getParam('lng', ''));
+      var zoomParam = parseInt(PDIDeepLink.getParam('zoom', ''));
+      var geoidParam = PDIDeepLink.getParam('geoid', '');
+      var indicatorParam = PDIDeepLink.getParam('indicator', '');
+
+      // Apply indicator from URL (cross-page link from county profile or evidence)
+      if (indicatorParam) {
+        this.selectedVariable = indicatorParam;
+      }
+
       try {
         this.initLeafletMap();
+
+        // Apply URL view params after map init
+        if (!isNaN(latParam) && !isNaN(lngParam)) {
+          var z = !isNaN(zoomParam) ? zoomParam : 7;
+          this._map.setView([latParam, lngParam], z);
+        }
+
         await this.fetchGeoJSON();
         await this.discoverAnalyses();
         await this.fetchAllScores();
         this.renderGeoJSON();
         this.updateStats();
         this.mapReady = true;
+
+        // Zoom to specific tract if geoid provided
+        if (geoidParam && this.tractGeoJSON) {
+          var self = this;
+          this.tractGeoJSON.features.some(function(f) {
+            var props = f.properties || {};
+            var fGeoid = (props.GEOID || '').toString().trim();
+            if (fGeoid === geoidParam) {
+              var layer = L.geoJSON(f);
+              var bounds = layer.getBounds();
+              if (bounds.isValid()) {
+                self._map.fitBounds(bounds, { maxZoom: 12, padding: [40, 40] });
+              }
+              // Open popup after a short delay for rendering
+              setTimeout(function() {
+                self._tractLayer.eachLayer(function(l) {
+                  var lp = l.feature && l.feature.properties;
+                  var lg = lp && (lp.GEOID || '').toString().trim();
+                  if (lg === geoidParam) {
+                    l.fire('click');
+                  }
+                });
+              }, 500);
+              return true;
+            }
+          });
+        }
+
+        // Listen for map move/zoom to sync URL
+        var syncMapURL = this.syncMapURL.bind(this);
+        this._map.on('moveend', syncMapURL);
+        this._map.on('zoomend', syncMapURL);
       } catch (e) {
         this.mapError = e.message || 'Failed to load map data.';
         console.error('Map init failed:', e);
@@ -775,11 +1022,25 @@ function lisaMap() {
     onVariableChange() {
       this.renderGeoJSON();
       this.updateStats();
+      this.syncMapURL();
 
       // Tell the chat adapter about the new indicator
       if (window.ChatAdapter) {
         ChatAdapter.setPageContext({ page: 'map', indicator: this.selectedVariable });
       }
+    },
+
+    // ═══════════════ MAP URL SYNC ══════
+    syncMapURL() {
+      if (!this._map) return;
+      var center = this._map.getCenter();
+      var zoom = this._map.getZoom();
+      PDIDeepLink.syncURL({
+        indicator: this.selectedVariable,
+        lat: center.lat.toFixed(4),
+        lng: center.lng.toFixed(4),
+        zoom: zoom,
+      });
     },
 
     // ═══════════════ RENDER GEOJSON ════
@@ -853,7 +1114,7 @@ function lisaMap() {
       const name = props.tract_name || props.NAME || geoid;
       const countyName = props.county_name || '';
 
-      layer.on('click', function() {
+      layer.on('click', function(e) {
         const currentScores = self.scoresByVariable[self.selectedVariable] || {};
         const scoreInfo = currentScores[geoid] || null;
 
@@ -867,6 +1128,44 @@ function lisaMap() {
             : Number(indicatorVal).toFixed(1) + unit;
         }
 
+        // ── Populate mini profile panel ──
+        const countyGeoid = geoid.substring(0, 5);
+        const povertyVal = props.poverty_rate;
+        const incomeVal = props.median_hh_income;
+        const pocVal = props.pct_poc;
+        const uninsuredVal = props.uninsured_rate;
+
+        self.mpTract = {
+          name: name,
+          geoid: geoid,
+          countyName: countyName,
+          countyGeoid: countyGeoid,
+          poverty: povertyVal != null ? (parseFloat(povertyVal).toFixed(1) + '%') : null,
+          income: incomeVal != null ? ('$' + Math.round(parseFloat(incomeVal)).toLocaleString()) : null,
+          poc: pocVal != null ? (parseFloat(pocVal).toFixed(1) + '%') : null,
+          uninsured: uninsuredVal != null ? (parseFloat(uninsuredVal).toFixed(1) + '%') : null,
+          lisaTier: scoreInfo ? (scoreInfo.cluster || 'NS') : null,
+        };
+        self.mpVisible = true;
+
+        // Position the panel near the click
+        setTimeout(function() {
+          var panel = document.getElementById('mini-profile');
+          if (panel && e.originalEvent) {
+            var mapRect = self._map.getContainer().getBoundingClientRect();
+            var left = e.originalEvent.clientX - mapRect.left + 10;
+            var top = e.originalEvent.clientY - mapRect.top - 10;
+            // Keep panel within map bounds
+            if (left + 350 > mapRect.width) left = mapRect.width - 350 - 10;
+            if (top + 300 > mapRect.height) top = mapRect.height - 300 - 10;
+            if (left < 10) left = 10;
+            if (top < 10) top = 10;
+            panel.style.left = left + 'px';
+            panel.style.top = top + 'px';
+          }
+        }, 50);
+
+        // Also show the leaflet popup
         let html = '';
 
         // ── Header ──
@@ -1053,6 +1352,33 @@ function lisaMap() {
     _esc(s) {
       return String(s == null ? '' : s).replace(/[&<>\"']/g, c =>
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[c]);
+    },
+
+    // ═══════════════ CHAT INTEGRATION ══
+    askAboutTract() {
+      if (!this.mpTract) return;
+      // Open chat drawer and pre-fill a question
+      if (window.PDIChatDrawer) {
+        window.PDIChatDrawer.open();
+        window.PDIChatDrawer.focus();
+      }
+      // Set page context for chat
+      if (window.ChatAdapter) {
+        ChatAdapter.setPageContext({
+          page: 'map',
+          indicator: this.selectedVariable,
+          tractGeoid: this.mpTract.geoid,
+          tractName: this.mpTract.name,
+          countyGeoid: this.mpTract.countyGeoid,
+        });
+      }
+      // Navigate to chat page with context
+      var params = new URLSearchParams();
+      params.set('page', 'map');
+      params.set('indicator', this.selectedVariable);
+      params.set('geoid', this.mpTract.countyGeoid);
+      params.set('name', this.mpTract.countyName || '');
+      window.open('/chat?' + params.toString(), '_blank');
     },
 
     _indicatorRow(label, value, unit) {

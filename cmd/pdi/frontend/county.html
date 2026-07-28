@@ -613,6 +613,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     line-height: 1.55;
     margin: 0 0 14px;
   }
+
+  /* ── Navigation pills (cross-page integration) ──────────────────────────── */
+  .nav-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    margin: 2px 4px 2px 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .nav-pill:hover {
+    background: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+  }
 </style>
 <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -635,7 +655,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 
-<main id="main" x-data="countyProfile()" x-init="init()">
+<main id="main" x-data="countyProfile()" x-init="init()" @category-change="syncCountyURL()">
 
   <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:0.85rem;margin:24px 0 0;padding:0 clamp(16px,3vw,32px);" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">← Back to counties</a>
 
@@ -684,6 +704,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="portrait-actions">
           <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Brief</a>
           <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
+          <a :href="'/map?geoid='+geoid" class="btn btn-secondary">View on Map</a>
           <a href="/chat" class="btn btn-secondary">Ask Chat</a>
         </div>
       </div>
@@ -714,7 +735,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div x-show="!indicatorsLoading && !indicatorsError" x-cloak>
           <div class="filter-row">
             <template x-for="(inds, cat) in groupedIndicators" :key="cat">
-              <button class="filter-chip" :class="{active: activeCategory===cat}" @click="activeCategory=cat; indSortCol=''; indSortDir=1" x-text="cat"></button>
+              <button class="filter-chip" :class="{active: activeCategory===cat}" @click="activeCategory=cat; indSortCol=''; indSortDir=1; syncCountyURL()" x-text="cat"></button>
             </template>
           </div>
 
@@ -729,6 +750,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <th style="text-align:center;">State Rank</th>
                   <th @click="indSortCol='reliability'; indSortDir*=-1" :class="{sorted: indSortCol==='reliability'}" style="text-align:center;cursor:pointer;user-select:none;">Reliability <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
                   <th class="num">MOE</th>
+                  <th style="text-align:center;">Map</th>
                 </tr>
               </thead>
               <tbody>
@@ -746,6 +768,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                       <span class="badge" :class="'badge-'+(ind.reliability||'unknown')" x-text="ind.reliability || '—'"></span>
                     </td>
                     <td class="num" style="color:var(--subtle);font-style:italic;" x-text="fmtMOE(ind.margin_of_error)"></td>
+                    <td style="text-align:center;">
+                      <a :href="'/map?indicator=' + encodeURIComponent(ind.variable_id)" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-weight:600;" title="View on Map">🗺️</a>
+                    </td>
                   </tr>
                 </template>
               </tbody>
@@ -988,7 +1013,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <div class="levers-grid" x-show="!evidenceLoading && !evidenceError && evidenceCards.length > 0" x-cloak>
           <template x-for="card in evidenceCards.slice(0,6)" :key="card.policy_id + '-' + card.title">
-            <div class="evidence-card">
+            <a :href="'/evidence?dimension=' + encodeURIComponent(card.equity_dimension || '')" class="evidence-card" style="text-decoration:none;color:inherit;">
               <div class="ev-category" x-text="card.category || 'Policy'"></div>
               <div class="ev-title" x-text="card.title"></div>
               <div class="ev-finding" x-text="card.key_finding || ''"></div>
@@ -996,12 +1021,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 <span x-show="card.equity_dimension" x-text="card.equity_dimension"></span>
                 <span x-show="card.data_quality" class="badge" :class="'badge-'+(card.data_quality||'unknown')" x-text="card.data_quality"></span>
               </div>
-            </div>
+            </a>
           </template>
         </div>
 
         <div x-show="!evidenceLoading && !evidenceError && evidenceCards.length === 0" class="state-empty" x-cloak>
           No evidence cards available yet. Cards are generated by the analysis pipeline.
+        </div>
+
+        <!-- View all evidence link -->
+        <div x-show="evidenceCards.length > 0" style="text-align:center;margin-top:clamp(16px,2.5vw,24px);" x-cloak>
+          <a href="/evidence" class="btn btn-secondary">View all evidence cards →</a>
         </div>
 
         <!-- CTA: Five Mornings + Compare -->
@@ -1017,7 +1047,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Open Compare</a>
             <div style="margin-top:10px;font-size:0.72rem;color:var(--subtle);">
               <template x-for="n in neighborSuggestions" :key="n.geoid">
-                <a :href="'/county?geoid='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
+                <a :href="'/compare?geoid1='+geoid+'&geoid2='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="'vs ' + n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
               </template>
             </div>
           </div>
@@ -1053,6 +1083,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   Policy Data Infrastructure · <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a> · Apache-2.0
 </footer>
 
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function countyProfile() {
   return {
@@ -1338,11 +1369,27 @@ function countyProfile() {
     },
 
     async init() {
-      this.geoid = new URLSearchParams(window.location.search).get('geoid') || '';
+      this.geoid = PDIDeepLink.getParam('geoid', '');
       if (!this.geoid) {
         this.loading = false;
         this.error = 'No GEOID provided. Go back to the <a href="/" style="color:var(--accent);">County Explorer</a> to select a county.';
         return;
+      }
+
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
+
+      // Watch composite details toggle for URL sync
+      const compositeDetails = document.querySelector('.composite-panel');
+      if (compositeDetails) {
+        const self = this;
+        compositeDetails.addEventListener('toggle', function () {
+          if (compositeDetails.open) {
+            PDIDeepLink.syncURL({ geoid: self.geoid, tab: self.activeCategory, composite: 'open' });
+          } else {
+            PDIDeepLink.syncURL({ geoid: self.geoid, tab: self.activeCategory });
+          }
+        });
       }
 
       this.loading = true;
@@ -1397,6 +1444,63 @@ function countyProfile() {
       }
       this.loading = false;
       this.activeCategory = '';
+
+      // Read deep-link params for layer/indicator/tab
+      const layerParam = PDIDeepLink.getParam('layer', '');
+      const indicatorParam = PDIDeepLink.getParam('indicator', '');
+      const tabParam = PDIDeepLink.getParam('tab', '');
+      const compositeParam = PDIDeepLink.getParam('composite', '');
+
+      if (layerParam) {
+        // Map layer number to section ID: layer-1 → #layer-1
+        const sectionId = 'layer-' + layerParam;
+        this.$nextTick(() => {
+          const el = document.getElementById(sectionId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }
+
+      if (tabParam) {
+        // Set active category tab directly
+        this.$nextTick(() => {
+          const groups = this.groupedIndicators;
+          if (groups[tabParam]) {
+            this.activeCategory = tabParam;
+          }
+        });
+      }
+
+      if (indicatorParam) {
+        // Find which category contains this indicator and switch to it
+        this.$nextTick(() => {
+          for (const [cat, inds] of Object.entries(this.groupedIndicators)) {
+            if (inds.some(i => i.variable_id === indicatorParam)) {
+              this.activeCategory = cat;
+              break;
+            }
+          }
+        });
+      }
+
+      if (compositeParam === 'open') {
+        // Open the composite builder details element
+        this.$nextTick(() => {
+          const detailsEl = document.querySelector('.composite-panel');
+          if (detailsEl && !detailsEl.open) {
+            detailsEl.open = true;
+          }
+        });
+      }
+    },
+
+    // ── Deep-link URL sync ─────────────────────────────────
+    syncCountyURL() {
+      PDIDeepLink.syncURL({
+        geoid: this.geoid,
+        tab: this.activeCategory,
+      });
     },
 
     reloadIndicators() {

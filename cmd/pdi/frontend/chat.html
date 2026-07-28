@@ -104,6 +104,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .data-table tbody tr:last-child td { border-bottom: none; }
   .data-table tbody tr:hover { background: var(--plane-base); }
+
+  /* ── Navigation pills ──────────────────────────────────────────────────────── */
+  .nav-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    margin: 2px 4px 2px 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .nav-pill:hover {
+    background: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+  }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -133,6 +153,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <script src="/static/lib/api.js"></script>
 <script src="/static/lib/domain.js"></script>
 <script src="/static/lib/chat.js"></script>
+<script src="/static/lib/deeplink.js"></script>
 <script>
 (function(){
   var msgs=document.getElementById('messages'), input=document.getElementById('input'), sendBtn=document.getElementById('send'), sug=document.getElementById('suggestions');
@@ -208,6 +229,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     sendBtn.disabled = true;
     add('user', text);
     thinking(true);
+    // Update URL with query for shareability
+    PDIDeepLink.syncURL({ q: encodeURIComponent(text) });
     var asstEl, full = '', first = true;
     try {
       await ChatAdapter.send(text,
@@ -245,6 +268,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   // Expose refresh so other pages can trigger it
   window._pdiRefreshChatSuggestions = refreshSuggestions;
+
+  // ── Deep-link: auto-send query from ?q= param ────────────
+  (function autoSendFromURL() {
+    var q = PDIDeepLink.getParam('q', '');
+    if (q) {
+      input.value = decodeURIComponent(q.replace(/\+/g, ' '));
+      // Wait for ChatAdapter to be ready, then send
+      var attempts = 0;
+      var trySend = function () {
+        if (window.ChatAdapter && typeof ChatAdapter.send === 'function') {
+          send();
+        } else if (attempts < 30) {
+          attempts++;
+          setTimeout(trySend, 200);
+        }
+      };
+      setTimeout(trySend, 500);
+    }
+  })();
+
+  // ── Inject Copy Link button ──────────────────────────────
+  PDIDeepLink.autoInjectCopyButton();
 })();
 </script>
 <script src="/static/chat-drawer.js"></script>

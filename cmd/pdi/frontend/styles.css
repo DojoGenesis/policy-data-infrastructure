@@ -1306,3 +1306,40 @@ html.js .page-view {
     --cta-glow:    color-mix(in srgb, var(--tp-ink) 34%, transparent);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COPY LINK BUTTON — ADR-012 I4 deep-link
+   ──────────────────────────────────────────────────────────────────
+   Shared button style for copying shareable URLs. Used by the
+   PDIDeepLink utility in /static/lib/deeplink.js.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--raised);
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-badge);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  white-space: nowrap;
+}
+.copy-link-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.copy-link-btn svg {
+  flex-shrink: 0;
+}
+.copy-link-btn--copied {
+  background: color-mix(in srgb, var(--live) 12%, transparent) !important;
+  color: var(--live) !important;
+  border-color: color-mix(in srgb, var(--live) 35%, transparent) !important;
+}

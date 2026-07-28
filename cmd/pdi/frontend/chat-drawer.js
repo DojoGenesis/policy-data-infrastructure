@@ -58,6 +58,12 @@
     + '.cd-msg.asst .mini-chart{background:var(--plane-1);}'
     + '.cd-msg.asst .data-table thead{background:var(--plane-1);}'
 
+    // --- navigation pills --------------------------------------------------------
+    + '.nav-pill{display:inline-block;padding:4px 12px;font-size:0.78rem;font-weight:600;'
+    + 'color:var(--accent);text-decoration:none;border:1px solid var(--accent);'
+    + 'border-radius:999px;margin:2px 4px 2px 0;transition:all 0.15s ease;white-space:nowrap;}'
+    + '.nav-pill:hover{background:var(--accent);color:var(--bg);text-decoration:none;}'
+
     // --- thinking dots --------------------------------------------------------
     + '.cd-thinking{display:flex;align-items:center;gap:5px;padding:8px 12px;color:var(--muted);font-size:0.78rem;}'
     + '.cd-thinking .cd-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);'
@@ -189,6 +195,56 @@
     if (!show && el) el.remove();
   }
 
+  // ── Navigation Command Execution ────────────────────────────────────────────
+
+  // Execute navigation commands extracted from chat responses.
+  // Handles: scroll (scroll page to layer), map (update map view), highlight (draw attention to card)
+  function executeNavCommands(commands) {
+    if (!commands || commands.length === 0) return;
+
+    commands.forEach(function (cmd) {
+      switch (cmd.type) {
+        case 'scroll':
+          // Scroll page to target element (e.g., #layer-3)
+          var targetEl = document.getElementById(cmd.target);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Brief highlight flash
+            targetEl.style.transition = 'box-shadow 0.3s ease';
+            targetEl.style.boxShadow = '0 0 0 3px var(--accent)';
+            setTimeout(function () {
+              targetEl.style.boxShadow = '';
+            }, 2000);
+          }
+          break;
+
+        case 'map':
+          // Dispatch custom event for map page to pick up
+          // map.html can listen for 'pdi-map-command' to update indicator/zoom
+          var mapEvent = new CustomEvent('pdi-map-command', {
+            detail: cmd.params
+          });
+          document.dispatchEvent(mapEvent);
+          break;
+
+        case 'highlight':
+          // Highlight evidence card by id (e.g., card-1, evidence-3)
+          var cardEl = document.getElementById(cmd.target);
+          if (cardEl) {
+            cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            cardEl.style.transition = 'box-shadow 0.3s ease, outline 0.3s ease';
+            cardEl.style.outline = '3px solid var(--accent)';
+            cardEl.style.boxShadow = '0 0 20px color-mix(in srgb, var(--accent) 30%, transparent)';
+            setTimeout(function () {
+              cardEl.style.outline = '';
+              cardEl.style.boxShadow = '';
+            }, 3000);
+          }
+          break;
+      }
+    });
+  }
+
   // ── Send ───────────────────────────────────────────────────────────────────
   async function send() {
     var text = input.value.trim();
@@ -207,6 +263,13 @@
     addMsg('user', text);
     showThinking(true);
 
+    // Update URL with query for shareability
+    if (window.PDIDeepLink) {
+      PDIDeepLink.syncURL({ q: encodeURIComponent(text) });
+    } else if (window.URLState) {
+      URLState.updateParam('q', encodeURIComponent(text));
+    }
+
     var asstEl = null;
     var full = '';
     var first = true;
@@ -217,14 +280,23 @@
           if (first) { showThinking(false); asstEl = addMsg('asst', ''); first = false; }
           full += chunk;
           if (asstEl) {
-            var parsed = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
+            // Show raw text during streaming; parse nav commands after done
+            var rawHtml = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
               ? ChatAdapter._parseRichResponse(full)
               : full;
-            asstEl.innerHTML = parsed.replace(/\n/g, '<br>');
+            asstEl.innerHTML = rawHtml.replace(/\n/g, '<br>');
           }
           msgs.scrollTop = msgs.scrollHeight;
         },
         function onDone() {
+          // Parse navigation commands from full response and clean display
+          if (asstEl && window.ChatAdapter && typeof ChatAdapter._parseNavigationCommands === 'function') {
+            var navResult = ChatAdapter._parseNavigationCommands(full);
+            var cleanHtml = ChatAdapter._parseRichResponse(navResult.cleanText);
+            asstEl.innerHTML = cleanHtml.replace(/\n/g, '<br>');
+            // Execute navigation commands (scroll, map, highlight)
+            executeNavCommands(navResult.commands);
+          }
           sending = false;
           sendBtn.disabled = false;
           input.focus();
@@ -295,7 +367,14 @@
     toggle: function () { setOpen(!open); },
     refreshSuggestions: refreshSuggestions,
     focus: function () { setOpen(true); setTimeout(function () { input.focus(); }, 300); },
-    isOpen: function () { return open; }
+    isOpen: function () { return open; },
+    executeNavCommands: executeNavCommands,
+    // narrate(command): convenience method that opens the drawer, types the command, and sends it
+    narrate: function (command) {
+      setOpen(true);
+      input.value = command;
+      setTimeout(function () { send(); }, 200);
+    }
   };
 
 })();

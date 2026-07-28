@@ -440,6 +440,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       font-size: 0.76rem;
     }
   }
+
+  /* ── Navigation pills (cross-page integration) ──────────────────────────── */
+  .nav-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    margin: 2px 4px 2px 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .nav-pill:hover {
+    background: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+  }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -645,6 +665,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <span x-show="geo2Name" class="lead lead-b" x-text="geo2Name + ': ' + leadBCount + ' better'"></span>
       <span class="sep">·</span>
       <span>Biggest gap: <strong x-text="statsBiggestGap"></strong></span>
+      <a :href="'/chat?page=compare&geoid1=' + (geoid1||'') + '&geoid2=' + (geoid2||'') + '&name1=' + encodeURIComponent(selectedName1||'') + '&name2=' + encodeURIComponent(selectedName2||'')" class="nav-pill" style="display:inline-block;margin-left:4px;">💬 Explain this gap</a>
       <span class="sep">·</span>
       <span x-text="mergedDiffs.length + ' indicators'"></span>
     </div>
@@ -738,6 +759,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </main>
 
 <!-- ═══════════════ APP LOGIC ════════════════════ -->
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function compareTool() {
   return {
@@ -931,8 +953,18 @@ function compareTool() {
       const params = new URLSearchParams(window.location.search);
       const g1 = params.get('geoid1');
       const g2 = params.get('geoid2');
+      const highlight = params.get('highlight') || '';
+
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
 
       await this.loadCounties();
+
+      // Watch category tab changes to sync URL
+      var self = this;
+      this.$watch('activeCategory', function () {
+        self.syncURL();
+      });
 
       if (g1) {
         const c1 = this.countyList.find(c => c.geoid === g1);
@@ -947,6 +979,26 @@ function compareTool() {
         await this.loadVariables();
         this.initialSkeleton = false;
         await this.compare();
+
+        // Apply highlight from URL after comparison loads
+        if (highlight) {
+          this.activeCategory = 'all';
+          // Scroll to highlighted row after render
+          var self = this;
+          this.$nextTick(function () {
+            setTimeout(function () {
+              var rows = document.querySelectorAll('.compare-table tbody tr');
+              rows.forEach(function (row) {
+                var nameCell = row.querySelector('.var-name');
+                var varName = nameCell ? nameCell.textContent.trim() : '';
+                if (varName && varName.toLowerCase().includes(highlight.toLowerCase())) {
+                  row.classList.add('row-max-delta');
+                  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              });
+            }, 300);
+          });
+        }
       } else {
         this.initialSkeleton = false;
       }
@@ -1094,14 +1146,12 @@ function compareTool() {
     },
 
     syncURL() {
-      const params = new URLSearchParams();
-      if (this.geoid1) params.set('geoid1', this.geoid1);
-      if (this.geoid2) params.set('geoid2', this.geoid2);
-      const qs = params.toString();
-      const newUrl = window.location.pathname + (qs ? '?' + qs : '');
-      if (window.location.search !== (qs ? '?' + qs : '')) {
-        window.history.replaceState(null, '', newUrl);
-      }
+      PDIDeepLink.syncURL({
+        geoid1: this.geoid1 || '',
+        geoid2: this.geoid2 || '',
+        tab: this.activeCategory !== 'all' ? this.activeCategory : '',
+        highlight: this.maxDeltaId || '',
+      });
     },
 
     // ── Compare ──────────────────────────────────────────────

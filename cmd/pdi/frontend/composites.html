@@ -1036,6 +1036,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </footer>
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
+<script src="/static/lib/deeplink.js"></script>
 <script>
 function compositeBuilder() {
   return {
@@ -1118,8 +1119,39 @@ function compositeBuilder() {
 
     // ── Init ────────────────────────────────────────────────────
     async init() {
+      // Inject Copy Link button
+      PDIDeepLink.autoInjectCopyButton();
+
+      // Read pre-selected variables from URL: ?vars=poverty_rate,median_hh_income
+      var varsParam = PDIDeepLink.getParam('vars', '');
+      if (varsParam) {
+        var preselected = varsParam.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        this.variables = preselected;
+        this.pendingPreselected = preselected;
+      }
+
+      // Read pre-selected geography from URL: ?geoid=55025
+      var geoidParam = PDIDeepLink.getParam('geoid', '');
+      if (geoidParam) {
+        this.geoids = geoidParam.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      }
+
       this.loadVariables();
       this.loadGeographies();
+
+      // Watch variables changes to sync URL
+      var self = this;
+      this.$watch('variables', function (val) {
+        if (val && val.length > 0) {
+          PDIDeepLink.syncURL({ vars: val.join(','), geoid: self.geoids.join(',') });
+        }
+      });
+
+      // Watch geoids changes to sync URL
+      this.$watch('geoids', function (val) {
+        var varsStr = self.variables.length > 0 ? self.variables.join(',') : '';
+        PDIDeepLink.syncURL({ vars: varsStr, geoid: (val || []).join(',') });
+      });
     },
 
     // ── Load geography names cache ──────────────────────────────
