@@ -1023,7 +1023,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="wrap layer-inner">
         <span class="layer-indicator li-2">Layer 2 · Research-Grounded Measures</span>
         <h2>Validated Features</h2>
-        <p class="layer-context" x-html="layer2Context"></p>
+        <p class="layer-context" x-show="!iceError && iceScore != null">
+          <span>ICE score: </span><strong x-text="iceScore ? iceScore.toFixed(3) : '—'"></strong>
+          <span x-text="' (' + (icePercentile != null ? icePercentile.toFixed(0) : '?') + 'th percentile). That means '"></span>
+          <strong x-text="geo?.name || 'this county'"></strong>
+          <span> is </span><em x-text="layer2ContextRel"></em><span>. The ICE index measures the gap between concentrated privilege and concentrated deprivation — the wider the gap, the more polarized the community (Krieger et al. 2016).</span>
+        </p>
+        <p x-show="iceScore == null && !iceError" class="layer-context">Computing the Index of Concentration at the Extremes for <strong x-text="geo?.name || 'this county'"></strong>…</p>
 
         <!-- ICE Score -->
         <div class="feature-card">
@@ -1511,6 +1517,15 @@ function countyProfile() {
         indCount + ' indicators across ' + catCount + ' categories — ' +
         'ACS 5-year estimates plus supplementary sources from CDC PLACES, EPA EJScreen, and USDA Food Access. ' +
         'Each value carries a reliability badge.';
+    },
+
+    get layer2ContextRel() {
+      if (this.iceScore == null) return '';
+      let rel = this.iceScore > 0.3 ? 'among ' + this.stateName + '\u2019s most privileged' :
+        this.iceScore < -0.3 ? 'among ' + this.stateName + '\u2019s most deprived' :
+        this.iceScore > 0 ? 'moderately privileged relative to ' + this.stateName :
+        'moderately deprived relative to ' + this.stateName;
+      return rel;
     },
 
     get layer2Context() {
