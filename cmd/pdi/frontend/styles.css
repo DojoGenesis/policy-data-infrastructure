@@ -53,18 +53,130 @@ img, svg, video, canvas {
    plane-2    → hover / active lift (--raised + stronger shadow)
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════
+   ELEVATION SCALE — ported from casa-datos
+   ──────────────────────────────────────────────────────────────────
+   This block is the FALLBACK — plain token references only, so no
+   engine can lose a card to a broken color-mix(). The richer values
+   live in the @supports block immediately below.
+
+   Levels: ground (--bg) < band < plane-1 (cards) < plane-2 (hover),
+   with --plane-sunk for chips recessed INTO a card.
+   ═══════════════════════════════════════════════════════════════════ */
+
 :root {
+  /* Fluid section rhythm */
+  --rhythm: clamp(48px, 5.6vw, 76px);
+
+  /* ── Plane ladder — base layer (fallback) ─────────────────────── */
   --plane-base: var(--surface);
-  --plane-1:   var(--raised);
-  --plane-2:   var(--raised);
+  --plane-band: var(--bg-alt);
+  --plane-1:    var(--raised);
+  --plane-2:    var(--raised);
+  --plane-sunk: var(--bg);
 
-  /* Lift shadows — subtle amber spectral glow on dark ground.
-     No hex, no rgb() — built entirely from --accent via color-mix. */
-  --lift:       0 1px 3px color-mix(in srgb, var(--accent) 4%, transparent);
-  --lift-hover: 0 2px 8px color-mix(in srgb, var(--accent) 9%, transparent);
+  /* ── Spectral card edges — base (plain token references) ────────
+     Warm→cool gradient borders so each card reads as a distinct frame
+     rather than a repeated grey rectangle. */
+  --edge-warm:        var(--tp-sun-soft);
+  --edge-neutral:     var(--border-strong);
+  --edge-cool:        var(--tp-cyan-soft);
+  --edge-warm-hot:    var(--tp-cream);
+  --edge-neutral-hot: var(--border-strong);
+  --edge-cool-hot:    var(--tp-cyan);
 
-  /* Section rhythm — matches casa-datos spacing */
-  --section-gap: clamp(48px, 5.6vw, 76px);
+  --edge: linear-gradient(148deg,
+      var(--edge-warm) 0%,
+      var(--edge-neutral) 30%,
+      var(--edge-neutral) 62%,
+      var(--edge-cool) 100%);
+  --edge-hot: linear-gradient(148deg,
+      var(--edge-warm-hot) 0%,
+      var(--edge-neutral-hot) 28%,
+      var(--edge-neutral-hot) 60%,
+      var(--edge-cool-hot) 100%);
+
+  /* ── Section band ─────────────────────────────────────────────── */
+  --band-line: var(--border-strong);
+  --band-atmos: var(--tp-ember-soft);
+  --band-spectrum: linear-gradient(90deg,
+      transparent 0%,
+      var(--tp-sun)   14%,
+      var(--tp-ember) 34%,
+      var(--tp-red)   50%,
+      var(--tp-teal)  72%,
+      var(--tp-cyan)  88%,
+      transparent 100%);
+
+  /* ── Lift shadows — inset warm highlight + deep ambient shadow ── */
+  --lift:
+    inset 0 1px 0 0 var(--border-strong),
+    0 24px 48px -30px var(--tp-black);
+  --lift-hover:
+    inset 0 1px 0 0 var(--tp-cream),
+    0 30px 60px -28px var(--tp-black);
+
+  /* ── Quiet — between muted and subtle, >4.5:1 on every plane ──── */
+  --quiet: var(--muted);
+
+  /* ── Light rig probes (base = -soft tokens) ───────────────────── */
+  --rig-1: var(--tp-orange-soft);
+  --rig-2: var(--tp-cyan-soft);
+  --rig-3: var(--tp-ocean-soft);
+  --rig-4: var(--tp-ember-soft);
+  --grain-op: 0.34;
+  --bloom-cool: var(--tp-ocean-soft);
+
+  /* ── Painted gradients (base = Night Shift --grad-*) ──────────── */
+  --brand-paint: var(--grad);
+  --title-paint: var(--grad-title);
+  --cta-fill:    var(--grad-cta);
+  --cta-ink:     var(--bg);
+  --cta-glow:    var(--tp-ember-soft);
+
+  /* ── PDI-specific rhythm alias ────────────────────────────────── */
+  --section-gap: var(--rhythm);
+}
+
+/* ── THE ELEVATION SCALE — ENHANCEMENT LAYER ─────────────────────────
+   Everything above is complete and correct on its own. This block makes
+   it richer where the engine supports color-mix(). Warmed toward the
+   Rainbow ramp (--tp-peach) rather than lifted as flat grey — a
+   neutral-grey lift under a warm light reads as a hole.
+   ═══════════════════════════════════════════════════════════════════ */
+@supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+  :root {
+    --plane-base: color-mix(in srgb, var(--surface) 70%, var(--tp-black));
+    --plane-band: color-mix(in srgb, var(--tp-peach)  3.5%, var(--bg));
+    --plane-1:    color-mix(in srgb, var(--tp-peach)  6.5%, var(--plane-base));
+    --plane-2:    color-mix(in srgb, var(--tp-peach) 11.5%, var(--plane-base));
+    --plane-sunk: color-mix(in srgb, var(--tp-ember)    3%, var(--tp-black));
+
+    --edge-warm:        color-mix(in srgb, var(--tp-cream) 38%, var(--plane-1));
+    --edge-neutral:     color-mix(in srgb, var(--tp-paper) 18%, var(--plane-1));
+    --edge-cool:        color-mix(in srgb, var(--tp-cyan)  32%, var(--plane-1));
+    --edge-warm-hot:    color-mix(in srgb, var(--tp-cream) 46%, var(--plane-2));
+    --edge-neutral-hot: color-mix(in srgb, var(--tp-paper) 30%, var(--plane-2));
+    --edge-cool-hot:    color-mix(in srgb, var(--tp-cyan)  50%, var(--plane-2));
+
+    --band-line: color-mix(in srgb, var(--tp-cream) 22%, var(--plane-band));
+    --band-atmos: color-mix(in srgb, var(--tp-peach) 26%, transparent);
+    --quiet:     color-mix(in srgb, var(--muted) 62%, var(--subtle));
+
+    --lift:
+      inset 0 1px 0 0 color-mix(in srgb, var(--tp-cream) 22%, transparent),
+      0 24px 48px -30px color-mix(in srgb, var(--tp-black) 96%, transparent);
+    --lift-hover:
+      inset 0 1px 0 0 color-mix(in srgb, var(--tp-cream) 34%, transparent),
+      0 30px 60px -28px color-mix(in srgb, var(--tp-black) 98%, transparent);
+
+    --rig-1: color-mix(in srgb, var(--tp-orange) 30%, transparent);
+    --rig-2: color-mix(in srgb, var(--tp-cyan)   26%, transparent);
+    --rig-3: color-mix(in srgb, var(--tp-ocean)  32%, transparent);
+    --rig-4: color-mix(in srgb, var(--tp-ember)  14%, transparent);
+    --bloom-cool: color-mix(in srgb, var(--tp-ocean) 20%, transparent);
+    --cta-glow: color-mix(in srgb, var(--tp-ember) 60%, transparent);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -254,9 +366,11 @@ a:hover {
    ═══════════════════════════════════════════════════════════════════ */
 
 .card {
-  background: var(--plane-base);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--r-card);
+  background-image: linear-gradient(var(--plane-1), var(--plane-1)), var(--edge);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
   box-shadow: var(--lift);
   padding: clamp(16px, 2.5vw, 24px);
   transition: background-color 200ms ease,
@@ -266,15 +380,13 @@ a:hover {
 }
 
 .card-hover:hover {
-  background: var(--plane-2);
-  border-color: var(--border-strong);
+  background-image: linear-gradient(var(--plane-2), var(--plane-2)), var(--edge-hot);
   box-shadow: var(--lift-hover);
   transform: translateY(-1px);
 }
 
 .card-raised {
-  background: var(--plane-1);
-  border-color: var(--border-strong);
+  background-image: linear-gradient(var(--plane-2), var(--plane-2)), var(--edge-hot);
   box-shadow: var(--lift-hover);
 }
 
@@ -481,11 +593,20 @@ a:hover {
    ═══════════════════════════════════════════════════════════════════ */
 
 .chart-card {
-  background: var(--plane-1);
-  border: 1px solid var(--border);
-  border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border: 1px solid transparent;
   border-radius: var(--r-card);
+  background-image: linear-gradient(var(--plane-1), var(--plane-1)), var(--edge);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: var(--lift);
   padding: clamp(16px, 2.5vw, 24px);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 200ms ease;
+}
+.chart-card:hover {
+  box-shadow: var(--lift-hover);
+  background-image: linear-gradient(var(--plane-2), var(--plane-2)), var(--edge-hot);
 }
 
 .chart-card-header {
@@ -533,7 +654,7 @@ a:hover {
 .chart-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--cta-fill);
   transition: width 400ms ease;
 }
 
@@ -543,6 +664,73 @@ a:hover {
 
 .chart-bar-fill--gated {
   background: var(--gated);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SECTION BAND · atmospheric surface
+   ──────────────────────────────────────────────────────────────────
+   A full-bleed band that lifts a section off the page with a warm
+   atmospheric gradient and a spectral top lip. Uses box-shadow spread
+   to extend past the .wrap measure without touching 100vw.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.section-band {
+  position: relative;
+}
+.section-band::before,
+.section-band::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  pointer-events: none;
+  clip-path: inset(0 -100vmax);
+}
+.section-band::before {
+  top: 0;
+  bottom: 0;
+  background:
+    radial-gradient(56% 68% at 20% 30%, var(--band-atmos), transparent 72%),
+    var(--plane-band);
+  box-shadow: 0 0 0 100vmax var(--plane-band);
+}
+/* Lit lip — spectral 3px line across the top */
+.section-band::after {
+  top: 0;
+  height: 3px;
+  background: var(--band-spectrum);
+  box-shadow: 0 0 0 100vmax var(--band-line);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HERO BLOOM · warm/cool radial glows
+   ──────────────────────────────────────────────────────────────────
+   .hero-glow places two fixed pseudo-elements behind the hero:
+   ::before = warm key light (high left), ::after = cool counter (top right).
+   Both are pointer-events: none and carry no information.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.hero-glow {
+  position: relative;
+}
+.hero-glow::before,
+.hero-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.hero-glow::before {
+  background:
+    radial-gradient(72% 48% at 0% -14%,   var(--rig-1), transparent 66%),
+    radial-gradient(58% 42% at 100% -6%,  var(--rig-2), transparent 64%);
+}
+.hero-glow::after {
+  background:
+    radial-gradient(92% 50% at 50% 114%,  var(--rig-3), transparent 70%),
+    radial-gradient(70% 44% at 96% 78%,   var(--rig-4), transparent 72%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -624,12 +812,13 @@ select option {
 .btn:hover { text-decoration: none; }
 
 .btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+  background: var(--cta-fill);
+  color: var(--cta-ink);
+  border-color: transparent;
+  box-shadow: 0 14px 30px -18px var(--cta-glow);
 }
 .btn-primary:hover {
-  background: color-mix(in srgb, var(--accent) 85%, white);
+  filter: brightness(1.06);
 }
 
 .btn-secondary {
@@ -993,5 +1182,102 @@ html.js .page-view {
 
   @page {
     margin: 1.5cm;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE THEME LAYER — light
+   ──────────────────────────────────────────────────────────────────────
+   tokens.css re-binds canonical tokens (--bg, --text, --accent …).
+   This block re-derives what this stack composes ON TOP of them — the
+   elevation ladder, edges, shadows, light rig, and painted gradients.
+
+   Gated on color-mix(). An engine without it gets the dark theme in
+   light mode: a complete, measured page rather than a broken
+   approximation.
+
+   Two identical blocks by CSS necessity — a selector list cannot cross
+   an @media boundary.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --plane-base: var(--surface);
+      --plane-band: var(--bg-alt);
+      --plane-1:    var(--raised);
+      --plane-2:    var(--tp-paper);
+      --plane-sunk: color-mix(in srgb, var(--tp-ember) 4%, var(--bg));
+
+      --edge-warm:        color-mix(in srgb, var(--tp-ember) 52%, var(--plane-1));
+      --edge-neutral:     color-mix(in srgb, var(--tp-ink)   22%, var(--plane-1));
+      --edge-cool:        color-mix(in srgb, var(--tp-ocean) 32%, var(--plane-1));
+      --edge-warm-hot:    color-mix(in srgb, var(--tp-ember) 62%, var(--plane-2));
+      --edge-neutral-hot: color-mix(in srgb, var(--tp-ink)   34%, var(--plane-2));
+      --edge-cool-hot:    color-mix(in srgb, var(--tp-ocean) 48%, var(--plane-2));
+
+      --band-line: color-mix(in srgb, var(--tp-ink) 20%, var(--plane-band));
+      --band-atmos: color-mix(in srgb, var(--tp-peach) 18%, transparent);
+      --quiet:     color-mix(in srgb, var(--tp-ink) 76%, var(--tp-paper));
+
+      --lift:
+        0 1px 2px -1px   color-mix(in srgb, var(--tp-ink) 20%, transparent),
+        0 16px 30px -20px color-mix(in srgb, var(--tp-ink) 38%, transparent);
+      --lift-hover:
+        0 2px 5px -2px   color-mix(in srgb, var(--tp-ink) 26%, transparent),
+        0 24px 44px -20px color-mix(in srgb, var(--tp-ink) 46%, transparent);
+
+      --rig-1: color-mix(in srgb, var(--tp-orange) 7%, transparent);
+      --rig-2: color-mix(in srgb, var(--tp-cyan)   6%, transparent);
+      --rig-3: color-mix(in srgb, var(--tp-ocean)  7%, transparent);
+      --rig-4: color-mix(in srgb, var(--tp-ember)  4%, transparent);
+      --grain-op: 0.065;
+      --bloom-cool: color-mix(in srgb, var(--tp-ocean) 13%, transparent);
+
+      --brand-paint: linear-gradient(135deg, var(--tp-red-deep) 0%, var(--tp-teal-deep) 52%, var(--tp-ocean-deep) 100%);
+      --title-paint: linear-gradient(120deg, var(--tp-ink) 0%, var(--tp-teal-deep) 46%, var(--tp-ocean-deep) 100%);
+      --cta-fill:    linear-gradient(135deg, var(--tp-ember-deep) 0%, var(--tp-red-deep) 45%, var(--tp-ocean-deep) 100%);
+      --cta-ink:     var(--tp-paper);
+      --cta-glow:    color-mix(in srgb, var(--tp-ink) 34%, transparent);
+    }
+  }
+
+  :root[data-theme="light"] {
+    --plane-base: var(--surface);
+    --plane-band: var(--bg-alt);
+    --plane-1:    var(--raised);
+    --plane-2:    var(--tp-paper);
+    --plane-sunk: color-mix(in srgb, var(--tp-ember) 4%, var(--bg));
+
+    --edge-warm:        color-mix(in srgb, var(--tp-ember) 52%, var(--plane-1));
+    --edge-neutral:     color-mix(in srgb, var(--tp-ink)   22%, var(--plane-1));
+    --edge-cool:        color-mix(in srgb, var(--tp-ocean) 32%, var(--plane-1));
+    --edge-warm-hot:    color-mix(in srgb, var(--tp-ember) 62%, var(--plane-2));
+    --edge-neutral-hot: color-mix(in srgb, var(--tp-ink)   34%, var(--plane-2));
+    --edge-cool-hot:    color-mix(in srgb, var(--tp-ocean) 48%, var(--plane-2));
+
+    --band-line: color-mix(in srgb, var(--tp-ink) 20%, var(--plane-band));
+    --band-atmos: color-mix(in srgb, var(--tp-peach) 18%, transparent);
+    --quiet:     color-mix(in srgb, var(--tp-ink) 76%, var(--tp-paper));
+
+    --lift:
+      0 1px 2px -1px   color-mix(in srgb, var(--tp-ink) 20%, transparent),
+      0 16px 30px -20px color-mix(in srgb, var(--tp-ink) 38%, transparent);
+    --lift-hover:
+      0 2px 5px -2px   color-mix(in srgb, var(--tp-ink) 26%, transparent),
+      0 24px 44px -20px color-mix(in srgb, var(--tp-ink) 46%, transparent);
+
+    --rig-1: color-mix(in srgb, var(--tp-orange) 7%, transparent);
+    --rig-2: color-mix(in srgb, var(--tp-cyan)   6%, transparent);
+    --rig-3: color-mix(in srgb, var(--tp-ocean)  7%, transparent);
+    --rig-4: color-mix(in srgb, var(--tp-ember)  4%, transparent);
+    --grain-op: 0.065;
+    --bloom-cool: color-mix(in srgb, var(--tp-ocean) 13%, transparent);
+
+    --brand-paint: linear-gradient(135deg, var(--tp-red-deep) 0%, var(--tp-teal-deep) 52%, var(--tp-ocean-deep) 100%);
+    --title-paint: linear-gradient(120deg, var(--tp-ink) 0%, var(--tp-teal-deep) 46%, var(--tp-ocean-deep) 100%);
+    --cta-fill:    linear-gradient(135deg, var(--tp-ember-deep) 0%, var(--tp-red-deep) 45%, var(--tp-ocean-deep) 100%);
+    --cta-ink:     var(--tp-paper);
+    --cta-glow:    color-mix(in srgb, var(--tp-ink) 34%, transparent);
   }
 }

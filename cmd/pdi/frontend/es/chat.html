@@ -38,6 +38,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .suggest button { padding:5px 12px; font-size:0.75rem; background:var(--plane-base); border:1px solid var(--border); border-radius:var(--r-chip); color:var(--muted); cursor:pointer; transition:all 0.15s; font-family:inherit; }
   .suggest button:hover { border-color:var(--accent); color:var(--text); }
 </style>
+  <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
 <body>
 <a class="skip-link visually-hidden" href="#main">Ir al chat</a>
@@ -105,5 +106,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   input.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}};
 })();
 </script>
+<script src="/static/chat-drawer.js"></script>
 </body>
 </html>

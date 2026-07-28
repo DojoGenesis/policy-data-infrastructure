@@ -8,8 +8,8 @@ if(d.hidden){r.classList.add('motion-failed');}
 window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
 <style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDI — County Explorer</title>
-<meta name="description" content="Wisconsin County Explorer — select a county to view detailed indicators from the Policy Data Infrastructure platform.">
+<title>PDI — Policy Data Infrastructure</title>
+<meta name="description" content="Policy Data Infrastructure — open-source platform making public data accessible across 72 Wisconsin counties, 1,542 tracts, 42 variables from 13 sources.">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
@@ -26,11 +26,302 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
   [x-cloak] { display: none !important; }
 
-  /* ── County Explorer page-specific ──────────────────────────── */
+  /* ════════════════════════════════════════════════════════════════
+     VISUAL VOCABULARY — page-level definitions
+     These classes extend the stack's token system. They live here
+     rather than in styles.css because they're specific to the
+     landing-page narrative experience per ADR-011.
+     ════════════════════════════════════════════════════════════════ */
+
+  /* ── Hero glow — atmospheric hero section ────────────────────────
+     Full-width dark canvas with a soft radial gradient behind the
+     hero statement, built from Night Shift tokens. */
+  .hero-glow {
+    position: relative;
+    padding: clamp(64px, 10vw, 120px) clamp(16px, 3vw, 32px);
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 70% at 50% 40%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 50% at 20% 80%, color-mix(in srgb, #8b5cf6 6%, transparent) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 50% at 80% 80%, color-mix(in srgb, #ec4899 5%, transparent) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-glow > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-statement {
+    font-size: clamp(1.4rem, 4.8vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    max-width: 38ch;
+    margin-inline: auto;
+    text-wrap: balance;
+  }
+
+  .hero-statement em {
+    font-style: normal;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+
+  /* ── Section band — alternating section tint ──────────────────── */
+  .section-band {
+    padding: clamp(48px, 7vw, 80px) clamp(16px, 3vw, 32px);
+  }
+
+  .section-band--alt {
+    background: var(--bg-alt);
+  }
+
+  .section-band-inner {
+    max-width: var(--wrap);
+    margin-inline: auto;
+  }
+
+  .section-band-heading {
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 0.25em;
+  }
+
+  .section-band-subtitle {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-bottom: clamp(24px, 3vw, 36px);
+  }
+
+  /* ── Thread ribbon — visual connector between sections ────────── */
+  .thread {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 clamp(16px, 3vw, 32px);
+    max-width: var(--wrap);
+    margin-inline: auto;
+  }
+
+  .thread::before,
+  .thread::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--accent) 25%, transparent) 30%,
+      color-mix(in srgb, var(--accent) 25%, transparent) 70%,
+      transparent 100%
+    );
+  }
+
+  .thread-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  /* ── Nav cards — three action cards ───────────────────────────── */
+  .nav-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(16px, 2.5vw, 24px);
+    margin-top: clamp(24px, 3vw, 32px);
+  }
+
+  .nav-card {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.5vw, 12px);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .nav-card:hover {
+    text-decoration: none;
+  }
+
+  .nav-card-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-badge);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .nav-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .nav-card-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .nav-card-link {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+  }
+
+  /* ── Featured county card ─────────────────────────────────────── */
+  .featured-card {
+    border-top: 2px solid var(--accent);
+    border-left: 1px solid var(--border-strong);
+  }
+
+  .featured-card-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(16px, 3vw, 32px);
+    align-items: flex-start;
+  }
+
+  .featured-card-left {
+    flex: 1 1 260px;
+    min-width: 0;
+  }
+
+  .featured-card-right {
+    flex: 1 1 300px;
+    min-width: 0;
+  }
+
+  .featured-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .featured-geoid {
+    font-size: 0.7rem;
+    color: var(--subtle);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+  }
+
+  .featured-story {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: clamp(12px, 2vw, 16px);
+  }
+
+  .featured-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(16px, 3vw, 28px);
+    margin-top: clamp(12px, 2vw, 16px);
+  }
+
+  .featured-stat-val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .featured-stat-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+
+  .featured-cta {
+    margin-top: clamp(12px, 2vw, 16px);
+  }
+
+  /* ── Stats bar ────────────────────────────────────────────────── */
+  .stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(16px, 3vw, 48px);
+    padding: clamp(24px, 4vw, 36px) clamp(16px, 3vw, 32px);
+    max-width: var(--wrap);
+    margin-inline: auto;
+  }
+
+  .stats-bar-item {
+    text-align: center;
+  }
+
+  .stats-bar-val {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats-bar-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--subtle);
+    margin-top: 2px;
+  }
+
+  .stats-bar-sep {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+  }
+
+  /* ── County grid ──────────────────────────────────────────────── */
   .county-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: clamp(10px, 1.5vw, 16px);
+  }
+
+  .county-grid-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: clamp(12px, 2vw, 20px);
+  }
+
+  .county-grid-count {
+    font-size: 0.78rem;
+    color: var(--muted);
   }
 
   .county-card {
@@ -170,7 +461,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-color: var(--accent);
   }
 
-  /* ── Responsive grid ────────────────────────────────────────── */
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .nav-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .stats-bar {
+      gap: clamp(12px, 2vw, 20px);
+    }
+  }
+
   @media (max-width: 1100px) {
     .county-grid {
       grid-template-columns: repeat(4, 1fr);
@@ -181,11 +482,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     .county-grid {
       grid-template-columns: repeat(2, 1fr);
     }
+
+    .stats-bar-sep {
+      display: none;
+    }
+
+    .stats-bar {
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
   }
 
   @media (max-width: 420px) {
     .county-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Reduced motion ─────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-glow::before {
+      animation: none;
     }
   }
 </style>
@@ -202,7 +520,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </a>
 
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="/" aria-current="page">Counties</a>
+      <a href="/" aria-current="page">Home</a>
       <a href="/compare">Compare</a>
       <a href="/evidence">Evidence</a>
       <a href="/candidates">Candidates</a>
@@ -219,80 +537,209 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </header>
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main id="main" class="wrap" x-data="countyExplorer()" x-init="init()">
+<main id="main" x-data="countyExplorer()" x-init="init()">
 
-  <!-- ── Hero ─────────────────────────────────────────────────── -->
-  <div class="hero">
-    <h1>Wisconsin County Explorer</h1>
-    <p class="hero-subtitle">72 counties · Select a county to view detailed indicators</p>
+  <!-- ── Hero Glow ─────────────────────────────────────────────── -->
+  <section class="hero-glow reveal">
+    <span class="section-tag">OPEN SOURCE &middot; APACHE-2.0</span>
+    <p class="hero-statement">
+      Public data, privately held, <em>is the quietest form of exclusion.</em> We've made it public again.
+    </p>
+  </section>
+
+  <!-- ── Thread ─────────────────────────────────────────────────── -->
+  <div class="thread" style="margin-bottom:0">
+    <div class="thread-dot"></div>
   </div>
 
-  <!-- ── Search ────────────────────────────────────────────────── -->
-  <div class="search-wrap">
-    <input
-      type="search"
-      x-model="countySearch"
-      placeholder="Search counties by name…"
-      aria-label="Search counties by name"
-    >
-  </div>
+  <!-- ── Nav Cards ──────────────────────────────────────────────── -->
+  <section class="section-band section-band--alt reveal">
+    <div class="section-band-inner">
+      <div class="nav-cards">
+        <a href="#counties" class="card card-hover card-spectral nav-card" @click.prevent="scrollToCounties()">
+          <div class="nav-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+          </div>
+          <span class="nav-card-title">Understand your county</span>
+          <span class="nav-card-desc">Explore indicators, equity dimensions, and narrative summaries for any Wisconsin county.</span>
+          <span class="nav-card-link">Browse counties &rarr;</span>
+        </a>
 
-  <!-- ── Skeleton loading ──────────────────────────────────────── -->
-  <div x-show="countiesLoading" x-cloak>
-    <div class="county-grid" aria-hidden="true">
-      <template x-for="i in 6" :key="i">
-        <div class="card skeleton skeleton-card">
-          <div class="skeleton-line skeleton"></div>
-          <div class="skeleton-line skeleton"></div>
-          <div class="skeleton-line skeleton"></div>
-        </div>
-      </template>
+        <a href="/compare" class="card card-hover card-spectral nav-card">
+          <div class="nav-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+          </div>
+          <span class="nav-card-title">Compare places</span>
+          <span class="nav-card-desc">Side-by-side comparison of counties with delta highlighting — spot the gaps that matter.</span>
+          <span class="nav-card-link">Compare counties &rarr;</span>
+        </a>
+
+        <a href="/map" class="card card-hover card-spectral nav-card">
+          <div class="nav-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+            </svg>
+          </div>
+          <span class="nav-card-title">See patterns on a map</span>
+          <span class="nav-card-desc">Spatial choropleth at census-tract resolution — see where inequity clusters geographically.</span>
+          <span class="nav-card-link">Open map &rarr;</span>
+        </a>
+      </div>
     </div>
+  </section>
+
+  <!-- ── Thread ─────────────────────────────────────────────────── -->
+  <div class="thread">
+    <div class="thread-dot"></div>
   </div>
 
-  <!-- ── Error state ───────────────────────────────────────────── -->
-  <div x-show="countiesError" x-cloak class="state-error">
-    <span x-text="countiesError"></span>
-    <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em">Retry</button>
-  </div>
-
-  <!-- ── County grid ───────────────────────────────────────────── -->
-  <div x-show="!countiesLoading && !countiesError && filteredCounties.length > 0" x-cloak>
-    <div class="county-grid" @keydown="handleGridKeydown($event)">
-      <template x-for="c in filteredCounties" :key="c.geoid">
-        <div
-          class="card card-hover county-card"
-          tabindex="0"
-          @keydown="handleGridKeydown($event)"
-          @click="window.location = '/county?geoid=' + c.geoid"
-        >
-          <div class="county-card-name" x-text="c.name"></div>
-          <div class="county-card-geoid" x-text="c.geoid"></div>
-          <div class="county-card-pop">
-            <span class="county-card-pop-val" x-text="fmtPop(c.population)"></span>
-            <span class="county-card-pop-label">pop.</span>
+  <!-- ── Featured County ────────────────────────────────────────── -->
+  <section class="section-band reveal" x-show="featuredCounty" x-cloak>
+    <div class="section-band-inner">
+      <span class="section-tag">FEATURED COUNTY</span>
+      <div class="card card-raised featured-card">
+        <div class="featured-card-inner">
+          <div class="featured-card-left">
+            <div class="featured-name" x-text="featuredCounty.name"></div>
+            <div class="featured-geoid" x-text="featuredCounty.geoid"></div>
+            <p class="featured-story" x-text="featuredCounty.story"></p>
+            <div class="featured-stats">
+              <div>
+                <div class="featured-stat-val" x-text="fmtPop(featuredCounty.population)"></div>
+                <div class="featured-stat-label">Population</div>
+              </div>
+              <div>
+                <div class="featured-stat-val" x-text="featuredCounty.tract_count || '—'"></div>
+                <div class="featured-stat-label">Census Tracts</div>
+              </div>
+              <div>
+                <div class="featured-stat-val" x-text="featuredCounty.indicator_count || '—'"></div>
+                <div class="featured-stat-label">Indicators</div>
+              </div>
+            </div>
+          </div>
+          <div class="featured-card-right">
+            <div class="featured-cta">
+              <a :href="'/county?geoid=' + featuredCounty.geoid" class="btn btn-primary">Explore <span x-text="featuredCounty.name"></span> &rarr;</a>
+            </div>
           </div>
         </div>
-      </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Thread ─────────────────────────────────────────────────── -->
+  <div class="thread">
+    <div class="thread-dot"></div>
+  </div>
+
+  <!-- ── Stats Bar ──────────────────────────────────────────────── -->
+  <div class="stats-bar reveal">
+    <div class="stats-bar-item">
+      <div class="stats-bar-val">72</div>
+      <div class="stats-bar-label">Counties</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val">1,542</div>
+      <div class="stats-bar-label">Tracts</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val">42</div>
+      <div class="stats-bar-label">Variables</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val">13</div>
+      <div class="stats-bar-label">Sources</div>
     </div>
   </div>
 
-  <!-- ── Empty state ───────────────────────────────────────────── -->
-  <div
-    x-show="!countiesLoading && !countiesError && filteredCounties.length === 0 && countySearch"
-    x-cloak
-    class="state-empty"
-  >
-    <p>No counties match &ldquo;<span x-text="countySearch"></span>&rdquo;</p>
-  </div>
+  <!-- ── County Grid Section ────────────────────────────────────── -->
+  <section class="section-band section-band--alt reveal" id="counties">
+    <div class="section-band-inner">
+      <span class="section-tag">EXPLORE</span>
+      <h2 class="section-band-heading">All 72 Wisconsin Counties</h2>
+      <p class="section-band-subtitle">Select a county to view detailed indicators, evidence cards, and narrative summaries.</p>
+
+      <!-- ── Search ──────────────────────────────────────────────── -->
+      <div class="search-wrap">
+        <input
+          type="search"
+          x-model="countySearch"
+          placeholder="Search counties by name…"
+          aria-label="Search counties by name"
+        >
+      </div>
+
+      <!-- ── Grid header ────────────────────────────────────────── -->
+      <div class="county-grid-header" x-show="!countiesLoading && !countiesError">
+        <span class="county-grid-count" x-text="filteredCounties.length + ' of ' + allCounties.length + ' counties'"></span>
+      </div>
+
+      <!-- ── Skeleton loading ────────────────────────────────────── -->
+      <div x-show="countiesLoading" x-cloak>
+        <div class="county-grid" aria-hidden="true">
+          <template x-for="i in 6" :key="i">
+            <div class="card skeleton skeleton-card">
+              <div class="skeleton-line skeleton"></div>
+              <div class="skeleton-line skeleton"></div>
+              <div class="skeleton-line skeleton"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Error state ─────────────────────────────────────────── -->
+      <div x-show="countiesError" x-cloak class="state-error">
+        <span x-text="countiesError"></span>
+        <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em">Retry</button>
+      </div>
+
+      <!-- ── County grid ─────────────────────────────────────────── -->
+      <div x-show="!countiesLoading && !countiesError && filteredCounties.length > 0" x-cloak>
+        <div class="county-grid" @keydown="handleGridKeydown($event)">
+          <template x-for="c in filteredCounties" :key="c.geoid">
+            <div
+              class="card card-hover county-card"
+              tabindex="0"
+              @keydown="handleGridKeydown($event)"
+              @click="window.location = '/county?geoid=' + c.geoid"
+            >
+              <div class="county-card-name" x-text="c.name"></div>
+              <div class="county-card-geoid" x-text="c.geoid"></div>
+              <div class="county-card-pop">
+                <span class="county-card-pop-val" x-text="fmtPop(c.population)"></span>
+                <span class="county-card-pop-label">pop.</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Empty state ─────────────────────────────────────────── -->
+      <div
+        x-show="!countiesLoading && !countiesError && filteredCounties.length === 0 && countySearch"
+        x-cloak
+        class="state-empty"
+      >
+        <p>No counties match &ldquo;<span x-text="countySearch"></span>&rdquo;</p>
+      </div>
+    </div>
+  </section>
 
 </main>
 
 <!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
 <footer class="site-footer">
-  Policy Data Infrastructure ·
+  Policy Data Infrastructure &middot;
   <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
-  · Apache-2.0
+  &middot; Apache-2.0
 </footer>
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
@@ -303,6 +750,36 @@ function countyExplorer() {
     countiesLoading: false,
     countiesError: '',
     countySearch: '',
+    featuredCounty: null,
+
+    /* ── Featured county rotation pool ─────────────────────────── */
+    featuredPool: [
+      {
+        geoid: '55079',
+        name: 'Milwaukee County',
+        population: 916205,
+        tract_count: 297,
+        indicator_count: 42,
+        story: 'Home to Wisconsin\'s largest city, Milwaukee County anchors the state\'s economy with a $100B+ GDP — yet 26% of its residents live in a census tract flagged for persistent poverty. The county carries the heaviest equity load in the state, with health insurance gaps and food-access deserts concentrated in historically redlined neighborhoods. The data here is the densest in the platform: 297 tracts, every indicator populated.'
+      },
+      {
+        geoid: '55025',
+        name: 'Dane County',
+        population: 575347,
+        tract_count: 107,
+        indicator_count: 42,
+        story: 'The fastest-growing county in Wisconsin, driven by Madison\'s tech and university sectors. Dane County added 48,000 residents in the last decade — but housing-cost burden jumped 12 points over the same period, hitting renter households hardest. The prosperity gap between the isthmus and the rural townships is one of the widest in the Midwest.'
+      },
+      {
+        geoid: '55141',
+        name: 'Menominee County',
+        population: 4255,
+        tract_count: 2,
+        indicator_count: 28,
+        story: 'The smallest and most rural county in Wisconsin, coextensive with the Menominee Indian Reservation. With just 4,255 residents across two census tracts, Menominee is where data sparsity meets deep need — fewer than 30 of 42 indicators are populated here, and the poverty rate runs 2.6× the state average. This is why open data matters: without it, a county of 4,000 people is invisible to policy.'
+      }
+    ],
+    featuredIndex: 0,
 
     get filteredCounties() {
       if (!this.countySearch.trim()) return this.allCounties;
@@ -322,8 +799,15 @@ function countyExplorer() {
         if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
         this.allCounties = data.items || [];
+
+        /* Pick a featured county — cycled by date so it rotates daily */
+        const today = new Date();
+        this.featuredIndex = (today.getDate() - 1) % this.featuredPool.length;
+        this.featuredCounty = this.featuredPool[this.featuredIndex];
       } catch (e) {
         this.countiesError = `Failed to load counties: ${e.message}`;
+        /* Fallback featured — still show even if API fails */
+        this.featuredCounty = this.featuredPool[0];
       } finally {
         this.countiesLoading = false;
       }
@@ -334,6 +818,11 @@ function countyExplorer() {
       if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
       if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
       return n.toLocaleString();
+    },
+
+    scrollToCounties() {
+      const el = document.getElementById('counties');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
     },
 
     /* ── Arrow-key grid navigation ──────────────────────────── */
