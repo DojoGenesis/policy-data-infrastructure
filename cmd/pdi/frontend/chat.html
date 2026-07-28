@@ -2,183 +2,44 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chat — PDI Policy Data Infrastructure</title>
-<meta name="description" content="Chat with Wisconsin policy data — ask about counties, indicators, and policy positions backed by live Census and CDC data.">
+<title>Chat — PDI</title>
+<meta name="description" content="Ask questions about Wisconsin county indicators, policy positions, and equity data.">
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/styles.css">
 <style>
-  /* Chat page layout — token-only colors, system fonts, shared-class extension.
-     Every color is var(--<token>); no hex, no rgb(), no named color. */
-
-  .chat-layout {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - clamp(48px, 7vw, 64px));
-  }
-
-  /* ── Message list ─────────────────────────────────────────────── */
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: clamp(16px, 2.5vw, 24px);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .chat-msg {
-    max-width: 80%;
-    padding: 12px 16px;
-    border-radius: var(--r-card);
-    line-height: 1.55;
-    font-size: 0.9375rem;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  /* User bubble — accent bg, dark text, right-aligned */
-  .chat-msg.user {
-    align-self: flex-end;
-    background: var(--accent);
-    color: var(--bg);
-    border-bottom-right-radius: 4px;
-  }
-
-  /* Assistant bubble — .card provides plane-base bg, border, shadow.
-     Override card padding (smaller + asymmetric radius for bubble tail). */
-  .chat-msg.assistant {
-    align-self: flex-start;
-    background: var(--plane-base);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-    box-shadow: var(--lift);
-    max-width: 85%;
-  }
-  .chat-msg.assistant p { margin: 0 0 8px; }
-  .chat-msg.assistant p:last-child { margin: 0; }
-  .chat-msg.assistant strong { color: var(--accent); }
-
-  /* System message — centered, muted, no bubble */
-  .chat-msg.system {
-    align-self: center;
-    background: transparent;
-    color: var(--muted);
-    font-size: 0.8125rem;
-    text-align: center;
-    max-width: 100%;
-    padding: 8px 0;
-  }
-
-  /* ── Welcome / empty state ────────────────────────────────────── */
-  .chat-welcome {
-    text-align: center;
-    padding: clamp(32px, 8vw, 64px) clamp(16px, 3vw, 32px);
-  }
-  .chat-welcome h1 {
-    font-size: clamp(1.3rem, 3.4vw, 1.8rem);
-    color: var(--text);
-    margin-bottom: 0.35em;
-  }
-  .chat-welcome p {
-    color: var(--muted);
-    max-width: 540px;
-    margin: 0 auto 1.5em;
-    line-height: 1.6;
-    font-size: 0.9375rem;
-  }
-
-  /* ── Input area ───────────────────────────────────────────────── */
-  .chat-input-area {
-    padding: 16px clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px);
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .chat-input-row {
-    display: flex;
-    gap: 8px;
-  }
-  .chat-input-row input {
-    flex: 1;
-  }
-
-  /* ── Suggestions ──────────────────────────────────────────────── */
-  .chat-suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
-  }
-  .chat-suggestion {
-    padding: 5px 12px;
-    font-size: 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--r-chip);
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transition: border-color 160ms ease, color 160ms ease;
-    font-family: var(--font-sans);
-    text-align: left;
-  }
-  .chat-suggestion:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
-
-  /* ── Thinking / typing indicator ──────────────────────────────── */
-  .chat-thinking {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 16px;
-    color: var(--muted);
-    font-size: 0.875rem;
-    align-self: flex-start;
-  }
-  .chat-thinking .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: chat-dot-pulse 1.4s infinite ease-in-out;
-  }
-  .chat-thinking .dot:nth-child(2) { animation-delay: 0.2s; }
-  .chat-thinking .dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes chat-dot-pulse {
-    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-    40%           { opacity: 1;   transform: scale(1); }
-  }
-
-  /* ── Responsive ───────────────────────────────────────────────── */
-  @media (min-width: 600px) {
-    .chat-msg { max-width: 72%; }
-    .chat-msg.assistant { max-width: 78%; }
-  }
-
-  @media (min-width: 900px) {
-    .chat-msg { max-width: 66%; }
-    .chat-msg.assistant { max-width: 72%; }
-  }
-
-  /* ── Reduced motion ───────────────────────────────────────────── */
-  @media (prefers-reduced-motion: reduce) {
-    .chat-thinking .dot { animation: none; opacity: 0.6; }
-  }
+  [x-cloak] { display:none!important; }
+  .chat-wrap { max-width:720px; margin:0 auto; height:calc(100vh - 56px); display:flex; flex-direction:column; }
+  .chat-msgs { flex:1; overflow-y:auto; padding:clamp(16px,3vw,24px); display:flex; flex-direction:column; gap:12px; }
+  .msg { max-width:82%; padding:12px 16px; border-radius:var(--r-card); line-height:1.5; font-size:0.9rem; }
+  .msg.user { align-self:flex-end; background:var(--accent); color:var(--bg); border-bottom-right-radius:6px; }
+  .msg.asst { align-self:flex-start; background:var(--plane-base); color:var(--text); border:1px solid var(--border); border-bottom-left-radius:6px; }
+  .msg.asst p { margin:0 0 8px; } .msg.asst p:last-child { margin:0; }
+  .msg.system { align-self:center; background:transparent; color:var(--muted); font-size:0.8rem; text-align:center; max-width:100%; }
+  .msg.system h1 { font-size:1.4rem; font-weight:700; color:var(--text); margin-bottom:8px; }
+  .thinking { display:flex;align-items:center;gap:6px;padding:12px 16px;color:var(--muted);font-size:0.85rem; }
+  .thinking .dot { width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce 1.4s infinite; }
+  .thinking .dot:nth-child(2){animation-delay:0.2s;} .thinking .dot:nth-child(3){animation-delay:0.4s;}
+  @keyframes bounce { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+  .chat-input-wrap { padding:12px 24px 20px; border-top:1px solid var(--border); background:var(--bg); }
+  .chat-input-wrap .row { display:flex; gap:8px; }
+  .chat-input-wrap input { flex:1; }
+  .suggest { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .suggest button { padding:5px 12px; font-size:0.75rem; background:var(--plane-base); border:1px solid var(--border); border-radius:var(--r-chip); color:var(--muted); cursor:pointer; transition:all 0.15s; font-family:inherit; }
+  .suggest button:hover { border-color:var(--accent); color:var(--text); }
 </style>
 </head>
 <body>
-
 <a class="skip-link visually-hidden" href="#main">Skip to chat</a>
-
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Chat
-    </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Chat</a>
+    <nav class="site-nav">
       <a href="/">Explorer</a>
       <a href="/compare">Compare</a>
       <a href="/map">Map</a>
@@ -187,181 +48,57 @@
     </nav>
   </div>
 </header>
-
-<main id="main" class="wrap-narrow chat-layout">
-
-  <div id="messages" class="chat-messages">
-    <!-- Welcome / empty state — hidden once first message appears -->
-    <div id="welcome" class="chat-welcome">
-      <h1>Ask the Data</h1>
-      <p>
-        I can answer questions about Wisconsin's 72 counties — poverty rates, income,
-        health outcomes, housing costs, and how 85 policy positions connect to local
-        conditions. Every number is verified against live Census and CDC data.
-      </p>
-    </div>
+<main id="main" class="chat-wrap">
+  <div id="messages" class="chat-msgs">
+    <div class="msg system"><h1>Ask the Data</h1><p>I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data.</p></div>
   </div>
-
-  <div class="chat-input-area">
-    <div class="chat-input-row">
-      <input
-        id="input"
-        type="text"
-        placeholder="Ask about Wisconsin counties, indicators, or policies…"
-        autocomplete="off"
-        aria-label="Chat message"
-      >
-      <button id="send" class="btn btn-primary" onclick="sendMessage()">Send</button>
-    </div>
-    <div id="suggestions" class="chat-suggestions" aria-label="Suggested questions"></div>
+  <div class="chat-input-wrap">
+    <div class="row"><input id="input" type="text" placeholder="Ask about counties, indicators, or policies…" autofocus><button id="send" class="btn btn-primary">Send</button></div>
+    <div id="suggestions" class="suggest"></div>
   </div>
-
 </main>
-
 <script src="/static/lib/api.js"></script>
 <script src="/static/lib/domain.js"></script>
 <script src="/static/lib/chat.js"></script>
 <script>
-(function() {
-  'use strict';
+(function(){
+  var msgs=document.getElementById('messages'), input=document.getElementById('input'), sendBtn=document.getElementById('send'), sug=document.getElementById('suggestions');
 
-  var messagesEl = document.getElementById('messages');
-  var welcomeEl  = document.getElementById('welcome');
-  var input      = document.getElementById('input');
-  var sendBtn    = document.getElementById('send');
-  var suggestionsEl = document.getElementById('suggestions');
-
-  // ── Suggestions ─────────────────────────────────────────────────
-  if (ChatAdapter._placeholders) {
-    ChatAdapter._placeholders.forEach(function(p) {
-      var btn = document.createElement('button');
-      btn.className = 'chat-suggestion';
-      btn.textContent = p.length > 85 ? p.slice(0, 82) + '…' : p;
-      btn.addEventListener('click', function() {
-        input.value = p;
-        sendMessage();
-      });
-      suggestionsEl.appendChild(btn);
+  if(window.ChatAdapter&&ChatAdapter._placeholders){
+    ChatAdapter._placeholders.forEach(function(p){
+      var b=document.createElement('button');b.textContent=p.length>85?p.slice(0,82)+'…':p;
+      b.onclick=function(){input.value=p;send();};sug.appendChild(b);
     });
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────
-
-  function hideWelcome() {
-    if (welcomeEl) { welcomeEl.style.display = 'none'; }
+  function add(role,txt){
+    var d=document.createElement('div');d.className='msg '+role;
+    if(role==='asst')d.innerHTML=txt.replace(/\n/g,'<br>');else d.textContent=txt;
+    msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;
   }
 
-  function scrollToBottom() {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+  function thinking(show){
+    var el=document.getElementById('thinking');
+    if(show&&!el){el=document.createElement('div');el.id='thinking';el.className='thinking';el.innerHTML='<span class=dot></span><span class=dot></span><span class=dot></span> Thinking…';msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;}
+    if(!show&&el)el.remove();
   }
 
-  function setSending(disabled) {
-    input.disabled = disabled;
-    sendBtn.disabled = disabled;
-  }
-
-  function addMessage(role, text) {
-    hideWelcome();
-    var div = document.createElement('div');
-    div.className = 'chat-msg ' + role;
-    if (role === 'assistant') {
-      div.innerHTML = text;
-    } else {
-      div.textContent = text;
-    }
-    messagesEl.appendChild(div);
-    scrollToBottom();
-    return div;
-  }
-
-  function addThinking() {
-    hideWelcome();
-    var div = document.createElement('div');
-    div.className = 'chat-thinking';
-    div.id = 'thinking-indicator';
-    div.setAttribute('role', 'status');
-    div.setAttribute('aria-label', 'Assistant is thinking');
-    div.innerHTML =
-      '<span class="dot" aria-hidden="true"></span>' +
-      '<span class="dot" aria-hidden="true"></span>' +
-      '<span class="dot" aria-hidden="true"></span> Thinking…';
-    messagesEl.appendChild(div);
-    scrollToBottom();
-    return div;
-  }
-
-  function removeThinking() {
-    var el = document.getElementById('thinking-indicator');
-    if (el) { el.remove(); }
-  }
-
-  // ── Send ────────────────────────────────────────────────────────
-
-  async function sendMessage() {
-    var text = input.value.trim();
-    if (!text) { return; }
-
-    input.value = '';
-    setSending(true);
-
-    // Echo user message
-    addMessage('user', text);
-
-    // Thinking indicator
-    addThinking();
-
-    // Create empty assistant bubble for streaming into
-    var assistantEl = addMessage('assistant', '');
-    var fullText = '';
-    var firstChunk = true;
-
-    try {
+  async function send(){
+    var text=input.value.trim();if(!text||!window.ChatAdapter)return;
+    input.value='';sendBtn.disabled=true;add('user',text);thinking(true);
+    var asstEl,full='',first=true;
+    try{
       await ChatAdapter.send(text,
-        /* onChunk */ function(chunk) {
-          if (firstChunk) {
-            removeThinking();
-            firstChunk = false;
-          }
-          fullText += chunk;
-          assistantEl.innerHTML = fullText.replace(/\n/g, '<br>');
-          scrollToBottom();
-        },
-        /* onDone */ function() {
-          removeThinking();
-          if (!fullText) {
-            assistantEl.textContent = 'No response received.';
-          }
-        }
+        function(chunk){if(first){thinking(false);asstEl=add('asst','');first=false;}full+=chunk;if(asstEl)asstEl.innerHTML=full.replace(/\n/g,'<br>');msgs.scrollTop=msgs.scrollHeight;},
+        function(){sendBtn.disabled=false;input.focus();}
       );
-    } catch (e) {
-      removeThinking();
-      assistantEl.innerHTML = '';
-      addMessage('system',
-        'Sorry, something went wrong. The chat service may be unavailable. ' +
-        'Try again in a moment.'
-      );
-    }
-
-    setSending(false);
-    input.focus();
+      if(first){thinking(false);add('system','No response received. The chat service may be busy.');sendBtn.disabled=false;}
+    }catch(e){thinking(false);add('system','Error: '+e.message);sendBtn.disabled=false;}
   }
 
-  // Expose to inline onclick
-  window.sendMessage = sendMessage;
-
-  // ── Enter to send ───────────────────────────────────────────────
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  // ── Focus on load ───────────────────────────────────────────────
-  input.focus();
-
+  document.getElementById('send').onclick=send;
+  input.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}};
 })();
 </script>
-
 </body>
 </html>
