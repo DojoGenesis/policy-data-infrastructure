@@ -10,6 +10,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>County Profile — PDI</title>
 <meta name="description" content="Three-act county profile: Portrait, Layers, and Levers. Indicators, ICE scores, factor analysis, LISA clusters, and composite indexing.">
+
+<!-- PWA — ADR-012 I7: offline support + installable web app -->
+<meta name="theme-color" content="#0a0a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PDI County">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/pdi-icon.svg">
 <link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
@@ -116,6 +124,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     flex-wrap: wrap;
     align-items: center;
   }
+
+  /* ── Return-visit indicator (ADR-012 I6) ───────────────────── */
+  .last-viewed {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: var(--r-chip);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+  .last-viewed strong { color: var(--text); font-weight: 600; }
 
   /* ═══════════════════════════════════════════════════════════════
      THREAD RIBBONS — spectral dividers between acts
@@ -492,6 +514,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.78rem;
   }
 
+  /* Sparklines — subtle inline trend visuals */
+  .sparkline-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+  }
+  .sparkline-wrap svg {
+    flex-shrink: 0;
+  }
+  .sparkline-dot {
+    /* animated dot at current value */
+  }
+  .sparkline-label {
+    font-size: 0.6rem;
+    color: var(--subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   /* Tract child cards */
   .tract-grid {
     display: grid;
@@ -633,6 +677,163 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--bg);
     text-decoration: none;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     PERSONALIZED VIDEO PLAYER — ADR-012 I2
+     ═══════════════════════════════════════════════════════════════ */
+
+  .video-player {
+    margin: clamp(14px, 2vw, 20px) 0;
+    max-width: 640px;
+  }
+  .video-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-card);
+    background: var(--bg);
+    box-shadow: var(--lift);
+    border: 1px solid var(--border);
+  }
+  .video-wrapper video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-card);
+  }
+
+  /* Play button overlay */
+  .video-play-btn {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 200ms ease;
+  }
+  .video-play-btn:hover {
+    background: color-mix(in srgb, var(--bg) 35%, transparent);
+  }
+  .video-play-btn svg {
+    width: 56px;
+    height: 56px;
+    fill: var(--accent);
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+  .video-play-btn:hover svg {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+
+  /* Caption bar — sits at the bottom of the video */
+  .video-caption-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px clamp(12px, 2.5vw, 18px);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: center;
+    z-index: 3;
+    transition: opacity 300ms ease;
+  }
+  .video-caption-bar strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Stats overlay bar — top-right chip row */
+  .video-stats-bar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    z-index: 3;
+  }
+  .video-stat {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: var(--r-badge);
+    padding: 4px 10px;
+    font-size: 0.65rem;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .video-stat.accent {
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg) 88%);
+  }
+  .video-stat .vs-label {
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle);
+    font-weight: 600;
+  }
+  .video-stat.accent .vs-label { color: var(--accent); }
+  .video-stat .vs-value {
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--text);
+  }
+  .video-stat.accent .vs-value { color: var(--accent); }
+  .video-stat .vs-compare {
+    font-size: 0.58rem;
+    color: var(--subtle);
+    margin-top: 1px;
+  }
+
+  /* Video loader */
+  .video-player .loader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    background: var(--bg);
+  }
+
+  /* Small heading for video section */
+  .video-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .video-label::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    flex-shrink: 0;
+  }
 </style>
 <link rel="stylesheet" href="/static/chat-drawer.css">
 </head>
@@ -697,6 +898,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="portrait-stat">
               <div class="portrait-stat-val" x-text="stat.value"></div>
               <div class="portrait-stat-lbl" x-text="stat.label"></div>
+              <div x-show="stat.indicator && sparklineData[stat.indicator]" style="margin-top:4px;"
+                   x-html="sparklineSVG(sparklineData[stat.indicator], stat.rawValue, stat.indicator)"></div>
             </div>
           </template>
         </div>
@@ -706,6 +909,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
           <a :href="'/map?geoid='+geoid" class="btn btn-secondary">View on Map</a>
           <a href="/chat" class="btn btn-secondary">Ask Chat</a>
+        </div>
+
+        <!-- Return-visit indicator (ADR-012 I6) -->
+        <div class="last-viewed" x-show="lastVisitDate" x-cloak>
+          📅 You last viewed this county on <strong x-text="lastVisitDate"></strong>.
+          <span x-show="dataVintage" x-cloak> Data vintage: <strong x-text="dataVintage"></strong>.</span>
         </div>
       </div>
     </section>
@@ -780,6 +989,35 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </section>
 
+    <!-- Video: Z-Score (Layer 1 Indicator Distribution) -->
+    <div class="wrap" style="padding-bottom:0;">
+      <div x-data="videoPlayer('zscore')" x-init="init()" x-show="geoid" x-cloak>
+        <div class="video-label">📹 How to Read the Distribution</div>
+        <div class="video-player">
+          <div class="video-wrapper">
+            <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/zscore.mp4" preload="metadata"
+              @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
+              @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="video-stats-bar" x-show="overlayStats.length > 0">
+              <template x-for="stat in overlayStats" :key="stat.label">
+                <span class="video-stat" :class="{accent: stat.accent}">
+                  <span class="vs-label" x-text="stat.label"></span>
+                  <span class="vs-value" x-text="stat.value"></span>
+                  <span class="vs-compare" x-text="stat.comparison" x-show="stat.comparison"></span>
+                </span>
+              </template>
+            </div>
+            <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── LAYER 2: Validated Features ───────────────────────────── -->
     <section class="section-band" id="layer-2">
       <div class="wrap layer-inner">
@@ -838,6 +1076,35 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </section>
 
+    <!-- Video: ICE (Layer 2 Validated Features) -->
+    <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
+      <div x-data="videoPlayer('ice')" x-init="init()" x-show="geoid" x-cloak>
+        <div class="video-label">📹 Understanding the ICE Score</div>
+        <div class="video-player">
+          <div class="video-wrapper">
+            <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/ice.mp4" preload="metadata"
+              @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
+              @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="video-stats-bar" x-show="overlayStats.length > 0">
+              <template x-for="stat in overlayStats" :key="stat.label">
+                <span class="video-stat" :class="{accent: stat.accent}">
+                  <span class="vs-label" x-text="stat.label"></span>
+                  <span class="vs-value" x-text="stat.value"></span>
+                  <span class="vs-compare" x-text="stat.comparison" x-show="stat.comparison"></span>
+                </span>
+              </template>
+            </div>
+            <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── LAYER 3: Factor Profile ───────────────────────────────── -->
     <section class="section-band" id="layer-3">
       <div class="wrap layer-inner">
@@ -845,18 +1112,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <h2>Factor Profile</h2>
         <p class="layer-context" x-html="layer3Context"></p>
 
-        <div x-show="factorsLoading" x-cloak>
+        <div x-show="factorsLoading" style="display:none">
           <div class="loader"><div class="loader-spinner"></div></div>
         </div>
-        <div x-show="factorsError" x-cloak class="state-error">
+        <div x-show="factorsError" style="display:none" class="state-error">
           <span x-text="factorsError"></span>
           <button class="btn btn-ghost" @click="loadFactors()">Retry</button>
         </div>
-        <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" x-cloak>
+        <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" style="display:none">
           Factor analysis has not been computed for this geography. Run <code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code> to generate scores.
         </div>
 
-        <div x-show="!factorsLoading && !factorsError && factors.length > 0" x-cloak class="card card-spectral">
+        <div x-show="!factorsLoading && !factorsError && factors.length > 0" style="display:none" class="card card-spectral">
           <template x-for="f in factorList" :key="f.factor_name">
             <div class="factor-bar-row">
               <span class="factor-bar-name" x-text="f.label || f.factor_name"></span>
@@ -880,22 +1147,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <h2>Spatial Clusters (LISA)</h2>
         <p class="layer-context" x-html="layer4Context"></p>
 
-        <div x-show="lisaLoading" x-cloak>
+        <div x-show="lisaLoading" style="display:none">
           <div class="loader"><div class="loader-spinner"></div></div>
         </div>
-        <div x-show="lisaError" x-cloak class="state-error">
+        <div x-show="lisaError" style="display:none" class="state-error">
           <span x-text="lisaError"></span>
           <button class="btn btn-ghost" @click="loadLISA()">Retry</button>
         </div>
-        <div x-show="!lisaLoading && !lisaError && lisaClusters.length === 0 && !lisaEmpty" class="state-empty" x-cloak>
+        <div x-show="!lisaLoading && !lisaError && lisaClusters.length === 0 && !lisaEmpty" class="state-empty" style="display:none">
           <p>Run spatial analysis to see clusters →</p>
           <a href="/map" style="color:var(--accent);">View methodology &amp; launch analysis</a>
         </div>
-        <div x-show="!lisaLoading && !lisaError && lisaEmpty" class="state-empty" x-cloak>
+        <div x-show="!lisaLoading && !lisaError && lisaEmpty" class="state-empty" style="display:none">
           No LISA analyses found. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a>
         </div>
 
-        <div x-show="!lisaLoading && !lisaError && lisaClusters.length > 0" x-cloak>
+        <div x-show="!lisaLoading && !lisaError && lisaClusters.length > 0" style="display:none">
           <div class="lisa-badge-list">
             <template x-for="c in lisaClusters" :key="c.key">
               <a :href="'/map?indicator='+c.variable" class="lisa-badge" :class="c.cluster">
@@ -910,6 +1177,35 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
       </div>
     </section>
+
+    <!-- Video: LISA Cluster Map (Layer 4 Spatial Clusters) -->
+    <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
+      <div x-data="videoPlayer('lisa_cluster_map')" x-init="init()" x-show="geoid" x-cloak>
+        <div class="video-label">📹 Reading Spatial Patterns</div>
+        <div class="video-player">
+          <div class="video-wrapper">
+            <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/lisa_cluster_map.mp4" preload="metadata"
+              @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
+              @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="video-stats-bar" x-show="overlayStats.length > 0">
+              <template x-for="stat in overlayStats" :key="stat.label">
+                <span class="video-stat" :class="{accent: stat.accent}">
+                  <span class="vs-label" x-text="stat.label"></span>
+                  <span class="vs-value" x-text="stat.value"></span>
+                  <span class="vs-compare" x-text="stat.comparison" x-show="stat.comparison"></span>
+                </span>
+              </template>
+            </div>
+            <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ── LAYER 5: Composite Builder ────────────────────────────── -->
     <section class="section-band" id="layer-5">
@@ -936,14 +1232,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <label class="composite-var-row" :title="'Direction: ' + (v.direction||'unknown')">
                 <input type="checkbox" :value="v.id" x-model="compositeSelected">
                 <span class="composite-var-name" x-text="v.name || v.id"></span>
-                <span class="composite-var-dir" x-text="v.direction==='higher_is_better' ? '↑' : '↓'"></span>
+                <span class="composite-var-dir" x-text="v.direction==='higher_is_better' || v.direction==='higher_better' ? '↑' : '↓'"></span>
               </label>
             </template>
 
             <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:14px;">Compute Composite</button>
             <div x-show="compositeComputing" class="loader" style="padding:20px 0;"><div class="loader-spinner"></div></div>
 
-            <div x-show="compositeResult && !compositeComputing" x-cloak class="composite-result-card">
+            <div x-show="compositeResult && !compositeComputing" style="display:none" class="composite-result-card">
               <div class="composite-score-row">
                 <div>
                   <div class="cr-score-num" x-text="compositeResult.score != null ? compositeResult.score.toFixed(3) : '—'"></div>
@@ -979,7 +1275,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 </table>
               </div>
             </div>
-            <div x-show="compositeError" x-cloak class="state-error" style="margin-top:14px;">
+            <div x-show="compositeError" style="display:none;margin-top:14px" class="state-error">
               <span x-text="compositeError"></span>
             </div>
           </div>
@@ -1138,6 +1434,15 @@ function countyProfile() {
     evidenceLoading: false,
     evidenceError: '',
 
+    // ── Return-visit tracking (ADR-012 I6) ──────────────────
+    lastVisitDate: '',
+    dataVintage: '',
+
+    // Temporal / sparkline data
+    sparklineData: {},     // {indicator_id: [{vintage, value}, ...]}
+    sparklineLoading: false,
+    availableVintages: ['2023','2022','2021','2020','2019'],
+
     // ── Derived ──────────────────────────────────────────────
 
     // State FIPS → name lookup
@@ -1188,11 +1493,11 @@ function countyProfile() {
       const stats = [];
       const find = id => this.indicators.find(i => i.variable_id === id);
       const pov = find('poverty_rate');
-      if (pov && pov.value != null) stats.push({label: 'Poverty Rate', value: pov.value.toFixed(1)+'%'});
+      if (pov && pov.value != null) stats.push({label: 'Poverty Rate', value: pov.value.toFixed(1)+'%', indicator: 'poverty_rate', rawValue: pov.value});
       const inc = find('median_household_income');
-      if (inc && inc.value != null) stats.push({label: 'Median Income', value: '$'+Math.round(inc.value).toLocaleString()});
+      if (inc && inc.value != null) stats.push({label: 'Median Income', value: '$'+Math.round(inc.value).toLocaleString(), indicator: 'median_household_income', rawValue: inc.value});
       const uns = find('uninsured_rate');
-      if (uns && uns.value != null) stats.push({label: 'Uninsured', value: uns.value.toFixed(1)+'%'});
+      if (uns && uns.value != null) stats.push({label: 'Uninsured', value: uns.value.toFixed(1)+'%', indicator: 'uninsured_rate', rawValue: uns.value});
       if (this.popPOC != null) stats.push({label: 'People of Color', value: this.popPOC.toFixed(1)+'%'});
       return stats;
     },
@@ -1439,6 +1744,12 @@ function countyProfile() {
         this.loadDissimilarity();
         this.loadLISA();
         this.loadEvidence();
+        this.loadSparklines();
+
+        // ── Return-visit tracking (ADR-012 I6) ───────────────
+        this.lookupLastVisit();
+        this.trackVisit();
+        this.deriveDataVintage();
       } catch (e) {
         this.error = 'Failed to load county data: ' + e.message;
       }
@@ -1763,6 +2074,71 @@ function countyProfile() {
       return 'Sensitive:';
     },
 
+    // ── Sparklines ──────────────────────────────────────────
+
+    // Render an inline SVG sparkline for an array of {vintage, value} points.
+    // Color: --accent (amber) for upward trend, --live (green) for downward (improving).
+    sparklineSVG(points, currentVal, indicatorId) {
+      if (!points || points.length < 2) return '';
+      const sorted = [...points].sort((a,b) => a.vintage.localeCompare(b.vintage));
+      const values = sorted.map(p => p.value).filter(v => v != null);
+      if (values.length < 2) return '';
+
+      const w = 68, h = 22, pad = 3;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+
+      // Determine trend direction: up = worse for poverty/uninsured, better for income
+      const firstVal = values[0], lastVal = values[values.length - 1];
+      const isUp = lastVal > firstVal;
+      const isDown = lastVal < firstVal;
+      // For income: up is good. For poverty/uninsured: down is good.
+      const incomeIds = ['median_household_income', 'median_hh_income'];
+      const improving = incomeIds.includes(indicatorId) ? isUp : isDown;
+      const color = improving ? 'var(--live)' : 'var(--accent)';
+
+      // Build polyline points
+      const xStep = (w - 2*pad) / (values.length - 1);
+      let pts = '';
+      for (let i = 0; i < values.length; i++) {
+        const x = pad + i * xStep;
+        const y = h - pad - ((values[i] - min) / range) * (h - 2*pad);
+        pts += `${x.toFixed(1)},${y.toFixed(1)} `;
+      }
+
+      // Dot at current value position
+      const lastX = pad + (values.length - 1) * xStep;
+      const lastY = h - pad - ((lastVal - min) / range) * (h - 2*pad);
+
+      return `<span class="sparkline-wrap"><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-label="Trend sparkline"><polyline points="${pts.trim()}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg><span class="sparkline-label">${sorted[0].vintage}–${sorted[sorted.length-1].vintage}</span></span>`;
+    },
+
+    // Fetch multi-vintage data for sparkline indicators.
+    async loadSparklines() {
+      const indicators = ['poverty_rate', 'median_household_income', 'uninsured_rate'];
+      this.sparklineLoading = true;
+      try {
+        const vintageParam = this.availableVintages.join(',');
+        const url = `/v1/policy/geographies/${this.geoid}/indicators?variable_id=${indicators.join('&variable_id=')}&vintage=${vintageParam}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const data = await r.json();
+        const items = data.indicators || [];
+
+        // Group by variable_id
+        const byVar = {};
+        for (const item of items) {
+          if (!byVar[item.variable_id]) byVar[item.variable_id] = [];
+          byVar[item.variable_id].push({vintage: item.vintage, value: item.value});
+        }
+        this.sparklineData = byVar;
+      } catch (e) {
+        console.warn('Sparkline data fetch failed:', e.message);
+      }
+      this.sparklineLoading = false;
+    },
+
     // ── Evidence Cards (Act 3) ──────────────────────────────
 
     async loadEvidence() {
@@ -1776,9 +2152,170 @@ function countyProfile() {
       }
       this.evidenceLoading = false;
     },
+
+    // ── Return-visit tracking (ADR-012 I6) ──────────────────
+
+    trackVisit() {
+      try {
+        var raw = localStorage.getItem('pdi-county-visits');
+        var visits = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(visits)) visits = [];
+        visits.push({
+          geoid: this.geoid,
+          name: this.geo ? this.geo.name : '',
+          timestamp: new Date().toISOString(),
+        });
+        // Keep only last 20 visits
+        if (visits.length > 20) visits = visits.slice(-20);
+        localStorage.setItem('pdi-county-visits', JSON.stringify(visits));
+      } catch (e) { /* localStorage may be unavailable */ }
+    },
+
+    lookupLastVisit() {
+      try {
+        var raw = localStorage.getItem('pdi-county-visits');
+        if (!raw) return;
+        var visits = JSON.parse(raw);
+        if (!Array.isArray(visits)) return;
+        // Find previous visit with same geoid (excluding the current page load)
+        for (var i = visits.length - 1; i >= 0; i--) {
+          if (visits[i].geoid === this.geoid) {
+            var d = new Date(visits[i].timestamp);
+            this.lastVisitDate = d.toLocaleDateString(undefined, {
+              year: 'numeric', month: 'short', day: 'numeric'
+            });
+            break;
+          }
+        }
+      } catch (e) { /* localStorage may be unavailable */ }
+    },
+
+    deriveDataVintage() {
+      // Extract the most common vintage year from indicators
+      var counts = {};
+      for (var i = 0; i < this.indicators.length; i++) {
+        var v = this.indicators[i].vintage || this.indicators[i].year;
+        if (v) {
+          var y = String(v).substring(0, 4);
+          counts[y] = (counts[y] || 0) + 1;
+        }
+      }
+      var best = '', bestCount = 0;
+      for (var yr in counts) {
+        if (counts[yr] > bestCount) { best = yr; bestCount = counts[yr]; }
+      }
+      if (best) this.dataVintage = best;
+    },
+  };
+}
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// Personalized Video Player Component — ADR-012 I2
+// Fetches county-specific captions from /v1/policy/videos/:name?geoid=X
+// and overlays them as HTML/CSS captions over pre-rendered MP4s.
+// ═══════════════════════════════════════════════════════════════════
+function videoPlayer(videoName) {
+  return {
+    videoName: videoName,
+    loading: true,
+    loaded: false,
+    playing: false,
+    geoid: '',
+    captions: [],
+    overlayStats: [],
+    currentCaptionText: '',
+    currentIdx: -1,
+
+    api(path) {
+      return fetch('/v1/policy' + path).then(function(r) {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return r.json();
+      });
+    },
+
+    init() {
+      // Read geoid from URL — same as countyProfile
+      this.geoid = PDIDeepLink ? PDIDeepLink.getParam('geoid', '') : '';
+      if (!this.geoid) {
+        this.loading = false;
+        this.loaded = true;
+        return;
+      }
+      this.fetchCaptions();
+    },
+
+    async fetchCaptions() {
+      this.loading = true;
+      try {
+        var data = await this.api('/videos/' + this.videoName + '?geoid=' + this.geoid);
+        this.captions = data.captions || [];
+        this.overlayStats = data.overlay_stats || [];
+      } catch (e) {
+        // Silently use empty captions — video plays without overlay
+        this.captions = [];
+        this.overlayStats = [];
+      }
+      this.loading = false;
+    },
+
+    onLoaded() {
+      this.loaded = true;
+    },
+
+    play() {
+      var vid = this.$refs.video;
+      if (vid) {
+        vid.currentTime = 0;
+        vid.play().catch(function() {});
+      }
+    },
+
+    updateCaption() {
+      var vid = this.$refs.video;
+      if (!vid || this.captions.length === 0) return;
+      var t = vid.currentTime;
+
+      // Find the caption whose interval contains current time
+      for (var i = 0; i < this.captions.length; i++) {
+        var cap = this.captions[i];
+        if (t >= cap.start_sec && t < cap.end_sec) {
+          if (this.currentIdx !== i) {
+            this.currentIdx = i;
+            this.currentCaptionText = this._highlightAccent(cap);
+          }
+          return;
+        }
+      }
+      // No caption active
+      this.currentIdx = -1;
+      this.currentCaptionText = '';
+    },
+
+    _highlightAccent(cap) {
+      var text = cap.text || '';
+      var accent = cap.accent_text || '';
+      if (!accent) return text;
+      // Replace the accent substring with a <strong> wrapper
+      var idx = text.indexOf(accent);
+      if (idx === -1) return text;
+      return text.substring(0, idx) + '<strong>' + accent + '</strong>' + text.substring(idx + accent.length);
+    }
   };
 }
 </script>
 <script src="/static/chat-drawer.js"></script>
+
+<!-- Service Worker registration (ADR-012 I7: PWA offline) -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    console.log('[PDI] Service Worker registered:', reg.scope);
+  }).catch(function(err) {
+    console.warn('[PDI] Service Worker registration failed:', err.message);
+  });
+}
+</script>
 </body>
 </html>

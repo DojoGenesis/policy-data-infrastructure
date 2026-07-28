@@ -45,7 +45,7 @@ query. A separate deterministic step runs it against the real data.
 
 Schema:
 {
-  "operation":  "lookup" | "rank" | "compare" | "aggregate" | "threshold" | "representation",
+  "operation":  "lookup" | "rank" | "compare" | "aggregate" | "threshold" | "representation" | "time_series",
   "indicator":  one of the indicator ids below (omit for representation),
   "places":     array of county names or tract GEOIDs,
   "level":      "county" | "tract"   (default "county"),
@@ -63,6 +63,7 @@ Operation guide:
   aggregate       a summary across every place at a level
   threshold       every place above or below a number
   representation  which districts cover a place and who holds the seats
+  time_series     how one indicator has changed over time. Include the place name in "places". The system will fetch all available vintages automatically.
 
 Rules:
 - "mean" and "average" are NOT available. Averaging medians does not produce a

@@ -99,4 +99,7 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 
 	// LISA county profile.
 	group.GET("/geographies/:geoid/lisa-profile", geoidMW, p.handleGetLISACountyProfile)
+
+	// Personalized video captions.
+	group.GET("/videos/:name", p.handleGetVideoCaptions)
 }

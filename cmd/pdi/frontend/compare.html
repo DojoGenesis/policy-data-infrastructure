@@ -919,7 +919,7 @@ function compareTool() {
     get leadACount() {
       let aBetter = 0;
       for (const d of this.mergedDiffs) {
-        if (d.diff != null && d.direction && this.deltaClass(d) === 'delta-green') {
+        if (d.diff != null && this.deltaClass(d) === 'delta-green') {
           aBetter++;
         }
       }
@@ -929,7 +929,7 @@ function compareTool() {
     get leadBCount() {
       let bBetter = 0;
       for (const d of this.mergedDiffs) {
-        if (d.diff != null && d.direction && this.deltaClass(d) === 'delta-red') {
+        if (d.diff != null && this.deltaClass(d) === 'delta-red') {
           bBetter++;
         }
       }
@@ -1289,10 +1289,11 @@ function compareTool() {
       const dir = d.direction;
       const diff = d.diff;
 
-      if (dir === 'higher_is_better') {
+      // Accept both naming conventions: higher_better / higher_is_better
+      if (dir === 'higher_is_better' || dir === 'higher_better') {
         return diff < 0 ? 'delta-green' : (diff > 0 ? 'delta-red' : 'delta-neutral');
       }
-      if (dir === 'lower_is_better') {
+      if (dir === 'lower_is_better' || dir === 'lower_better') {
         return diff > 0 ? 'delta-green' : (diff < 0 ? 'delta-red' : 'delta-neutral');
       }
       return 'delta-neutral';

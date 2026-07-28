@@ -521,6 +521,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <span x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]" style="font-size:0.7rem;color:var(--subtle);margin-left:4px;"></span>
     </div>
 
+    <div style="display:flex;align-items:center;gap:8px;" x-show="availableVintages.length > 0">
+      <label for="vintage-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">Vintage</label>
+      <select id="vintage-select" x-model="selectedVintage" @change="onVintageChange()">
+        <template x-for="v in availableVintages" :key="v">
+          <option :value="v" x-text="'ACS ' + v + ' 5-Year'"></option>
+        </template>
+      </select>
+    </div>
+
     <label class="toggle-wrap">
       <input type="checkbox" x-model="showCounties" @change="toggleCounties()">
       <span class="toggle-track"></span>
@@ -670,6 +679,8 @@ function lisaMap() {
   return {
     // ── State ──────────────────────────────────────────────────
     selectedVariable: PDIDeepLink.getParam('indicator', 'poverty_rate'),
+    selectedVintage: '',
+    availableVintages: [],
     showCounties: false,
     analysisVintage: '',
     mapLoading: true,
@@ -939,10 +950,25 @@ function lisaMap() {
 
         const details = (await Promise.all(detailPromises)).filter(Boolean);
 
+        // Store all analyses for vintage filtering
+        this._allAnalyses = details;
+
+        // Collect available vintages
+        const vintageSet = new Set();
+        for (const d of details) {
+          if (d.vintage) vintageSet.add(d.vintage);
+        }
+        this.availableVintages = [...vintageSet].sort().reverse();
+        if (this.availableVintages.length > 0 && !this.selectedVintage) {
+          this.selectedVintage = this.availableVintages[0]; // Default to latest
+        }
+
         const byVar = {};
         for (const d of details) {
           const v = d.variable;
           if (!v) continue;
+          // Only include analyses matching selected vintage (if set)
+          if (this.selectedVintage && d.vintage !== this.selectedVintage) continue;
           if (!byVar[v] || (d.computedAt > byVar[v].computedAt)) {
             byVar[v] = { analysisId: d.id, vintage: d.vintage, computedAt: d.computedAt };
           }
@@ -1027,6 +1053,37 @@ function lisaMap() {
       // Tell the chat adapter about the new indicator
       if (window.ChatAdapter) {
         ChatAdapter.setPageContext({ page: 'map', indicator: this.selectedVariable });
+      }
+    },
+
+    // ═══════════════ VINTAGE CHANGE ═══
+    onVintageChange() {
+      // Filter analyses to selected vintage and re-render
+      const v = this.selectedVintage;
+      if (!v) return;
+      // Re-discover analyses filtered by vintage
+      this.filterAnalysesByVintage(v);
+      this.renderGeoJSON();
+      this.updateStats();
+    },
+
+    // Filter analysisMap to only show analyses matching a vintage
+    filterAnalysesByVintage(vintage) {
+      if (!this._allAnalyses) return;
+      const byVar = {};
+      for (const d of this._allAnalyses) {
+        const variable = d.variable;
+        if (!variable) continue;
+        if (d.vintage !== vintage) continue;
+        if (!byVar[variable] || (d.computedAt > byVar[variable].computedAt)) {
+          byVar[variable] = { analysisId: d.id, vintage: d.vintage, computedAt: d.computedAt };
+        }
+      }
+      this.analysisMap = byVar;
+      this.variablesLoaded = Object.keys(this.analysisMap).length;
+
+      if (this.variablesLoaded > 0 && !this.analysisMap[this.selectedVariable]) {
+        this.selectedVariable = Object.keys(this.analysisMap)[0];
       }
     },
 

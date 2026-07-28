@@ -111,6 +111,7 @@ func (p *PolicyPlugin) handleGetGeography(c *gin.Context) {
 	}
 	if vintage != "" {
 		indQ.Vintage = vintage
+		indQ.Vintages = parseCSV(vintage)
 	}
 	inds, err = p.store.QueryIndicators(c.Request.Context(), indQ)
 	if err != nil {
@@ -208,7 +209,7 @@ func (p *PolicyPlugin) handleGetChildren(c *gin.Context) {
 
 // handleGetIndicators returns all indicators for a geography.
 //
-// Query params: variable_id (repeatable), vintage, latest (bool, default true).
+// Query params: variable_id (repeatable), vintage (comma-separated for multi-vintage), latest (bool, default true).
 func (p *PolicyPlugin) handleGetIndicators(c *gin.Context) {
 	geoid := c.Param("geoid")
 
@@ -219,6 +220,7 @@ func (p *PolicyPlugin) handleGetIndicators(c *gin.Context) {
 	q.VariableIDs = c.QueryArray("variable_id")
 	if v := c.Query("vintage"); v != "" {
 		q.Vintage = v
+		q.Vintages = parseCSV(v)
 		q.LatestOnly = false
 	}
 	if latest := c.Query("latest"); latest == "false" {
@@ -317,6 +319,7 @@ func (p *PolicyPlugin) handleQuery(c *gin.Context) {
 			GEOIDs:      geoids,
 			VariableIDs: req.VariableIDs,
 			Vintage:     req.Vintage,
+			Vintages:    parseCSV(req.Vintage),
 			LatestOnly:  req.Vintage == "",
 		}
 		allInds, err := p.store.QueryIndicators(c.Request.Context(), indQ)
@@ -374,6 +377,7 @@ func (p *PolicyPlugin) handleCompare(c *gin.Context) {
 		GEOIDs:      []string{req.GEOID1, req.GEOID2},
 		VariableIDs: req.VariableIDs,
 		Vintage:     req.Vintage,
+		Vintages:    parseCSV(req.Vintage),
 		LatestOnly:  req.Vintage == "",
 	}
 	allInds, err := p.store.QueryIndicators(ctx, indQ)
@@ -673,7 +677,7 @@ func (p *PolicyPlugin) handleListVariables(c *gin.Context) {
 			Name:        v.Name,
 			Description: v.Description,
 			Unit:        v.Unit,
-			Direction:   v.Direction,
+			Direction:   normalizeDirection(v.Direction),
 			SourceID:    v.SourceID,
 			SourceName:  v.SourceName,
 		})
@@ -1082,6 +1086,20 @@ func (p *PolicyPlugin) handleComposite(c *gin.Context) {
 
 // ── Internal helpers ────────────────────────────────────────────────────────
 
+// normalizeDirection standardizes direction values from the database
+// (which may use higher_better/lower_better/neutral) to the canonical
+// higher_is_better/lower_is_better form expected by the frontend.
+func normalizeDirection(d string) string {
+	switch d {
+	case "higher_better":
+		return "higher_is_better"
+	case "lower_better":
+		return "lower_is_better"
+	default:
+		return d
+	}
+}
+
 // indicatorToResponse converts a store.Indicator to an IndicatorResponse,
 // enriching it with human-readable metadata from the plugin's varMeta cache.
 func (p *PolicyPlugin) indicatorToResponse(ind store.Indicator) IndicatorResponse {
@@ -1097,7 +1115,7 @@ func (p *PolicyPlugin) indicatorToResponse(ind store.Indicator) IndicatorRespons
 	if meta, ok := p.varMeta[ind.VariableID]; ok {
 		resp.Name = meta.Name
 		resp.Unit = meta.Unit
-		resp.Direction = meta.Direction
+		resp.Direction = normalizeDirection(meta.Direction)
 	}
 	return resp
 }
@@ -1363,6 +1381,406 @@ func formatInt(n int) string {
 	}
 	parts = append([]string{s}, parts...)
 	return strings.Join(parts, ",")
+}
+
+// ── GET /videos/:name ────────────────────────────────────────────────────────
+
+// handleGetVideoCaptions returns personalized overlay captions for a pre-rendered
+// explainer video. When ?geoid=X is provided, county-specific stats are injected
+// into the caption text. Otherwise generic fallback captions are returned.
+func (p *PolicyPlugin) handleGetVideoCaptions(c *gin.Context) {
+	videoName := c.Param("name")
+	if videoName == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "video name is required"})
+		return
+	}
+
+	geoid := c.Query("geoid")
+
+	// ── Fallback: no geoid → generic captions ─────────────────────────
+	if geoid == "" {
+		c.JSON(http.StatusOK, buildGenericCaptions(videoName))
+		return
+	}
+
+	// ── Personalized: fetch county data ───────────────────────────────
+	ctx := c.Request.Context()
+
+	g, err := p.store.GetGeography(ctx, geoid)
+	if err != nil {
+		// If geography not found, fall back to generic
+		c.JSON(http.StatusOK, buildGenericCaptions(videoName))
+		return
+	}
+
+	// Fetch indicators for this county
+	inds, err := p.store.QueryIndicators(ctx, store.IndicatorQuery{
+		GEOIDs:     []string{geoid},
+		LatestOnly: true,
+	})
+	if err != nil {
+		inds = nil
+	}
+
+	// Fetch LISA profile
+	lisaProfile, _ := p.store.QueryLISACountyProfile(ctx, geoid)
+
+	resp := buildPersonalizedCaptions(videoName, geoid, g.Name, inds, lisaProfile)
+	c.JSON(http.StatusOK, resp)
+}
+
+// buildGenericCaptions returns a fallback VideoCaptionResponse with no
+// county-specific data — generic explainer captions only.
+func buildGenericCaptions(videoName string) VideoCaptionResponse {
+	return VideoCaptionResponse{
+		VideoName:    videoName,
+		Fallback:     true,
+		OverlayStats: []VideoOverlayStat{},
+		Captions:     genericCaptionsForVideo(videoName),
+	}
+}
+
+// buildPersonalizedCaptions constructs county-specific overlay stats and
+// captions for a given video, injecting local data into the caption text.
+func buildPersonalizedCaptions(
+	videoName, geoid, countyName string,
+	indicators []store.Indicator,
+	lisaProfile *store.LISACountyProfile,
+) VideoCaptionResponse {
+	resp := VideoCaptionResponse{
+		VideoName:  videoName,
+		GEOID:      geoid,
+		CountyName: countyName,
+		Fallback:   false,
+	}
+
+	// Build a fast lookup map for indicator values
+	indMap := make(map[string]*float64)
+	for _, ind := range indicators {
+		indMap[ind.VariableID] = ind.Value
+	}
+	getVal := func(id string) *float64 { return indMap[id] }
+
+	switch videoName {
+	case "zscore":
+		resp.OverlayStats = buildZScoreOverlay(countyName, getVal)
+		resp.Captions = buildZScoreCaptions(countyName, getVal)
+	case "ice":
+		resp.OverlayStats = buildICEOverlay(countyName, getVal)
+		resp.Captions = buildICECaptions(countyName, getVal)
+	case "lisa_cluster_map":
+		resp.OverlayStats = buildLISAOverlay(countyName, lisaProfile)
+		resp.Captions = buildLISACaptions(countyName, lisaProfile)
+	default:
+		// Unrecognized video — use generic captions
+		resp.OverlayStats = []VideoOverlayStat{}
+		resp.Captions = genericCaptionsForVideo(videoName)
+	}
+
+	return resp
+}
+
+// ── Overlay stat builders per video type ─────────────────────────────────────
+
+func buildZScoreOverlay(countyName string, getVal func(string) *float64) []VideoOverlayStat {
+	pov := getVal("poverty_rate")
+	inc := getVal("median_household_income")
+	unins := getVal("uninsured_rate")
+
+	var stats []VideoOverlayStat
+	if pov != nil {
+		stats = append(stats, VideoOverlayStat{
+			Label:      "Poverty Rate",
+			Value:      fmt.Sprintf("%.1f%%", *pov),
+			Comparison: "WI avg: 11.2%",
+			Accent:     *pov > 11.2,
+		})
+	}
+	if inc != nil {
+		stats = append(stats, VideoOverlayStat{
+			Label:      "Median Income",
+			Value:      fmt.Sprintf("$%.0f", *inc),
+			Comparison: "WI median: $72,458",
+			Accent:     *inc < 72458,
+		})
+	}
+	if unins != nil {
+		stats = append(stats, VideoOverlayStat{
+			Label:      "Uninsured",
+			Value:      fmt.Sprintf("%.1f%%", *unins),
+			Comparison: "WI avg: 5.7%",
+			Accent:     *unins > 5.7,
+		})
+	}
+	return stats
+}
+
+func buildICEOverlay(countyName string, getVal func(string) *float64) []VideoOverlayStat {
+	// Compute ICE from population data
+	popTotal := getVal("total_population")
+	poverty := getVal("poverty_rate")
+	popWhite := getVal("pop_white_non_hispanic")
+	if popWhite == nil {
+		popWhite = getVal("pop_non_hispanic_white")
+	}
+
+	var stats []VideoOverlayStat
+
+	if popTotal != nil && popWhite != nil && poverty != nil && *popTotal > 0 {
+		pocPct := ((*popTotal - *popWhite) / *popTotal) * 100
+		povPct := *poverty
+		priv := (1 - pocPct/100) * (1 - povPct/100) * *popTotal
+		dep := (pocPct / 100) * (povPct / 100) * *popTotal
+		var ice float64
+		if priv+dep > 0 {
+			ice = (priv - dep) / (priv + dep)
+		}
+		stats = append(stats,
+			VideoOverlayStat{
+				Label:  "ICE Score",
+				Value:  fmt.Sprintf("%.3f", ice),
+				Accent: true,
+			},
+			VideoOverlayStat{
+				Label:      "% People of Color",
+				Value:      fmt.Sprintf("%.1f%%", pocPct),
+				Comparison: "WI avg: 18.8%",
+				Accent:     false,
+			},
+			VideoOverlayStat{
+				Label:      "Poverty Rate",
+				Value:      fmt.Sprintf("%.1f%%", *poverty),
+				Comparison: "WI avg: 11.2%",
+				Accent:     false,
+			},
+		)
+	}
+
+	return stats
+}
+
+func buildLISAOverlay(countyName string, lisaProfile *store.LISACountyProfile) []VideoOverlayStat {
+	var stats []VideoOverlayStat
+
+	if lisaProfile != nil {
+		stats = append(stats, VideoOverlayStat{
+			Label:  "Total Tracts",
+			Value:  fmt.Sprintf("%d", lisaProfile.TotalTracts),
+			Accent: false,
+		})
+		for _, entry := range lisaProfile.Clusters {
+			stats = append(stats, VideoOverlayStat{
+				Label:  fmt.Sprintf("Cluster %s", entry.Cluster),
+				Value:  fmt.Sprintf("%d tracts", entry.Count),
+				Accent: entry.Cluster == "HH" || entry.Cluster == "LL",
+			})
+		}
+	}
+
+	return stats
+}
+
+// ── Caption builders per video type ──────────────────────────────────────────
+
+func buildZScoreCaptions(countyName string, getVal func(string) *float64) []VideoCaption {
+	pov := getVal("poverty_rate")
+	inc := getVal("median_household_income")
+
+	captions := []VideoCaption{
+		{Text: "The z-score tells us how far a county is from the state average.", StartSec: 0, EndSec: 4},
+		{Text: "Measured in standard deviations — a score of 0 means exactly average.", StartSec: 4, EndSec: 8},
+	}
+
+	if countyName != "" && pov != nil {
+		povZ := (*pov - 11.2) / 4.5 // rough z approximation
+		where := "above"
+		if povZ < 0 {
+			where = "below"
+		}
+		captions = append(captions, VideoCaption{
+			Text:       fmt.Sprintf("%s sits at z=%.1f — %s the state average for poverty.", countyName, povZ, where),
+			StartSec:   8,
+			EndSec:     13,
+			AccentText: countyName,
+		})
+	} else {
+		captions = append(captions, VideoCaption{
+			Text: "Your county's position on the distribution shows where it stands.", StartSec: 8, EndSec: 13,
+		})
+	}
+
+	if inc != nil {
+		incZ := (*inc - 72458) / 15000
+		where := "above"
+		if incZ < 0 {
+			where = "below"
+		}
+		captions = append(captions, VideoCaption{
+			Text:       fmt.Sprintf("%s's median income is $%.0f — %s the WI median.", countyName, *inc, where),
+			StartSec:   13,
+			EndSec:     19,
+			AccentText: countyName,
+		})
+	}
+
+	return captions
+}
+
+func buildICECaptions(countyName string, getVal func(string) *float64) []VideoCaption {
+	popTotal := getVal("total_population")
+	poverty := getVal("poverty_rate")
+	popWhite := getVal("pop_white_non_hispanic")
+	if popWhite == nil {
+		popWhite = getVal("pop_non_hispanic_white")
+	}
+
+	captions := []VideoCaption{
+		{Text: "ICE — Index of Concentration at the Extremes — measures polarization.", StartSec: 0, EndSec: 5},
+	}
+
+	if countyName != "" && popTotal != nil && popWhite != nil && poverty != nil && *popTotal > 0 {
+		pocPct := ((*popTotal - *popWhite) / *popTotal) * 100
+		povPct := *poverty
+		priv := (1 - pocPct/100) * (1 - povPct/100) * *popTotal
+		dep := (pocPct / 100) * (povPct / 100) * *popTotal
+		var ice float64
+		if priv+dep > 0 {
+			ice = (priv - dep) / (priv + dep)
+		}
+		desc := "moderately balanced"
+		if ice > 0.3 {
+			desc = "concentrated privilege"
+		} else if ice < -0.3 {
+			desc = "concentrated deprivation"
+		} else if ice > 0 {
+			desc = "slightly privileged"
+		} else if ice < 0 {
+			desc = "slightly deprived"
+		}
+		captions = append(captions,
+			VideoCaption{
+				Text:       fmt.Sprintf("%s's ICE score is %.3f — indicating %s.", countyName, ice, desc),
+				StartSec:   5,
+				EndSec:     11,
+				AccentText: countyName,
+			},
+			VideoCaption{
+				Text:       fmt.Sprintf("%.1f%% people of color, %.1f%% poverty rate — the extremes that shape the score.", pocPct, povPct),
+				StartSec:   11,
+				EndSec:     17,
+				AccentText: fmt.Sprintf("%.1f%% people of color", pocPct),
+			},
+		)
+	} else {
+		captions = append(captions, VideoCaption{
+			Text: "The score ranges from -1 (all deprived) to +1 (all privileged).", StartSec: 5, EndSec: 11,
+		})
+	}
+
+	return captions
+}
+
+func buildLISACaptions(countyName string, lisaProfile *store.LISACountyProfile) []VideoCaption {
+	captions := []VideoCaption{
+		{Text: "LISA — Local Indicators of Spatial Association — reveals geographic clusters.", StartSec: 0, EndSec: 5},
+	}
+
+	if countyName != "" && lisaProfile != nil {
+		totalTracts := lisaProfile.TotalTracts
+		clusterSummary := ""
+		for i, entry := range lisaProfile.Clusters {
+			if i > 0 {
+				clusterSummary += ", "
+			}
+			clusterSummary += fmt.Sprintf("%s (%d)", entry.Cluster, entry.Count)
+		}
+		if clusterSummary == "" {
+			clusterSummary = "no significant clusters"
+		}
+		captions = append(captions,
+			VideoCaption{
+				Text:       fmt.Sprintf("%s has %d tracts with LISA clusters: %s.", countyName, totalTracts, clusterSummary),
+				StartSec:   5,
+				EndSec:     12,
+				AccentText: countyName,
+			},
+		)
+
+		// Highlight the dominant cluster
+		dominant := ""
+		maxCount := 0
+		for _, entry := range lisaProfile.Clusters {
+			if entry.Count > maxCount {
+				maxCount = entry.Count
+				dominant = entry.Cluster
+			}
+		}
+		if dominant != "" {
+			meaning := map[string]string{
+				"HH": "High-High: concentrated advantage",
+				"LL": "Low-Low: concentrated disadvantage",
+				"HL": "High-Low: an island of advantage",
+				"LH": "Low-High: an island of disadvantage",
+			}
+			captions = append(captions, VideoCaption{
+				Text:       fmt.Sprintf("Dominant pattern: %s — %s.", dominant, meaning[dominant]),
+				StartSec:   12,
+				EndSec:     18,
+				AccentText: dominant,
+			})
+		}
+	} else {
+		captions = append(captions,
+			VideoCaption{Text: "Each tract is classified by how it relates to its neighbors.", StartSec: 5, EndSec: 11},
+			VideoCaption{Text: "High-High: hot spots. Low-Low: cold spots. HL/LH: spatial outliers.", StartSec: 11, EndSec: 17},
+		)
+	}
+
+	return captions
+}
+
+// parseCSV splits a comma-separated query param into a slice, trimming whitespace.
+// Used for multi-vintage queries: ?vintage=2019,2021,2023
+func parseCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+func genericCaptionsForVideo(videoName string) []VideoCaption {
+	switch videoName {
+	case "zscore":
+		return []VideoCaption{
+			{Text: "The z-score tells us how far a county is from the state average.", StartSec: 0, EndSec: 4},
+			{Text: "Measured in standard deviations — a score of 0 means exactly average.", StartSec: 4, EndSec: 8},
+			{Text: "Select a county to see where it falls on this distribution.", StartSec: 8, EndSec: 13},
+			{Text: "A z-score of +1.5 means the county is well above the state average.", StartSec: 13, EndSec: 18},
+		}
+	case "ice":
+		return []VideoCaption{
+			{Text: "ICE — Index of Concentration at the Extremes — measures polarization.", StartSec: 0, EndSec: 5},
+			{Text: "The score ranges from -1 (all deprived) to +1 (all privileged).", StartSec: 5, EndSec: 11},
+			{Text: "It combines race and income into one measure of structural inequality.", StartSec: 11, EndSec: 17},
+		}
+	case "lisa_cluster_map":
+		return []VideoCaption{
+			{Text: "LISA — Local Indicators of Spatial Association — reveals geographic clusters.", StartSec: 0, EndSec: 5},
+			{Text: "Each tract is classified by how it relates to its neighbors.", StartSec: 5, EndSec: 11},
+			{Text: "High-High: hot spots. Low-Low: cold spots. HL/LH: spatial outliers.", StartSec: 11, EndSec: 17},
+		}
+	default:
+		return []VideoCaption{
+			{Text: "Select a county to see personalized data for this video.", StartSec: 0, EndSec: 5},
+		}
+	}
 }
 
 // ── GET /geographies/:geoid/lisa-profile ────────────────────────────────────

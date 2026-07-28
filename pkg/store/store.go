@@ -38,7 +38,8 @@ type Indicator struct {
 type IndicatorQuery struct {
 	GEOIDs      []string
 	VariableIDs []string
-	Vintage     string
+	Vintage     string   // single vintage (legacy; parsed from query param)
+	Vintages    []string // multiple vintages (comma-separated query param)
 	LatestOnly  bool
 }
 

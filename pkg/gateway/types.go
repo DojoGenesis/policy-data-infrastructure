@@ -302,3 +302,33 @@ type LISACountyProfileResponse struct {
 	TotalTracts int                        `json:"total_tracts"`
 }
 
+// ── Personalized Video Captions ──────────────────────────────────────────────
+
+// VideoCaptionResponse returns personalized overlay captions for a pre-rendered
+// explainer video. When a county GEOID is provided, county-specific stats are
+// injected; otherwise generic placeholder captions are returned.
+type VideoCaptionResponse struct {
+	VideoName    string              `json:"video_name"`
+	GEOID        string              `json:"geoid,omitempty"`
+	CountyName   string              `json:"county_name,omitempty"`
+	OverlayStats []VideoOverlayStat  `json:"overlay_stats"`
+	Captions     []VideoCaption      `json:"captions"`
+	Fallback     bool                `json:"fallback"` // true when no geoid — generic captions
+}
+
+// VideoOverlayStat is a single county-specific stat shown in the video overlay bar.
+type VideoOverlayStat struct {
+	Label      string  `json:"label"`
+	Value      string  `json:"value"`
+	Comparison string  `json:"comparison,omitempty"` // e.g. "WI average: 11.2%"
+	Accent     bool    `json:"accent"`                // true to highlight as accent color
+}
+
+// VideoCaption is a timed text caption rendered over the video at a specific interval.
+type VideoCaption struct {
+	Text       string  `json:"text"`
+	StartSec   float64 `json:"start_sec"`
+	EndSec     float64 `json:"end_sec"`
+	AccentText string  `json:"accent_text,omitempty"` // substring to render in accent color
+}
+

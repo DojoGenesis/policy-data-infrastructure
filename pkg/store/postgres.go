@@ -462,15 +462,16 @@ func (s *PostgresStore) PutIndicatorsBatch(ctx context.Context, indicators []Ind
 }
 
 // QueryIndicators returns indicators matching the given filter. When LatestOnly
-// is set, the query reads from the indicators_latest materialized view which
-// holds only the most recent vintage per (geoid, variable_id) pair.
+// is set and no vintage filter is provided, the query reads from the
+// indicators_latest materialized view which holds only the most recent vintage
+// per (geoid, variable_id) pair.
 func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) ([]Indicator, error) {
 	args := []interface{}{}
 	idx := 1
 	var where []string
 
 	table := "indicators"
-	if q.LatestOnly && q.Vintage == "" {
+	if q.LatestOnly && q.Vintage == "" && len(q.Vintages) == 0 {
 		table = "indicators_latest"
 	}
 
@@ -484,9 +485,12 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 		args = append(args, q.VariableIDs)
 		idx++
 	}
-	if q.Vintage != "" {
-		where = append(where, fmt.Sprintf("vintage = $%d", idx))
-		args = append(args, q.Vintage)
+	if q.Vintage != "" && len(q.Vintages) == 0 {
+		q.Vintages = []string{q.Vintage}
+	}
+	if len(q.Vintages) > 0 {
+		where = append(where, fmt.Sprintf("vintage = ANY($%d)", idx))
+		args = append(args, q.Vintages)
 		idx++
 	}
 

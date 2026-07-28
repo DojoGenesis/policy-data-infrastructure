@@ -107,6 +107,23 @@ func Execute(in *Intent, ds *Dataset) (*Result, error) {
 			})
 		}
 
+	case OpTimeSeries:
+		// Static atlas only has one vintage. Return the current value with a note
+		// about multi-vintage availability via the API.
+		for _, g := range in.Places {
+			v, ok := ds.Value(g, in.Level, in.Indicator)
+			if !ok {
+				return nil, fmt.Errorf("place %s not present at %s level", g, in.Level)
+			}
+			res.Values = append(res.Values, Value{
+				GeoID: g, Name: ds.Name(g, in.Level), Value: v, Missing: v == nil,
+			})
+		}
+		res.ScalarKind = "time_series_note"
+		note := "The static atlas has one vintage (" + ds.Vintage + "). Multi-vintage time-series data is available via the API endpoint with ?vintage=YYYY,YYYY parameter. The current value shown is the latest available."
+		res.Facts = renderFacts(in, ds, ind, res) + "\n\n" + note
+		return res, nil
+
 	case OpRank:
 		vals := ds.collect(in.Level, in.Indicator)
 		sort.SliceStable(vals, func(i, j int) bool {

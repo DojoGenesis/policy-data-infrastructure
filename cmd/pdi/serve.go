@@ -165,6 +165,26 @@ func runServe(port int) error {
 	})
 	r.GET("/static/*filepath", gin.WrapH(http.StripPrefix("/static", http.FileServer(http.FS(feFS)))))
 
+	// Service Worker — must be served from root for correct scope.
+	swJS, swErr := fs.ReadFile(feFS, "sw.js")
+	r.GET("/sw.js", func(c *gin.Context) {
+		if swErr != nil {
+			c.String(http.StatusNotFound, "not found")
+			return
+		}
+		c.Data(http.StatusOK, "application/javascript; charset=utf-8", swJS)
+	})
+
+	// Web App Manifest — PWA install support.
+	manifestJSON, mfErr := fs.ReadFile(feFS, "manifest.json")
+	r.GET("/manifest.json", func(c *gin.Context) {
+		if mfErr != nil {
+			c.String(http.StatusNotFound, "not found")
+			return
+		}
+		c.Data(http.StatusOK, "application/manifest+json; charset=utf-8", manifestJSON)
+	})
+
 	// Clean URL routing: /page → page.html (no .html extension in URL).
 	htmlPages := []struct{ route, file string }{
 		{"/county", "county.html"},

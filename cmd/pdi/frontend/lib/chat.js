@@ -258,6 +258,7 @@ const ChatAdapter = {
           'Walk me through ' + (ctx.name || 'this county'),
           'How does ' + (ctx.name || 'this county') + ' compare to the state average?',
           'Compare this county to the state average',
+          'How has poverty changed in ' + (ctx.name || 'this county') + ' since 2019?',
           'What should I do about this?',
           'Which policies would help ' + (ctx.name || 'this county') + ' the most?',
           'What are the biggest disparities within ' + (ctx.name || 'this county') + '?'

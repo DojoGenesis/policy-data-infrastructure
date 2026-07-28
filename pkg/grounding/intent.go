@@ -36,11 +36,13 @@ const (
 	OpThreshold Operation = "threshold"
 	// OpRepresentation — which districts cover a place, and who holds the seats.
 	OpRepresentation Operation = "representation"
+	// OpTimeSeries — trend of one indicator for one place across multiple vintages.
+	OpTimeSeries Operation = "time_series"
 )
 
 // AllOperations is the enumeration handed to the planner in the system prompt.
 var AllOperations = []Operation{
-	OpLookup, OpRank, OpCompare, OpAggregate, OpThreshold, OpRepresentation,
+	OpLookup, OpRank, OpCompare, OpAggregate, OpThreshold, OpRepresentation, OpTimeSeries,
 }
 
 // Level is a geography resolution present in the bundle.
@@ -178,6 +180,11 @@ func (in *Intent) Validate(ds *Dataset) error {
 		if in.Operation == OpCompare && len(in.Places) < 2 {
 			return &ValidationError{"places", "compare needs at least two places",
 				"use lookup for a single place"}
+		}
+	case OpTimeSeries:
+		if len(in.Places) == 0 {
+			return &ValidationError{"places", "no place given",
+				"name at least one county or tract to see trends for"}
 		}
 	case OpRank:
 		if in.Direction == "" {

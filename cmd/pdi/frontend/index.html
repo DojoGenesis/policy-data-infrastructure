@@ -11,6 +11,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <title>PDI — Policy Data Infrastructure</title>
 <meta name="description" content="Policy Data Infrastructure — open-source platform making public data accessible across 72 Wisconsin counties, 1,542 tracts, 42 variables from 13 sources.">
 
+<!-- PWA — ADR-012 I7: offline support + installable web app -->
+<meta name="theme-color" content="#0a0a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PDI">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/pdi-icon.svg">
+
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
 
@@ -461,6 +469,33 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-color: var(--accent);
   }
 
+  /* ── Return-visit banner (ADR-012 I6) ──────────────────────── */
+  .return-banner {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-bottom: 1px solid var(--border-strong);
+    padding: 10px clamp(16px, 3vw, 32px);
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+  .return-banner strong { color: var(--text); }
+  .return-banner .banner-dismiss {
+    background: none;
+    border: none;
+    color: var(--subtle);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 6px;
+    margin-left: 4px;
+  }
+  .return-banner .banner-dismiss:hover { color: var(--text); }
+
   /* ── Responsive ─────────────────────────────────────────────── */
   @media (max-width: 900px) {
     .nav-cards {
@@ -541,6 +576,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
 <main id="main" x-data="countyExplorer()" x-init="init()">
+
+  <!-- ── Return-visit banner (ADR-012 I6) ─────────────────────── -->
+  <div x-show="showReturnBanner" x-cloak class="return-banner">
+    <span>👋 <span data-en="Welcome back. Since your last visit, " data-es="Bienvenido de nuevo. Desde tu última visita, ">Welcome back. Since your last visit, </span><strong x-text="returnCounty.name"></strong>'s <span data-en="data was updated." data-es="los datos fueron actualizados.">data was updated.</span></span>
+    <a :href="'/county?geoid=' + returnCounty.geoid" class="btn btn-ghost" style="font-size:0.8rem;" data-en="View changes →" data-es="Ver cambios →">View changes →</a>
+    <button class="banner-dismiss" @click="showReturnBanner = false" aria-label="Dismiss" title="Dismiss">&times;</button>
+  </div>
 
   <!-- ── Hero Glow ─────────────────────────────────────────────── -->
   <section class="hero-glow reveal">
@@ -757,6 +799,10 @@ function countyExplorer() {
     countySearch: '',
     featuredCounty: null,
 
+    /* ── Return-visit tracking (ADR-012 I6) ──────────────────── */
+    showReturnBanner: false,
+    returnCounty: { name: '', geoid: '' },
+
     /* ── Featured county rotation pool ─────────────────────────── */
     featuredPool: [
       {
@@ -794,12 +840,39 @@ function countyExplorer() {
 
     init() {
       this.loadCounties();
+      this.checkReturnVisit();
       /* Track language for reactive dynamic strings */
       this.lang = window.LangToggle ? window.LangToggle.getLang() : 'en';
       var self = this;
       document.addEventListener('tp:langchange', function(e) {
         self.lang = e.detail.lang;
       });
+    },
+
+    /* ── Return-visit check (ADR-012 I6) ───────────────────── */
+    checkReturnVisit() {
+      try {
+        var raw = localStorage.getItem('pdi-county-visits');
+        if (!raw) return;
+        var visits = JSON.parse(raw);
+        if (!Array.isArray(visits) || visits.length === 0) return;
+        // Find most recent visit that isn't today
+        var today = new Date().toDateString();
+        var lastVisit = null;
+        for (var i = visits.length - 1; i >= 0; i--) {
+          if (new Date(visits[i].timestamp).toDateString() !== today) {
+            lastVisit = visits[i];
+            break;
+          }
+        }
+        if (lastVisit) {
+          this.returnCounty = {
+            name: lastVisit.name || 'County',
+            geoid: lastVisit.geoid || ''
+          };
+          this.showReturnBanner = true;
+        }
+      } catch (e) { /* localStorage may be unavailable */ }
     },
 
     gridCount() {
@@ -890,5 +963,16 @@ function countyExplorer() {
 </script>
 
 <script src="/static/chat-drawer.js"></script>
+
+<!-- Service Worker registration (ADR-012 I7: PWA offline) -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    console.log('[PDI] Service Worker registered:', reg.scope);
+  }).catch(function(err) {
+    console.warn('[PDI] Service Worker registration failed:', err.message);
+  });
+}
+</script>
 </body>
 </html>

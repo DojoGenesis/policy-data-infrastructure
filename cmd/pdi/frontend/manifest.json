@@ -1,0 +1,23 @@
+{
+  "name": "PDI — Policy Data Infrastructure",
+  "short_name": "PDI",
+  "description": "Open-source platform making public data accessible across 72 Wisconsin counties — indicators, equity dimensions, and evidence cards.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a14",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/pdi-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "government", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}
