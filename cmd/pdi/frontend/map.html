@@ -470,20 +470,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .mp-county-link:hover { text-decoration: underline; }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <!-- ═══════════════ SITE HEADER ═══════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map" aria-current="page">Map</a>
-      <a href="/chat">Chat</a>
-      <a href="/about">About</a>
+    <a href="/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" aria-current="page" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
@@ -494,25 +502,27 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Back link ── -->
   <a href="/" class="btn btn-ghost" style="margin-bottom:0;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to counties
+    <span data-en="Back to counties" data-es="Volver a los condados">Back to counties</span>
   </a>
 
   <!-- ── Header ── -->
   <div class="map-hero">
-    <span class="section-tag">LISA Cluster Map</span>
-    <h1>Wisconsin Census Tracts</h1>
+    <span class="section-tag" data-en="LISA Cluster Map" data-es="Mapa de Clústeres LISA">LISA Cluster Map</span>
+    <h1 data-en="Wisconsin Census Tracts" data-es="Secciones Censales de Wisconsin">Wisconsin Census Tracts</h1>
     <p class="map-hero-subtitle">
       <span x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020–2024') : ''"></span>
       <span x-show="variablesLoaded > 0" class="badge badge-info" style="margin-left:10px;">
-        <span x-text="variablesLoaded"></span> LISA analyses loaded
+        <span x-text="variablesLoaded"></span> <span data-en="LISA analyses loaded" data-es="análisis LISA cargados">LISA analyses loaded</span>
       </span>
     </p>
   </div>
 
+  <hr class="thread" aria-hidden="true">
+
   <!-- ── Controls ── -->
   <div class="map-controls">
     <div style="display:flex;align-items:center;gap:8px;">
-      <label for="var-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">Indicator</label>
+      <label for="var-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);" data-en="Indicator" data-es="Indicador">Indicator</label>
       <select id="var-select" x-model="selectedVariable" @change="onVariableChange()">
         <template x-for="v in availableVariables" :key="v.id">
           <option :value="v.id" x-text="v.label + (analysisMap[v.id] ? '' : ' (no data)')"></option>
@@ -522,7 +532,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;" x-show="availableVintages.length > 0">
-      <label for="vintage-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">Vintage</label>
+      <label for="vintage-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);" data-en="Vintage" data-es="Año de referencia">Vintage</label>
       <select id="vintage-select" x-model="selectedVintage" @change="onVintageChange()">
         <template x-for="v in availableVintages" :key="v">
           <option :value="v" x-text="'ACS ' + v + ' 5-Year'"></option>
@@ -533,7 +543,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <label class="toggle-wrap">
       <input type="checkbox" x-model="showCounties" @change="toggleCounties()">
       <span class="toggle-track"></span>
-      <span class="toggle-label">County borders</span>
+      <span class="toggle-label" data-en="County borders" data-es="Límites de condado">County borders</span>
     </label>
 
     <button class="download-btn" @click="downloadPNG()" title="Download map as PNG">
@@ -573,19 +583,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="mp-stats">
               <div class="mp-stat" x-show="mpTract.poverty != null">
                 <div class="mp-stat-val" x-text="mpTract.poverty"></div>
-                <div class="mp-stat-lbl">Poverty Rate</div>
+                <div class="mp-stat-lbl" data-en="Poverty Rate" data-es="Tasa de Pobreza">Poverty Rate</div>
               </div>
               <div class="mp-stat" x-show="mpTract.income != null">
                 <div class="mp-stat-val" x-text="mpTract.income"></div>
-                <div class="mp-stat-lbl">Median Income</div>
+                <div class="mp-stat-lbl" data-en="Median Income" data-es="Ingreso Medio">Median Income</div>
               </div>
               <div class="mp-stat" x-show="mpTract.poc != null">
                 <div class="mp-stat-val" x-text="mpTract.poc"></div>
-                <div class="mp-stat-lbl">% POC</div>
+                <div class="mp-stat-lbl" data-en="% POC" data-es="% Personas de Color">% POC</div>
               </div>
               <div class="mp-stat" x-show="mpTract.uninsured != null">
                 <div class="mp-stat-val" x-text="mpTract.uninsured"></div>
-                <div class="mp-stat-lbl">Uninsured</div>
+                <div class="mp-stat-lbl" data-en="Uninsured" data-es="Sin Seguro Médico">Uninsured</div>
               </div>
             </div>
 
@@ -594,12 +604,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <span x-text="(clusterLabels[mpTract.lisaTier] || mpTract.lisaTier) + ' — ' + varLabel"></span>
             </div>
             <div class="mp-lisa" x-show="!mpTract.lisaTier" style="color:var(--muted);">
-              <span>No LISA data for current indicator</span>
+              <span data-en="No LISA data for current indicator" data-es="No hay datos LISA para el indicador actual">No LISA data for current indicator</span>
             </div>
 
             <div class="mp-actions">
-              <a :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-btn mp-btn-primary">View full profile →</a>
-              <button class="mp-btn" @click="askAboutTract()">💬 Ask about this tract</button>
+              <a :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-btn mp-btn-primary" data-en="View full profile →" data-es="Ver perfil completo →">View full profile →</a>
+              <button class="mp-btn" @click="askAboutTract()" data-en="💬 Ask about this tract" data-es="💬 Preguntar sobre esta sección censal">💬 Ask about this tract</button>
             </div>
           </div>
         </template>
@@ -621,13 +631,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ═══════════ ERROR ═══════════ -->
   <div x-show="mapError && !mapLoading" x-cloak class="state-error">
     <p x-text="mapError"></p>
-    <button @click="init()" class="btn btn-secondary">Retry</button>
+    <button @click="init()" class="btn btn-secondary" data-en="Retry" data-es="Reintentar">Retry</button>
   </div>
 
   <!-- ═══════════ EMPTY ═══════════ -->
   <div x-show="!mapLoading && !mapError && !mapReady" x-cloak class="state-empty">
-    <p>No LISA data computed. Run spatial analysis first.</p>
-    <a href="/" class="btn btn-secondary">Back to counties</a>
+    <p data-en="No LISA data computed. Run spatial analysis first." data-es="No se ha calculado ningún dato LISA. Ejecuta primero el análisis espacial.">No LISA data computed. Run spatial analysis first.</p>
+    <a href="/" class="btn btn-secondary" data-en="Back to counties" data-es="Volver a los condados">Back to counties</a>
   </div>
 
   <!-- ═══════════ STATS PANEL ═══════════ -->
@@ -637,7 +647,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <!-- RIGHT: Stats panel -->
     <div class="stats-panel">
-      <h3>Cluster Distribution</h3>
+      <h3 data-en="Cluster Distribution" data-es="Distribución de Clústeres">Cluster Distribution</h3>
       <div class="stats-summary">
         <span x-text="stats.significant + ' of ' + stats.total + ' tracts significant (p &lt; 0.05)'"></span>
         <br>
@@ -646,7 +656,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
       <table class="stats-table">
         <thead>
-          <tr><th>Tier</th><th>Count</th></tr>
+          <tr><th data-en="Tier" data-es="Nivel">Tier</th><th data-en="Count" data-es="Cantidad">Count</th></tr>
         </thead>
         <tbody>
           <template x-for="row in stats.rows" :key="row.tier">
@@ -661,18 +671,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </tbody>
       </table>
       <div style="font-size:0.65rem;color:var(--subtle);line-height:1.5;">
-        <p style="margin:4px 0;"><strong>HH</strong> — High value, neighbors also high (concentrated)</p>
-        <p style="margin:4px 0;"><strong>HL</strong> — High value, neighbors low (outlier)</p>
-        <p style="margin:4px 0;"><strong>LL</strong> — Low value, neighbors also low (concentrated)</p>
-        <p style="margin:4px 0;"><strong>LH</strong> — Low value, neighbors high (outlier)</p>
-        <p style="margin:4px 0;"><strong>NS</strong> — No significant spatial pattern</p>
+        <p style="margin:4px 0;"><strong>HH</strong> <span data-en="— High value, neighbors also high (concentrated)" data-es="— Valor alto, vecinos también altos (concentrado)">— High value, neighbors also high (concentrated)</span></p>
+        <p style="margin:4px 0;"><strong>HL</strong> <span data-en="— High value, neighbors low (outlier)" data-es="— Valor alto, vecinos bajos (atípico)">— High value, neighbors low (outlier)</span></p>
+        <p style="margin:4px 0;"><strong>LL</strong> <span data-en="— Low value, neighbors also low (concentrated)" data-es="— Valor bajo, vecinos también bajos (concentrado)">— Low value, neighbors also low (concentrated)</span></p>
+        <p style="margin:4px 0;"><strong>LH</strong> <span data-en="— Low value, neighbors high (outlier)" data-es="— Valor bajo, vecinos altos (atípico)">— Low value, neighbors high (outlier)</span></p>
+        <p style="margin:4px 0;"><strong>NS</strong> <span data-en="— No significant spatial pattern" data-es="— Sin patrón espacial significativo">— No significant spatial pattern</span></p>
       </div>
     </div>
   </div>
 
 </main>
 
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
 <!-- ═══════════════ APP LOGIC ═══════════════ -->
+<script src="/static/theme-toggle.js"></script>
 <script src="/static/lib/deeplink.js"></script>
 <script>
 function lisaMap() {

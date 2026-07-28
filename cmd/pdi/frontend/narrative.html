@@ -26,15 +26,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   /* ── Narrative Reader · page-specific ───────────────────────────── */
 
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
-  }
-
   /* ── Two-column layout: sidebar + prose ─────────────────────────── */
   .narrative-layout {
     display: grid;
@@ -547,21 +538,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/about">About</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" aria-current="page" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
@@ -577,7 +575,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <path d="M6 12H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-2"/>
         <rect x="6" y="14" width="12" height="8"/>
       </svg>
-      Print
+      <span data-en="Print" data-es="Imprimir">Print</span>
     </button>
 
     <button @click="shareLink()" class="btn btn-ghost">
@@ -586,10 +584,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <polyline points="16 6 12 2 8 6"/>
         <line x1="12" y1="2" x2="12" y2="15"/>
       </svg>
-      Share link
+      <span data-en="Share link" data-es="Compartir enlace">Share link</span>
     </button>
 
-    <span x-show="copied" x-cloak class="copy-toast">Link copied!</span>
+    <span x-show="copied" x-cloak class="copy-toast" data-en="Link copied!" data-es="¡Enlace copiado!">Link copied!</span>
   </div>
 
   <!-- ── Loading · skeleton ──────────────────────────────────────── -->
@@ -609,23 +607,25 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Error · generation failed ───────────────────────────────── -->
   <div x-show="error && !loading" x-cloak class="state-error">
     <span x-text="error"></span>
-    <button @click="loadNarrative()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
+    <button @click="loadNarrative()" class="btn btn-ghost" style="font-size:0.8rem;" data-en="Retry" data-es="Reintentar">Retry</button>
   </div>
 
   <!-- ── Empty · no analysis_id ──────────────────────────────────── -->
   <div x-show="!loading && !error && !analysisId" x-cloak class="state-empty">
-    <p>No analysis specified.</p>
-    <p style="font-size:0.8rem;color:var(--subtle);margin-top:0.5em;">
+    <p data-en="No analysis specified." data-es="No se especificó ningún análisis.">No analysis specified.</p>
+    <p style="font-size:0.8rem;color:var(--subtle);margin-top:0.5em;" data-en="Open a narrative from the County Profile page." data-es="Abre una narrativa desde la página de Perfil del Condado.">
       Open a narrative from the County Profile page.
     </p>
   </div>
+
+  <hr class="thread" aria-hidden="true" x-show="!loading && !error && narrativeHTML" x-cloak>
 
   <!-- ── Narrative + Sidebar ──────────────────────────────────────── -->
   <div class="narrative-layout reveal" x-show="!loading && !error && narrativeHTML" x-cloak>
 
     <!-- Chapter Navigation Sidebar -->
     <aside class="chapter-sidebar" x-show="chapters.length > 1">
-      <span class="section-tag">Chapters</span>
+      <span class="section-tag" data-en="Chapters" data-es="Capítulos">Chapters</span>
       <nav aria-label="Chapter navigation">
         <template x-for="ch in chapters" :key="ch.id">
           <a :href="'#' + ch.id"
@@ -646,7 +646,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
 </main>
 
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
 <!-- ═══════════════════════════ ALPINE ═══════════════════════════ -->
+<script src="/static/theme-toggle.js"></script>
 <script>
 function narrativeReader() {
   return {

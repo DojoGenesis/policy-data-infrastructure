@@ -29,15 +29,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     --evidence-gap: clamp(14px, 2vw, 20px);
   }
 
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
-  }
-
   /* ── Hero ───────────────────────────────────────────────────── */
   .hero {
     margin-bottom: clamp(20px, 3vw, 32px);
@@ -426,25 +417,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     height: 0.75em;
   }
 
-  /* ── Footer ─────────────────────────────────────────────────── */
-  .site-footer {
-    border-top: 1px solid var(--border);
-    margin-top: clamp(32px, 5vw, 56px);
-    padding: clamp(16px, 2.5vw, 24px) 0;
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--subtle);
-  }
-
-  .site-footer a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .site-footer a:hover {
-    text-decoration: underline;
-  }
-
   /* ── Responsive ─────────────────────────────────────────────── */
   @media (max-width: 700px) {
     .filter-bar {
@@ -492,22 +464,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/evidence" aria-current="page">Evidence</a>
-      <a href="/about">About</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" aria-current="page" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
@@ -519,20 +497,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
-    Back to County Explorer
+    <span data-en="Back to County Explorer" data-es="Volver al Explorador de Condados">Back to County Explorer</span>
   </a>
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
   <div class="hero reveal">
-    <span class="section-tag">Evidence</span>
-    <h1>Evidence Card Gallery</h1>
+    <span class="section-tag" data-en="Evidence" data-es="Evidencia">Evidence</span>
+    <h1 data-en="Evidence Card Gallery" data-es="Galería de Tarjetas de Evidencia">Evidence Card Gallery</h1>
     <p class="hero-subtitle">
-      70 policy evidence cards · <span x-text="allCards.length"></span> cards loaded
+      <span data-en="70 policy evidence cards · " data-es="70 tarjetas de evidencia de política · ">70 policy evidence cards · </span><span x-text="allCards.length"></span> <span data-en="cards loaded" data-es="cargadas">cards loaded</span>
     </p>
-    <p class="hero-count">
+    <p class="hero-count" data-en="Explore data-backed policy positions with linked indicators, county-level variation, and key findings." data-es="Explora posiciones de política respaldadas por datos, con indicadores vinculados, variación por condado y hallazgos clave.">
       Explore data-backed policy positions with linked indicators, county-level variation, and key findings.
     </p>
   </div>
+
+  <hr class="thread" aria-hidden="true">
 
   <!-- ── Filter bar ───────────────────────────────────────────── -->
   <div class="filter-bar">
@@ -541,12 +521,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         type="search"
         x-model="searchQuery"
         placeholder="Search by policy title, finding, or indicator…"
+        data-en-placeholder="Search by policy title, finding, or indicator…"
+        data-es-placeholder="Buscar por título de política, hallazgo o indicador…"
         aria-label="Search evidence cards"
       >
     </div>
     <div class="filter-select">
       <select x-model="equityFilter" aria-label="Filter by equity dimension">
-        <option value="">All equity dimensions</option>
+        <option value="" data-en="All equity dimensions" data-es="Todas las dimensiones de equidad">All equity dimensions</option>
         <template x-for="dim in equityDimensions" :key="dim">
           <option :value="dim" x-text="fmtLabel(dim)"></option>
         </template>
@@ -560,6 +542,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       class="filter-chip"
       :class="{ active: categoryFilter === '' }"
       @click="categoryFilter = ''"
+      data-en="All categories" data-es="Todas las categorías"
     >All categories</button>
     <template x-for="cat in categories" :key="cat">
       <button
@@ -573,8 +556,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- ── Results info ─────────────────────────────────────────── -->
   <div class="results-info" x-show="!cardsLoading && !cardsError">
-    Showing <strong x-text="filteredCards.length"></strong> of <strong x-text="allCards.length"></strong> evidence cards
-    <span x-show="searchQuery || categoryFilter || equityFilter">(filtered)</span>
+    <span data-en="Showing " data-es="Mostrando ">Showing </span><strong x-text="filteredCards.length"></strong><span data-en=" of " data-es=" de "> of </span><strong x-text="allCards.length"></strong><span data-en=" evidence cards" data-es=" tarjetas de evidencia"> evidence cards</span>
+    <span x-show="searchQuery || categoryFilter || equityFilter" data-en="(filtered)" data-es="(filtrado)">(filtered)</span>
   </div>
 
   <hr class="thread" aria-hidden="true">
@@ -596,7 +579,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Error state ──────────────────────────────────────────── -->
   <div x-show="cardsError" x-cloak class="state-error">
     <span x-text="cardsError"></span>
-    <button class="btn btn-ghost" @click="loadCards()" style="margin-left:1em">Retry</button>
+    <button class="btn btn-ghost" @click="loadCards()" style="margin-left:1em" data-en="Retry" data-es="Reintentar">Retry</button>
   </div>
 
   <!-- ── Card grid ────────────────────────────────────────────── -->
@@ -649,7 +632,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Statewide context -->
             <div class="detail-section" x-show="Object.keys(card.statewide_context || {}).length">
-              <div class="detail-heading">Statewide Indicator Values</div>
+              <div class="detail-heading" data-en="Statewide Indicator Values" data-es="Valores de Indicadores Estatales">Statewide Indicator Values</div>
               <div class="detail-stats">
                 <template x-for="(stats, indicator) in card.statewide_context" :key="indicator">
                   <div class="detail-stat">
@@ -662,24 +645,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- County variation -->
             <div class="detail-section" x-show="Object.keys(card.county_variation || {}).length">
-              <div class="detail-heading">County-Level Variation</div>
+              <div class="detail-heading" data-en="County-Level Variation" data-es="Variación a Nivel de Condado">County-Level Variation</div>
               <div class="detail-stats">
                 <template x-for="(v, indicator) in card.county_variation" :key="indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="fmtNum(v.range)"></div>
-                    <div class="detail-stat-label">Range</div>
+                    <div class="detail-stat-label" data-en="Range" data-es="Rango">Range</div>
                   </div>
                 </template>
                 <template x-for="(v, indicator) in card.county_variation" :key="'std-'+indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="fmtNum(v.std)"></div>
-                    <div class="detail-stat-label">Std Dev</div>
+                    <div class="detail-stat-label" data-en="Std Dev" data-es="Desv. Est.">Std Dev</div>
                   </div>
                 </template>
                 <template x-for="(v, indicator) in card.county_variation" :key="'count-'+indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="v.counties_with_data"></div>
-                    <div class="detail-stat-label">Counties</div>
+                    <div class="detail-stat-label" data-en="Counties" data-es="Condados">Counties</div>
                   </div>
                 </template>
               </div>
@@ -687,14 +670,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Top need counties -->
             <div class="detail-section" x-show="card.top_need_counties && card.top_need_counties.length">
-              <div class="detail-heading">Counties With Highest Need</div>
+              <div class="detail-heading" data-en="Counties With Highest Need" data-es="Condados con Mayor Necesidad">Counties With Highest Need</div>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
                     <tr>
-                      <th>County</th>
+                      <th data-en="County" data-es="Condado">County</th>
                       <th>GEOID</th>
-                      <th class="county-val">Value</th>
+                      <th class="county-val" data-en="Value" data-es="Valor">Value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -710,20 +693,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               </div>
               <!-- Compare link: uses first and last of top_need -->
               <div x-show="card.bottom_need_counties && card.bottom_need_counties.length && card.top_need_counties && card.top_need_counties.length" style="margin-top:10px;">
-                <a :href="'/compare?geoid1=' + card.top_need_counties[0].geoid + '&geoid2=' + card.bottom_need_counties[0].geoid" class="nav-pill" style="font-size:0.68rem;">Compare most vs least affected →</a>
+                <a :href="'/compare?geoid1=' + card.top_need_counties[0].geoid + '&geoid2=' + card.bottom_need_counties[0].geoid" class="nav-pill" style="font-size:0.68rem;" data-en="Compare most vs least affected →" data-es="Comparar más afectado vs. menos afectado →">Compare most vs least affected →</a>
               </div>
             </div>
 
             <!-- Bottom need counties -->
             <div class="detail-section" x-show="card.bottom_need_counties && card.bottom_need_counties.length">
-              <div class="detail-heading">Counties With Lowest Need</div>
+              <div class="detail-heading" data-en="Counties With Lowest Need" data-es="Condados con Menor Necesidad">Counties With Lowest Need</div>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
                     <tr>
-                      <th>County</th>
+                      <th data-en="County" data-es="Condado">County</th>
                       <th>GEOID</th>
-                      <th class="county-val">Value</th>
+                      <th class="county-val" data-en="Value" data-es="Valor">Value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -741,7 +724,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Methodology note -->
             <div class="detail-section">
-              <div class="detail-heading">Methodology &amp; Citations</div>
+              <div class="detail-heading" data-en="Methodology &amp; Citations" data-es="Metodología y Citas">Methodology &amp; Citations</div>
               <div class="methodology-note">
                 <strong>Data source:</strong> PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.<br>
                 <strong>Methodology:</strong> County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).<br>
@@ -774,9 +757,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     x-cloak
     class="state-empty"
   >
-    <p>No evidence cards match your filters.</p>
+    <p data-en="No evidence cards match your filters." data-es="No hay tarjetas de evidencia que coincidan con tus filtros.">No evidence cards match your filters.</p>
     <p style="font-size:0.82rem;margin-top:0.5em;">
-      <button class="btn btn-ghost" @click="clearFilters()">Clear all filters</button>
+      <button class="btn btn-ghost" @click="clearFilters()" data-en="Clear all filters" data-es="Limpiar todos los filtros">Clear all filters</button>
     </p>
   </div>
 
@@ -788,6 +771,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
   · Apache-2.0
 </footer>
+
+<script src="/static/theme-toggle.js"></script>
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
 <script src="/static/lib/deeplink.js"></script>

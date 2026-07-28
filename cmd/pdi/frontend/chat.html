@@ -147,32 +147,49 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .offline-banner.visible { display: block; }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 <!-- Offline banner (ADR-012 I7) -->
-<div class="offline-banner" id="offline-banner">📡 Offline — showing cached data. Chat and dynamic indicators are unavailable until you reconnect.</div>
-<a class="skip-link visually-hidden" href="#main">Skip to chat</a>
+<div class="offline-banner" id="offline-banner" data-en="📡 Offline — showing cached data. Chat and dynamic indicators are unavailable until you reconnect." data-es="📡 Sin conexión — mostrando datos en caché. El chat y los indicadores dinámicos no están disponibles hasta que te reconectes.">📡 Offline — showing cached data. Chat and dynamic indicators are unavailable until you reconnect.</div>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to chat" data-es="Saltar al chat">Skip to chat</a>
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Chat</a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/chat" aria-current="page">Chat</a>
-      <a href="/about">About</a>
+    <a href="/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" aria-current="page" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
 <main id="main" class="chat-wrap">
   <div id="messages" class="chat-msgs">
-    <div class="msg system"><h1>Ask the Data</h1><p>I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data.</p></div>
+    <div class="msg system"><h1 data-en="Ask the Data" data-es="Pregúntale a los Datos">Ask the Data</h1><p data-en="I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data." data-es="Puedo responder preguntas sobre los 72 condados de Wisconsin — tasas de pobreza, ingresos, salud, vivienda, y cómo 85 posiciones de política pública se conectan con las condiciones locales. Cada cifra está verificada con datos en vivo.">I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data.</p></div>
   </div>
   <div class="chat-input-wrap">
-    <div class="row"><input id="input" type="text" placeholder="Ask about counties, indicators, or policies…" autofocus><button id="send" class="btn btn-primary">Send</button></div>
+    <div class="row"><input id="input" type="text" placeholder="Ask about counties, indicators, or policies…" data-en-placeholder="Ask about counties, indicators, or policies…" data-es-placeholder="Pregunta sobre condados, indicadores o políticas…" autofocus><button id="send" class="btn btn-primary" data-en="Send" data-es="Enviar">Send</button></div>
     <div id="suggestions" class="suggest"></div>
   </div>
 </main>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
+<script src="/static/theme-toggle.js"></script>
 <script src="/static/lib/api.js"></script>
 <script src="/static/lib/domain.js"></script>
 <script src="/static/lib/chat.js"></script>

@@ -758,6 +758,157 @@ a:hover {
     radial-gradient(70% 44% at 96% 78%,   var(--rig-4), transparent 72%);
 }
 
+/* Without clip-path: inset() the 100vmax spread on .section-band::before
+   is never trimmed back to the section's own top and bottom — it paints
+   100vmax in every direction and the WHOLE PAGE turns --plane-band,
+   erasing the distinction the band exists to create. Dropping the
+   spread degrades the band to the .wrap measure: narrower than
+   intended, but a band rather than a flooded page. */
+@supports not (clip-path: inset(0 -1px)) {
+  .section-band::before,
+  .section-band::after {
+    box-shadow: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   THREAD RIBBON · spectral section divider (ADR-013 §1D)
+   ──────────────────────────────────────────────────────────────────
+   The line between two sections is the full Rainbow sweep
+   (sun→ember→red→teal→cyan), not a faded single-colour hairline. This
+   is the one place ADR-013 lets a Rainbow hue carry no data, and the
+   sweep still does a job: warm where the section you are leaving ends,
+   cool where the next one begins — the same wayfinding the card edges
+   run vertically, run horizontally.
+
+   Height is 1px, per §1D. casa-datos runs a 22–60px seeded SVG ribbon
+   in this slot, redrawn by its app.js from the same seed as its charts;
+   PDI has no such generator, and a tall gradient block without the
+   parametric idea behind it is decoration pretending to be an artifact.
+   The spectrum and the technique port. The height does not.
+
+   Both markup shapes in the pages are covered:
+     <hr class="thread">                          — the rule itself
+     <div class="thread"><i class="thread-dot">   — split rule, centre mark
+   ═══════════════════════════════════════════════════════════════════ */
+
+.thread {
+  display: block;
+  width: 100%;
+  height: 1px;
+  border: 0;
+  margin-block: var(--section-gap);
+  background: var(--band-spectrum);
+}
+
+/* Dot variant — the sweep splits either side of a centre mark, warm
+   half leading and cool half trailing, so the divider still reads
+   left-to-right the way the single rule does. :has()-guarded: an engine
+   without it gets the plain 1px rule above, which is a complete
+   divider, not a broken one. */
+@supports selector(:has(*)) {
+  .thread:has(.thread-dot) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    height: auto;
+    background: none;
+    max-width: var(--wrap);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 3vw, 32px);
+  }
+  .thread:has(.thread-dot)::before,
+  .thread:has(.thread-dot)::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+  }
+  .thread:has(.thread-dot)::before {
+    background: linear-gradient(90deg,
+      transparent 0%, var(--tp-sun) 42%, var(--tp-ember) 100%);
+  }
+  .thread:has(.thread-dot)::after {
+    background: linear-gradient(90deg,
+      var(--tp-red) 0%, var(--tp-teal) 48%, var(--tp-cyan) 80%, transparent 100%);
+  }
+}
+
+.thread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SITE FOOTER
+   ──────────────────────────────────────────────────────────────────
+   Two markup shapes resolve here: PDI's bare centred line
+   (<footer class="site-footer">text · link · licence</footer>) and the
+   stack's row layout (.site-footer > .wrap holding .footer-links). A
+   page can gain the row without gaining a stylesheet.
+
+   The top edge is flat --band-line, not the spectrum. A footer is a
+   boundary, not a seam between two peers — ADR-013's colour rule keeps
+   the Rainbow for the places that are. --band-line rather than
+   --border-strong because the 0.16-alpha white hairline measures about
+   1.3:1 against the page: it is declared, and it is not visible.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.site-footer {
+  border-top: 1px solid var(--band-line);
+  margin-top: clamp(32px, 5vw, 56px);
+  padding-block: clamp(20px, 3vw, 32px);
+  padding-inline: clamp(16px, 3vw, 32px);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--quiet);
+}
+
+.site-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+/* --quiet, never --subtle: --subtle cannot reach AA-normal on any plane
+   in this stack (3.96:1 at its best on the ground). */
+.site-footer small {
+  color: var(--quiet);
+  font-size: 0.78rem;
+}
+
+/* Row layout — engages only when the page supplies the wrapper. */
+.site-footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.footer-links {
+  display: flex;
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.footer-links a {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.footer-links a:hover {
+  color: var(--text);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    FORM ELEMENTS
    ──────────────────────────────────────────────────────────────────
@@ -928,14 +1079,57 @@ select option {
   border-radius: 4px;
 }
 
-/* Skeleton variants for common shapes */
+/* Skeleton variants for common shapes.
+
+   ADR-013 §3B: a loading state is atmosphere, not a spinner. The card
+   and row variants keep the spectral edge and pulse warm rather than
+   grey, so the page's lighting model is present before its content is.
+
+   These re-state the fill because .skeleton's `background` SHORTHAND
+   (above) resets background-image and would otherwise clobber the
+   --edge layer that .card puts on the same element — index.html marks
+   its placeholders `class="card skeleton skeleton-card"`, and without
+   this the card silently loses its edge exactly while loading.
+
+   The pulse is --accent, not a Rainbow hue: "the system is working" is
+   a system signal, and a categorical colour here would claim a
+   meaning the placeholder does not have. */
 .skeleton-card {
   min-height: 120px;
+  border: 1px solid transparent;
+  border-radius: var(--r-card);
+  background-image:
+    linear-gradient(90deg,
+      var(--plane-1) 24%,
+      color-mix(in srgb, var(--accent) 9%, var(--plane-1)) 50%,
+      var(--plane-1) 76%),
+    var(--edge);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 200% 100%, auto;
+  background-repeat: no-repeat, no-repeat;
+  box-shadow: var(--lift);
+  animation: skeleton-spectral 1.9s ease-in-out infinite;
 }
 
+/* Rows sit INSIDE a card, so they recess to --plane-sunk and take no
+   lift — depth is earned, and a placeholder row has earned none. */
 .skeleton-row {
   height: 44px;
   margin-bottom: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-badge);
+  background-image:
+    linear-gradient(90deg,
+      var(--plane-sunk) 24%,
+      color-mix(in srgb, var(--accent) 8%, var(--plane-sunk)) 50%,
+      var(--plane-sunk) 76%),
+    var(--edge);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 200% 100%, auto;
+  background-repeat: no-repeat, no-repeat;
+  animation: skeleton-spectral 1.9s ease-in-out infinite;
 }
 
 .skeleton-circle {
@@ -945,6 +1139,14 @@ select option {
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Two layers, two positions — the sweep travels, the --edge stays put.
+   A single-value keyframe would drag the spectral border along with
+   the shimmer and the card's warm corner would migrate. */
+@keyframes skeleton-spectral {
+  0%   { background-position: 200% 0, 0 0; }
+  100% { background-position: -200% 0, 0 0; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1088,6 +1290,23 @@ html.js .page-view {
   .skeleton {
     background: var(--surface);
     animation: none;
+  }
+
+  /* ADR-013 §3B: "section atmosphere holds during loading" — the sweep
+     stops, the spectral edge and the plane do not. Stated after the
+     .skeleton rule above on purpose: elements carry both classes, and
+     that rule's `background` shorthand would otherwise flatten these. */
+  .skeleton-card,
+  .skeleton-row {
+    animation: none;
+    background-size: auto, auto;
+    background-position: 0 0, 0 0;
+  }
+  .skeleton-card {
+    background-image: linear-gradient(var(--plane-1), var(--plane-1)), var(--edge);
+  }
+  .skeleton-row {
+    background-image: linear-gradient(var(--plane-sunk), var(--plane-sunk)), var(--edge);
   }
 
   .card-hover:hover {
@@ -1305,6 +1524,32 @@ html.js .page-view {
     --cta-ink:     var(--tp-paper);
     --cta-glow:    color-mix(in srgb, var(--tp-ink) 34%, transparent);
   }
+}
+
+/* ── THE THEME LAYER — light · thread ribbon ─────────────────────────
+   ADR-013's Consequences flag this case explicitly. The ribbon is raw
+   Rainbow hues laid straight onto the ground, and on cream the warm
+   half all but disappears — --tp-sun over --tp-paper is a near-white on
+   a near-white. Multiply is the fix and it is the physically right one:
+   it is what translucent ink on paper actually does, subtracting the
+   channels the hue lacks (sun's blue) instead of averaging toward
+   white. Same spectrum, same 1px — the element just stops washing out.
+
+   Outside the color-mix() @supports gate above: blending needs no
+   color-mix(), and an engine that lands on the dark theme in light mode
+   has no light ground to wash against anyway.
+
+   Not gated to the dot variant's pseudo-elements separately —
+   mix-blend-mode on the host blends everything it renders, pseudos
+   included. Decoration only; nothing here is load-bearing.
+   ─────────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .thread {
+    mix-blend-mode: multiply;
+  }
+}
+:root[data-theme="light"] .thread {
+  mix-blend-mode: multiply;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

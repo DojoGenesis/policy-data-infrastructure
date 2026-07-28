@@ -460,23 +460,312 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--bg);
     text-decoration: none;
   }
+
+  /* ══ Statewide context: scoreboard, rank, standardized gap ══════════════
+     Every number below is computed from the live 72-county WI distribution
+     returned by POST /v1/policy/query — no hardcoded reference values.
+     Polarity comes from the API's own `direction` field (ADR-013 §2A:
+     emerald = better, red = worse; neutral indicators are never colored). */
+
+  .scoreboard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    padding: clamp(12px, 2vw, 18px);
+    margin-bottom: 14px;
+  }
+  .scoreboard-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    margin-bottom: 12px;
+  }
+  .scoreboard-verdict {
+    font-size: clamp(0.95rem, 2vw, 1.12rem);
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+  }
+  .scoreboard-verdict .win-a { color: var(--tp-cat-4); }
+  .scoreboard-verdict .win-b { color: var(--tp-cat-6); }
+  .scoreboard-sub {
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Head-to-head record bar: emerald share = A ahead, cyan share = B ahead */
+  .record-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    margin: 10px 0 6px;
+  }
+  .record-bar-a { background: var(--tp-cat-4); }
+  .record-bar-b { background: var(--tp-cat-6); }
+  .record-bar-tie { background: var(--subtle); opacity: 0.4; }
+  .record-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .record-legend .swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: baseline;
+  }
+
+  .scoreboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .scoreboard-stat {
+    padding: 9px 11px;
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+  }
+  .scoreboard-stat .k {
+    display: block;
+    font-size: 0.63rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle);
+    margin-bottom: 3px;
+  }
+  .scoreboard-stat .v {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .scoreboard-stat .v small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Per-row statewide rank, rendered under each county's value */
+  .ctx-rank {
+    display: block;
+    font-size: 0.64rem;
+    font-weight: 400;
+    font-family: var(--font-mono);
+    color: var(--subtle);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .ctx-rank.rank-top    { color: var(--tp-cat-4); }
+  .ctx-rank.rank-bottom { color: var(--tp-cat-5); }
+
+  /* Standardized-gap bar. Zero sits at center; fill grows toward the
+     county that is better off. Width is |z| clamped at 3 state SD. */
+  .zcell { width: 132px; }
+  .zbar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+  }
+  .zbar-track {
+    position: relative;
+    height: 9px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    overflow: hidden;
+  }
+  .zbar-track::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--text) 26%, transparent);
+  }
+  .zbar-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 2px;
+    transition: width 200ms ease, left 200ms ease;
+  }
+  .zbar-fill.zbar-better  { background: var(--tp-cat-4); }
+  .zbar-fill.zbar-worse   { background: var(--tp-cat-5); }
+  .zbar-fill.zbar-neutral { background: var(--subtle); opacity: 0.55; }
+  .zbar-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .zbar-label small {
+    font-weight: 400;
+    color: var(--subtle);
+    font-size: 0.62rem;
+  }
+
+  /* Materiality chips */
+  .mat-chip {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .mat-large {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .mat-moderate {
+    color: var(--muted);
+    border-color: color-mix(in srgb, var(--text) 22%, transparent);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .mat-small,
+  .mat-negligible {
+    color: var(--subtle);
+    border-color: color-mix(in srgb, var(--text) 14%, transparent);
+    background: transparent;
+  }
+  .mat-noise {
+    color: var(--gated);
+    border-color: color-mix(in srgb, var(--gated) 40%, transparent);
+    background: color-mix(in srgb, var(--gated) 10%, transparent);
+  }
+  .mat-context {
+    color: var(--subtle);
+    border-color: color-mix(in srgb, var(--text) 12%, transparent);
+    background: transparent;
+    font-style: italic;
+  }
+  .mat-detail {
+    display: block;
+    font-size: 0.62rem;
+    color: var(--subtle);
+    margin-top: 3px;
+    line-height: 1.35;
+  }
+  .matcell {
+    max-width: 150px;
+    min-width: 118px;
+  }
+
+  /* Row-level flags shown beside the indicator name */
+  .row-flag {
+    display: inline-block;
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+    vertical-align: middle;
+    color: var(--subtle);
+    border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  }
+
+  .ctx-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 0.73rem;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--gated) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gated) 30%, transparent);
+    border-radius: var(--r-card);
+  }
+
+  /* Methods disclosure — every statistic on the page states its formula */
+  .methods {
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--plane-base);
+  }
+  .methods > summary {
+    cursor: pointer;
+    padding: 9px 13px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--muted);
+    list-style: none;
+  }
+  .methods > summary::-webkit-details-marker { display: none; }
+  .methods > summary::before {
+    content: '▸ ';
+    color: var(--subtle);
+  }
+  .methods[open] > summary::before { content: '▾ '; }
+  .methods-body {
+    padding: 0 13px 12px;
+    font-size: 0.72rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  .methods-body dt {
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 9px;
+  }
+  .methods-body dd { margin: 2px 0 0; }
+  .methods-body code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    color: var(--text);
+  }
+
+  @media (max-width: 720px) {
+    .zcell { width: 96px; }
+    .scoreboard-grid { grid-template-columns: 1fr 1fr; }
+  }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <!-- ══════════════════ HEADER ══════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
     <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare" aria-current="page">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/chat">Chat</a>
-      <a href="/about">About</a>
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" aria-current="page" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
@@ -486,10 +775,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- ── Toolbar: heading + back link ──────────────── -->
   <div class="compare-toolbar">
-    <h1>Compare Counties</h1>
+    <h1 data-en="Compare Counties" data-es="Comparar Condados">Compare Counties</h1>
     <a href="/" class="back-link">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Explorer
+      <span data-en="Back to Explorer" data-es="Volver al Explorador">Back to Explorer</span>
     </a>
   </div>
 
@@ -497,13 +786,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <div class="selector-row">
     <!-- County A -->
     <div class="selector-field">
-      <div class="selector-label">County A</div>
+      <div class="selector-label" data-en="County A" data-es="Condado A">County A</div>
       <div class="autocomplete" @click.outside="dropdown1 = false">
         <input
           type="text"
           x-model="search1"
           x-ref="input1"
           placeholder="Search counties…"
+          data-en-placeholder="Search counties…"
+          data-es-placeholder="Buscar condados…"
           aria-label="Select first county"
           autocomplete="off"
           @focus="openDropdown('a')"
@@ -517,14 +808,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div x-show="dropdown1" x-cloak class="autocomplete-dropdown" @click.stop="">
           <div x-show="countyListLoading" class="autocomplete-loading">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 0.6s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/></svg>
-            Loading counties…
+            <span data-en="Loading counties…" data-es="Cargando condados…">Loading counties…</span>
           </div>
           <div x-show="countyListError" class="autocomplete-empty" style="color:var(--gated);">
             <span x-text="countyListError"></span>
-            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;">Retry</button>
+            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;" data-en="Retry" data-es="Reintentar">Retry</button>
           </div>
           <div x-show="!countyListLoading && !countyListError && filteredCounties1.length === 0" class="autocomplete-empty">
-            No counties match "<span x-text="search1"></span>"
+            <span data-en="No counties match " data-es="Ningún condado coincide con ">No counties match </span>"<span x-text="search1"></span>"
           </div>
           <template x-for="(c, idx) in filteredCounties1" :key="c.geoid">
             <div
@@ -554,13 +845,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <!-- County B -->
     <div class="selector-field">
-      <div class="selector-label">County B</div>
+      <div class="selector-label" data-en="County B" data-es="Condado B">County B</div>
       <div class="autocomplete" @click.outside="dropdown2 = false">
         <input
           type="text"
           x-model="search2"
           x-ref="input2"
           placeholder="Search counties…"
+          data-en-placeholder="Search counties…"
+          data-es-placeholder="Buscar condados…"
           aria-label="Select second county"
           autocomplete="off"
           @focus="openDropdown('b')"
@@ -574,14 +867,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div x-show="dropdown2" x-cloak class="autocomplete-dropdown" @click.stop="">
           <div x-show="countyListLoading" class="autocomplete-loading">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 0.6s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/></svg>
-            Loading counties…
+            <span data-en="Loading counties…" data-es="Cargando condados…">Loading counties…</span>
           </div>
           <div x-show="countyListError" class="autocomplete-empty" style="color:var(--gated);">
             <span x-text="countyListError"></span>
-            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;">Retry</button>
+            <button class="btn btn-ghost" @click="loadCounties()" style="font-size:0.68rem;margin-top:4px;display:block;margin-inline:auto;" data-en="Retry" data-es="Reintentar">Retry</button>
           </div>
           <div x-show="!countyListLoading && !countyListError && filteredCounties2.length === 0" class="autocomplete-empty">
-            No counties match "<span x-text="search2"></span>"
+            <span data-en="No counties match " data-es="Ningún condado coincide con ">No counties match </span>"<span x-text="search2"></span>"
           </div>
           <template x-for="(c, idx) in filteredCounties2" :key="c.geoid">
             <div
@@ -625,11 +918,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <table class="skeleton-table">
         <thead>
           <tr>
-            <th style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;">Indicator</th>
-            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">County A</th>
-            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">County B</th>
-            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">Δ Abs</th>
-            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;">Δ %</th>
+            <th style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;" data-en="Indicator" data-es="Indicador">Indicator</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;" data-en="County A" data-es="Condado A">County A</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;" data-en="County B" data-es="Condado B">County B</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;" data-en="Δ Abs" data-es="Δ Abs">Δ Abs</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;" data-en="Δ %" data-es="Δ %">Δ %</th>
+            <th class="num" style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:right;" data-en="Gap (state SD)" data-es="Brecha (SD estatal)">Gap (state SD)</th>
+            <th style="padding:0.6em 0.8em;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;" data-en="Materiality" data-es="Materialidad">Materiality</th>
           </tr>
         </thead>
         <tbody>
@@ -640,6 +935,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <td><div class="skeleton-bar" style="width:50%"></div></td>
               <td><div class="skeleton-bar" style="width:35%"></div></td>
               <td><div class="skeleton-bar" style="width:30%"></div></td>
+              <td><div class="skeleton-bar" style="width:55%"></div></td>
+              <td><div class="skeleton-bar" style="width:45%"></div></td>
             </tr>
           </template>
         </tbody>
@@ -650,24 +947,88 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ═════════════ LOADING ═════════════════════ -->
   <div x-show="compareLoading" x-cloak class="loader" style="margin:clamp(40px,5vw,60px) 0;">
     <div class="loader-spinner"></div>
-    <p style="margin-top:10px;color:var(--muted);font-size:0.82rem;">Comparing counties…</p>
+    <p style="margin-top:10px;color:var(--muted);font-size:0.82rem;" data-en="Comparing counties…" data-es="Comparando condados…">Comparing counties…</p>
   </div>
 
   <!-- ═══════════════ RESULTS ════════════════════ -->
   <div x-show="compared && !compareError" x-cloak>
 
-    <!-- ── Stat summary line ─────────────────────────── -->
-    <div class="compare-summary" x-show="mergedDiffs.length > 0">
-      <span class="label">Summary</span>
-      <span class="sep">|</span>
-      <span x-show="geo1Name" class="lead lead-a" x-text="geo1Name + ': ' + leadACount + ' better'"></span>
-      <span class="sep" x-show="geo1Name && geo2Name">·</span>
-      <span x-show="geo2Name" class="lead lead-b" x-text="geo2Name + ': ' + leadBCount + ' better'"></span>
-      <span class="sep">·</span>
-      <span>Biggest gap: <strong x-text="statsBiggestGap"></strong></span>
-      <a :href="'/chat?page=compare&geoid1=' + (geoid1||'') + '&geoid2=' + (geoid2||'') + '&name1=' + encodeURIComponent(selectedName1||'') + '&name2=' + encodeURIComponent(selectedName2||'')" class="nav-pill" style="display:inline-block;margin-left:4px;">💬 Explain this gap</a>
-      <span class="sep">·</span>
-      <span x-text="mergedDiffs.length + ' indicators'"></span>
+    <!-- ── Degraded-context banner (statewide distribution unavailable) ── -->
+    <div class="ctx-banner" x-show="compared && ctxError" x-cloak>
+      <span>⚠</span>
+      <span x-text="ctxError"></span>
+      <span data-en="Showing raw differences only — statewide rank, standardized gap and materiality are unavailable." data-es="Mostrando solo diferencias brutas — el rango estatal, la brecha estandarizada y la materialidad no están disponibles.">Showing raw differences only — statewide rank, standardized gap and materiality are unavailable.</span>
+    </div>
+
+    <!-- ── Scoreboard: head-to-head record + standardized headline ────── -->
+    <div class="scoreboard" x-show="mergedDiffs.length > 0">
+      <div class="scoreboard-head">
+        <div class="scoreboard-verdict">
+          <template x-if="!ctxReady">
+            <span x-text="'Comparing ' + (geo1Name || 'County A') + ' and ' + (geo2Name || 'County B') + ' across ' + mergedDiffs.length + ' indicators.'"></span>
+          </template>
+          <template x-if="ctxReady">
+            <span>
+              <span :class="recordLeader === 'a' ? 'win-a' : (recordLeader === 'b' ? 'win-b' : '')"
+                    x-text="recordHeadline"></span>
+            </span>
+          </template>
+        </div>
+      </div>
+
+      <!-- Head-to-head record bar -->
+      <div x-show="ctxReady && directionalCount > 0" x-cloak>
+        <div class="record-bar" :title="leadACount + ' to ' + leadBCount + ' of ' + directionalCount + ' directional indicators'">
+          <div class="record-bar-a" :style="'width:' + recordPctA + '%'"></div>
+          <div class="record-bar-tie" :style="'width:' + recordPctTie + '%'"></div>
+          <div class="record-bar-b" :style="'width:' + recordPctB + '%'"></div>
+        </div>
+        <div class="record-legend">
+          <span><i class="swatch record-bar-a"></i><span x-text="(geo1Name || 'County A') + ' better · ' + leadACount"></span></span>
+          <span x-show="tieCount > 0"><i class="swatch record-bar-tie"></i><span x-text="'Tied · ' + tieCount"></span></span>
+          <span><i class="swatch record-bar-b"></i><span x-text="(geo2Name || 'County B') + ' better · ' + leadBCount"></span></span>
+          <span x-show="neutralCount > 0" x-text="neutralCount + ' context-only (no better/worse direction)'"></span>
+        </div>
+      </div>
+
+      <!-- Headline statistics -->
+      <div class="scoreboard-grid" x-show="ctxReady" x-cloak>
+        <div class="scoreboard-stat">
+          <span class="k" data-en="Largest standardized gap" data-es="Mayor brecha estandarizada">Largest standardized gap</span>
+          <span class="v">
+            <span x-text="topGapName"></span>
+            <small x-text="topGapDetail"></small>
+          </span>
+        </div>
+        <div class="scoreboard-stat">
+          <span class="k" data-en="Closest match" data-es="Coincidencia más cercana">Closest match</span>
+          <span class="v">
+            <span x-text="closestGapName"></span>
+            <small x-text="closestGapDetail"></small>
+          </span>
+        </div>
+        <div class="scoreboard-stat">
+          <span class="k" data-en="Substantial gaps" data-es="Brechas sustanciales">Substantial gaps</span>
+          <span class="v">
+            <span x-text="materialCount + ' of ' + directionalCount"></span>
+            <small x-text="'≥ 0.5 statewide SD apart · ' + negligibleCount + ' negligible (&lt; 0.2 SD)'"></small>
+          </span>
+        </div>
+        <div class="scoreboard-stat">
+          <span class="k" data-en="Statewide reference" data-es="Referencia estatal">Statewide reference</span>
+          <span class="v">
+            <span x-text="ctxN + ' ' + ctxStateName + ' counties'"></span>
+            <small x-text="moeCount > 0 ? (moeCount === 1 ? '1 indicator carries a published ACS margin of error' : moeCount + ' indicators carry a published ACS margin of error') : 'No published margins of error in this set'"></small>
+          </span>
+        </div>
+      </div>
+
+      <div class="scoreboard-sub" style="margin-top:10px;">
+        <span x-text="mergedDiffs.length + ' indicators'"></span>
+        <span class="sep">·</span>
+        <span><span data-en="Raw difference is " data-es="La diferencia bruta es ">Raw difference is </span><code style="font-family:var(--font-mono);">B − A</code></span>
+        <a :href="'/chat?page=compare&geoid1=' + (geoid1||'') + '&geoid2=' + (geoid2||'') + '&name1=' + encodeURIComponent(selectedName1||'') + '&name2=' + encodeURIComponent(selectedName2||'')" class="nav-pill" style="display:inline-block;margin-left:6px;" data-en="💬 Explain this gap" data-es="💬 Explicar esta brecha">💬 Explain this gap</a>
+      </div>
     </div>
 
     <!-- ── Category tabs ─────────────────────────────── -->
@@ -676,6 +1037,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         @click="activeCategory = 'all'"
         class="cat-tab"
         :class="{ active: activeCategory === 'all' }"
+        data-en="All" data-es="Todas"
       >All</button>
       <template x-for="cat in categories" :key="cat">
         <button
@@ -693,7 +1055,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <thead>
           <tr>
             <th @click="sortByCol('name')" :class="{ sorted: sortCol === 'name' }">
-              Indicator
+              <span data-en="Indicator" data-es="Indicador">Indicator</span>
               <span class="sort-arrow" x-show="sortCol === 'name'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
             <th class="num" @click="sortByCol('val1')" :class="{ sorted: sortCol === 'val1' }">
@@ -705,12 +1067,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <span class="sort-arrow" x-show="sortCol === 'val2'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
             <th class="num" @click="sortByCol('delta')" :class="{ sorted: sortCol === 'delta' }">
-              Δ Abs
+              <span data-en="Δ Abs" data-es="Δ Abs">Δ Abs</span>
               <span class="sort-arrow" x-show="sortCol === 'delta'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
             <th class="num" @click="sortByCol('pct')" :class="{ sorted: sortCol === 'pct' }">
-              Δ %
+              <span data-en="Δ %" data-es="Δ %">Δ %</span>
               <span class="sort-arrow" x-show="sortCol === 'pct'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortByCol('zgap')" :class="{ sorted: sortCol === 'zgap' }"
+                title="Gap between the two counties expressed in statewide county standard deviations, which makes gaps comparable across indicators with different units. Sorting lists scored indicators before context-only ones.">
+              <span data-en="Gap (state SD)" data-es="Brecha (SD estatal)">Gap (state SD)</span>
+              <span class="sort-arrow" x-show="sortCol === 'zgap'" x-text="sortAsc ? '▲' : '▼'"></span>
+            </th>
+            <th @click="sortByCol('material')" :class="{ sorted: sortCol === 'material' }"
+                title="How large the gap is relative to the spread across all counties in the state, and whether it survives the published margin of error.">
+              <span data-en="Materiality" data-es="Materialidad">Materiality</span>
+              <span class="sort-arrow" x-show="sortCol === 'material'" x-text="sortAsc ? '▲' : '▼'"></span>
             </th>
           </tr>
         </thead>
@@ -718,7 +1090,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <template x-for="d in displayedDiffs" :key="d.variable_id">
             <tr :class="{ 'row-max-delta': d.variable_id === maxDeltaId }">
               <td>
-                <div class="var-name" x-text="d.name || displayName(d.variable_id)"></div>
+                <div class="var-name">
+                  <span x-text="d.name || displayName(d.variable_id)"></span>
+                  <span class="row-flag" x-show="d.ctx && d.ctx.normalized" x-cloak
+                        title="This indicator is a raw count. Statewide rank and gap are computed on a population-normalized rate (count per 10,000 residents) so counties of different size are comparable."
+                        data-en="per 10k" data-es="por 10 mil">per 10k</span>
+                  <span class="row-flag" x-show="!isDirectional(d)" x-cloak
+                        title="This variable has no better/worse direction in the API, so no county is scored as ahead."
+                        data-en="context" data-es="contexto">context</span>
+                </div>
                 <div class="var-unit" x-text="d.unit || ''"></div>
               </td>
               <td class="val">
@@ -726,37 +1106,156 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <span x-text="fmtVal(d.value1, d.unit)"></span>
                   <span class="rel-dot" :class="'rel-dot-' + (d.reliability1 || 'unknown')" :title="'Reliability: ' + (d.reliability1 || 'unknown')" x-show="d.reliability1"></span>
                 </span>
+                <span class="ctx-rank" :class="rankClass(d, 1)" x-show="d.ctx && d.ctx.rank1" x-cloak
+                      :title="rankTitle(d, 1)" x-text="rankLabel(d, 1)"></span>
               </td>
               <td class="val">
                 <span class="val-wrap">
                   <span x-text="fmtVal(d.value2, d.unit)"></span>
                   <span class="rel-dot" :class="'rel-dot-' + (d.reliability2 || 'unknown')" :title="'Reliability: ' + (d.reliability2 || 'unknown')" x-show="d.reliability2"></span>
                 </span>
+                <span class="ctx-rank" :class="rankClass(d, 2)" x-show="d.ctx && d.ctx.rank2" x-cloak
+                      :title="rankTitle(d, 2)" x-text="rankLabel(d, 2)"></span>
               </td>
               <td class="delta" :class="deltaClass(d)" x-text="fmtDiff(d.diff)"></td>
               <td class="delta" :class="deltaClass(d)" x-text="fmtPct(d.pct_diff)"></td>
+              <td class="delta zcell">
+                <div class="zbar-wrap" x-show="d.ctx && d.ctx.zGap !== null" x-cloak>
+                  <div class="zbar-label" :class="zLabelClass(d)" x-text="fmtZ(d)"></div>
+                  <div class="zbar-track" :title="zTitle(d)">
+                    <div class="zbar-fill" :class="zBarClass(d)" :style="zBarStyle(d)"></div>
+                  </div>
+                </div>
+                <span x-show="!d.ctx || d.ctx.zGap === null" class="delta-neutral" x-text="'—'"></span>
+              </td>
+              <td class="matcell">
+                <span class="mat-chip" :class="materialityClass(d)" x-text="materialityLabel(d)"></span>
+                <span class="mat-detail" x-show="materialityDetail(d)" x-cloak x-text="materialityDetail(d)"></span>
+              </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
 
+    <!-- ── Methods ────────────────────────────────────── -->
+    <details class="methods" x-show="mergedDiffs.length > 0">
+      <summary data-en="How these numbers are computed" data-es="Cómo se calculan estos números">How these numbers are computed</summary>
+      <div class="methods-body">
+        <p style="margin:0 0 4px;">
+          Every statistic below is derived at page load from the live
+          <code>POST /v1/policy/query</code> distribution of all
+          <span x-text="ctxN || '72'"></span> <span x-text="ctxStateName"></span> counties
+          for the same indicator and vintage. Nothing is hardcoded.
+        </p>
+        <dl style="margin:0;">
+          <dt>Direction (who is "better")</dt>
+          <dd>
+            Taken verbatim from the API's <code>direction</code> field on each indicator
+            (<code>lower_is_better</code>, <code>higher_is_better</code>, or <code>neutral</code>).
+            Indicators marked <code>neutral</code> — or with no direction at all — are shown as
+            <em>context</em> and are never colored or scored, because there is no defensible
+            better/worse reading for them.
+          </dd>
+
+          <dt>Statewide rank</dt>
+          <dd>
+            Each county's ordinal position among all counties in its state on that indicator,
+            ordered so that rank 1 is the <em>better</em> end per the indicator's direction.
+            The accompanying percentile uses the mean rank for ties over <code>n − 1</code>,
+            matching <code>pkg/stats.PercentileRank</code>.
+          </dd>
+
+          <dt>Gap in state SD</dt>
+          <dd>
+            <code>(value_A − value_B) / SD_state</code>, where <code>SD_state</code> is the
+            population standard deviation of all county values for that indicator, matching
+            <code>pkg/stats.ZScore</code>. Expressing the gap in standard deviations is what
+            makes a poverty-rate gap and an income gap comparable on one scale. Sign is
+            re-oriented so a positive bar always means County A is better off.
+          </dd>
+
+          <dt>Counts normalized per 10,000 residents</dt>
+          <dd>
+            Indicators with <code>unit: count</code> are population-confounded — a larger county
+            has more of nearly everything. For rank and gap only, counts are divided by the
+            county's <code>population</code> from the same API response and scaled to a rate per
+            10,000 residents. Rows treated this way are flagged <span class="row-flag">per 10k</span>
+            and show the rate beside the rank. The value columns still show the raw count the API
+            returned, and on these rows the raw Δ columns are deliberately left uncolored: the raw
+            count difference is a true statement, but it is not the basis on which this page decides
+            who is better off.
+            <span x-show="reversalCount > 0" x-cloak>
+              In this comparison <strong x-text="reversalCount"></strong>
+              <span x-text="reversalCount === 1 ? 'indicator reverses' : 'indicators reverse'"></span>
+              its verdict between the raw-count and per-capita bases.
+            </span>
+            Note that for housing measures the more appropriate denominator would be housing units,
+            which the API does not currently pair to each variable.
+          </dd>
+
+          <dt>Materiality</dt>
+          <dd>
+            Two independent checks. <strong>Margin of error:</strong> where the API publishes
+            <code>margin_of_error</code> for both counties, the difference is tested against
+            <code>√(MOE_A² + MOE_B²)</code> — the Census Bureau's formula for the margin of error
+            of a difference. ACS margins are 90% confidence, so a gap smaller than that is reported
+            as not distinguishable from noise. <strong>Distributional size:</strong> where no margin
+            of error is published, the gap is described by its size in state SD using Cohen's
+            conventional benchmarks (&lt; 0.2 negligible, &lt; 0.5 small, &lt; 0.8 moderate,
+            otherwise large), applied here to a gap scaled by the statewide county standard
+            deviation. This is a descriptive convention, not a significance test.
+          </dd>
+
+          <dt>Counties between</dt>
+          <dd>
+            The count of other counties in the state whose value falls strictly between the two
+            selected counties. This is exact and assumption-free: it answers "how much of the state
+            sits in this gap?" A large SD gap with zero counties between means both counties are
+            outliers at the same end of the distribution.
+          </dd>
+
+          <dt>Reliability dots</dt>
+          <dd>
+            Where a margin of error is published, the coefficient of variation
+            <code>(MOE / 1.645) / |estimate|</code> is classified using the Census Bureau
+            thresholds in <code>pkg/stats.ReliabilityLevel</code>: high &lt; 0.15,
+            moderate &lt; 0.30, otherwise low.
+          </dd>
+        </dl>
+        <p style="margin:10px 0 0;color:var(--subtle);">
+          Vintage: <span x-text="ctxVintage || '—'"></span>.
+          Margins of error are published for
+          <span x-text="moeCount"></span> of <span x-text="mergedDiffs.length"></span>
+          indicators in this comparison.
+        </p>
+      </div>
+    </details>
+
     <!-- ── Empty states ──────────────────────────────── -->
     <div x-show="displayedDiffs.length === 0 && mergedDiffs.length > 0" x-cloak class="state-no-results">
-      <p>No indicators in category &ldquo;<span x-text="activeCategory"></span>&rdquo;.</p>
+      <p><span data-en="No indicators in category " data-es="Ningún indicador en la categoría ">No indicators in category </span>&ldquo;<span x-text="activeCategory"></span>&rdquo;.</p>
     </div>
 
     <div x-show="mergedDiffs.length === 0" x-cloak class="state-no-results">
-      <p>No indicator data available for this comparison.</p>
+      <p data-en="No indicator data available for this comparison." data-es="No hay datos de indicadores disponibles para esta comparación.">No indicator data available for this comparison.</p>
     </div>
   </div>
 
   <!-- ── Prompt (no counties selected yet) ──────────── -->
   <div x-show="!compared && !initialSkeleton && !compareLoading" x-cloak class="state-no-results" style="padding:clamp(48px,6vw,72px) 0;">
-    <p style="color:var(--muted);font-size:1rem;margin:0;">Select two counties above to compare.</p>
+    <p style="color:var(--muted);font-size:1rem;margin:0;" data-en="Select two counties above to compare." data-es="Selecciona dos condados arriba para comparar.">Select two counties above to compare.</p>
   </div>
 
 </main>
+
+<footer class="site-footer">
+  Policy Data Infrastructure ·
+  <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a>
+  · Apache-2.0
+</footer>
+
+<script src="/static/theme-toggle.js"></script>
 
 <!-- ═══════════════ APP LOGIC ════════════════════ -->
 <script src="/static/lib/deeplink.js"></script>
@@ -798,8 +1297,20 @@ function compareTool() {
 
     // ── Filtering / sorting ──────────────────────────────────
     activeCategory: 'all',
-    sortCol: 'delta',
+    sortCol: 'zgap',
     sortAsc: false,
+
+    // ── Statewide distribution context ────────────────────────
+    // Populated from POST /v1/policy/query over every county in the
+    // state. Keyed variable_id → { values, pops, n, mean, sd, ... }.
+    // Empty until a comparison runs; all context UI degrades to the
+    // plain delta view when this stays empty.
+    stateDist: {},
+    ctxLoading: false,
+    ctxError: '',
+    ctxN: 0,
+    ctxStateFips: '',
+    ctxVintage: '',
 
     // ═══════════════ COMPUTED ═══════════════════════════════
 
@@ -845,16 +1356,81 @@ function compareTool() {
         const name = i1?.name || i2?.name || vmeta.name || null;
         const unit = i1?.unit || i2?.unit || vmeta.unit || null;
         const direction = i1?.direction || i2?.direction || vmeta.direction || null;
-        const reliability1 = i1?.reliability || null;
-        const reliability2 = i2?.reliability || null;
+
+        // Margins of error, where ACS publishes them. The API returns
+        // `margin_of_error` on the indicator; it does NOT return a
+        // precomputed `reliability`, so derive it from the MOE using the
+        // same CV thresholds as pkg/stats.ReliabilityLevel.
+        const moe1 = (typeof i1?.margin_of_error === 'number') ? i1.margin_of_error : null;
+        const moe2 = (typeof i2?.margin_of_error === 'number') ? i2.margin_of_error : null;
+        const reliability1 = i1?.reliability || this.reliabilityFrom(d.value1, moe1);
+        const reliability2 = i2?.reliability || this.reliabilityFrom(d.value2, moe2);
 
         let category = vmeta.category || null;
         if (!category) {
           category = this.inferCategory(d.variable_id, name);
         }
 
-        return { ...d, name, unit, direction, reliability1, reliability2, category };
+        const row = {
+          ...d, name, unit, direction,
+          moe1, moe2, reliability1, reliability2, category,
+        };
+        row.ctx = this.contextFor(row);
+        row.moeVerdict = this.moeVerdict(row);
+        return row;
       });
+    },
+
+    // ── Statewide context for one indicator ──────────────────
+    // Returns null when the distribution has not loaded, the indicator
+    // is absent from it, or the series is degenerate (zero variance).
+    contextFor(row) {
+      const dist = this.stateDist[row.variable_id];
+      if (!dist || dist.degenerate) return null;
+
+      const v1 = dist.values[this.geoid1];
+      const v2 = dist.values[this.geoid2];
+      if (v1 == null || v2 == null) return null;
+
+      const zGap = dist.sd > 0 ? (v1 - v2) / dist.sd : null;
+      const lo = Math.min(v1, v2);
+      const hi = Math.max(v1, v2);
+      let between = 0;
+      for (const gid in dist.values) {
+        if (gid === this.geoid1 || gid === this.geoid2) continue;
+        const v = dist.values[gid];
+        if (v > lo && v < hi) between++;
+      }
+
+      return {
+        n: dist.n,
+        normalized: dist.normalized,
+        sd: dist.sd,
+        rank1: dist.ranks[this.geoid1] || null,
+        rank2: dist.ranks[this.geoid2] || null,
+        pct1: dist.pcts[this.geoid1] ?? null,
+        pct2: dist.pcts[this.geoid2] ?? null,
+        // Normalized (per-10k) values when normalized === true, else raw.
+        nv1: v1,
+        nv2: v2,
+        zGap,
+        // Direction-aware: positive means County A is better off.
+        zAdvantageA: (zGap == null) ? null : zGap * this.polarity(row),
+        between,
+      };
+    },
+
+    // +1 when a higher value is better, -1 when lower is better,
+    // 0 when the API gives no usable direction (neutral or empty).
+    polarity(row) {
+      const dir = row.direction;
+      if (dir === 'higher_is_better' || dir === 'higher_better') return 1;
+      if (dir === 'lower_is_better' || dir === 'lower_better') return -1;
+      return 0;
+    },
+
+    isDirectional(row) {
+      return this.polarity(row) !== 0;
     },
 
     get categories() {
@@ -891,6 +1467,18 @@ function compareTool() {
             va = Math.abs(a.pct_diff ?? 0);
             vb = Math.abs(b.pct_diff ?? 0);
             return asc ? va - vb : vb - va;
+          case 'zgap':
+            // Directional indicators always outrank context-only ones: a
+            // large standardized gap on an indicator with no better/worse
+            // reading is visually loud but analytically inert, and should
+            // not head the table. Rows without context sort last.
+            va = this.gapSortWeight(a);
+            vb = this.gapSortWeight(b);
+            return asc ? va - vb : vb - va;
+          case 'material':
+            va = this.materialityWeight(a);
+            vb = this.materialityWeight(b);
+            return asc ? va - vb : vb - va;
           case 'delta':
           default:
             va = Math.abs(a.diff ?? 0);
@@ -904,7 +1492,15 @@ function compareTool() {
 
     // ── Max-delta row highlighting ──────────────────────────
 
+    // Highlights the most consequential row. Prefers the largest
+    // standardized gap among directional indicators; only when no
+    // statewide context is available does it fall back to the raw
+    // difference, which is dominated by whichever indicator is the
+    // largest population count and therefore rarely meaningful.
     get maxDeltaId() {
+      const ranked = this.gapRanked;
+      if (ranked.length > 0) return ranked[0].variable_id;
+
       const diffs = this.mergedDiffs.filter(d => d.diff != null);
       if (diffs.length === 0) return null;
       let biggest = diffs[0];
@@ -916,12 +1512,13 @@ function compareTool() {
 
     // ── Statistical summary ─────────────────────────────────
 
+    // Head-to-head counts use the canonical per-row verdict (advantageA),
+    // NOT the raw-delta coloring — the two diverge on count indicators,
+    // where the raw count favours the smaller county by construction.
     get leadACount() {
       let aBetter = 0;
       for (const d of this.mergedDiffs) {
-        if (d.diff != null && this.deltaClass(d) === 'delta-green') {
-          aBetter++;
-        }
+        if (d.diff != null && this.advantageA(d) > 0) aBetter++;
       }
       return aBetter;
     },
@@ -929,14 +1526,20 @@ function compareTool() {
     get leadBCount() {
       let bBetter = 0;
       for (const d of this.mergedDiffs) {
-        if (d.diff != null && this.deltaClass(d) === 'delta-red') {
-          bBetter++;
-        }
+        if (d.diff != null && this.advantageA(d) < 0) bBetter++;
       }
       return bBetter;
     },
 
+    // Retained for any consumer of the old summary contract. Now answers
+    // with the largest STANDARDIZED gap, so it agrees with the scoreboard
+    // instead of reporting whichever indicator is the biggest raw count.
     get statsBiggestGap() {
+      const top = this.gapRanked[0];
+      if (top) {
+        const name = top.name || this.displayName(top.variable_id);
+        return name + ' (' + Math.abs(top.ctx.zGap).toFixed(2) + ' state SD)';
+      }
       const diffs = this.mergedDiffs.filter(d => d.diff != null);
       if (diffs.length === 0) return '—';
       let biggest = diffs[0];
@@ -945,6 +1548,130 @@ function compareTool() {
       }
       const name = biggest.name || this.displayName(biggest.variable_id);
       return name + ' (' + this.fmtDiffAbs(Math.abs(biggest.diff)) + ')';
+    },
+
+    // ═══════════ Statewide-context scoreboard ═══════════════
+    // Everything here is direction-aware and excludes indicators the
+    // API marks `neutral` (or leaves blank), which have no better/worse
+    // reading and must never be scored as a win for either county.
+
+    get ctxReady() {
+      return !this.ctxLoading && !this.ctxError && this.ctxN > 0
+        && this.mergedDiffs.some(d => d.ctx);
+    },
+
+    get directionalDiffs() {
+      return this.mergedDiffs.filter(d => this.isDirectional(d) && d.diff != null);
+    },
+
+    get directionalCount() { return this.directionalDiffs.length; },
+
+    get neutralCount() {
+      return this.mergedDiffs.filter(d => !this.isDirectional(d)).length;
+    },
+
+    get tieCount() {
+      return this.directionalCount - this.leadACount - this.leadBCount;
+    },
+
+    get moeCount() {
+      return this.mergedDiffs.filter(d => d.moe1 != null && d.moe2 != null).length;
+    },
+
+    get ctxStateName() {
+      const names = { '55': 'Wisconsin' };
+      return names[this.ctxStateFips] || 'statewide';
+    },
+
+    // Head-to-head record, expressed as a share of directional indicators.
+    get recordPctA() {
+      return this.directionalCount ? (this.leadACount / this.directionalCount) * 100 : 0;
+    },
+    get recordPctB() {
+      return this.directionalCount ? (this.leadBCount / this.directionalCount) * 100 : 0;
+    },
+    get recordPctTie() {
+      // Rounded to keep floating-point residue out of the inline width.
+      const t = 100 - this.recordPctA - this.recordPctB;
+      return t < 0.01 ? 0 : t;
+    },
+    get recordLeader() {
+      if (this.leadACount > this.leadBCount) return 'a';
+      if (this.leadBCount > this.leadACount) return 'b';
+      return 'tie';
+    },
+
+    // ADR-011 §2C framing: "X leads Y in N of M indicators".
+    get recordHeadline() {
+      const a = this.geo1Name || 'County A';
+      const b = this.geo2Name || 'County B';
+      const n = this.directionalCount;
+      if (n === 0) {
+        return 'No indicator in this set has a better/worse direction, so neither county can be scored as ahead.';
+      }
+      if (this.leadACount === this.leadBCount) {
+        return a + ' and ' + b + ' are evenly matched — each is better on '
+          + this.leadACount + ' of ' + n + ' directional indicators.';
+      }
+      const leadName = this.leadACount > this.leadBCount ? a : b;
+      const leadN = Math.max(this.leadACount, this.leadBCount);
+      return leadName + ' is better off on ' + leadN + ' of ' + n + ' directional indicators.';
+    },
+
+    // Ranked by standardized gap — NOT by raw difference. A raw-difference
+    // ranking is dominated by whichever indicator happens to be a large
+    // population count, which is why the old "biggest gap" was unhelpful.
+    get gapRanked() {
+      return this.directionalDiffs
+        .filter(d => d.ctx && d.ctx.zGap != null)
+        .sort((x, y) => Math.abs(y.ctx.zGap) - Math.abs(x.ctx.zGap));
+    },
+
+    get topGapName() {
+      const d = this.gapRanked[0];
+      return d ? (d.name || this.displayName(d.variable_id)) : '—';
+    },
+    get topGapDetail() {
+      const d = this.gapRanked[0];
+      if (!d) return '';
+      const ahead = d.ctx.zAdvantageA > 0 ? (this.geo1Name || 'County A') : (this.geo2Name || 'County B');
+      return Math.abs(d.ctx.zGap).toFixed(2) + ' state SD apart · ' + ahead + ' better off';
+    },
+    get closestGapName() {
+      const r = this.gapRanked;
+      const d = r.length ? r[r.length - 1] : null;
+      return d ? (d.name || this.displayName(d.variable_id)) : '—';
+    },
+    get closestGapDetail() {
+      const r = this.gapRanked;
+      const d = r.length ? r[r.length - 1] : null;
+      if (!d) return '';
+      return Math.abs(d.ctx.zGap).toFixed(2) + ' state SD apart · '
+        + d.ctx.between + (d.ctx.between === 1 ? ' county' : ' counties') + ' in between';
+    },
+
+    get materialCount() {
+      return this.directionalDiffs.filter(d => d.ctx && d.ctx.zGap != null
+        && Math.abs(d.ctx.zGap) >= 0.5).length;
+    },
+    get negligibleCount() {
+      return this.directionalDiffs.filter(d => d.ctx && d.ctx.zGap != null
+        && Math.abs(d.ctx.zGap) < 0.2).length;
+    },
+
+    // Indicators where ranking on the raw count and ranking on the
+    // per-capita rate disagree about which county is better off. Reported
+    // in the methods note as the concrete reason counts are normalized.
+    get reversalCount() {
+      let n = 0;
+      for (const d of this.mergedDiffs) {
+        if (!this.isDirectional(d) || !d.ctx || !d.ctx.normalized) continue;
+        if (d.diff == null || d.ctx.zAdvantageA == null) continue;
+        const rawAdv = -Math.sign(d.diff) * this.polarity(d);
+        const normAdv = Math.sign(d.ctx.zAdvantageA);
+        if (rawAdv !== 0 && normAdv !== 0 && rawAdv !== normAdv) n++;
+      }
+      return n;
     },
 
     // ═══════════════ METHODS ═══════════════════════════════
@@ -1051,6 +1778,189 @@ function compareTool() {
         }
         this.variablesMap = map;
       } catch (_) { /* non-fatal */ }
+    },
+
+    // ── Statewide distribution ───────────────────────────────
+    // Pulls every county in the state for the indicators under
+    // comparison in ONE request, then derives rank, percentile and
+    // standard deviation locally. Failure here is non-fatal: the page
+    // falls back to the plain delta view and says so.
+    async loadStateContext() {
+      this.stateDist = {};
+      this.ctxError = '';
+      this.ctxN = 0;
+
+      const diffs = this.result?.differences || [];
+      if (diffs.length === 0) return;
+
+      const s1 = (this.geoid1 || '').slice(0, 2);
+      const s2 = (this.geoid2 || '').slice(0, 2);
+      if (!s1 || s1 !== s2) {
+        this.ctxError = 'The two counties are in different states, so a single statewide distribution does not apply.';
+        return;
+      }
+      this.ctxStateFips = s1;
+      this.ctxVintage = diffs[0]?.vintage || '';
+
+      const varIds = diffs.map(d => d.variable_id);
+      this.ctxLoading = true;
+      try {
+        const resp = await fetch('/v1/policy/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level: 'county',
+            state_fips: s1,
+            variable_ids: varIds,
+            limit: 500,
+          }),
+        });
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        const data = await resp.json();
+        const items = data.items || [];
+        if (items.length === 0) throw new Error('no counties returned');
+
+        this.ctxN = items.length;
+        this.stateDist = this.buildDistributions(items, varIds);
+      } catch (e) {
+        this.ctxError = `Statewide context unavailable: ${e.message}.`;
+        this.stateDist = {};
+        this.ctxN = 0;
+      } finally {
+        this.ctxLoading = false;
+      }
+    },
+
+    // Build one distribution per variable from the statewide county set.
+    //
+    // Count-unit indicators are population-normalized to a rate per 10k
+    // residents before ranking. Comparing raw counts across counties of
+    // different size measures population, not policy outcome.
+    buildDistributions(items, varIds) {
+      const pops = {};
+      for (const g of items) {
+        if (typeof g.population === 'number' && g.population > 0) pops[g.geoid] = g.population;
+      }
+
+      // variable_id → { geoid → raw value }, plus the unit seen.
+      const raw = {};
+      const units = {};
+      for (const g of items) {
+        for (const ind of (g.indicators || [])) {
+          if (typeof ind.value !== 'number') continue;
+          if (!raw[ind.variable_id]) raw[ind.variable_id] = {};
+          raw[ind.variable_id][g.geoid] = ind.value;
+          if (ind.unit) units[ind.variable_id] = ind.unit;
+        }
+      }
+
+      const out = {};
+      for (const vid of varIds) {
+        const series = raw[vid];
+        if (!series) continue;
+
+        const unit = (units[vid] || '').toLowerCase();
+        const normalize = (unit === 'count');
+
+        const values = {};
+        for (const gid in series) {
+          if (normalize) {
+            const p = pops[gid];
+            if (!p) continue;               // cannot normalize without a denominator
+            values[gid] = (series[gid] / p) * 10000;
+          } else {
+            values[gid] = series[gid];
+          }
+        }
+
+        const geoids = Object.keys(values);
+        const n = geoids.length;
+        if (n < 2) continue;
+
+        const nums = geoids.map(g => values[g]);
+        const mean = nums.reduce((a, b) => a + b, 0) / n;
+        // Population SD, matching pkg/stats.ZScore (variance / n, not n-1).
+        const variance = nums.reduce((acc, v) => acc + (v - mean) * (v - mean), 0) / n;
+        const sd = Math.sqrt(variance);
+
+        // A zero-variance series carries no information — e.g. total
+        // population normalized by population is 10,000 everywhere.
+        // Mark it degenerate rather than emitting a meaningless rank.
+        const degenerate = !(variance > 0);
+
+        out[vid] = {
+          values, n, mean, sd, normalized: normalize, degenerate, unit,
+          ranks: this.ordinalRanks(values, this.directionForVar(vid)),
+          pcts: this.percentileRanks(values),
+        };
+      }
+      return out;
+    },
+
+    directionForVar(vid) {
+      const i1 = (this.result?.geography1?.indicators || []).find(i => i.variable_id === vid);
+      const i2 = (this.result?.geography2?.indicators || []).find(i => i.variable_id === vid);
+      return i1?.direction || i2?.direction || this.variablesMap[vid]?.direction || null;
+    },
+
+    // Ordinal rank where 1 is the BETTER end for the indicator's direction.
+    // Ties share the same (best) rank, the standard competition ranking.
+    ordinalRanks(values, direction) {
+      const asc = (direction === 'lower_is_better' || direction === 'lower_better');
+      const entries = Object.keys(values).map(g => ({ g, v: values[g] }));
+      entries.sort((a, b) => asc ? a.v - b.v : b.v - a.v);
+
+      const ranks = {};
+      let i = 0;
+      while (i < entries.length) {
+        let j = i;
+        while (j < entries.length && entries[j].v === entries[i].v) j++;
+        for (let k = i; k < j; k++) ranks[entries[k].g] = i + 1;
+        i = j;
+      }
+      return ranks;
+    },
+
+    // Percentile rank in [0,1] mirroring pkg/stats.PercentileRank:
+    // mean rank for tied values, divided by n-1.
+    percentileRanks(values) {
+      const entries = Object.keys(values).map(g => ({ g, v: values[g] }));
+      entries.sort((a, b) => a.v - b.v);
+      const n = entries.length;
+      const denom = Math.max(n - 1, 1);
+
+      const pcts = {};
+      let i = 0;
+      while (i < n) {
+        let j = i;
+        while (j < n && entries[j].v === entries[i].v) j++;
+        const meanRank = (i + j - 1) / 2;
+        for (let k = i; k < j; k++) pcts[entries[k].g] = meanRank / denom;
+        i = j;
+      }
+      return pcts;
+    },
+
+    // Census Bureau reliability classification, mirroring
+    // pkg/stats.CoefficientOfVariation + pkg/stats.ReliabilityLevel.
+    reliabilityFrom(estimate, moe) {
+      if (typeof estimate !== 'number' || typeof moe !== 'number' || estimate === 0) return null;
+      const cv = Math.abs((moe / 1.645) / estimate);
+      if (cv < 0.15) return 'high';
+      if (cv < 0.30) return 'moderate';
+      return 'low';
+    },
+
+    // Census Bureau formula for the margin of error of a difference:
+    // MOE_diff = sqrt(MOE_A^2 + MOE_B^2). ACS margins are 90% confidence.
+    // Returns null when either margin is unpublished — never guessed.
+    moeVerdict(row) {
+      if (row.moe1 == null || row.moe2 == null || row.diff == null) return null;
+      const moeDiff = Math.sqrt(row.moe1 * row.moe1 + row.moe2 * row.moe2);
+      return {
+        moeDiff,
+        distinguishable: Math.abs(row.diff) > moeDiff,
+      };
     },
 
     // ── Autocomplete dropdown management ─────────────────────
@@ -1199,6 +2109,11 @@ function compareTool() {
         if (Object.keys(this.variablesMap).length === 0) {
           await this.loadVariables();
         }
+
+        // Statewide distribution powers rank, standardized gap and
+        // materiality. Loaded after the comparison renders so a slow or
+        // failed context request never blocks the core result.
+        await this.loadStateContext();
       } catch (e) {
         this.compareError = `Comparison failed: ${e.message}`;
       } finally {
@@ -1219,6 +2134,25 @@ function compareTool() {
 
     categoryCount(cat) {
       return this.mergedDiffs.filter(d => d.category === cat).length;
+    },
+
+    // Sort weight for the Gap column. Directional rows occupy a band above
+    // every context-only row, so ordering within each band is by magnitude
+    // but a context row can never outrank a scored one.
+    gapSortWeight(d) {
+      const hasCtx = d.ctx && d.ctx.zGap != null;
+      if (!hasCtx) return -1000;
+      const mag = Math.abs(d.ctx.zGap);
+      return this.isDirectional(d) ? mag : (mag - 1000);
+    },
+
+    // Sort weight for the Materiality column: substantive gaps first,
+    // then weaker ones, with noise and undirected context rows last.
+    materialityWeight(d) {
+      if (!this.isDirectional(d)) return -2;
+      if (d.moeVerdict && !d.moeVerdict.distinguishable) return -1;
+      if (!d.ctx || d.ctx.zGap == null) return 0;
+      return Math.abs(d.ctx.zGap);
     },
 
     // ── Formatting ───────────────────────────────────────────
@@ -1278,25 +2212,192 @@ function compareTool() {
       return varId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     },
 
+    // ── Statewide rank rendering ─────────────────────────────
+
+    ordinal(n) {
+      if (n == null) return '';
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    },
+
+    // Shows the rank, and — where the comparison basis was normalized —
+    // the per-10k rate it was computed on, so the normalization is
+    // visible in the table rather than hidden behind a tooltip.
+    rankLabel(d, which) {
+      if (!d.ctx) return '';
+      const r = which === 1 ? d.ctx.rank1 : d.ctx.rank2;
+      if (!r) return '';
+      const rank = this.ordinal(r) + ' of ' + d.ctx.n;
+      if (!d.ctx.normalized) return rank;
+      const nv = which === 1 ? d.ctx.nv1 : d.ctx.nv2;
+      if (nv == null) return rank;
+      const rate = nv >= 100 ? Math.round(nv).toLocaleString() : nv.toFixed(1);
+      return rate + '/10k · ' + rank;
+    },
+
+    // The standardized-gap label always carries the verdict, including on
+    // normalized rows where the raw Δ columns are intentionally uncolored.
+    zLabelClass(d) {
+      if (!d.ctx || d.ctx.zGap == null || !this.isDirectional(d)) return 'delta-neutral';
+      const adv = this.advantageA(d);
+      return adv > 0 ? 'delta-green' : (adv < 0 ? 'delta-red' : 'delta-neutral');
+    },
+
+    rankTitle(d, which) {
+      if (!d.ctx) return '';
+      const r = which === 1 ? d.ctx.rank1 : d.ctx.rank2;
+      const p = which === 1 ? d.ctx.pct1 : d.ctx.pct2;
+      const nm = which === 1 ? (this.geo1Name || 'County A') : (this.geo2Name || 'County B');
+      if (!r) return '';
+      const basis = d.ctx.normalized ? ' (ranked on count per 10,000 residents)' : '';
+      const dirNote = this.isDirectional(d)
+        ? 'Rank 1 = best on this indicator.'
+        : 'This indicator has no better/worse direction; rank is by value, highest first.';
+      const pctTxt = (p == null) ? '' :
+        ' Percentile in the state distribution: ' + (p * 100).toFixed(0) + '.';
+      return `${nm} ranks ${this.ordinal(r)} of ${d.ctx.n} counties in the state${basis}. ${dirNote}${pctTxt}`;
+    },
+
+    // Highlight only the extremes, and only where "best/worst" is meaningful.
+    rankClass(d, which) {
+      if (!d.ctx || !this.isDirectional(d)) return '';
+      const r = which === 1 ? d.ctx.rank1 : d.ctx.rank2;
+      if (!r) return '';
+      const n = d.ctx.n;
+      if (r <= Math.max(3, Math.round(n * 0.05))) return 'rank-top';
+      if (r >= n - Math.max(2, Math.round(n * 0.05))) return 'rank-bottom';
+      return '';
+    },
+
+    // ── Standardized gap bar ─────────────────────────────────
+
+    fmtZ(d) {
+      if (!d.ctx || d.ctx.zGap == null) return '—';
+      return Math.abs(d.ctx.zGap).toFixed(2) + ' SD';
+    },
+
+    // Neutral-direction indicators get a grey bar: there is no defensible
+    // better/worse reading, so coloring one would be misleading.
+    zBarClass(d) {
+      if (!d.ctx || d.ctx.zAdvantageA == null) return 'zbar-neutral';
+      if (!this.isDirectional(d)) return 'zbar-neutral';
+      if (d.ctx.zAdvantageA > 0) return 'zbar-better';
+      if (d.ctx.zAdvantageA < 0) return 'zbar-worse';
+      return 'zbar-neutral';
+    },
+
+    // Zero at centre; fill extends right when County A is better off,
+    // left when County B is. Magnitude clamped at 3 state SD.
+    zBarStyle(d) {
+      if (!d.ctx || d.ctx.zGap == null) return 'width:0;left:50%;';
+      const MAX = 3;
+      const adv = this.isDirectional(d) ? d.ctx.zAdvantageA : Math.abs(d.ctx.zGap);
+      const mag = Math.min(Math.abs(adv), MAX) / MAX;
+      const half = mag * 50;
+      if (!this.isDirectional(d)) {
+        // Centred, symmetric — magnitude only, no winner implied.
+        return `width:${half}%;left:${50 - half / 2}%;`;
+      }
+      return adv >= 0
+        ? `width:${half}%;left:50%;`
+        : `width:${half}%;left:${50 - half}%;`;
+    },
+
+    zTitle(d) {
+      if (!d.ctx || d.ctx.zGap == null) return '';
+      const a = this.geo1Name || 'County A';
+      const b = this.geo2Name || 'County B';
+      const mag = Math.abs(d.ctx.zGap).toFixed(2);
+      const basis = d.ctx.normalized ? ', computed on count per 10,000 residents' : '';
+      const head = `The two counties are ${mag} statewide standard deviations apart on this indicator${basis}.`;
+      const btwn = ` ${d.ctx.between} of ${d.ctx.n} counties fall between them.`;
+      if (!this.isDirectional(d)) {
+        return head + btwn + ' This indicator has no better/worse direction, so neither county is scored as ahead.';
+      }
+      const ahead = d.ctx.zAdvantageA > 0 ? a : b;
+      return head + btwn + ` ${ahead} is the better-off of the two.`;
+    },
+
+    // ── Materiality ──────────────────────────────────────────
+    // Preference order: a published margin of error beats a
+    // distributional description, because it is a real uncertainty
+    // measure rather than a descriptive convention.
+
+    materialityClass(d) {
+      if (!this.isDirectional(d)) return 'mat-context';
+      if (d.moeVerdict && !d.moeVerdict.distinguishable) return 'mat-noise';
+      if (!d.ctx || d.ctx.zGap == null) return 'mat-negligible';
+      const a = Math.abs(d.ctx.zGap);
+      if (a >= 0.8) return 'mat-large';
+      if (a >= 0.5) return 'mat-moderate';
+      if (a >= 0.2) return 'mat-small';
+      return 'mat-negligible';
+    },
+
+    materialityLabel(d) {
+      if (!this.isDirectional(d)) return 'context only';
+      if (d.moeVerdict && !d.moeVerdict.distinguishable) return 'within margin of error';
+      if (!d.ctx || d.ctx.zGap == null) return '—';
+      const a = Math.abs(d.ctx.zGap);
+      if (a >= 0.8) return 'large gap';
+      if (a >= 0.5) return 'moderate gap';
+      if (a >= 0.2) return 'small gap';
+      return 'negligible';
+    },
+
+    materialityDetail(d) {
+      if (!this.isDirectional(d)) return 'no better/worse direction';
+      if (d.moeVerdict && !d.moeVerdict.distinguishable) {
+        return '±' + this.fmtDiffAbs(Math.round(d.moeVerdict.moeDiff)) + ' at 90% confidence';
+      }
+      if (!d.ctx) return '';
+      const parts = [];
+      parts.push(d.ctx.between + ' of ' + d.ctx.n
+        + (d.ctx.between === 1 ? ' county between' : ' counties between'));
+      if (d.moeVerdict && d.moeVerdict.distinguishable) parts.push('exceeds ACS margin of error');
+      return parts.join(' · ');
+    },
+
     // ── Delta coloring ───────────────────────────────────────
     // diff = value2 - value1 (server-computed)
     // Green = County A better, Red = County A worse
     // higher_is_better: A better when diff < 0 (value1 > value2)
     // lower_is_better:  A better when diff > 0 (value1 < value2)
 
+    // Canonical better/worse verdict for a row: +1 County A, -1 County B,
+    // 0 when tied or when the indicator has no direction.
+    //
+    // For count-unit indicators this is decided on the population-normalized
+    // rate, not the raw count — otherwise the larger county is scored worse
+    // on nearly everything simply for being larger. Where no statewide
+    // context loaded, it falls back to the raw difference.
+    advantageA(d) {
+      const pol = this.polarity(d);
+      if (pol === 0) return 0;
+      if (d.ctx && d.ctx.zAdvantageA != null) {
+        return d.ctx.zAdvantageA > 0 ? 1 : (d.ctx.zAdvantageA < 0 ? -1 : 0);
+      }
+      if (d.diff == null) return 0;
+      // diff = value2 - value1, so A leads on a higher value when diff < 0.
+      const aHigher = -Math.sign(d.diff);
+      return aHigher * pol > 0 ? 1 : (aHigher * pol < 0 ? -1 : 0);
+    },
+
+    // Coloring for the raw Δ Abs / Δ % columns.
+    //
+    // On rows whose verdict is computed per-capita, the RAW difference is
+    // deliberately left uncolored: "+3,535 more cost-burdened households"
+    // is a true statement about counts, but it is not the basis on which
+    // this page decides who is better off, and coloring it green while the
+    // per-capita bar runs red would contradict itself inside one row. The
+    // verdict for those rows lives in the Gap (state SD) column, which
+    // states its normalization.
     deltaClass(d) {
       if (d.diff == null) return 'delta-neutral';
-      const dir = d.direction;
-      const diff = d.diff;
-
-      // Accept both naming conventions: higher_better / higher_is_better
-      if (dir === 'higher_is_better' || dir === 'higher_better') {
-        return diff < 0 ? 'delta-green' : (diff > 0 ? 'delta-red' : 'delta-neutral');
-      }
-      if (dir === 'lower_is_better' || dir === 'lower_better') {
-        return diff > 0 ? 'delta-green' : (diff < 0 ? 'delta-red' : 'delta-neutral');
-      }
-      return 'delta-neutral';
+      if (d.ctx && d.ctx.normalized) return 'delta-neutral';
+      const adv = this.advantageA(d);
+      return adv > 0 ? 'delta-green' : (adv < 0 ? 'delta-red' : 'delta-neutral');
     },
 
     // ── Category inference ───────────────────────────────────

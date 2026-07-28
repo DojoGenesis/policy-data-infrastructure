@@ -3,6 +3,48 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-07-28
+
+### Frontend rebuild — ADR-013 visual layer deployed (4 parallel tracks, PIP-115)
+
+**Root cause found:** the frontend problem was not missing features. Waves 1–4 shipped the ADR-011/012 *structure* (chat drawer, deep links, PWA, videos, Leaflet — all present and working), but the ADR-013 *visual layer* was never ported from casa-datos. `tokens.css` was already byte-identical to casa-datos; only `styles.css` lagged (49,160 → 59,068 bytes).
+
+- **`.thread` was used 19× in markup with zero style rules** — every section divider rendered as nothing. Now the full Rainbow spectrum ribbon (`--band-spectrum`), 1px, per ADR-013 §1D.
+- **`.site-footer` was used 6× with zero style rules** — footers rendered as unstyled raw text. Now styled; contrast verified 5.76:1 dark / 6.25:1 light (AA).
+- **Inline `<style>` blocks were defeating the shared stylesheet.** Page-level `<style>` loads *after* `/static/styles.css`, and 7 pages redefined `.thread` as the faded single-colour line ADR-013 §1D exists to replace. All stale inline `.thread`/`.site-footer` rules removed; markup preserved. Zero stale faded-thread rules remain in the built binary.
+- `fix:` `.skeleton`'s `background` shorthand was clobbering `.card`'s `--edge` layer — cards silently lost their spectral edge *during loading*, exactly when ADR-013 §3B says atmosphere should hold. `.skeleton-card`/`.skeleton-row` now carry spectral edge + amber pulse, with a reduced-motion variant.
+- `fix:` `@supports not (clip-path: inset())` fallback — without `clip-path`, `.section-band`'s 100vmax spread shadow was never trimmed and flooded the whole page.
+- `feat:` light-theme `mix-blend-mode: multiply` on `.thread` — raw Rainbow hues wash out on cream.
+
+### Chrome unification across 8 EN pages
+- Footers added to `narrative`, `chat`, `map` (were absent); all 10 pages now carry one.
+- Headers normalized byte-identical across 8 pages (differing only by `aria-current`); nav hrefs verified against the real route table in `cmd/pdi/serve.go` — Composites is served at `/composite` (singular).
+- `theme-toggle.js` now loaded on all 8 pages. **Known incomplete — see TODO:** the script self-mounts only beside `[data-agent-lang-pair]`, which only `lang-toggle.js` creates, and only `index.html` loads that. The toggle button therefore still renders nowhere; ADR-013 §3C is not yet satisfied.
+- `section-band` applied to all 9 sections of `about.html`. Deliberately **not** applied to `evidence`/`composites`/`narrative`/`chat`/`map` — those pages contain zero `<section>` elements (div-based Alpine conditional states), and ADR-011 §1A classifies Map/Chat/Composites as the **Interact** archetype, explicitly distinct from the section-band rhythm.
+- Removed a dead `.chat-toggle` button from `index.html`'s header (verified zero click handlers; `chat-drawer.js` self-mounts its own toggle).
+- **Corrected a false alarm:** `narrative.html`'s reported "4 headers" was a substring-grep artifact matching `.site-header-inner`, a print-media CSS selector, and a JS comment. Only one real `<header>` exists. No fix needed.
+
+### County profile — composite builder promoted (ADR-011 §2B Act 3, ADR-012 §3)
+- `<details class="composite-panel">` → a first-class section with an accessible button toggle (`aria-expanded`/`aria-controls`), open by default. `<details>`/`<summary>` count now 0.
+- Deep-link `?composite=open` behaviour preserved, reimplemented via `$watch` instead of a DOM `toggle` listener (removes a `$nextTick` race).
+- Alpine bindings 165 → 167, none lost.
+- Assessment: the three-act narrative structure (ADR-011 §2B) **was already built** — ACT 1/2/3 headers, ICE-conditioned defining sentence, per-layer context prose, and both Act 3 CTAs already matched the ADR. The only real gap was Layer 5 being collapsed, which this fixes.
+
+### Compare — statewide context replaces raw deltas
+- Every gap is now positioned against all 72 WI counties rather than only the other county: statewide rank + percentile, standardized gap (`(v_A − v_B) / SD_state`, matching `pkg/stats.ZScore`), direction-aware verdict, materiality test, and an ADR-011 §2C scoreboard ("better off on 9 of 13 directional indicators").
+- Polarity taken verbatim from the API's `direction` field; emerald/red per ADR-013 §2A. Across 51 variables: 33 `lower_is_better`, 4 `higher_is_better`, 12 `neutral`, 2 empty — the 14 undirected are rendered context-only, never coloured.
+- Materiality uses the Census difference formula `√(MOE_A² + MOE_B²)` at 90% confidence where MOEs are published, otherwise a distributional band plus an assumption-free counties-between count.
+- `fix:` **16 of 19 indicators are `unit: "count"`**, so raw comparison measured county *size*, not policy outcome. Counts are now normalized per-10k residents for rank/gap. This surfaced a genuine contradiction: 2 indicators (`owner_cost_burden_30pct_4`, `renter_cost_burden_30pct_4`) reverse which county is better off between raw-count and per-capita bases. Resolved with one canonical verdict; raw Δ columns left uncoloured on normalized rows.
+- Reliability dots now populate from real `margin_of_error` (previously always null).
+- Enabled by one `POST /v1/policy/query` returning all 72 counties in a single 225KB request. No Go changes.
+- Alpine bindings 83 → 125, none lost.
+
+### Repo hygiene
+- `chore:` deleted the repo-root `/frontend/` orphan fork (27 tracked files). `cmd/pdi/serve.go:24`'s `//go:embed all:frontend` resolves relative to `cmd/pdi/`, so the root copy was never served; it had diverged 5 commits and was a trap for agents editing the wrong tree.
+
+### Gates
+`go build ./...` ✅ · `go vet ./...` ✅ · `go test ./... -short` 10/10 packages ✅ · HTML tag balance even across all 10 pages ✅ · JS syntax clean ✅ · new assets confirmed embedded in the built binary ✅
+
 ## 2026-07-27
 
 ### Wave 1: Frontend Reconciliation + Deploy

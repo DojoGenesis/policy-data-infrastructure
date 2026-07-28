@@ -139,19 +139,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .last-viewed strong { color: var(--text); font-weight: 600; }
 
-  /* ═══════════════════════════════════════════════════════════════
-     THREAD RIBBONS — spectral dividers between acts
-     ═══════════════════════════════════════════════════════════ */
-
-  .thread {
-    width: 100%;
-    height: 1px;
-    border: 0;
-    margin: 0;
-    background: var(--band-spectrum);
-    position: relative;
-    z-index: 1;
-  }
+  /* .thread — now owned by /static/styles.css (ADR-013 §1D spectral ribbon); markup unchanged */
 
   /* ═══════════════════════════════════════════════════════════════
      ACT 2 · THE LAYERS — scroll-driven sections
@@ -394,17 +382,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .chart-bar-fill--neg { background: var(--gated); }
 
-  /* Composite panel */
-  .composite-panel summary {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--accent);
-    cursor: pointer;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    user-select: none;
+  /* Composite panel — promoted out of a disclosure triangle into a first-class layer section (ADR-012 §3) */
+  .composite-toggle-btn {
+    font-size: 0.8rem;
   }
-  .composite-panel summary:hover { color: var(--text); }
+  .composite-toggle-chevron {
+    transition: transform 200ms ease;
+    flex-shrink: 0;
+  }
+  .composite-toggle-chevron.is-open {
+    transform: rotate(180deg);
+  }
   .composite-inner {
     padding: clamp(16px, 2.5vw, 24px) 0;
   }
@@ -836,10 +824,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 </style>
 <link rel="stylesheet" href="/static/chat-drawer.css">
+<!-- Language toggle — replaces ES twin files per ADR-011 -->
+<script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <header class="site-header">
   <div class="site-header-inner">
@@ -847,18 +837,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
     <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/chat">Chat</a>
-      <a href="/about">About</a>
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
 
 <main id="main" x-data="countyProfile()" x-init="init()" @category-change="syncCountyURL()">
 
-  <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:0.85rem;margin:24px 0 0;padding:0 clamp(16px,3vw,32px);" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">← Back to counties</a>
+  <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:0.85rem;margin:24px 0 0;padding:0 clamp(16px,3vw,32px);" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''" data-en="← Back to counties" data-es="← Volver a los condados">← Back to counties</a>
 
   <!-- ══ LOADING ══ -->
   <div x-show="loading" x-cloak style="padding:0 clamp(16px,3vw,32px);">
@@ -873,7 +867,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ══ ERROR ══ -->
   <div x-show="error" x-cloak class="state-error" style="margin:24px clamp(16px,3vw,32px) 20px;">
     <span x-text="error"></span>
-    <button class="btn btn-ghost" @click="init()">Retry</button>
+    <button class="btn btn-ghost" @click="init()" data-en="Retry" data-es="Reintentar">Retry</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -905,16 +899,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
 
         <div class="portrait-actions">
-          <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Brief</a>
-          <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
-          <a :href="'/map?geoid='+geoid" class="btn btn-secondary">View on Map</a>
-          <a href="/chat" class="btn btn-secondary">Ask Chat</a>
+          <a :href="'/narrative?geoid='+geoid" class="btn btn-primary" data-en="Generate Brief" data-es="Generar Informe">Generate Brief</a>
+          <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary" data-en="Compare" data-es="Comparar">Compare</a>
+          <a :href="'/map?geoid='+geoid" class="btn btn-secondary" data-en="View on Map" data-es="Ver en el Mapa">View on Map</a>
+          <a href="/chat" class="btn btn-secondary" data-en="Ask Chat" data-es="Preguntar al Chat">Ask Chat</a>
         </div>
 
         <!-- Return-visit indicator (ADR-012 I6) -->
         <div class="last-viewed" x-show="lastVisitDate" x-cloak>
-          📅 You last viewed this county on <strong x-text="lastVisitDate"></strong>.
-          <span x-show="dataVintage" x-cloak> Data vintage: <strong x-text="dataVintage"></strong>.</span>
+          <span data-en="📅 You last viewed this county on " data-es="📅 Viste este condado por última vez el ">📅 You last viewed this county on </span><strong x-text="lastVisitDate"></strong>.
+          <span x-show="dataVintage" x-cloak><span data-en=" Data vintage: " data-es=" Año de referencia: "> Data vintage: </span><strong x-text="dataVintage"></strong>.</span>
         </div>
       </div>
     </section>
@@ -929,8 +923,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ── LAYER 1: Census Indicators ────────────────────────────── -->
     <section class="section-band" id="layer-1">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-1">Layer 1 · Primary Observation</span>
-        <h2>Indicator Dashboard</h2>
+        <span class="layer-indicator li-1" data-en="Layer 1 · Primary Observation" data-es="Capa 1 · Observación Primaria">Layer 1 · Primary Observation</span>
+        <h2 data-en="Indicator Dashboard" data-es="Panel de Indicadores">Indicator Dashboard</h2>
         <p class="layer-context" x-html="layer1Context"></p>
 
         <div x-show="indicatorsLoading" x-cloak>
@@ -938,7 +932,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
         <div x-show="indicatorsError" x-cloak class="state-error">
           <span x-text="indicatorsError"></span>
-          <button class="btn btn-ghost" @click="reloadIndicators()">Retry</button>
+          <button class="btn btn-ghost" @click="reloadIndicators()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
 
         <div x-show="!indicatorsLoading && !indicatorsError" x-cloak>
@@ -948,18 +942,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </template>
           </div>
 
-          <div x-show="visibleIndicators.length === 0" class="state-empty">No indicators found for this category.</div>
+          <div x-show="visibleIndicators.length === 0" class="state-empty" data-en="No indicators found for this category." data-es="No se encontraron indicadores para esta categoría.">No indicators found for this category.</div>
 
           <div x-show="visibleIndicators.length > 0" style="overflow-x:auto;">
             <table class="data-table" role="grid" aria-label="Indicator dashboard">
               <thead>
                 <tr>
-                  <th @click="indSortCol='name'; indSortDir*=-1" :class="{sorted: indSortCol==='name'}" style="cursor:pointer;user-select:none;">Indicator <span class="sort-arrow" x-text="indSortCol==='name' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
-                  <th @click="indSortCol='value'; indSortDir*=-1" :class="{sorted: indSortCol==='value'}" class="num" style="cursor:pointer;user-select:none;">Value <span class="sort-arrow" x-text="indSortCol==='value' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
-                  <th style="text-align:center;">State Rank</th>
-                  <th @click="indSortCol='reliability'; indSortDir*=-1" :class="{sorted: indSortCol==='reliability'}" style="text-align:center;cursor:pointer;user-select:none;">Reliability <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+                  <th @click="indSortCol='name'; indSortDir*=-1" :class="{sorted: indSortCol==='name'}" style="cursor:pointer;user-select:none;"><span data-en="Indicator" data-es="Indicador">Indicator</span> <span class="sort-arrow" x-text="indSortCol==='name' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+                  <th @click="indSortCol='value'; indSortDir*=-1" :class="{sorted: indSortCol==='value'}" class="num" style="cursor:pointer;user-select:none;"><span data-en="Value" data-es="Valor">Value</span> <span class="sort-arrow" x-text="indSortCol==='value' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+                  <th style="text-align:center;" data-en="State Rank" data-es="Rango Estatal">State Rank</th>
+                  <th @click="indSortCol='reliability'; indSortDir*=-1" :class="{sorted: indSortCol==='reliability'}" style="text-align:center;cursor:pointer;user-select:none;"><span data-en="Reliability" data-es="Confiabilidad">Reliability</span> <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
                   <th class="num">MOE</th>
-                  <th style="text-align:center;">Map</th>
+                  <th style="text-align:center;" data-en="Map" data-es="Mapa">Map</th>
                 </tr>
               </thead>
               <tbody>
@@ -992,7 +986,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- Video: Z-Score (Layer 1 Indicator Distribution) -->
     <div class="wrap" style="padding-bottom:0;">
       <div x-data="videoPlayer('zscore')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label">📹 How to Read the Distribution</div>
+        <div class="video-label" data-en="📹 How to Read the Distribution" data-es="📹 Cómo Leer la Distribución">📹 How to Read the Distribution</div>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1021,28 +1015,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ── LAYER 2: Validated Features ───────────────────────────── -->
     <section class="section-band" id="layer-2">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-2">Layer 2 · Research-Grounded Measures</span>
-        <h2>Validated Features</h2>
+        <span class="layer-indicator li-2" data-en="Layer 2 · Research-Grounded Measures" data-es="Capa 2 · Medidas con Base en Investigación">Layer 2 · Research-Grounded Measures</span>
+        <h2 data-en="Validated Features" data-es="Características Validadas">Validated Features</h2>
         <p class="layer-context" x-show="!iceError && iceScore != null">
-          <span>ICE score: </span><strong x-text="iceScore ? iceScore.toFixed(3) : '—'"></strong>
+          <span data-en="ICE score: " data-es="Puntaje ICE: ">ICE score: </span><strong x-text="iceScore ? iceScore.toFixed(3) : '—'"></strong>
           <span x-text="' (' + (icePercentile != null ? icePercentile.toFixed(0) : '?') + 'th percentile). That means '"></span>
           <strong x-text="geo?.name || 'this county'"></strong>
           <span> is </span><em x-text="layer2ContextRel"></em><span>. The ICE index measures the gap between concentrated privilege and concentrated deprivation — the wider the gap, the more polarized the community (Krieger et al. 2016).</span>
         </p>
-        <p x-show="iceScore == null && !iceError" class="layer-context">Computing the Index of Concentration at the Extremes for <strong x-text="geo?.name || 'this county'"></strong>…</p>
+        <p x-show="iceScore == null && !iceError" class="layer-context"><span data-en="Computing the Index of Concentration at the Extremes for " data-es="Calculando el Índice de Concentración en los Extremos para ">Computing the Index of Concentration at the Extremes for </span><strong x-text="geo?.name || 'this county'"></strong>…</p>
 
         <!-- ICE Score -->
         <div class="feature-card">
-          <div class="feature-title">ICE — Index of Concentration at the Extremes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Krieger et al. 2016)</span></div>
+          <div class="feature-title"><span data-en="ICE — Index of Concentration at the Extremes" data-es="ICE — Índice de Concentración en los Extremos">ICE — Index of Concentration at the Extremes</span> <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Krieger et al. 2016)</span></div>
           <div x-show="iceError" x-cloak class="state-error" style="margin:12px 0;">
             <span x-text="iceError"></span>
           </div>
           <div x-show="!iceError">
             <div class="feature-grid">
-              <div class="feature-stat"><div class="fs-val" x-text="fmtICE(iceScore)"></div><div class="fs-lbl">ICE Score</div></div>
-              <div class="feature-stat"><div class="fs-val" x-text="icePercentile != null ? icePercentile.toFixed(1)+'th' : '—'"></div><div class="fs-lbl">State Percentile</div></div>
-              <div class="feature-stat"><div class="fs-val" x-text="popPOC != null ? popPOC.toFixed(1)+'%' : '—'"></div><div class="fs-lbl">% People of Color</div></div>
-              <div class="feature-stat"><div class="fs-val" x-text="povertyRate != null ? povertyRate.toFixed(1)+'%' : '—'"></div><div class="fs-lbl">Poverty Rate</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="fmtICE(iceScore)"></div><div class="fs-lbl" data-en="ICE Score" data-es="Puntaje ICE">ICE Score</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="icePercentile != null ? icePercentile.toFixed(1)+'th' : '—'"></div><div class="fs-lbl" data-en="State Percentile" data-es="Percentil Estatal">State Percentile</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="popPOC != null ? popPOC.toFixed(1)+'%' : '—'"></div><div class="fs-lbl" data-en="% People of Color" data-es="% Personas de Color">% People of Color</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="povertyRate != null ? povertyRate.toFixed(1)+'%' : '—'"></div><div class="fs-lbl" data-en="Poverty Rate" data-es="Tasa de Pobreza">Poverty Rate</div></div>
             </div>
             <div class="feature-interp" x-show="icePercentile != null" x-html="iceInterpretation()"></div>
           </div>
@@ -1050,14 +1044,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Dissimilarity -->
         <div class="feature-card" x-show="dissimBW !== null || dissimHW !== null">
-          <div class="feature-title">Dissimilarity Index <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Massey &amp; Denton 1988)</span></div>
+          <div class="feature-title"><span data-en="Dissimilarity Index" data-es="Índice de Disimilitud">Dissimilarity Index</span> <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Massey &amp; Denton 1988)</span></div>
           <div x-show="dissimError" x-cloak class="state-error" style="margin:12px 0;">
             <span x-text="dissimError"></span>
           </div>
           <div x-show="!dissimError">
             <div class="feature-grid">
-              <div class="feature-stat"><div class="fs-val" x-text="dissimBW != null ? dissimBW.toFixed(3) : '—'"></div><div class="fs-lbl">Black-White D</div></div>
-              <div class="feature-stat"><div class="fs-val" x-text="dissimHW != null ? dissimHW.toFixed(3) : '—'"></div><div class="fs-lbl">Hispanic-White D</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="dissimBW != null ? dissimBW.toFixed(3) : '—'"></div><div class="fs-lbl" data-en="Black-White D" data-es="D Negro-Blanco">Black-White D</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="dissimHW != null ? dissimHW.toFixed(3) : '—'"></div><div class="fs-lbl" data-en="Hispanic-White D" data-es="D Hispano-Blanco">Hispanic-White D</div></div>
               <div style="grid-column:1/-1;"><div class="feature-interp" x-text="dissimInterpretation()"></div></div>
             </div>
           </div>
@@ -1065,8 +1059,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Reliability Distribution -->
         <div class="card card-spectral">
-          <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">Indicator Reliability Distribution</div>
-          <div x-show="!reliabilityCounts.any" style="font-size:0.8rem;color:var(--muted);">No reliability data available.</div>
+          <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;" data-en="Indicator Reliability Distribution" data-es="Distribución de Confiabilidad de Indicadores">Indicator Reliability Distribution</div>
+          <div x-show="!reliabilityCounts.any" style="font-size:0.8rem;color:var(--muted);" data-en="No reliability data available." data-es="No hay datos de confiabilidad disponibles.">No reliability data available.</div>
           <div x-show="reliabilityCounts.any" class="reliability-dist">
             <template x-for="r in ['high','moderate','low','unknown']" :key="r">
               <template x-if="reliabilityCounts[r]">
@@ -1085,7 +1079,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- Video: ICE (Layer 2 Validated Features) -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
       <div x-data="videoPlayer('ice')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label">📹 Understanding the ICE Score</div>
+        <div class="video-label" data-en="📹 Understanding the ICE Score" data-es="📹 Entendiendo el Puntaje ICE">📹 Understanding the ICE Score</div>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1114,8 +1108,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ── LAYER 3: Factor Profile ───────────────────────────────── -->
     <section class="section-band" id="layer-3">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-3">Layer 3 · Derived Structure</span>
-        <h2>Factor Profile</h2>
+        <span class="layer-indicator li-3" data-en="Layer 3 · Derived Structure" data-es="Capa 3 · Estructura Derivada">Layer 3 · Derived Structure</span>
+        <h2 data-en="Factor Profile" data-es="Perfil de Factores">Factor Profile</h2>
         <p class="layer-context" x-html="layer3Context"></p>
 
         <div x-show="factorsLoading" style="display:none">
@@ -1123,10 +1117,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
         <div x-show="factorsError" style="display:none" class="state-error">
           <span x-text="factorsError"></span>
-          <button class="btn btn-ghost" @click="loadFactors()">Retry</button>
+          <button class="btn btn-ghost" @click="loadFactors()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
         <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" style="display:none">
-          Factor analysis has not been computed for this geography. Run <code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code> to generate scores.
+          <span data-en="Factor analysis has not been computed for this geography. Run " data-es="El análisis factorial no se ha calculado para esta geografía. Ejecuta ">Factor analysis has not been computed for this geography. Run </span><code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code><span data-en=" to generate scores." data-es=" para generar puntajes."> to generate scores.</span>
         </div>
 
         <div x-show="!factorsLoading && !factorsError && factors.length > 0" style="display:none" class="card card-spectral">
@@ -1149,8 +1143,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ── LAYER 4: Spatial Clusters ─────────────────────────────── -->
     <section class="section-band" id="layer-4">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-4">Layer 4 · Geography as Signal</span>
-        <h2>Spatial Clusters (LISA)</h2>
+        <span class="layer-indicator li-4" data-en="Layer 4 · Geography as Signal" data-es="Capa 4 · Geografía como Señal">Layer 4 · Geography as Signal</span>
+        <h2 data-en="Spatial Clusters (LISA)" data-es="Clústeres Espaciales (LISA)">Spatial Clusters (LISA)</h2>
         <p class="layer-context" x-html="layer4Context"></p>
 
         <div x-show="lisaLoading" style="display:none">
@@ -1158,14 +1152,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
         <div x-show="lisaError" style="display:none" class="state-error">
           <span x-text="lisaError"></span>
-          <button class="btn btn-ghost" @click="loadLISA()">Retry</button>
+          <button class="btn btn-ghost" @click="loadLISA()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
         <div x-show="!lisaLoading && !lisaError && lisaClusters.length === 0 && !lisaEmpty" class="state-empty" style="display:none">
-          <p>Run spatial analysis to see clusters →</p>
-          <a href="/map" style="color:var(--accent);">View methodology &amp; launch analysis</a>
+          <p data-en="Run spatial analysis to see clusters →" data-es="Ejecuta el análisis espacial para ver los clústeres →">Run spatial analysis to see clusters →</p>
+          <a href="/map" style="color:var(--accent);" data-en="View methodology &amp; launch analysis" data-es="Ver metodología y lanzar análisis">View methodology &amp; launch analysis</a>
         </div>
         <div x-show="!lisaLoading && !lisaError && lisaEmpty" class="state-empty" style="display:none">
-          No LISA analyses found. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a>
+          <span data-en="No LISA analyses found. " data-es="No se encontraron análisis LISA. ">No LISA analyses found. </span><a href="/map" style="color:var(--accent);" data-en="Run spatial analysis →" data-es="Ejecutar análisis espacial →">Run spatial analysis →</a>
         </div>
 
         <div x-show="!lisaLoading && !lisaError && lisaClusters.length > 0" style="display:none">
@@ -1187,7 +1181,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- Video: LISA Cluster Map (Layer 4 Spatial Clusters) -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
       <div x-data="videoPlayer('lisa_cluster_map')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label">📹 Reading Spatial Patterns</div>
+        <div class="video-label" data-en="📹 Reading Spatial Patterns" data-es="📹 Leyendo Patrones Espaciales">📹 Reading Spatial Patterns</div>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1216,23 +1210,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ── LAYER 5: Composite Builder ────────────────────────────── -->
     <section class="section-band" id="layer-5">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-5">Layer 5 · Query-Time Construction</span>
-        <h2>Custom Composite Index</h2>
+        <span class="layer-indicator li-5" data-en="Layer 5 · Query-Time Construction" data-es="Capa 5 · Construcción en Tiempo de Consulta">Layer 5 · Query-Time Construction</span>
+        <div class="layer-heading">
+          <h2 data-en="Custom Composite Index" data-es="Índice Compuesto Personalizado">Custom Composite Index</h2>
+          <button type="button" class="btn btn-ghost composite-toggle-btn" @click="compositeOpen = !compositeOpen" :aria-expanded="compositeOpen ? 'true' : 'false'" aria-controls="composite-panel-body">
+            <span x-text="compositeOpen ? 'Collapse builder' : 'Build Custom Index'"></span>
+            <svg class="composite-toggle-chevron" :class="{'is-open': compositeOpen}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
         <p class="layer-context" x-html="layer5Context"></p>
 
-        <details class="composite-panel">
-          <summary>Build Custom Index</summary>
+        <div class="composite-panel" id="composite-panel-body" x-show="compositeOpen" x-cloak>
           <div class="composite-inner">
             <div class="composite-controls">
               <select x-model="compositeMethod">
-                <option value="geometric_mean">Geometric Mean</option>
-                <option value="weighted_zscore">Weighted Z-Score</option>
+                <option value="geometric_mean" data-en="Geometric Mean" data-es="Media Geométrica">Geometric Mean</option>
+                <option value="weighted_zscore" data-en="Weighted Z-Score" data-es="Z-Score Ponderado">Weighted Z-Score</option>
               </select>
-              <button class="preset-chip" @click="loadPresetNARI()">Load NARI v2</button>
+              <button class="preset-chip" @click="loadPresetNARI()" data-en="Load NARI v2" data-es="Cargar NARI v2">Load NARI v2</button>
             </div>
-            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">Select variables (minimum 2). Weights normalize to sum 1.0 automatically.</p>
+            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;" data-en="Select variables (minimum 2). Weights normalize to sum 1.0 automatically." data-es="Selecciona variables (mínimo 2). Los pesos se normalizan automáticamente para sumar 1.0.">Select variables (minimum 2). Weights normalize to sum 1.0 automatically.</p>
 
-            <div x-show="compositeVars.length === 0" style="font-size:0.8rem;color:var(--muted);">No variables with values available. Indicator data must be loaded first.</div>
+            <div x-show="compositeVars.length === 0" style="font-size:0.8rem;color:var(--muted);" data-en="No variables with values available. Indicator data must be loaded first." data-es="No hay variables con valores disponibles. Los datos de indicadores deben cargarse primero.">No variables with values available. Indicator data must be loaded first.</div>
 
             <template x-for="v in compositeVars" :key="v.id">
               <label class="composite-var-row" :title="'Direction: ' + (v.direction||'unknown')">
@@ -1242,33 +1241,33 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               </label>
             </template>
 
-            <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:14px;">Compute Composite</button>
+            <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:14px;" data-en="Compute Composite" data-es="Calcular Compuesto">Compute Composite</button>
             <div x-show="compositeComputing" class="loader" style="padding:20px 0;"><div class="loader-spinner"></div></div>
 
             <div x-show="compositeResult && !compositeComputing" style="display:none" class="composite-result-card">
               <div class="composite-score-row">
                 <div>
                   <div class="cr-score-num" x-text="compositeResult.score != null ? compositeResult.score.toFixed(3) : '—'"></div>
-                  <div class="cr-score-lbl">Composite Score</div>
+                  <div class="cr-score-lbl" data-en="Composite Score" data-es="Puntaje Compuesto">Composite Score</div>
                 </div>
                 <div>
                   <span style="font-weight:700;font-size:1.1rem;color:var(--text);" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></span>
-                  <div class="cr-score-lbl">Variables Used</div>
+                  <div class="cr-score-lbl" data-en="Variables Used" data-es="Variables Utilizadas">Variables Used</div>
                 </div>
                 <div x-show="compositeResult.missing_variables && compositeResult.missing_variables.length > 0">
                   <span style="font-weight:700;font-size:1.1rem;color:var(--gated);" x-text="compositeResult.missing_variables.length"></span>
-                  <div class="cr-score-lbl">Missing</div>
+                  <div class="cr-score-lbl" data-en="Missing" data-es="Faltantes">Missing</div>
                 </div>
               </div>
 
               <div x-show="sensitivityStability !== null" class="composite-stability">
                 <strong x-text="sensitivityLabel()"></strong>
-                <span x-show="sensitivityStability !== null">ranking is <strong style="color:var(--accent);" x-text="(sensitivityStability*100).toFixed(0)+'%'"></strong> stable under ±20% weight perturbation</span>
+                <span x-show="sensitivityStability !== null"><span data-en="ranking is " data-es="la clasificación es ">ranking is </span><strong style="color:var(--accent);" x-text="(sensitivityStability*100).toFixed(0)+'%'"></strong><span data-en=" stable under ±20% weight perturbation" data-es=" estable ante una perturbación de peso del ±20%"> stable under ±20% weight perturbation</span></span>
               </div>
 
               <div x-show="compositeResult.contributing_variables && compositeResult.contributing_variables.length > 0">
                 <table class="composite-contrib-table">
-                  <thead><tr><th>Variable</th><th style="text-align:right;">Value</th><th style="text-align:right;">Weight</th></tr></thead>
+                  <thead><tr><th data-en="Variable" data-es="Variable">Variable</th><th style="text-align:right;" data-en="Value" data-es="Valor">Value</th><th style="text-align:right;" data-en="Weight" data-es="Peso">Weight</th></tr></thead>
                   <tbody>
                     <template x-for="cv in compositeResult.contributing_variables" :key="cv.variable_id">
                       <tr>
@@ -1285,7 +1284,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <span x-text="compositeError"></span>
             </div>
           </div>
-        </details>
+        </div>
       </div>
     </section>
 
@@ -1299,9 +1298,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
          ═══════════════════════════════════════════════════════════ -->
     <section class="section-band" id="levers">
       <div class="wrap layer-inner">
-        <span class="layer-indicator li-1" style="color:var(--tp-lime);">Act 3 · Policy Levers</span>
+        <span class="layer-indicator li-1" style="color:var(--tp-lime);" data-en="Act 3 · Policy Levers" data-es="Acto 3 · Palancas de Política">Act 3 · Policy Levers</span>
         <span class="layer-indicator li-1" style="color:var(--tp-lime);" x-show="false"></span>
-        <h2>Levers</h2>
+        <h2 data-en="Levers" data-es="Palancas">Levers</h2>
         <p class="layer-context" x-html="leversContext"></p>
 
         <!-- Evidence Cards -->
@@ -1310,7 +1309,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
         <div x-show="evidenceError" x-cloak class="state-error">
           <span x-text="evidenceError"></span>
-          <button class="btn btn-ghost" @click="loadEvidence()">Retry</button>
+          <button class="btn btn-ghost" @click="loadEvidence()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
 
         <div class="levers-grid" x-show="!evidenceLoading && !evidenceError && evidenceCards.length > 0" x-cloak>
@@ -1327,26 +1326,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </template>
         </div>
 
-        <div x-show="!evidenceLoading && !evidenceError && evidenceCards.length === 0" class="state-empty" x-cloak>
+        <div x-show="!evidenceLoading && !evidenceError && evidenceCards.length === 0" class="state-empty" x-cloak data-en="No evidence cards available yet. Cards are generated by the analysis pipeline." data-es="Aún no hay fichas de evidencia disponibles. Las fichas se generan mediante el pipeline de análisis.">
           No evidence cards available yet. Cards are generated by the analysis pipeline.
         </div>
 
         <!-- View all evidence link -->
         <div x-show="evidenceCards.length > 0" style="text-align:center;margin-top:clamp(16px,2.5vw,24px);" x-cloak>
-          <a href="/evidence" class="btn btn-secondary">View all evidence cards →</a>
+          <a href="/evidence" class="btn btn-secondary" data-en="View all evidence cards →" data-es="Ver todas las fichas de evidencia →">View all evidence cards →</a>
         </div>
 
         <!-- CTA: Five Mornings + Compare -->
         <div class="levers-cta">
           <div class="levers-cta-card">
-            <h3>📖 Generate a Five Mornings Narrative</h3>
-            <p>The full narrative weaves census data into five human-centered mornings — one for each structural archetype in this county.</p>
-            <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Narrative</a>
+            <h3 data-en="📖 Generate a Five Mornings Narrative" data-es="📖 Generar una Narrativa Five Mornings">📖 Generate a Five Mornings Narrative</h3>
+            <p data-en="The full narrative weaves census data into five human-centered mornings — one for each structural archetype in this county." data-es="La narrativa completa entreteje datos censales en cinco mañanas centradas en las personas — una por cada arquetipo estructural de este condado.">The full narrative weaves census data into five human-centered mornings — one for each structural archetype in this county.</p>
+            <a :href="'/narrative?geoid='+geoid" class="btn btn-primary" data-en="Generate Narrative" data-es="Generar Narrativa">Generate Narrative</a>
           </div>
           <div class="levers-cta-card">
-            <h3>🔍 Compare with a Neighboring County</h3>
-            <p>See how this county's profile stacks up against its neighbors — where does it lead, and where does it lag?</p>
-            <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Open Compare</a>
+            <h3 data-en="🔍 Compare with a Neighboring County" data-es="🔍 Comparar con un Condado Vecino">🔍 Compare with a Neighboring County</h3>
+            <p data-en="See how this county's profile stacks up against its neighbors — where does it lead, and where does it lag?" data-es="Descubre cómo se compara el perfil de este condado con sus vecinos — ¿dónde lidera y dónde se queda atrás?">See how this county's profile stacks up against its neighbors — where does it lead, and where does it lag?</p>
+            <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary" data-en="Open Compare" data-es="Abrir Comparación">Open Compare</a>
             <div style="margin-top:10px;font-size:0.72rem;color:var(--subtle);">
               <template x-for="n in neighborSuggestions" :key="n.geoid">
                 <a :href="'/compare?geoid1='+geoid+'&geoid2='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="'vs ' + n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
@@ -1361,8 +1360,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="wrap" style="padding-bottom:clamp(32px,5vw,48px);" x-show="children.length > 0">
       <hr class="thread">
       <div class="layer-inner">
-        <span class="layer-indicator li-4">Geography Hierarchy</span>
-        <h2>Census Tracts</h2>
+        <span class="layer-indicator li-4" data-en="Geography Hierarchy" data-es="Jerarquía Geográfica">Geography Hierarchy</span>
+        <h2 data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</h2>
         <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + ' census tracts within ' + geo.name"></p>
         <div class="tract-grid">
           <template x-for="c in children.slice(0,48)" :key="c.geoid">
@@ -1373,7 +1372,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </template>
         </div>
         <div x-show="children.length > 48" class="tract-trunc">
-          Showing 48 of <span x-text="children.length"></span> tracts.
+          <span data-en="Showing 48 of " data-es="Mostrando 48 de ">Showing 48 of </span><span x-text="children.length"></span><span data-en=" tracts." data-es=" secciones censales."> tracts.</span>
         </div>
       </div>
     </div>
@@ -1385,6 +1384,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   Policy Data Infrastructure · <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a> · Apache-2.0
 </footer>
 
+<script src="/static/theme-toggle.js"></script>
 <script src="/static/lib/deeplink.js"></script>
 <script>
 function countyProfile() {
@@ -1434,6 +1434,7 @@ function countyProfile() {
     compositeComputing: false,
     compositeError: '',
     sensitivityStability: null,
+    compositeOpen: true,
 
     // Evidence cards (Act 3)
     evidenceCards: [],
@@ -1699,18 +1700,14 @@ function countyProfile() {
       // Inject Copy Link button
       PDIDeepLink.autoInjectCopyButton();
 
-      // Watch composite details toggle for URL sync
-      const compositeDetails = document.querySelector('.composite-panel');
-      if (compositeDetails) {
-        const self = this;
-        compositeDetails.addEventListener('toggle', function () {
-          if (compositeDetails.open) {
-            PDIDeepLink.syncURL({ geoid: self.geoid, tab: self.activeCategory, composite: 'open' });
-          } else {
-            PDIDeepLink.syncURL({ geoid: self.geoid, tab: self.activeCategory });
-          }
-        });
-      }
+      // Watch composite panel toggle for URL sync (ADR-012 I4 deep links)
+      this.$watch('compositeOpen', (isOpen) => {
+        if (isOpen) {
+          PDIDeepLink.syncURL({ geoid: this.geoid, tab: this.activeCategory, composite: 'open' });
+        } else {
+          PDIDeepLink.syncURL({ geoid: this.geoid, tab: this.activeCategory });
+        }
+      });
 
       this.loading = true;
       this.error = '';
@@ -1811,13 +1808,8 @@ function countyProfile() {
       }
 
       if (compositeParam === 'open') {
-        // Open the composite builder details element
-        this.$nextTick(() => {
-          const detailsEl = document.querySelector('.composite-panel');
-          if (detailsEl && !detailsEl.open) {
-            detailsEl.open = true;
-          }
-        });
+        // Open the composite builder panel (open by default already; explicit for shared links)
+        this.compositeOpen = true;
       }
     },
 

@@ -17,15 +17,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
 [x-cloak] { display: none !important; }
 
-/* ── Thread divider ribbons ──────────────────────────────────── */
-.thread {
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--border), transparent);
-  margin: var(--section-gap, 48px) 0;
-  border: 0;
-}
-
 /* ── About-page layout ──────────────────────────────────────────── */
 .about-section { margin-bottom: var(--section-gap, 48px); }
 
@@ -328,21 +319,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 .about-section .table-wrapper .data-table { margin: 0; }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/about" aria-current="page">About</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
+      <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
+      <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
+      <a href="/compare" data-en="Compare" data-es="Comparar">Compare</a>
+      <a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+      <a href="/about" aria-current="page" data-en="About" data-es="Acerca de">About</a>
     </nav>
   </div>
 </header>
@@ -350,10 +348,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <main id="main" class="wrap-narrow" x-data="aboutPage()" x-init="init()">
 
   <!-- ── Platform Overview ────────────────────────────────────────── -->
-  <section class="about-section reveal" id="overview">
-    <span class="section-tag">About PDI</span>
-    <h1 class="about-section-title">Platform Overview</h1>
-    <p class="about-section-subtitle">An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts.</p>
+  <section class="about-section section-band reveal" id="overview">
+    <span class="section-tag" data-en="About PDI" data-es="Acerca de PDI">About PDI</span>
+    <h1 class="about-section-title" data-en="Platform Overview" data-es="Resumen de la Plataforma">Platform Overview</h1>
+    <p class="about-section-subtitle" data-en="An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts." data-es="Una plataforma nacional de datos de políticas de código abierto que integra datos de censo, salud, vivienda, medio ambiente y educación a nivel de sección censal para más de 85,000 secciones censales de EE. UU.">An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts.</p>
 
     <p>PDI ingests public data from
       <strong x-show="!overviewLoading && sourceCount != null" x-text="sourceCount + ' sources'"></strong>
@@ -371,10 +369,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Five-Layer Architecture ──────────────────────────────────── -->
-  <section class="about-section reveal" id="architecture">
-    <span class="section-tag">Architecture</span>
-    <h2 class="about-section-title">Five-Layer Statistical Architecture</h2>
-    <p class="about-section-subtitle">Each layer builds on the one below. Composites exist only at the top — computed at query time, never stored as truth.</p>
+  <section class="about-section section-band section-band--alt reveal" id="architecture">
+    <span class="section-tag" data-en="Architecture" data-es="Arquitectura">Architecture</span>
+    <h2 class="about-section-title" data-en="Five-Layer Statistical Architecture" data-es="Arquitectura Estadística de Cinco Capas">Five-Layer Statistical Architecture</h2>
+    <p class="about-section-subtitle" data-en="Each layer builds on the one below. Composites exist only at the top — computed at query time, never stored as truth." data-es="Cada capa se construye sobre la anterior. Los Composites existen solo en la cima — se calculan en el momento de la consulta, nunca se almacenan como verdad absoluta.">Each layer builds on the one below. Composites exist only at the top — computed at query time, never stored as truth.</p>
 
     <div class="arch-diagram">
       <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
@@ -408,18 +406,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Data Sources (live from API) ─────────────────────────────── -->
-  <section class="about-section reveal" id="sources" x-data="sourcesData()" x-init="init()">
-    <span class="section-tag">Data Sources</span>
-    <h2 class="about-section-title">Data Sources</h2>
-    <p class="about-section-subtitle">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
+  <section class="about-section section-band reveal" id="sources" x-data="sourcesData()" x-init="init()">
+    <span class="section-tag" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</span>
+    <h2 class="about-section-title" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</h2>
+    <p class="about-section-subtitle" data-en="Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level." data-es="Datos en vivo obtenidos de la API de PDI al cargar la p\u00e1gina. Se puede buscar por nombre, tipo, descripci\u00f3n o nivel geogr\u00e1fico.">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
 
-    <div x-show="loading" x-cloak class="loading-row">Loading sources&hellip;</div>
+    <div x-show="loading" x-cloak class="loading-row" data-en="Loading sources&hellip;" data-es="Cargando fuentes&hellip;">Loading sources&hellip;</div>
     <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
-          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" aria-label="Search sources" x-model="search">
+          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" data-en-placeholder="Search sources by name, type, or geographic level&hellip;" data-es-placeholder="Buscar fuentes por nombre, tipo o nivel geogr\u00e1fico&hellip;" aria-label="Search sources" x-model="search">
         </div>
         <div x-show="filteredSources.length === 0" class="state-empty" x-text="search ? 'No sources match \u201c' + search + '\u201d.' : 'No sources available.'"></div>
         <template x-if="filteredSources.length > 0">
@@ -427,10 +425,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Source</th>
-                  <th>Type</th>
-                  <th>Geographic Levels</th>
-                  <th>Description</th>
+                  <th data-en="Source" data-es="Fuente">Source</th>
+                  <th data-en="Type" data-es="Tipo">Type</th>
+                  <th data-en="Geographic Levels" data-es="Niveles Geogr\u00e1ficos">Geographic Levels</th>
+                  <th data-en="Description" data-es="Descripci\u00f3n">Description</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,8 +436,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <tr>
                     <td style="font-weight:500;" x-text="s.name"></td>
                     <td>
-                      <span class="badge badge-type-api" x-show="s.type === 'api'">API</span>
-                      <span class="badge badge-type-file" x-show="s.type === 'file'">FILE</span>
+                      <span class="badge badge-type-api" x-show="s.type === 'api'" data-en="API" data-es="API">API</span>
+                      <span class="badge badge-type-file" x-show="s.type === 'file'" data-en="FILE" data-es="ARCHIVO">FILE</span>
                       <span class="badge badge-type-unsure" x-show="!s.type || (s.type !== 'api' && s.type !== 'file')" x-text="s.type || '—'"></span>
                     </td>
                     <td x-text="s.levels ? s.levels.join(', ') : '—'"></td>
@@ -458,10 +456,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Statistical Methodology ──────────────────────────────────── -->
-  <section class="about-section reveal" id="methodology">
-    <span class="section-tag">Methodology</span>
-    <h2 class="about-section-title">Statistical Methodology</h2>
-    <p class="about-section-subtitle">Six core methods. Each grounded in peer-reviewed research.</p>
+  <section class="about-section section-band section-band--alt reveal" id="methodology">
+    <span class="section-tag" data-en="Methodology" data-es="Metodología">Methodology</span>
+    <h2 class="about-section-title" data-en="Statistical Methodology" data-es="Metodología Estadística">Statistical Methodology</h2>
+    <p class="about-section-subtitle" data-en="Six core methods. Each grounded in peer-reviewed research." data-es="Seis métodos centrales. Cada uno respaldado por investigación revisada por pares.">Six core methods. Each grounded in peer-reviewed research.</p>
 
     <div class="method-grid">
       <div class="method-card">
@@ -502,18 +500,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Variable Catalog (live from API) ─────────────────────────── -->
-  <section class="about-section reveal" id="variables" x-data="variablesData()" x-init="init()">
-    <span class="section-tag">Variables</span>
-    <h2 class="about-section-title">Variable Catalog</h2>
-    <p class="about-section-subtitle">Validated variables across multiple sources. Searchable and grouped by data source.</p>
+  <section class="about-section section-band reveal" id="variables" x-data="variablesData()" x-init="init()">
+    <span class="section-tag" data-en="Variables" data-es="Variables">Variables</span>
+    <h2 class="about-section-title" data-en="Variable Catalog" data-es="Catálogo de Variables">Variable Catalog</h2>
+    <p class="about-section-subtitle" data-en="Validated variables across multiple sources. Searchable and grouped by data source." data-es="Variables validadas de múltiples fuentes. Se pueden buscar y agrupar por fuente de datos.">Validated variables across multiple sources. Searchable and grouped by data source.</p>
 
-    <div x-show="loading" x-cloak class="loading-row">Loading variable catalog&hellip;</div>
+    <div x-show="loading" x-cloak class="loading-row" data-en="Loading variable catalog&hellip;" data-es="Cargando catálogo de variables&hellip;">Loading variable catalog&hellip;</div>
     <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
-          <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" aria-label="Search variables" x-model="search">
+          <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" data-en-placeholder="Search variables by name, ID, description, or source&hellip;" data-es-placeholder="Buscar variables por nombre, ID, descripción o fuente&hellip;" aria-label="Search variables" x-model="search">
         </div>
         <div x-show="groupedVariables.length === 0" class="state-empty" x-text="search ? 'No variables match \u201c' + search + '\u201d.' : 'No variables available.'"></div>
         <template x-for="[name, vars] in groupedVariables" :key="name">
@@ -537,41 +535,41 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Manim Video Gallery ──────────────────────────────────────── -->
-  <section class="about-section reveal" id="manim">
-    <span class="section-tag">Animations</span>
-    <h2 class="about-section-title">Manim Video Gallery</h2>
-    <p class="about-section-subtitle">Statistical concept animations explaining the methodology. Coming soon.</p>
+  <section class="about-section section-band section-band--alt reveal" id="manim">
+    <span class="section-tag" data-en="Animations" data-es="Animaciones">Animations</span>
+    <h2 class="about-section-title" data-en="Manim Video Gallery" data-es="Galería de Videos de Manim">Manim Video Gallery</h2>
+    <p class="about-section-subtitle" data-en="Statistical concept animations explaining the methodology. Coming soon." data-es="Animaciones de conceptos estadísticos que explican la metodología. Próximamente.">Statistical concept animations explaining the methodology. Coming soon.</p>
 
     <div class="manim-grid">
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>z-score Normalization</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="z-score Normalization" data-es="Normalización z-score">z-score Normalization</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>ICE Polarization</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="ICE Polarization" data-es="Polarización ICE">ICE Polarization</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>Bootstrap Sampling</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="Bootstrap Sampling" data-es="Muestreo Bootstrap">Bootstrap Sampling</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>Quantile Transformation</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="Quantile Transformation" data-es="Transformación por Cuantiles">Quantile Transformation</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>LISA Spatial Clusters</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="LISA Spatial Clusters" data-es="Clústeres Espaciales LISA">LISA Spatial Clusters</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>Pipeline DAG Flow</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+        <div data-en="Pipeline DAG Flow" data-es="Flujo del Pipeline DAG">Pipeline DAG Flow</div>
+        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
       </div>
     </div>
   </section>
@@ -579,12 +577,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Research References ──────────────────────────────────────── -->
-  <section class="about-section reveal" id="references" x-data="referencesData()" x-init="load()">
-    <span class="section-tag">References</span>
-    <h2 class="about-section-title">Research References</h2>
-    <p class="about-section-subtitle">30 peer-reviewed and technical sources that ground the statistical architecture.</p>
+  <section class="about-section section-band reveal" id="references" x-data="referencesData()" x-init="load()">
+    <span class="section-tag" data-en="References" data-es="Referencias">References</span>
+    <h2 class="about-section-title" data-en="Research References" data-es="Referencias de Investigación">Research References</h2>
+    <p class="about-section-subtitle" data-en="30 peer-reviewed and technical sources that ground the statistical architecture." data-es="30 fuentes revisadas por pares y técnicas que fundamentan la arquitectura estadística.">30 peer-reviewed and technical sources that ground the statistical architecture.</p>
 
-    <div x-show="loading" x-cloak class="loading-row">Loading references&hellip;</div>
+    <div x-show="loading" x-cloak class="loading-row" data-en="Loading references&hellip;" data-es="Cargando referencias&hellip;">Loading references&hellip;</div>
     <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
     <template x-if="!loading && !error">
@@ -592,7 +590,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="table-wrapper">
           <table class="data-table ref-table">
             <thead>
-              <tr><th>#</th><th>Title</th><th>Authors</th><th>Year</th><th>Type</th><th>Key Finding</th></tr>
+              <tr><th>#</th><th data-en="Title" data-es="Título">Title</th><th data-en="Authors" data-es="Autores">Authors</th><th data-en="Year" data-es="Año">Year</th><th data-en="Type" data-es="Tipo">Type</th><th data-en="Key Finding" data-es="Hallazgo Clave">Key Finding</th></tr>
             </thead>
             <tbody>
               <template x-for="r in refs" :key="r.id">
@@ -619,26 +617,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Grant Acknowledgments ────────────────────────────────────── -->
-  <section class="about-section reveal" id="grants">
-    <span class="section-tag">Funding</span>
-    <h2 class="about-section-title">Grant Acknowledgments</h2>
-    <p class="about-section-subtitle">PDI is supported by grants from Arnold Ventures and the Madison Community Foundation.</p>
+  <section class="about-section section-band section-band--alt reveal" id="grants">
+    <span class="section-tag" data-en="Funding" data-es="Financiamiento">Funding</span>
+    <h2 class="about-section-title" data-en="Grant Acknowledgments" data-es="Agradecimientos de Financiamiento">Grant Acknowledgments</h2>
+    <p class="about-section-subtitle" data-en="PDI is supported by grants from Arnold Ventures and the Madison Community Foundation." data-es="PDI cuenta con el apoyo de subvenciones de Arnold Ventures y la Madison Community Foundation.">PDI is supported by grants from Arnold Ventures and the Madison Community Foundation.</p>
 
     <div class="grant-section">
       <div class="grant-logos">
         <div class="grant-logo">Arnold Ventures</div>
         <div class="grant-logo">Madison Community Foundation</div>
       </div>
-      <p style="margin-top:0.75em;font-size:0.8rem;color:var(--muted);">Both organizations have provided critical support for data infrastructure and open-source tooling that makes platforms like PDI possible.</p>
+      <p style="margin-top:0.75em;font-size:0.8rem;color:var(--muted);" data-en="Both organizations have provided critical support for data infrastructure and open-source tooling that makes platforms like PDI possible." data-es="Ambas organizaciones han brindado un apoyo fundamental para la infraestructura de datos y las herramientas de código abierto que hacen posibles plataformas como PDI.">Both organizations have provided critical support for data infrastructure and open-source tooling that makes platforms like PDI possible.</p>
     </div>
   </section>
 
+  <hr class="thread" aria-hidden="true">
+
   <!-- ── License ──────────────────────────────────────────────────── -->
-  <section class="about-section reveal" id="license">
-    <span class="section-tag">License</span>
-    <h2 class="about-section-title">Apache-2.0</h2>
-    <p class="about-section-subtitle">All code, data pipelines, and documentation are freely available under the Apache License 2.0.</p>
-    <p>PDI is free to use, modify, and redistribute. The statistical methodology is fully documented and reproducible. Source code at <a href="https://github.com/DojoGenesis/policy-data-infrastructure">github.com/DojoGenesis/policy-data-infrastructure</a>.</p>
+  <section class="about-section section-band reveal" id="license">
+    <span class="section-tag" data-en="License" data-es="Licencia">License</span>
+    <h2 class="about-section-title" data-en="Apache-2.0" data-es="Apache-2.0">Apache-2.0</h2>
+    <p class="about-section-subtitle" data-en="All code, data pipelines, and documentation are freely available under the Apache License 2.0." data-es="Todo el código, los pipelines de datos y la documentación están disponibles libremente bajo la Licencia Apache 2.0.">All code, data pipelines, and documentation are freely available under the Apache License 2.0.</p>
+    <p><span data-en="PDI is free to use, modify, and redistribute. The statistical methodology is fully documented and reproducible. Source code at " data-es="PDI es de uso, modificación y redistribución libres. La metodología estadística está completamente documentada y es reproducible. Código fuente en ">PDI is free to use, modify, and redistribute. The statistical methodology is fully documented and reproducible. Source code at </span><a href="https://github.com/DojoGenesis/policy-data-infrastructure">github.com/DojoGenesis/policy-data-infrastructure</a>.</p>
   </section>
 
 </main>
