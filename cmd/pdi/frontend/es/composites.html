@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<meta charset="utf-8">
-<script>(function(d){var r=d.documentElement;r.classList.add('js');
-try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
-if(d.hidden){r.classList.add('motion-failed');}
-window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
-<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Composite Index Builder — PDI</title>
-<meta name="description" content="Build custom composite indices from any variable with variable picker, weight sliders, and sensitivity analysis.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constructor de Índice Compuesto — PDI</title>
+<meta name="description" content="Construye índices compuestos personalizados desde cualquier variable con selector de variables, deslizadores de peso y análisis de sensibilidad.">
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="en" href="/composites">
+<link rel="alternate" hreflang="es" href="/es/composites">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
-<link rel="stylesheet" href="/static/motion.css">
 
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
@@ -27,15 +25,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Page layout ─────────────────────────────────────────────── */
   :root {
     --composite-gap: clamp(14px, 2vw, 20px);
-  }
-
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
   }
 
   /* ── Hero ────────────────────────────────────────────────────── */
@@ -636,19 +625,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main">Ir al contenido</a>
 
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
+    <a href="/es/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
     <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/composite" aria-current="page">Composites</a>
-      <a href="/about">About</a>
+      <a href="/es/">Explorador</a>
+      <a href="/es/compare">Comparar</a>
+      <a href="/es/map">Mapa</a>
+      <a href="/es/composites" aria-current="page">Compuestos</a>
+      <a href="/es/about">Acerca de</a>
     </nav>
   </div>
 </header>
@@ -656,20 +645,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <main id="main" class="wrap" x-data="compositeBuilder()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
-  <a href="/" class="back-link">
+  <a href="/es/" class="back-link">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
-    Back to County Explorer
+    Volver al Explorador de Condados
   </a>
 
   <!-- ── Hero ──────────────────────────────────────────────────── -->
   <div class="hero reveal">
-    <span class="section-tag">Composites</span>
-    <h1>Composite Index Builder</h1>
+    <span class="section-tag">Compuestos</span>
+    <h1>Constructor de Índice Compuesto</h1>
     <p class="hero-subtitle">
-      Build custom composite indices from any available variables.
-      Select geographies, choose variables, set weights, and explore sensitivity.
+      Construye índices compuestos personalizados desde cualquier variable disponible.
+      Selecciona geografías, elige variables, asigna pesos y explora la sensibilidad.
     </p>
   </div>
 
@@ -682,16 +671,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <!-- ── Geography Selector ────────────────────────────────── -->
       <div class="card reveal">
         <div class="card-heading">
-          <span class="section-tag" style="margin-bottom:0">📍 Geographies</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="geoids.length + ' selected'"></span>
+          <span class="section-tag" style="margin-bottom:0">📍 Geografías</span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="geoids.length + ' seleccionadas'"></span>
         </div>
 
         <div class="geo-search-wrap">
           <input
             type="search"
             x-model="geoSearch"
-            placeholder="Search counties by name…"
-            aria-label="Search geography"
+            placeholder="Buscar condados por nombre…"
+            aria-label="Buscar geografía"
             @focus="geoDropdownOpen = true"
             @keydown.escape="geoDropdownOpen = false"
           >
@@ -717,13 +706,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <template x-for="geoid in geoids" :key="geoid">
             <span class="filter-chip active" style="cursor:default">
               <span x-text="geoLabel(geoid)"></span>
-              <button class="geoid-chip-remove" @click="removeGeoid(geoid)" aria-label="Remove">&times;</button>
+              <button class="geoid-chip-remove" @click="removeGeoid(geoid)" aria-label="Eliminar">&times;</button>
             </span>
           </template>
         </div>
 
         <p x-show="geoids.length === 0" style="font-size:0.72rem;color:var(--subtle);margin-top:8px">
-          Select one or more counties to include in the composite.
+          Selecciona uno o más condados para incluir en el compuesto.
         </p>
       </div>
 
@@ -731,7 +720,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0">📊 Variables</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="variables.length + ' selected'"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="variables.length + ' seleccionadas'"></span>
         </div>
 
         <!-- Filter -->
@@ -739,13 +728,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <input
             type="search"
             x-model="varSearch"
-            placeholder="Filter variables…"
-            aria-label="Filter variables"
+            placeholder="Filtrar variables…"
+            aria-label="Filtrar variables"
           >
-          <select x-model="varDirectionFilter" aria-label="Filter by direction">
-            <option value="">All</option>
-            <option value="adversity">Adversity</option>
-            <option value="resilience">Resilience</option>
+          <select x-model="varDirectionFilter" aria-label="Filtrar por dirección">
+            <option value="">Todas</option>
+            <option value="adversity">Adversidad</option>
+            <option value="resilience">Resiliencia</option>
           </select>
         </div>
 
@@ -761,7 +750,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               >
               <div class="var-item-info">
                 <div class="var-item-name" x-text="v.name"></div>
-                <div class="var-item-meta" x-text="v.source_name + ' · ' + (v.unit || 'index')"></div>
+                <div class="var-item-meta" x-text="v.source_name + ' · ' + (v.unit || 'índice')"></div>
               </div>
               <span
                 class="filter-chip"
@@ -775,7 +764,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
 
         <p x-show="filteredVariables.length === 0 && !varsLoading" style="font-size:0.75rem;color:var(--subtle);padding:1em 0;text-align:center">
-          No variables match your filter.
+          Ninguna variable coincide con tu filtro.
         </p>
 
         <!-- Loading state for variables -->
@@ -785,7 +774,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <p x-show="varsError" x-cloak class="state-error" style="margin-top:8px">
           <span x-text="varsError"></span>
-          <button class="btn btn-ghost" @click="loadVariables()" style="margin-left:0.75em;font-size:0.75rem">Retry</button>
+          <button class="btn btn-ghost" @click="loadVariables()" style="margin-left:0.75em;font-size:0.75rem">Reintentar</button>
         </p>
       </div>
     </div>
@@ -796,8 +785,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <!-- ── Weight Sliders ────────────────────────────────────── -->
       <div class="card reveal">
         <div class="card-heading">
-          <span class="section-tag" style="margin-bottom:0">⚖️ Weights</span>
-          <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.25em 0.65em" @click="resetEqualWeights()" x-show="variables.length > 0">Reset equal</button>
+          <span class="section-tag" style="margin-bottom:0">⚖️ Pesos</span>
+          <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.25em 0.65em" @click="resetEqualWeights()" x-show="variables.length > 0">Restablecer iguales</button>
         </div>
 
         <!-- Weight distribution bar using .chart-bar-track -->
@@ -811,10 +800,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
 
         <div class="weight-summary" x-show="variables.length > 0">
-          <span>Sum:</span>
+          <span>Suma:</span>
           <span class="weight-summary-val" :class="Math.abs(weightTotal - 1.0) < 0.01 ? 'ok' : 'warn'" x-text="weightTotal.toFixed(3)"></span>
           <span x-show="Math.abs(weightTotal - 1.0) >= 0.01" style="color:var(--gated);font-size:0.62rem">
-            (should be 1.000)
+            (debería ser 1.000)
           </span>
         </div>
 
@@ -840,47 +829,47 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         </div>
 
         <p x-show="variables.length === 0" style="font-size:0.72rem;color:var(--subtle)">
-          Select 2+ variables to set weights.
+          Selecciona 2+ variables para asignar pesos.
         </p>
       </div>
 
       <!-- ── Method & Preset ───────────────────────────────────── -->
       <div class="card reveal">
-        <span class="section-tag">⚙️ Method &amp; Preset</span>
+        <span class="section-tag">⚙️ Método y Predefinido</span>
 
         <!-- Method selector -->
         <div class="method-select">
           <label class="method-option" :class="{ active: method === 'geometric_mean' }">
             <input type="radio" value="geometric_mean" x-model="method">
             <div>
-              <span class="method-option-label">Geometric Mean</span>
-              <span class="method-option-desc">Penalizes extreme disparities across dimensions. Best for adversity indices.</span>
+              <span class="method-option-label">Media Geométrica</span>
+              <span class="method-option-desc">Penaliza disparidades extremas entre dimensiones. Ideal para índices de adversidad.</span>
             </div>
           </label>
           <label class="method-option" :class="{ active: method === 'weighted_zscore' }">
             <input type="radio" value="weighted_zscore" x-model="method">
             <div>
-              <span class="method-option-label">Weighted Z-Score</span>
-              <span class="method-option-desc">Linear additive combination. Best when variables share a common scale.</span>
+              <span class="method-option-label">Z-Score Ponderado</span>
+              <span class="method-option-desc">Combinación lineal aditiva. Ideal cuando las variables comparten una escala común.</span>
             </div>
           </label>
         </div>
 
         <!-- Preset loader -->
         <div class="preset-bar">
-          <span class="preset-label">Preset:</span>
+          <span class="preset-label">Predefinido:</span>
           <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.35em 0.85em" @click="loadNariPreset()" :disabled="presetLoading">
-            <span x-show="!presetLoading">Load NARI v2</span>
-            <span x-show="presetLoading">Loading…</span>
+            <span x-show="!presetLoading">Cargar NARI v2</span>
+            <span x-show="presetLoading">Cargando…</span>
           </button>
-          <span style="font-size:0.65rem;color:var(--subtle)">Neighborhood Adversity &amp; Resilience Index</span>
+          <span style="font-size:0.65rem;color:var(--subtle)">Índice de Adversidad y Resiliencia Vecinal</span>
         </div>
         <p x-show="presetError" x-cloak class="state-error" style="margin-top:8px;font-size:0.75rem" x-text="presetError"></p>
       </div>
 
       <!-- ── Compute ───────────────────────────────────────────── -->
       <div class="card reveal">
-        <span class="section-tag">🔬 Compute</span>
+        <span class="section-tag">🔬 Calcular</span>
 
         <div class="compute-bar">
           <button
@@ -889,23 +878,23 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             :disabled="!canCompute || computing"
             style="font-size:0.9rem;padding:0.65em 1.6em"
           >
-            <span x-show="!computing">Compute Composite</span>
+            <span x-show="!computing">Calcular Compuesto</span>
             <span x-show="computing">
               <span class="compute-spinner"></span>
-              Computing…
+              Calculando…
             </span>
           </button>
 
           <span style="font-size:0.7rem;color:var(--subtle)" x-show="!canCompute && !computing">
-            <span x-show="geoids.length === 0">Select geographies</span>
-            <span x-show="geoids.length > 0 && variables.length < 2">Select 2+ variables</span>
+            <span x-show="geoids.length === 0">Selecciona geografías</span>
+            <span x-show="geoids.length > 0 && variables.length < 2">Selecciona 2+ variables</span>
           </span>
         </div>
 
         <!-- Sensitivity perturbation control -->
         <div x-show="canCompute" style="margin-top:clamp(10px,1.5vw,14px)">
           <label style="font-size:0.7rem;color:var(--muted);display:flex;align-items:center;gap:8px">
-            Sensitivity perturbation:
+            Perturbación de sensibilidad:
             <input type="range" min="0.05" max="0.50" step="0.05" x-model.number="perturbation" style="width:auto;flex:0 0 140px;height:4px">
             <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text);min-width:3em;text-align:right" x-text="perturbationPct"></span>
           </label>
@@ -914,7 +903,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <!-- Error -->
         <div x-show="computeError" x-cloak class="state-error" style="margin-top:12px">
           <span x-text="computeError"></span>
-          <button class="btn btn-ghost" @click="computeComposite()" style="margin-left:0.75em;font-size:0.75rem">Retry</button>
+          <button class="btn btn-ghost" @click="computeComposite()" style="margin-left:0.75em;font-size:0.75rem">Reintentar</button>
         </div>
       </div>
     </div>
@@ -931,11 +920,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- Empty state (no compute yet) -->
   <div x-show="!computing && !computeError && results.length === 0 && canCompute" class="state-empty" x-cloak>
-    <p>Ready to compute. Adjust weights and click <strong>Compute Composite</strong>.</p>
+    <p>Listo para calcular. Ajusta los pesos y haz clic en <strong>Calcular Compuesto</strong>.</p>
   </div>
 
   <div x-show="!computing && !computeError && results.length === 0 && !canCompute" class="state-empty" x-cloak>
-    <p>Select at least <strong>2 variables</strong> and <strong>1 geography</strong> to get started.</p>
+    <p>Selecciona al menos <strong>2 variables</strong> y <strong>1 geografía</strong> para comenzar.</p>
   </div>
 
   <!-- ═══ RESULTS CARDS ═══ -->
@@ -950,15 +939,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <!-- Composite score -->
         <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:clamp(8px,1.2vw,12px)">
           <div>
-            <div class="result-score" x-text="r.score != null ? r.score.toFixed(3) : 'N/A'"></div>
-            <div class="result-score-label">Composite Score</div>
+            <div class="result-score" x-text="r.score != null ? r.score.toFixed(3) : 'N/D'"></div>
+            <div class="result-score-label">Puntuación Compuesta</div>
           </div>
           <span class="badge badge-info" x-text="methodLabel"></span>
         </div>
 
         <!-- Contributing variables -->
         <div x-show="r.contributing_variables && r.contributing_variables.length > 0">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Contributing Variables</div>
+          <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Variables Contribuyentes</div>
           <div class="contrib-list">
             <template x-for="cv in r.contributing_variables" :key="cv">
               <span class="contrib-chip">
@@ -971,7 +960,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Missing variables -->
         <div x-show="r.missing_variables && r.missing_variables.length > 0">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--gated);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Missing Variables</div>
+          <div style="font-size:0.68rem;font-weight:600;color:var(--gated);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Variables Faltantes</div>
           <div class="contrib-list">
             <template x-for="mv in r.missing_variables" :key="mv">
               <span class="missing-chip" x-text="varName(mv)"></span>
@@ -981,13 +970,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Sensitivity analysis -->
         <div class="sens-section" x-show="sensitivity && sensitivity.scenarios && sensitivity.scenarios.length > 0">
-          <div class="sens-heading">🔍 Sensitivity Analysis (<span x-text="perturbationPct"></span>)</div>
+          <div class="sens-heading">🔍 Análisis de Sensibilidad (<span x-text="perturbationPct"></span>)</div>
 
           <template x-for="sc in relevantScenarios(idx)" :key="sc.perturbed_variable + '_' + sc.direction">
             <div class="sens-scenario">
               <div class="sens-scenario-label">
                 <strong x-text="varName(sc.perturbed_variable)"></strong>
-                weight
+                peso
                 <span :style="'color:' + (sc.direction === 'increase' ? 'var(--gated)' : 'var(--info)')" x-text="sc.direction === 'increase' ? '+' + perturbationPct : '-' + perturbationPct"></span>
               </div>
 
@@ -1014,7 +1003,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 x-show="sensitivity.stability && sensitivity.stability[sc.perturbed_variable] != null"
                 :class="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"
               >
-                Ranking stability:
+                Estabilidad del ranking:
                 <span x-text="(sensitivity.stability[sc.perturbed_variable] * 100).toFixed(1) + '%'"></span>
                 <span style="font-size:0.62rem;font-weight:400;color:var(--muted);margin-left:4px" x-text="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"></span>
               </div>
@@ -1084,7 +1073,7 @@ function compositeBuilder() {
     },
 
     get methodLabel() {
-      return this.method === 'geometric_mean' ? 'Geometric Mean' : 'Weighted Z-Score';
+      return this.method === 'geometric_mean' ? 'Media Geométrica' : 'Z-Score Ponderado';
     },
 
     // ── Filtered variables ──────────────────────────────────────
@@ -1142,11 +1131,11 @@ function compositeBuilder() {
       this.varsError = '';
       try {
         const resp = await fetch('/v1/policy/variables');
-        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        if (!resp.ok) throw new Error(`Error de API: ${resp.status}`);
         const data = await resp.json();
         this.allVariables = data.variables || [];
       } catch (e) {
-        this.varsError = `Failed to load variables: ${e.message}`;
+        this.varsError = `Error al cargar variables: ${e.message}`;
       } finally {
         this.varsLoading = false;
       }
@@ -1247,10 +1236,10 @@ function compositeBuilder() {
     // ── Stability label ─────────────────────────────────────────
     stabilityLabel(val) {
       if (val == null) return '';
-      if (val >= 0.90) return 'Highly robust';
-      if (val >= 0.70) return 'Stable';
-      if (val >= 0.50) return 'Moderately stable';
-      return 'Low stability';
+      if (val >= 0.90) return 'Muy robusto';
+      if (val >= 0.70) return 'Estable';
+      if (val >= 0.50) return 'Moderadamente estable';
+      return 'Baja estabilidad';
     },
 
     // ── Preset loader ───────────────────────────────────────────
@@ -1259,7 +1248,7 @@ function compositeBuilder() {
       this.presetError = '';
       try {
         const resp = await fetch('/static/composites/nari_v2.json');
-        if (!resp.ok) throw new Error(`Failed to load: ${resp.status}`);
+        if (!resp.ok) throw new Error(`Error al cargar: ${resp.status}`);
         const preset = await resp.json();
 
         // Apply variables
@@ -1282,7 +1271,7 @@ function compositeBuilder() {
         this.results = [];
         this.sensitivity = null;
       } catch (e) {
-        this.presetError = `Failed to load NARI v2 preset: ${e.message}`;
+        this.presetError = `Error al cargar predefinido NARI v2: ${e.message}`;
       } finally {
         this.presetLoading = false;
       }
@@ -1315,14 +1304,14 @@ function compositeBuilder() {
 
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
-          throw new Error(errData.error || `API error: ${resp.status}`);
+          throw new Error(errData.error || `Error de API: ${resp.status}`);
         }
 
         const data = await resp.json();
         this.results = data.scores || [];
         this.sensitivity = data.sensitivity || null;
       } catch (e) {
-        this.computeError = `Computation failed: ${e.message}`;
+        this.computeError = `Error de cálculo: ${e.message}`;
       } finally {
         this.computing = false;
       }

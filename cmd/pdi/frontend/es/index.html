@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <script>(function(d){var r=d.documentElement;r.classList.add('js');
@@ -8,8 +8,12 @@ if(d.hidden){r.classList.add('motion-failed');}
 window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
 <style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDI — County Explorer</title>
-<meta name="description" content="Wisconsin County Explorer — select a county to view detailed indicators from the Policy Data Infrastructure platform.">
+<title>PDI — Explorador de Condados</title>
+<meta name="description" content="Explorador de Condados de Wisconsin — selecciona un condado para ver indicadores detallados de la plataforma Policy Data Infrastructure.">
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="en" href="/">
+<link rel="alternate" hreflang="es" href="/es/">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
@@ -188,20 +192,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
+    <a href="/es/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Explorador de Datos
     </a>
 
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="/" aria-current="page">Counties</a>
-      <a href="/compare">Compare</a>
-      <a href="/evidence">Evidence</a>
-      <a href="/candidates">Candidates</a>
-      <a href="/map">Map</a>
-      <a href="/about">About</a>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="/es/" aria-current="page">Condados</a>
+      <a href="/es/compare">Comparar</a>
+      <a href="/es/evidence">Evidencia</a>
+      <a href="/es/candidates">Candidatos</a>
+      <a href="/es/map">Mapa</a>
+      <a href="/es/about">Acerca de</a>
     </nav>
 
-    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
+    <button class="chat-toggle" aria-label="Alternar chat" title="Chatear con PDI">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
@@ -214,8 +218,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
   <div class="hero">
-    <h1>Wisconsin County Explorer</h1>
-    <p class="hero-subtitle">72 counties · Select a county to view detailed indicators</p>
+    <h1>Explorador de Condados de Wisconsin</h1>
+    <p class="hero-subtitle">72 condados · Selecciona un condado para ver indicadores detallados</p>
   </div>
 
   <!-- ── Search ────────────────────────────────────────────────── -->
@@ -223,8 +227,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <input
       type="search"
       x-model="countySearch"
-      placeholder="Search counties by name…"
-      aria-label="Search counties by name"
+      placeholder="Buscar condados por nombre…"
+      aria-label="Buscar condados por nombre"
     >
   </div>
 
@@ -244,7 +248,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Error state ───────────────────────────────────────────── -->
   <div x-show="countiesError" x-cloak class="state-error">
     <span x-text="countiesError"></span>
-    <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em">Retry</button>
+    <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em">Reintentar</button>
   </div>
 
   <!-- ── County grid ───────────────────────────────────────────── -->
@@ -253,13 +257,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <template x-for="c in filteredCounties" :key="c.geoid">
         <div
           class="card card-hover county-card"
-          @click="window.location = '/county?geoid=' + c.geoid"
+          @click="window.location = '/es/county?geoid=' + c.geoid"
         >
           <div class="county-card-name" x-text="c.name"></div>
           <div class="county-card-geoid" x-text="c.geoid"></div>
           <div class="county-card-pop">
             <span class="county-card-pop-val" x-text="fmtPop(c.population)"></span>
-            <span class="county-card-pop-label">pop.</span>
+            <span class="county-card-pop-label">pob.</span>
           </div>
         </div>
       </template>
@@ -272,7 +276,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     x-cloak
     class="state-empty"
   >
-    <p>No counties match &ldquo;<span x-text="countySearch"></span>&rdquo;</p>
+    <p>Ningún condado coincide con &ldquo;<span x-text="countySearch"></span>&rdquo;</p>
   </div>
 
 </main>
@@ -308,11 +312,11 @@ function countyExplorer() {
       this.countiesError = '';
       try {
         const resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=72');
-        if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
+        if (!resp.ok) throw new Error(`Error de API: ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
         this.allCounties = data.items || [];
       } catch (e) {
-        this.countiesError = `Failed to load counties: ${e.message}`;
+        this.countiesError = `Error al cargar condados: ${e.message}`;
       } finally {
         this.countiesLoading = false;
       }

@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<meta charset="utf-8">
-<script>(function(d){var r=d.documentElement;r.classList.add('js');
-try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
-if(d.hidden){r.classList.add('motion-failed');}
-window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
-<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Candidate Policy Tracker — PDI</title>
-<meta name="description" content="Candidate Policy Tracker — explore candidate policy positions grouped by equity dimension with indicator match bars from the Policy Data Infrastructure platform.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rastreador de Políticas de Candidatos — PDI</title>
+<meta name="description" content="Rastreador de Políticas de Candidatos — explora posiciones políticas de candidatos agrupadas por dimensión de equidad con barras de coincidencia de indicadores de la plataforma Policy Data Infrastructure.">
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="en" href="/candidates">
+<link rel="alternate" hreflang="es" href="/es/candidates">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
-<link rel="stylesheet" href="/static/motion.css">
 
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
@@ -27,15 +25,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Candidates page-specific ───────────────────────────────── */
   :root {
     --candidates-gap: clamp(14px, 2vw, 20px);
-  }
-
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
   }
 
   /* ── Hero ───────────────────────────────────────────────────── */
@@ -420,43 +409,48 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
-
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
+    <a href="/es/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Explorador de Datos
     </a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/candidates" aria-current="page">Candidates</a>
-      <a href="/about">About</a>
+
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="/es/">Condados</a>
+      <a href="/es/compare">Comparar</a>
+      <a href="/es/evidence">Evidencia</a>
+      <a href="/es/candidates" aria-current="page">Candidatos</a>
+      <a href="/es/map">Mapa</a>
+      <a href="/es/about">Acerca de</a>
     </nav>
+
+    <button class="chat-toggle" aria-label="Alternar chat" title="Chatear con PDI">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
   </div>
 </header>
 
-<main id="main" class="wrap" x-data="candidateTracker()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
+<main class="wrap" x-data="candidateTracker()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
-  <a href="/" class="back-link">
+  <a href="/es/" class="back-link">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
-    Back to County Explorer
+    Volver al Explorador de Condados
   </a>
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
-  <div class="hero reveal">
-    <span class="section-tag">Candidates</span>
-    <h1>Candidate Policy Tracker</h1>
+  <div class="hero">
+    <h1>Rastreador de Políticas de Candidatos</h1>
     <p class="hero-subtitle">
-      Explore candidate policy positions grouped by equity dimension with linked PDI indicators
+      Explora posiciones políticas de candidatos agrupadas por dimensión de equidad con indicadores PDI vinculados
     </p>
   </div>
-
-  <hr class="thread" aria-hidden="true">
 
   <!-- ── Loading state ─────────────────────────────────────────── -->
   <div x-show="loading" x-cloak>
@@ -493,14 +487,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Error state ───────────────────────────────────────────── -->
   <div x-show="error" x-cloak class="state-error" style="padding:clamp(16px,2.5vw,28px);border-radius:var(--r-card);">
     <span x-text="error"></span>
-    <button class="btn btn-ghost" @click="loadAll()" style="margin-left:1em">Retry</button>
+    <button class="btn btn-ghost" @click="loadAll()" style="margin-left:1em">Reintentar</button>
   </div>
 
   <!-- ── Empty state ───────────────────────────────────────────── -->
   <div x-show="!loading && !error && candidates.length === 0" x-cloak class="empty-state">
     <div class="empty-state-icon">🗳️</div>
-    <h2>No candidates seeded yet</h2>
-    <p>Candidate policies will appear here as they are added to the policy database. Check back soon for the first candidate profiles.</p>
+    <h2>Aún no hay candidatos registrados</h2>
+    <p>Las políticas de candidatos aparecerán aquí a medida que se agreguen a la base de datos de políticas. Vuelve pronto para ver los primeros perfiles de candidatos.</p>
   </div>
 
   <!-- ── Loaded state ──────────────────────────────────────────── -->
@@ -508,109 +502,91 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <!-- ── Candidate tabs (.filter-chip from styles.css) ──────── -->
     <div class="candidate-tabs">
-      <template x-for="c in candidates" :key="c.key">
+      <template x-for="c in candidates" :key="c.id">
         <button
           class="filter-chip"
-          :class="{ active: selectedCandidate === c.key, 'candidate-tab-placeholder': c.placeholder }"
-          :disabled="c.placeholder"
-          @click="!c.placeholder && selectCandidate(c.key)"
+          :class="{ active: activeCandidate === c.id }"
+          @click="activeCandidate = c.id"
         >
           <span x-text="c.name"></span>
-          <span x-show="!c.placeholder" class="candidate-tab-count" x-text="c.policyCount"></span>
+          <span class="candidate-tab-count" x-text="candidatePolicyCount(c.id)"></span>
         </button>
       </template>
     </div>
 
-    <!-- ── Summary bar ─────────────────────────────────────────── -->
-    <div class="summary-bar">
+    <!-- ── Summary bar for active candidate ───────────────────── -->
+    <div class="summary-bar" x-show="activeCandidateSummary">
       <div class="summary-stat">
-        <span class="summary-stat-val" x-text="selectedPolicies.length"></span>
-        <span class="summary-stat-label">Policies</span>
+        <span class="summary-stat-val" x-text="activeCandidateSummary.totalPositions"></span>
+        <span class="summary-stat-label">Posiciones Políticas</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-stat-val" x-text="selectedDimensions.length"></span>
-        <span class="summary-stat-label">Equity Dimensions</span>
+        <span class="summary-stat-val" x-text="activeCandidateSummary.dimensions"></span>
+        <span class="summary-stat-label">Dimensiones de Equidad</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-stat-val" x-text="selectedCategories.length"></span>
-        <span class="summary-stat-label">Categories</span>
-      </div>
-      <div class="summary-stat">
-        <span class="summary-stat-val" x-text="avgIndicatorCoverage + '%'"></span>
-        <span class="summary-stat-label">Avg Indicator Coverage</span>
+        <span class="summary-stat-val" x-text="activeCandidateSummary.matchedPct + '%'"></span>
+        <span class="summary-stat-label">Indicadores Vinculados</span>
       </div>
     </div>
 
-    <!-- ── Dimension sections ──────────────────────────────────── -->
-    <template x-for="dim in selectedDimensions" :key="dim.key">
-      <section class="dimension-section">
+    <!-- ── Dimension sections ─────────────────────────────────── -->
+    <template x-for="dim in activeDimensions" :key="dim.dimension">
+      <div class="dimension-section">
         <div class="dimension-header">
-          <span class="dimension-label" x-text="dim.label"></span>
-          <span class="dimension-priority" :class="'priority-'+dim.priority" x-text="dim.priority"></span>
-          <span class="dimension-policy-count" x-text="dim.policies.length + (dim.policies.length === 1 ? ' policy' : ' policies')"></span>
+          <span class="dimension-label" x-text="fmtLabel(dim.dimension)"></span>
+          <span class="dimension-priority" :class="'priority-' + dim.priority" x-text="dim.priority"></span>
+          <span class="dimension-policy-count" x-text="dim.policies.length + ' políticas'"></span>
         </div>
 
-        <!-- Indicator match bar (.chart-bar-track / .chart-bar-fill from styles.css) -->
+        <!-- ── Match bar for this dimension ──────────────────── -->
+        <div class="match-label-row">
+          <span class="match-label-heading">Coincidencia de Indicadores</span>
+          <span
+            class="match-label-pct"
+            :class="dim.matchPct >= 80 ? 'match-label-pct--high' : dim.matchPct >= 50 ? 'match-label-pct--medium' : 'match-label-pct--low'"
+            x-text="dim.matchPct + '%'"
+          ></span>
+        </div>
         <div class="match-bar-wrap">
-          <div class="match-label-row">
-            <span class="match-label-heading">Indicator Coverage</span>
-            <span
-              class="match-label-pct"
-              :class="dim.matchPct >= 75 ? 'match-label-pct--high' : dim.matchPct >= 40 ? 'match-label-pct--medium' : 'match-label-pct--low'"
-              x-text="dim.matchPct + '%'"
-            ></span>
-          </div>
           <div class="chart-bar-track">
-            <div
-              class="chart-bar-fill"
-              :class="dim.matchPct >= 75 ? 'chart-bar-fill--live' : dim.matchPct >= 40 ? 'chart-bar-fill--gated' : ''"
-              :style="'width:' + dim.matchPct + '%'"
-            ></div>
-          </div>
-          <div class="match-indicator-chips" x-show="dim.indicators.length > 0">
-            <template x-for="ind in dim.indicators" :key="ind.id">
-              <span
-                class="match-indicator-chip"
-                :class="{ 'match-indicator-chip--matched': ind.available }"
-                x-text="ind.id"
-                :title="ind.available ? 'Data available in PDI' : 'Not yet available in PDI'"
-              ></span>
-            </template>
+            <div class="chart-bar-fill" :style="'width:' + dim.matchPct + '%'"></div>
           </div>
         </div>
+        <div class="match-indicator-chips">
+          <template x-for="ind in dim.indicators" :key="ind.id">
+            <span
+              class="match-indicator-chip"
+              :class="{ 'match-indicator-chip--matched': ind.matched }"
+              x-text="ind.id"
+            ></span>
+          </template>
+        </div>
 
-        <!-- Policy cards (.card + .card-grid from styles.css) -->
+        <!-- ── Policy cards ──────────────────────────────────── -->
         <div class="card-grid">
-          <template x-for="pol in dim.policies" :key="pol.id">
-            <div class="card policy-card reveal" :style="'--d:' + (idx * 80)">
+          <template x-for="policy in dim.policies" :key="policy.id">
+            <div class="card policy-card">
               <div class="policy-card-header">
-                <span class="policy-card-id" x-text="pol.id"></span>
-                <h3 class="policy-card-title" x-text="pol.title"></h3>
+                <span class="policy-card-id" x-text="policy.id"></span>
+                <h3 class="policy-card-title" x-text="policy.title"></h3>
               </div>
-              <p class="policy-card-desc" x-show="pol.description" x-text="pol.description"></p>
+              <p class="policy-card-desc" x-text="policy.description" :title="policy.description"></p>
               <div class="policy-card-meta">
-                <!-- Category badge -->
-                <span class="badge badge-info" x-text="pol.category"></span>
-                <!-- Equity dimension badge -->
-                <span
-                  class="badge"
-                  :class="dim.priority === 'P1' ? 'badge-high' : dim.priority === 'P2' ? 'badge-moderate' : 'badge-low'"
-                  x-text="dim.label"
-                ></span>
-                <!-- Geographic scope badge -->
-                <span x-show="pol.geographic_scope" class="badge badge-unknown" x-text="pol.geographic_scope"></span>
-                <!-- Evidence estimate -->
-                <span class="evidence-chip" x-show="dim.evidenceEstimate > 0">
-                  <span class="evidence-chip-count" x-text="dim.evidenceEstimatePerPolicy"></span>
-                  est. evidence cards
+                <span class="badge badge-info" x-text="policy.category || 'Sin categoría'"></span>
+                <span class="evidence-chip" x-show="policy.evidenceCount > 0">
+                  <span class="evidence-chip-count" x-text="policy.evidenceCount"></span> tarjetas de evidencia
                 </span>
               </div>
             </div>
           </template>
         </div>
-      </section>
+      </div>
     </template>
 
+    <div x-show="activeDimensions.length === 0" class="empty-state">
+      <p>No hay dimensiones de política definidas para este candidato.</p>
+    </div>
   </div>
 
 </main>
@@ -624,213 +600,126 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
 <script>
+function fmtLabel(s) {
+  if (!s) return '';
+  return s.replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function candidateTracker() {
   return {
-    // ── State ────────────────────────────────────────────────────
-    allPolicies: [],          // raw API response: policies from GET /v1/policy/policies
-    candidates: [],           // [{key, name, placeholder, policyCount}]
-    selectedCandidate: '',
-    crosswalk: {},            // loaded from /static/crosswalks/wi_equity_crosswalk.json
-    availableIndicators: new Set(),  // populated from GET /v1/policy/variables
-    loading: false,
+    candidates: [],
+    policies: [],
+    evidenceCards: [],
+    loading: true,
     error: '',
-    crosswalkError: '',
+    activeCandidate: '',
 
-    // ── Computed ─────────────────────────────────────────────────
-    get selectedPolicies() {
-      if (!this.selectedCandidate) return [];
-      return this.allPolicies.filter(p => p.candidate === this.selectedCandidate);
+    async init() {
+      await this.loadAll();
     },
 
-    get selectedDimensions() {
-      const policies = this.selectedPolicies;
-      if (policies.length === 0) return [];
-
-      // Group policies by equity_dimension
-      const grouped = {};
-      for (const p of policies) {
-        const dimKey = p.equity_dimension || 'uncategorized';
-        if (!grouped[dimKey]) grouped[dimKey] = [];
-        grouped[dimKey].push(p);
-      }
-
-      // Build dimension objects with match bar data from crosswalk
-      const dims = [];
-      for (const [dimKey, dimPolicies] of Object.entries(grouped)) {
-        const cw = (this.crosswalk.dimensions && this.crosswalk.dimensions[dimKey])
-          || { label: dimKey, indicators: [], priority: 'P3' };
-
-        const totalIndicators = cw.indicators ? cw.indicators.length : 0;
-        const matchedIndicators = totalIndicators > 0
-          ? cw.indicators.filter(id => this.availableIndicators.has(id)).length
-          : 0;
-        const matchPct = totalIndicators > 0 ? Math.round((matchedIndicators / totalIndicators) * 100) : 0;
-
-        // Build indicator chip data
-        const indicators = (cw.indicators || []).map(id => ({
-          id,
-          available: this.availableIndicators.has(id)
-        }));
-
-        // Estimate: ~3 evidence cards per policy per dimension (rough heuristic)
-        const evidenceEstimate = dimPolicies.length * 3;
-        const evidenceEstimatePerPolicy = 3;
-
-        dims.push({
-          key: dimKey,
-          label: cw.label,
-          priority: cw.priority || 'P3',
-          policies: dimPolicies,
-          indicators,
-          totalIndicators,
-          matchedIndicators,
-          matchPct,
-          evidenceEstimate,
-          evidenceEstimatePerPolicy
-        });
-      }
-
-      // Sort: P1 first, then P2, then P3; within same priority, alphabetically
-      const priorityOrder = { P1: 0, P2: 1, P3: 2 };
-      dims.sort((a, b) => {
-        const pa = priorityOrder[a.priority] ?? 3;
-        const pb = priorityOrder[b.priority] ?? 3;
-        if (pa !== pb) return pa - pb;
-        return a.label.localeCompare(b.label);
-      });
-
-      return dims;
-    },
-
-    get selectedCategories() {
-      const cats = new Set();
-      for (const p of this.selectedPolicies) {
-        if (p.category) cats.add(p.category);
-      }
-      return [...cats].sort();
-    },
-
-    get avgIndicatorCoverage() {
-      const dims = this.selectedDimensions;
-      if (dims.length === 0) return 0;
-      const total = dims.reduce((sum, d) => sum + d.matchPct, 0);
-      return Math.round(total / dims.length);
-    },
-
-    // ── Init ─────────────────────────────────────────────────────
-    init() {
-      this.loadAll();
-    },
-
-    // ── Load everything ──────────────────────────────────────────
     async loadAll() {
       this.loading = true;
       this.error = '';
-
       try {
-        // Load crosswalk, variables, and policies in parallel
-        await Promise.all([
-          this.loadCrosswalk(),
-          this.loadIndicatorCatalog(),
+        const [candResp, policyResp] = await Promise.all([
+          fetch('/v1/policy/candidates'),
+          fetch('/v1/policy/policies'),
         ]);
+        if (!candResp.ok) throw new Error('Candidatos: HTTP ' + candResp.status);
+        if (!policyResp.ok) throw new Error('Políticas: HTTP ' + policyResp.status);
 
-        await this.loadPolicies();
-      } catch (e) {
-        // Individual loaders set their own errors; if we get here
-        // it's an unexpected failure
-        if (!this.error) {
-          this.error = `Failed to initialize: ${e.message}`;
+        const candData = await candResp.json();
+        const policyData = await policyResp.json();
+
+        this.candidates = candData.candidates || [];
+        this.policies = policyData.policies || [];
+
+        if (this.candidates.length > 0) {
+          this.activeCandidate = this.candidates[0].id;
         }
+
+        // Load evidence cards (fire and forget)
+        this.loadEvidenceCards();
+      } catch (e) {
+        this.error = 'Error al cargar datos: ' + e.message;
       } finally {
         this.loading = false;
       }
     },
 
-    // ── Load crosswalk from static JSON ─────────────────────────
-    async loadCrosswalk() {
+    async loadEvidenceCards() {
       try {
-        const resp = await fetch('/static/crosswalks/wi_equity_crosswalk.json');
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        this.crosswalk = await resp.json();
-      } catch (e) {
-        this.crosswalkError = `Crosswalk unavailable: ${e.message}`;
-        // Fallback to empty — dimensions will use raw keys as labels
-        this.crosswalk = { dimensions: {} };
-      }
-    },
-
-    // ── Load indicator catalog to determine availability ─────────
-    async loadIndicatorCatalog() {
-      try {
-        const resp = await fetch('/v1/policy/variables?limit=1000');
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        const vars = data.variables || [];
-        this.availableIndicators = new Set(vars.map(v => v.variable_id));
-      } catch (e) {
-        // If variable catalog fails, fall back to empty set
-        // (all indicators show as unavailable)
-        this.availableIndicators = new Set();
-      }
-    },
-
-    // ── Load policies from API ───────────────────────────────────
-    async loadPolicies() {
-      try {
-        const resp = await fetch('/v1/policy/policies?limit=1000');
-        if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
-        const data = await resp.json();
-        this.allPolicies = data.policies || [];
-
-        // Derive candidate list from policy data
-        this.buildCandidates();
-
-        // Auto-select first candidate
-        if (this.candidates.length > 0 && !this.candidates[0].placeholder) {
-          this.selectedCandidate = this.candidates[0].key;
+        const resp = await fetch('/static/evidence_cards.json');
+        if (resp.ok) {
+          this.evidenceCards = await resp.json();
         }
-      } catch (e) {
-        this.error = `Failed to load candidate policies: ${e.message}`;
-      }
+      } catch (_) { /* non-fatal */ }
     },
 
-    // ── Build candidate list ─────────────────────────────────────
-    buildCandidates() {
-      const candidateMap = {};
+    candidatePolicyCount(candidateId) {
+      return this.policies.filter(p => p.candidate_id === candidateId).length;
+    },
 
-      // Count policies per candidate from API data
-      for (const p of this.allPolicies) {
-        const name = p.candidate || 'Unknown';
-        if (!candidateMap[name]) {
-          candidateMap[name] = { name, key: name, placeholder: false, policyCount: 0 };
+    get activePolicies() {
+      return this.policies.filter(p => p.candidate_id === this.activeCandidate);
+    },
+
+    get activeDimensions() {
+      const dimMap = {};
+      for (const policy of this.activePolicies) {
+        const dim = policy.equity_dimension || 'Otra';
+        if (!dimMap[dim]) {
+          dimMap[dim] = {
+            dimension: dim,
+            priority: policy.priority || 'P3',
+            policies: [],
+            indicators: [],
+          };
         }
-        candidateMap[name].policyCount++;
+        dimMap[dim].policies.push(policy);
       }
 
-      const list = Object.values(candidateMap);
-
-      // If no candidates found in API, seed fallback entries
-      if (list.length === 0) {
-        list.push(
-          { name: 'Francesca Hong', key: 'Francesca Hong', placeholder: false, policyCount: 0 }
-        );
+      // Compute indicator match for each dimension
+      for (const [dim, dimData] of Object.entries(dimMap)) {
+        const indSet = new Set();
+        for (const policy of dimData.policies) {
+          const evidenceCards = this.evidenceCards.filter(ec => ec.policy_id === policy.id);
+          for (const card of evidenceCards) {
+            for (const ind of Object.keys(card.statewide_context || {})) {
+              indSet.add(ind);
+            }
+          }
+        }
+        const indicators = Array.from(indSet);
+        dimData.indicators = indicators.map(id => ({ id, matched: true }));
+        dimData.matchPct = indicators.length > 0 ? 100 : 0;
       }
 
-      // Sort by policy count descending
-      list.sort((a, b) => b.policyCount - a.policyCount);
-
-      // Always add a placeholder for future candidates
-      list.push(
-        { name: 'More candidates coming soon…', key: '_placeholder', placeholder: true, policyCount: 0 }
-      );
-
-      this.candidates = list;
+      return Object.values(dimMap).sort((a, b) => {
+        const prio = { P1: 0, P2: 1, P3: 2 };
+        return (prio[a.priority] || 3) - (prio[b.priority] || 3);
+      });
     },
 
-    // ── Select candidate ─────────────────────────────────────────
-    selectCandidate(key) {
-      this.selectedCandidate = key;
-    }
+    get activeCandidateSummary() {
+      if (!this.activeCandidate) return null;
+      const policies = this.activePolicies;
+      const dims = new Set(policies.map(p => p.equity_dimension));
+      let totalIndicators = 0;
+      let matchedIndicators = 0;
+      for (const dim of this.activeDimensions) {
+        totalIndicators += dim.indicators.length;
+        matchedIndicators += dim.indicators.filter(i => i.matched).length;
+      }
+      const matchedPct = totalIndicators > 0 ? Math.round((matchedIndicators / totalIndicators) * 100) : 0;
+      return {
+        totalPositions: policies.length,
+        dimensions: dims.size,
+        matchedPct,
+      };
+    },
   };
 }
 </script>

@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<meta charset="utf-8">
-<script>(function(d){var r=d.documentElement;r.classList.add('js');
-try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
-if(d.hidden){r.classList.add('motion-failed');}
-window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
-<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evidence Card Gallery — PDI</title>
-<meta name="description" content="Evidence Card Gallery — 70 policy evidence cards with indicators, county-level variation, and key findings from the Policy Data Infrastructure platform.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galería de Tarjetas de Evidencia — PDI</title>
+<meta name="description" content="Galería de Tarjetas de Evidencia — 70 tarjetas de evidencia política con indicadores, variación a nivel de condado y hallazgos clave de la plataforma Policy Data Infrastructure.">
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="en" href="/evidence">
+<link rel="alternate" hreflang="es" href="/es/evidence">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
-<link rel="stylesheet" href="/static/motion.css">
 
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
@@ -27,15 +25,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Evidence page-specific ──────────────────────────────────── */
   :root {
     --evidence-gap: clamp(14px, 2vw, 20px);
-  }
-
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
   }
 
   /* ── Hero ───────────────────────────────────────────────────── */
@@ -462,42 +451,49 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
-
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
+    <a href="/es/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Explorador de Datos
     </a>
-    <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/evidence" aria-current="page">Evidence</a>
-      <a href="/about">About</a>
+
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="/es/">Condados</a>
+      <a href="/es/compare">Comparar</a>
+      <a href="/es/evidence" aria-current="page">Evidencia</a>
+      <a href="/es/candidates">Candidatos</a>
+      <a href="/es/map">Mapa</a>
+      <a href="/es/about">Acerca de</a>
     </nav>
+
+    <button class="chat-toggle" aria-label="Alternar chat" title="Chatear con PDI">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
   </div>
 </header>
 
-<main id="main" class="wrap" x-data="evidenceGallery()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
+<main class="wrap" x-data="evidenceGallery()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
-  <a href="/" class="back-link">
+  <a href="/es/" class="back-link">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
-    Back to County Explorer
+    Volver al Explorador de Condados
   </a>
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
-  <div class="hero reveal">
-    <span class="section-tag">Evidence</span>
-    <h1>Evidence Card Gallery</h1>
+  <div class="hero">
+    <h1>Galería de Tarjetas de Evidencia</h1>
     <p class="hero-subtitle">
-      70 policy evidence cards · <span x-text="allCards.length"></span> cards loaded
+      70 tarjetas de evidencia política · <span x-text="allCards.length"></span> tarjetas cargadas
     </p>
     <p class="hero-count">
-      Explore data-backed policy positions with linked indicators, county-level variation, and key findings.
+      Explora posiciones políticas respaldadas por datos con indicadores vinculados, variación a nivel de condado y hallazgos clave.
     </p>
   </div>
 
@@ -507,13 +503,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <input
         type="search"
         x-model="searchQuery"
-        placeholder="Search by policy title, finding, or indicator…"
-        aria-label="Search evidence cards"
+        placeholder="Buscar por título de política, hallazgo o indicador…"
+        aria-label="Buscar tarjetas de evidencia"
       >
     </div>
     <div class="filter-select">
-      <select x-model="equityFilter" aria-label="Filter by equity dimension">
-        <option value="">All equity dimensions</option>
+      <select x-model="equityFilter" aria-label="Filtrar por dimensión de equidad">
+        <option value="">Todas las dimensiones de equidad</option>
         <template x-for="dim in equityDimensions" :key="dim">
           <option :value="dim" x-text="fmtLabel(dim)"></option>
         </template>
@@ -527,7 +523,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       class="filter-chip"
       :class="{ active: categoryFilter === '' }"
       @click="categoryFilter = ''"
-    >All categories</button>
+    >Todas las categorías</button>
     <template x-for="cat in categories" :key="cat">
       <button
         class="filter-chip"
@@ -540,11 +536,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- ── Results info ─────────────────────────────────────────── -->
   <div class="results-info" x-show="!cardsLoading && !cardsError">
-    Showing <strong x-text="filteredCards.length"></strong> of <strong x-text="allCards.length"></strong> evidence cards
-    <span x-show="searchQuery || categoryFilter || equityFilter">(filtered)</span>
+    Mostrando <strong x-text="filteredCards.length"></strong> de <strong x-text="allCards.length"></strong> tarjetas de evidencia
+    <span x-show="searchQuery || categoryFilter || equityFilter">(filtrado)</span>
   </div>
-
-  <hr class="thread" aria-hidden="true">
 
   <!-- ── Skeleton loading ─────────────────────────────────────── -->
   <div x-show="cardsLoading" x-cloak>
@@ -563,7 +557,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Error state ──────────────────────────────────────────── -->
   <div x-show="cardsError" x-cloak class="state-error">
     <span x-text="cardsError"></span>
-    <button class="btn btn-ghost" @click="loadCards()" style="margin-left:1em">Retry</button>
+    <button class="btn btn-ghost" @click="loadCards()" style="margin-left:1em">Reintentar</button>
   </div>
 
   <!-- ── Card grid ────────────────────────────────────────────── -->
@@ -571,9 +565,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="card-grid">
       <template x-for="(card, idx) in filteredCards" :key="card.policy_id">
         <div
-          class="card card-hover evidence-card reveal"
+          class="card card-hover evidence-card"
           :class="{ expanded: expandedCard === card.policy_id }"
-          :style="'--d:' + (idx * 80)"
           @click="toggleCard(card.policy_id, $event)"
         >
 
@@ -615,12 +608,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Statewide context -->
             <div class="detail-section" x-show="Object.keys(card.statewide_context || {}).length">
-              <div class="detail-heading">Statewide Indicator Values</div>
+              <div class="detail-heading">Valores de Indicadores Estatales</div>
               <div class="detail-stats">
                 <template x-for="(stats, indicator) in card.statewide_context" :key="indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="fmtNum(stats.mean)"></div>
-                    <div class="detail-stat-label" x-text="'Mean ' + fmtLabel(indicator)"></div>
+                    <div class="detail-stat-label" x-text="'Media ' + fmtLabel(indicator)"></div>
                   </div>
                 </template>
               </div>
@@ -628,24 +621,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- County variation -->
             <div class="detail-section" x-show="Object.keys(card.county_variation || {}).length">
-              <div class="detail-heading">County-Level Variation</div>
+              <div class="detail-heading">Variación a Nivel de Condado</div>
               <div class="detail-stats">
                 <template x-for="(v, indicator) in card.county_variation" :key="indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="fmtNum(v.range)"></div>
-                    <div class="detail-stat-label">Range</div>
+                    <div class="detail-stat-label">Rango</div>
                   </div>
                 </template>
                 <template x-for="(v, indicator) in card.county_variation" :key="'std-'+indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="fmtNum(v.std)"></div>
-                    <div class="detail-stat-label">Std Dev</div>
+                    <div class="detail-stat-label">Desv Est</div>
                   </div>
                 </template>
                 <template x-for="(v, indicator) in card.county_variation" :key="'count-'+indicator">
                   <div class="detail-stat">
                     <div class="detail-stat-val" x-text="v.counties_with_data"></div>
-                    <div class="detail-stat-label">Counties</div>
+                    <div class="detail-stat-label">Condados</div>
                   </div>
                 </template>
               </div>
@@ -653,14 +646,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Top need counties -->
             <div class="detail-section" x-show="card.top_need_counties && card.top_need_counties.length">
-              <div class="detail-heading">Counties With Highest Need</div>
+              <div class="detail-heading">Condados con Mayor Necesidad</div>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
                     <tr>
-                      <th>County</th>
+                      <th>Condado</th>
                       <th>GEOID</th>
-                      <th class="county-val">Value</th>
+                      <th class="county-val">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -678,14 +671,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Bottom need counties -->
             <div class="detail-section" x-show="card.bottom_need_counties && card.bottom_need_counties.length">
-              <div class="detail-heading">Counties With Lowest Need</div>
+              <div class="detail-heading">Condados con Menor Necesidad</div>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
                     <tr>
-                      <th>County</th>
+                      <th>Condado</th>
                       <th>GEOID</th>
-                      <th class="county-val">Value</th>
+                      <th class="county-val">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -703,24 +696,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
             <!-- Methodology note -->
             <div class="detail-section">
-              <div class="detail-heading">Methodology &amp; Citations</div>
+              <div class="detail-heading">Metodología y Citas</div>
               <div class="methodology-note">
-                <strong>Data source:</strong> PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.<br>
-                <strong>Methodology:</strong> County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).<br>
-                <strong>Data quality:</strong>
+                <strong>Fuente de datos:</strong> Plataforma PDI — indicadores provenientes de estimaciones ACS de 5 años del Censo (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen y USDA Food Access Research Atlas.<br>
+                <strong>Metodología:</strong> Variación a nivel de condado analizada en los 72 condados de Wisconsin. Los indicadores clave están vinculados a cada posición política mediante la tabla de referencia de dimensiones de equidad. Los rankings de necesidad usan valores brutos de indicadores ordenados por relevancia política (ascendente para métricas positivas como ingreso, descendente para métricas de carga como tasa de pobreza).<br>
+                <strong>Calidad de datos:</strong>
                 <span x-text="card.data_quality"></span> —
                 <template x-if="card.data_quality === 'strong'">
-                  <span>High-confidence indicators with CV &lt; 15% and full county coverage.</span>
+                  <span>Indicadores de alta confianza con CV &lt; 15% y cobertura completa de condados.</span>
                 </template>
                 <template x-if="card.data_quality === 'moderate'">
-                  <span>Moderate confidence; some indicators have CV 15–30% or partial county coverage.</span>
+                  <span>Confianza moderada; algunos indicadores tienen CV 15–30% o cobertura parcial de condados.</span>
                 </template>
                 <template x-if="card.data_quality === 'low'">
-                  <span>Limited data availability; use as suggestive evidence only.</span>
+                  <span>Disponibilidad limitada de datos; usar solo como evidencia sugestiva.</span>
                 </template>
                 <br>
-                <strong>Policy ID:</strong> <span x-text="card.policy_id"></span> ·
-                <strong>Equity dimension:</strong> <span x-text="fmtLabel(card.equity_dimension)"></span>
+                <strong>ID de Política:</strong> <span x-text="card.policy_id"></span> ·
+                <strong>Dimensión de equidad:</strong> <span x-text="fmtLabel(card.equity_dimension)"></span>
               </div>
             </div>
 
@@ -736,9 +729,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     x-cloak
     class="state-empty"
   >
-    <p>No evidence cards match your filters.</p>
+    <p>Ninguna tarjeta de evidencia coincide con tus filtros.</p>
     <p style="font-size:0.82rem;margin-top:0.5em;">
-      <button class="btn btn-ghost" @click="clearFilters()">Clear all filters</button>
+      <button class="btn btn-ghost" @click="clearFilters()">Limpiar todos los filtros</button>
     </p>
   </div>
 
@@ -821,7 +814,7 @@ function evidenceGallery() {
         const data = await resp.json();
         this.allCards = data || [];
       } catch (e) {
-        this.cardsError = `Failed to load evidence cards: ${e.message}`;
+        this.cardsError = `Error al cargar tarjetas de evidencia: ${e.message}`;
       } finally {
         this.cardsLoading = false;
       }

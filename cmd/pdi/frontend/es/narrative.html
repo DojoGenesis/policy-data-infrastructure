@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<meta charset="utf-8">
-<script>(function(d){var r=d.documentElement;r.classList.add('js');
-try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
-if(d.hidden){r.classList.add('motion-failed');}
-window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
-<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Narrative Reader — PDI</title>
-<meta name="description" content="Policy narrative reader — tract profiles, indicator dashboards, and policy lever recommendations.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lector de Narrativas — PDI</title>
+<meta name="description" content="Lector de narrativas políticas — perfiles de secciones censales, paneles de indicadores y recomendaciones de palancas políticas.">
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="en" href="/narrative">
+<link rel="alternate" hreflang="es" href="/es/narrative">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
-<link rel="stylesheet" href="/static/motion.css">
 
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
@@ -25,15 +23,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   [x-cloak] { display: none !important; }
 
   /* ── Narrative Reader · page-specific ───────────────────────────── */
-
-  /* ── Thread divider ribbons ──────────────────────────────────── */
-  .thread {
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-    margin: var(--section-gap, 48px) 0;
-    border: 0;
-  }
 
   /* ── Two-column layout: sidebar + prose ─────────────────────────── */
   .narrative-layout {
@@ -514,285 +503,170 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     .prose .stat-row {
       flex-direction: column;
     }
-    .prose .indicator-table {
-      font-size: 0.72rem;
-    }
-  }
-
-  /* ── Print ────────────────────────────────────────────────────── */
-  @media print {
-    .site-header,
-    .chapter-sidebar,
-    .toolbar {
-      display: none !important;
-    }
-    .narrative-layout {
-      display: block;
-      max-width: none;
-      padding-inline: 0;
-    }
-    .prose .cover {
-      background: #fff !important;
-      color: #000 !important;
-      border: none !important;
-      border-radius: 0 !important;
-      padding: 20px 0 !important;
-    }
-    .prose .chapter {
-      page-break-inside: avoid;
-    }
-    .prose .policy-lever {
-      break-inside: avoid;
-    }
   }
 </style>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
-
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
-    </a>
+    <a href="/es/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
     <nav class="site-nav">
-      <a href="/">Explorer</a>
-      <a href="/compare">Compare</a>
-      <a href="/map">Map</a>
-      <a href="/about">About</a>
+      <a href="/es/">Explorador</a>
+      <a href="/es/compare">Comparar</a>
+      <a href="/es/map">Mapa</a>
+      <a href="/es/chat">Chat</a>
+      <a href="/es/about">Acerca de</a>
     </nav>
   </div>
 </header>
 
-<main id="main" x-data="narrativeReader()" x-init="init()"
-      style="padding-top:clamp(24px,4vw,40px);padding-bottom:clamp(48px,8vw,96px);">
-
-  <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-  <div class="toolbar wrap-narrow" x-show="!loading && !error && narrativeHTML">
-    <button @click="printPDF()" class="btn btn-secondary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"/>
-        <path d="M6 12H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-2"/>
-        <rect x="6" y="14" width="12" height="8"/>
-      </svg>
-      Print
-    </button>
-
-    <button @click="shareLink()" class="btn btn-ghost">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-        <polyline points="16 6 12 2 8 6"/>
-        <line x1="12" y1="2" x2="12" y2="15"/>
-      </svg>
-      Share link
-    </button>
-
-    <span x-show="copied" x-cloak class="copy-toast">Link copied!</span>
+<main x-data="narrativeReader()" x-init="init()">
+  <!-- ── Toolbar ── -->
+  <div class="wrap-narrow" style="padding-top:clamp(24px,4vw,40px);">
+    <div class="toolbar">
+      <a href="/es/" class="btn btn-ghost">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver al Explorador
+      </a>
+      <span style="font-size:0.8rem;color:var(--subtle);" x-text="geoid ? 'GEOID: ' + geoid : ''"></span>
+      <button class="btn btn-ghost" @click="copyLink()" style="margin-left:auto;" x-show="geoid">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar enlace
+      </button>
+    </div>
+    <div x-show="copyMessage" x-cloak class="copy-toast" x-text="copyMessage"></div>
   </div>
 
-  <!-- ── Loading · skeleton ──────────────────────────────────────── -->
+  <!-- ── Loading ── -->
   <div x-show="loading" x-cloak class="prose-skeleton">
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
-    <div class="skeleton skeleton-line"></div>
+    <template x-for="i in 10" :key="i">
+      <div class="skeleton-line skeleton"></div>
+    </template>
   </div>
 
-  <!-- ── Error · generation failed ───────────────────────────────── -->
-  <div x-show="error && !loading" x-cloak class="state-error">
-    <span x-text="error"></span>
-    <button @click="loadNarrative()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
+  <!-- ── Error ── -->
+  <div x-show="error" x-cloak class="wrap-narrow state-error" style="padding:clamp(32px,5vw,64px) 0;">
+    <p x-text="error"></p>
+    <button class="btn btn-secondary" @click="init()">Reintentar</button>
   </div>
 
-  <!-- ── Empty · no analysis_id ──────────────────────────────────── -->
-  <div x-show="!loading && !error && !analysisId" x-cloak class="state-empty">
-    <p>No analysis specified.</p>
-    <p style="font-size:0.8rem;color:var(--subtle);margin-top:0.5em;">
-      Open a narrative from the County Profile page.
-    </p>
+  <!-- ── No geoid ── -->
+  <div x-show="!loading && !error && !geoid" x-cloak class="wrap-narrow state-empty" style="padding:clamp(48px,6vw,80px) 0;">
+    <h2 style="color:var(--text);font-size:1.1rem;margin-bottom:0.5em;">Narrativa Política</h2>
+    <p>Selecciona un condado del <a href="/es/" style="color:var(--accent);">Explorador de Condados</a> y haz clic en "Generar Informe" para ver una narrativa detallada.</p>
   </div>
 
-  <!-- ── Narrative + Sidebar ──────────────────────────────────────── -->
-  <div class="narrative-layout reveal" x-show="!loading && !error && narrativeHTML" x-cloak>
+  <!-- ── Narrative content ── -->
+  <div x-show="!loading && !error && narrative" x-cloak class="narrative-layout">
 
-    <!-- Chapter Navigation Sidebar -->
-    <aside class="chapter-sidebar" x-show="chapters.length > 1">
-      <span class="section-tag">Chapters</span>
-      <nav aria-label="Chapter navigation">
-        <template x-for="ch in chapters" :key="ch.id">
-          <a :href="'#' + ch.id"
-             class="chapter-link"
-             :class="{ active: activeChapter === ch.id }"
-             @click.prevent="scrollToChapter(ch.id)">
-            <span class="chapter-link-num" x-text="ch.num"></span>
-            <span x-text="ch.name"></span>
+    <!-- ── Chapter Sidebar ── -->
+    <aside class="chapter-sidebar">
+      <div class="sidebar-label">CAPÍTULOS</div>
+      <nav>
+        <template x-for="(ch, idx) in chapters" :key="ch.id">
+          <a
+            :href="'#' + ch.id"
+            class="chapter-link"
+            :class="{ active: activeChapter === ch.id }"
+            @click.prevent="scrollToChapter(ch.id)"
+          >
+            <span class="chapter-link-num" x-text="(idx + 1).toString().padStart(2, '0')"></span>
+            <span x-text="ch.title"></span>
           </a>
         </template>
       </nav>
     </aside>
 
-    <!-- Prose content -->
-    <div class="prose" x-ref="proseContainer" x-html="narrativeHTML"></div>
-
+    <!-- ── Prose ── -->
+    <div class="prose" id="prose" x-html="narrative"></div>
   </div>
-
 </main>
 
-<!-- ═══════════════════════════ ALPINE ═══════════════════════════ -->
+<footer class="site-footer">
+  Policy Data Infrastructure · <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a> · Apache-2.0
+</footer>
+
 <script>
 function narrativeReader() {
   return {
-    analysisId: '',
-    narrativeHTML: '',
-    loading: true,
-    error: '',
+    geoid: '',
+    narrative: null,
     chapters: [],
     activeChapter: '',
-    copied: false,
-    observer: null,
+    loading: true,
+    error: '',
+    copyMessage: '',
 
-    /* ── Init ────────────────────────────────────────────────── */
-    init() {
-      const params = new URLSearchParams(window.location.search);
-      this.analysisId = params.get('analysis_id') || '';
+    async init() {
+      this.geoid = new URLSearchParams(window.location.search).get('geoid') || '';
+      if (!this.geoid) { this.loading = false; return; }
 
-      if (!this.analysisId) {
-        this.loading = false;
-        return;
-      }
-
-      this.loadNarrative();
-    },
-
-    /* ── Load narrative HTML ──────────────────────────────────── */
-    async loadNarrative() {
       this.loading = true;
       this.error = '';
-      this.narrativeHTML = '';
-
       try {
-        const base = window.location.origin + '/v1/policy';
-        const resp = await fetch(`${base}/generate/narrative/${encodeURIComponent(this.analysisId)}`);
-
-        if (!resp.ok) {
-          const text = await resp.text().catch(() => resp.statusText);
-          throw new Error(text || `HTTP ${resp.status}`);
+        const resp = await fetch('/v1/policy/narratives?geoid=' + this.geoid);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + resp.statusText);
+        const data = await resp.json();
+        this.narrative = data.html || data.narrative || '<p>No se generó contenido narrativo.</p>';
+        this.chapters = data.chapters || [];
+        if (this.chapters.length > 0) {
+          this.activeChapter = this.chapters[0].id;
         }
-
-        const fullHTML = await resp.text();
-
-        // Extract body content: everything between <body ...> and </body>
-        const bodyMatch = fullHTML.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        if (bodyMatch) {
-          this.narrativeHTML = bodyMatch[1].trim();
-        } else {
-          // Fallback: use the full HTML (unlikely path)
-          this.narrativeHTML = fullHTML;
-        }
-
-        this.loading = false;
-
-        // Wait for Alpine to render the x-html, then build chapter nav
-        await this.$nextTick();
-        this.buildChapterNav();
-
       } catch (e) {
-        this.error = `Failed to load narrative: ${e.message}`;
+        this.error = 'Error al cargar la narrativa: ' + e.message;
+      } finally {
         this.loading = false;
       }
     },
 
-    /* ── Build chapter navigation from rendered DOM ───────────── */
-    buildChapterNav() {
-      const container = this.$refs.proseContainer;
-      if (!container) return;
-
-      const chapterEls = container.querySelectorAll('.chapter[id]');
-      if (chapterEls.length === 0) return;
-
-      this.chapters = Array.from(chapterEls).map((el, i) => {
-        const id = el.id;
-        const h2 = el.querySelector('h2');
-        const numSpan = el.querySelector('.chapter-number');
-        const numText = numSpan ? numSpan.textContent.replace(/^Chapter\s*/i, '').trim() : String(i + 1);
-        const name = h2 ? h2.textContent.replace(/\s*<[^>]*>.*/, '').trim() : '';
-
-        return {
-          id,
-          num: numText,
-          name: name || id,
-          label: numText ? `${numText} · ${name}` : (name || id),
-        };
-      });
-
-      // Scroll spy via IntersectionObserver
-      this.setupScrollSpy(chapterEls);
-    },
-
-    /* ── Scroll spy · highlight active chapter ────────────────── */
-    setupScrollSpy(chapterEls) {
-      if (this.observer) this.observer.disconnect();
-
-      const options = {
-        rootMargin: '-100px 0px -60% 0px',
-        threshold: 0,
-      };
-
-      this.observer = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            this.activeChapter = entry.target.id;
-            break; // first visible chapter wins
-          }
-        }
-      }, options);
-
-      chapterEls.forEach(el => this.observer.observe(el));
-    },
-
-    /* ── Scroll to chapter ────────────────────────────────────── */
     scrollToChapter(id) {
+      this.activeChapter = id;
       const el = document.getElementById(id);
       if (el) {
-        const headerH = 64;  // approximate site-header height
-        const top = el.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
-        window.scrollTo({ top, behavior: 'smooth' });
-        this.activeChapter = id;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     },
 
-    /* ── Print ────────────────────────────────────────────────── */
-    printPDF() {
-      window.print();
-    },
-
-    /* ── Share link ───────────────────────────────────────────── */
-    async shareLink() {
+    async copyLink() {
       try {
         await navigator.clipboard.writeText(window.location.href);
-        this.copied = true;
-        setTimeout(() => { this.copied = false; }, 2500);
-      } catch (e) {
-        // Fallback: show the URL
-        const input = document.createElement('input');
-        input.value = window.location.href;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        this.copied = true;
-        setTimeout(() => { this.copied = false; }, 2500);
+        this.copyMessage = '¡Enlace copiado!';
+      } catch (_) {
+        this.copyMessage = 'No se pudo copiar el enlace';
       }
+      setTimeout(() => { this.copyMessage = ''; }, 2000);
     },
   };
 }
+
+// Intersection observer for active chapter tracking
+document.addEventListener('alpine:init', () => {
+  // Runs after Alpine initializes
+  setTimeout(() => {
+    const prose = document.getElementById('prose');
+    if (!prose) return;
+    const chapters = prose.querySelectorAll('.chapter');
+    if (chapters.length === 0) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const chapterEl = entry.target;
+          const id = chapterEl.id;
+          if (id) {
+            const links = document.querySelectorAll('.chapter-link');
+            links.forEach(link => {
+              link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+            });
+          }
+        }
+      }
+    }, { rootMargin: '-20% 0px -60% 0px' });
+
+    chapters.forEach(ch => observer.observe(ch));
+  }, 500);
+});
 </script>
 
 </body>
