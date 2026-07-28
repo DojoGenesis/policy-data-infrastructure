@@ -179,7 +179,10 @@ func runServe(port int) error {
 
 	// Spanish twin pages: /es/<page> → es/<page>.html
 	r.GET("/es/*page", func(c *gin.Context) {
-		page := c.Param("page")
+		page := strings.TrimPrefix(c.Param("page"), "/")
+		if page == "" {
+			page = "index"
+		}
 		html, err := fs.ReadFile(feFS, "es/"+page+".html")
 		if err != nil {
 			c.String(http.StatusNotFound, "page not found")
