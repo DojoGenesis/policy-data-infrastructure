@@ -942,6 +942,17 @@ function compareTool() {
       }
 
       this.loadVariables();  // fire-and-forget background load
+
+      // Tell the chat adapter about the page context
+      if (window.ChatAdapter && this.geoid1 && this.geoid2) {
+        ChatAdapter.setPageContext({
+          page: 'compare',
+          geoid1: this.geoid1,
+          geoid2: this.geoid2,
+          name1: this.selectedName1,
+          name2: this.selectedName2,
+        });
+      }
     },
 
     async loadCounties() {
@@ -1111,6 +1122,19 @@ function compareTool() {
 
         this.result = await resp.json();
         this.compared = true;
+
+        // Tell the chat adapter which two counties we're comparing
+        if (window.ChatAdapter) {
+          const g1 = this.result.geography1;
+          const g2 = this.result.geography2;
+          ChatAdapter.setPageContext({
+            page: 'compare',
+            geoid1: this.geoid1,
+            geoid2: this.geoid2,
+            name1: g1 ? g1.name : this.selectedName1,
+            name2: g2 ? g2.name : this.selectedName2,
+          });
+        }
 
         if (Object.keys(this.variablesMap).length === 0) {
           await this.loadVariables();
