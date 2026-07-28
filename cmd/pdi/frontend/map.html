@@ -86,12 +86,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     width: 100%;
     height: calc(100vh - 120px);
     min-height: 480px;
-    background: #0a0a0f;
+    background: var(--bg);
   }
 
   /* ── Leaflet theming — Night Shift ───────────────────────────── */
   .leaflet-container {
-    background: #0a0a0f !important;
+    background: var(--bg) !important;
     font-family: var(--font-sans) !important;
   }
   .leaflet-control-zoom a {
@@ -317,8 +317,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .state-error p, .state-empty p {
     color: var(--muted); margin: 0 0 12px; font-size: 0.9rem;
   }
-  .state-error { border-color: var(--danger, #dc2626); }
-  .state-error p { color: var(--danger, #dc2626); }
+  .state-error { border-color: var(--tp-cat-5); }
+  .state-error p { color: var(--tp-cat-5); }
 
   /* ── Responsive ──────────────────────────────────────────────── */
   @media (max-width: 600px) {
@@ -413,7 +413,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="lisa-legend" x-show="mapReady" x-cloak>
       <template x-for="item in legendItems" :key="item.tier">
         <div class="lisa-legend-item">
-          <span class="lisa-swatch" :style="'background:' + item.color"></span>
+          <span class="lisa-swatch" :style="'background:' + _resolveColor(item.colorRef)"></span>
           <span x-text="item.tier" style="font-weight:600;"></span>
           <span style="font-size:0.65rem;color:var(--subtle);" x-text="item.desc"></span>
         </div>
@@ -455,7 +455,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <template x-for="row in stats.rows" :key="row.tier">
             <tr>
               <td>
-                <span class="stats-dot" :style="'background:' + row.color"></span>
+                <span class="stats-dot" :style="'background:' + _resolveColor(row.color)"></span>
                 <span x-text="row.label"></span>
               </td>
               <td x-text="row.count"></td>
@@ -504,15 +504,27 @@ function lisaMap() {
     _tractLayer: null,
     _countyLayer: null,
 
-    /* ── Color scale (5-tier — matches spec) ────────────────── */
+    /* ── Color scale (5-tier — Rainbow categorical) ────────── */
     clusterColors: {
-      'HH': '#f59e0b',   // amber-500 — concentrated disadvantage
-      'HL': '#a855f7',   // purple-500 — outlier (worse than neighbors)
-      'LL': '#14b8a6',   // teal-500 — concentrated advantage
-      'LH': '#3b82f6',   // blue-500 — outlier (better than neighbors)
-      'NS': '#4a4a5a'    // muted gray — not significant
+      'HH': 'var(--tp-cat-3)',   // ember — concentrated disadvantage
+      'HL': 'var(--tp-cat-5)',   // red — outlier (worse than neighbors)
+      'LL': 'var(--tp-cat-4)',   // emerald — concentrated advantage
+      'LH': 'var(--tp-cat-6)',   // cyan — outlier (better than neighbors)
+      'NS': 'var(--subtle)'      // muted gray — not significant
     },
-    MISSING_COLOR: '#27272a',  // zinc-800 — no data
+    MISSING_COLOR: 'var(--plane-sunk)',  // dark — no data
+
+    /* Resolved colors (computed from CSS vars at init) */
+    _resolvedColors: {},
+    _resolveColor(ref) {
+      if (this._resolvedColors[ref]) return this._resolvedColors[ref];
+      // Already a computed hex? Return as-is
+      if (ref && !ref.startsWith('var(')) return ref;
+      const el = document.documentElement;
+      const val = ref ? getComputedStyle(el).getPropertyValue(ref.replace(/var\(|\)/g, '')) : '';
+      this._resolvedColors[ref] = val || '#27272a';
+      return this._resolvedColors[ref];
+    },
 
     clusterLabels: {
       'HH': 'High-High', 'HL': 'High-Low', 'LL': 'Low-Low',
@@ -520,11 +532,11 @@ function lisaMap() {
     },
 
     legendItems: [
-      { tier: 'HH', color: '#f59e0b', desc: 'concentrated disadvantage' },
-      { tier: 'HL', color: '#a855f7', desc: 'outlier: worse than neighbors' },
-      { tier: 'LL', color: '#14b8a6', desc: 'concentrated advantage' },
-      { tier: 'LH', color: '#3b82f6', desc: 'outlier: better than neighbors' },
-      { tier: 'NS', color: '#4a4a5a', desc: 'not significant' }
+      { tier: 'HH', colorRef: 'var(--tp-cat-3)', desc: 'concentrated disadvantage' },
+      { tier: 'HL', colorRef: 'var(--tp-cat-5)', desc: 'outlier: worse than neighbors' },
+      { tier: 'LL', colorRef: 'var(--tp-cat-4)', desc: 'concentrated advantage' },
+      { tier: 'LH', colorRef: 'var(--tp-cat-6)', desc: 'outlier: better than neighbors' },
+      { tier: 'NS', colorRef: 'var(--subtle)',    desc: 'not significant' }
     ],
 
     availableVariables: [
@@ -592,7 +604,7 @@ function lisaMap() {
         attributionControl: true
       });
 
-      // NO external tile provider — dark solid background via CSS (#0a0a0f)
+      // NO external tile provider — dark solid background via CSS (var(--bg))
       // The GeoJSON layers provide the only visual content
       L.control.attribution({
         prefix: false,
@@ -785,12 +797,12 @@ function lisaMap() {
       const scoreInfo = currentScores[geoid] || null;
       const hasScores = Object.keys(currentScores).length > 0;
 
-      let color = this.MISSING_COLOR;
+      let color = this._resolveColor(this.MISSING_COLOR);
       if (scoreInfo) {
-        color = this.clusterColors[scoreInfo.cluster] || this.clusterColors['NS'];
+        color = this._resolveColor(this.clusterColors[scoreInfo.cluster] || this.clusterColors['NS']);
       } else if (!hasScores) {
         // No scores loaded at all — show a dark neutral
-        color = '#18181b';
+        color = this._resolveColor('var(--plane-sunk)');
       }
 
       return {
@@ -864,7 +876,7 @@ function lisaMap() {
         // ── LISA classification ──
         if (scoreInfo) {
           const tier = scoreInfo.cluster || 'NS';
-          const tierColor = self.clusterColors[tier] || self.clusterColors['NS'];
+          const tierColor = self._resolveColor(self.clusterColors[tier] || self.clusterColors['NS']);
           const tierLabel = self.clusterLabels[tier] || tier;
 
           html += '<div class="popup-section">';
@@ -958,7 +970,8 @@ function lisaMap() {
         const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         bgRect.setAttribute('width', '100%');
         bgRect.setAttribute('height', '100%');
-        bgRect.setAttribute('fill', '#0a0a0f');
+        const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#0a0a0f';
+        bgRect.setAttribute('fill', bgColor);
         svgClone.insertBefore(bgRect, svgClone.firstChild);
 
         // Serialize to data URL
@@ -973,7 +986,7 @@ function lisaMap() {
         ctx.scale(scale, scale);
 
         // Fill background
-        ctx.fillStyle = '#0a0a0f';
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, w, h);
 
         // Draw SVG onto canvas

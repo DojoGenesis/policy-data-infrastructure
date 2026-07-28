@@ -188,13 +188,15 @@ func runServe(port int) error {
 		})
 	}
 
-	// Spanish twin pages: /es/<page> → es/<page>.html
+	// Spanish language routes: /es/<page> serves the same page as English.
+	// The lang-toggle.js client script detects the /es/ path prefix and
+	// initializes to Spanish. ES twin files are no longer needed (ADR-011).
 	r.GET("/es/*page", func(c *gin.Context) {
 		page := strings.TrimPrefix(c.Param("page"), "/")
 		if page == "" {
 			page = "index"
 		}
-		html, err := fs.ReadFile(feFS, "es/"+page+".html")
+		html, err := fs.ReadFile(feFS, page+".html")
 		if err != nil {
 			c.String(http.StatusNotFound, "page not found")
 			return

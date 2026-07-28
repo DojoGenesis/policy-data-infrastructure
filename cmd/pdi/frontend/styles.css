@@ -289,6 +289,31 @@ a:hover {
    stack applies .scrolled via JS).
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ── Language toggle ──────────────────────────────────────────── */
+.lang-pair {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35em 0.65em;
+  border-radius: var(--r-badge);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: background-color 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+.lang-link:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text);
+  text-decoration: none;
+}
+
 .site-header {
   position: sticky;
   top: 0;

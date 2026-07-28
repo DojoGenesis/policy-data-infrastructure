@@ -208,7 +208,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
   }
 
-  /* ── Expand icon ────────────────────────────────────────────── */
+  /* ── Equity dimension badges — Rainbow categorical ──────── */
+  .badge-equity {
+    font-size: 0.62rem;
+    padding: 0.15em 0.55em;
+  }
+  .badge-equity.housing_affordability { background: color-mix(in srgb, var(--tp-cat-1) 18%, transparent); color: var(--tp-cat-1); border: 1px solid color-mix(in srgb, var(--tp-cat-1) 25%, transparent); }
+  .badge-equity.health_access         { background: color-mix(in srgb, var(--tp-cat-4) 18%, transparent); color: var(--tp-cat-4); border: 1px solid color-mix(in srgb, var(--tp-cat-4) 25%, transparent); }
+  .badge-equity.food_access           { background: color-mix(in srgb, var(--tp-cat-7) 18%, transparent); color: var(--tp-cat-7); border: 1px solid color-mix(in srgb, var(--tp-cat-7) 25%, transparent); }
+  .badge-equity.education             { background: color-mix(in srgb, var(--tp-cat-2) 18%, transparent); color: var(--tp-cat-2); border: 1px solid color-mix(in srgb, var(--tp-cat-2) 25%, transparent); }
+  .badge-equity.environmental         { background: color-mix(in srgb, var(--tp-cat-6) 18%, transparent); color: var(--tp-cat-6); border: 1px solid color-mix(in srgb, var(--tp-cat-6) 25%, transparent); }
+  .badge-equity.transit               { background: color-mix(in srgb, var(--tp-cat-3) 18%, transparent); color: var(--tp-cat-3); border: 1px solid color-mix(in srgb, var(--tp-cat-3) 25%, transparent); }
+  .badge-equity.economic              { background: color-mix(in srgb, var(--tp-cat-8) 18%, transparent); color: var(--tp-cat-8); border: 1px solid color-mix(in srgb, var(--tp-cat-8) 25%, transparent); }
+  .badge-equity.rural                 { background: color-mix(in srgb, var(--tp-cat-5) 18%, transparent); color: var(--tp-cat-5); border: 1px solid color-mix(in srgb, var(--tp-cat-5) 25%, transparent); }
   .expand-icon {
     display: inline-flex;
     align-items: center;
@@ -605,6 +617,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <!-- ── Meta badges ──────────────────────────────────── -->
           <div class="evidence-card-meta">
             <span class="badge badge-info" x-text="card.category"></span>
+            <span class="badge badge-equity" :class="card.equity_dimension" x-text="fmtLabel(card.equity_dimension)" x-show="card.equity_dimension"></span>
             <span class="badge" :class="'badge-' + card.data_quality" x-text="card.data_quality"></span>
           </div>
 

@@ -224,15 +224,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   /* Direction filter chips */
   .filter-chip.direction-adversity {
-    color: var(--gated);
-    border-color: color-mix(in srgb, var(--gated) 30%, transparent);
-    background: color-mix(in srgb, var(--gated) 10%, transparent);
+    color: var(--tp-cat-5);
+    border-color: color-mix(in srgb, var(--tp-cat-5) 30%, transparent);
+    background: color-mix(in srgb, var(--tp-cat-5) 10%, transparent);
   }
 
   .filter-chip.direction-resilience {
-    color: var(--live);
-    border-color: color-mix(in srgb, var(--live) 30%, transparent);
-    background: color-mix(in srgb, var(--live) 10%, transparent);
+    color: var(--tp-cat-4);
+    border-color: color-mix(in srgb, var(--tp-cat-4) 30%, transparent);
+    background: color-mix(in srgb, var(--tp-cat-4) 10%, transparent);
   }
 
   /* Variable filter bar */
@@ -561,10 +561,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 
   .sens-bar-fill.base {
-    background: var(--accent);
+    background: var(--tp-grad-spectrum);
   }
   .sens-bar-fill.perturbed {
-    background: var(--info);
+    background: var(--tp-grad-sky);
   }
 
   .sens-bar-label {
@@ -581,9 +581,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-family: var(--font-mono);
     margin-top: 4px;
   }
-  .sens-stability.robust { color: var(--live); }
-  .sens-stability.stable { color: var(--tp-amber); }
-  .sens-stability.moderate { color: var(--gated); }
+  .sens-stability.robust { color: var(--tp-cat-4); }
+  .sens-stability.stable { color: var(--tp-cat-1); }
+  .sens-stability.moderate { color: var(--tp-cat-5); }
 
   /* ── Footer ──────────────────────────────────────────────────── */
   .site-footer {
@@ -1233,14 +1233,14 @@ function compositeBuilder() {
     weightBarColor(varId) {
       const idx = this.variables.indexOf(varId);
       const colors = [
-        'background-color:var(--accent)',
-        'background-color:var(--info)',
-        'background-color:var(--live)',
-        'background-color:var(--gated)',
-        'background-color:var(--tp-amber)',
-        'background-color:var(--tp-cyan)',
-        'background-color:var(--tp-emerald)',
-        'background-color:var(--tp-red)',
+        'background-color:var(--tp-cat-1)',
+        'background-color:var(--tp-cat-2)',
+        'background-color:var(--tp-cat-3)',
+        'background-color:var(--tp-cat-4)',
+        'background-color:var(--tp-cat-5)',
+        'background-color:var(--tp-cat-6)',
+        'background-color:var(--tp-cat-7)',
+        'background-color:var(--tp-cat-8)',
       ];
       return colors[idx % colors.length];
     },

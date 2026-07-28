@@ -508,28 +508,30 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 </style>
   <link rel="stylesheet" href="/static/chat-drawer.css">
+  <!-- Language toggle — replaces ES twin files per ADR-011 -->
+  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 
-<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
 
 <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
+      <span class="site-logo-accent">PDI</span> <span data-en="Data Explorer" data-es="Explorador de Datos">Data Explorer</span>
     </a>
 
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="/" aria-current="page">Home</a>
-      <a href="/compare">Compare</a>
-      <a href="/evidence">Evidence</a>
-      <a href="/candidates">Candidates</a>
-      <a href="/map">Map</a>
-      <a href="/about">About</a>
+      <a href="/" aria-current="page"><span data-en="Home" data-es="Condados">Home</span></a>
+      <a href="/compare"><span data-en="Compare" data-es="Comparar">Compare</span></a>
+      <a href="/evidence"><span data-en="Evidence" data-es="Evidencia">Evidence</span></a>
+      <a href="/candidates"><span data-en="Candidates" data-es="Candidatos">Candidates</span></a>
+      <a href="/map"><span data-en="Map" data-es="Mapa">Map</span></a>
+      <a href="/about"><span data-en="About" data-es="Acerca de">About</span></a>
     </nav>
 
-    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
+    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI" data-en="Toggle chat" data-es="Alternar chat">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
@@ -544,7 +546,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <section class="hero-glow reveal">
     <span class="section-tag">OPEN SOURCE &middot; APACHE-2.0</span>
     <p class="hero-statement">
-      Public data, privately held, <em>is the quietest form of exclusion.</em> We've made it public again.
+      <span data-en="Public data, privately held, " data-es="Los datos públicos, en manos privadas, ">Public data, privately held, </span><em data-en="is the quietest form of exclusion." data-es="son la forma más silenciosa de exclusión.">is the quietest form of exclusion.</em><span data-en=" We've made it public again." data-es=" Los hemos hecho públicos de nuevo."> We've made it public again.</span>
     </p>
   </section>
 
@@ -563,9 +565,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
             </svg>
           </div>
-          <span class="nav-card-title">Understand your county</span>
-          <span class="nav-card-desc">Explore indicators, equity dimensions, and narrative summaries for any Wisconsin county.</span>
-          <span class="nav-card-link">Browse counties &rarr;</span>
+          <span class="nav-card-title" data-en="Understand your county" data-es="Comprende tu condado">Understand your county</span>
+          <span class="nav-card-desc" data-en="Explore indicators, equity dimensions, and narrative summaries for any Wisconsin county." data-es="Explora indicadores, dimensiones de equidad y resúmenes narrativos para cualquier condado de Wisconsin.">Explore indicators, equity dimensions, and narrative summaries for any Wisconsin county.</span>
+          <span class="nav-card-link" data-en="Browse counties →" data-es="Explorar condados →">Browse counties →</span>
         </a>
 
         <a href="/compare" class="card card-hover card-spectral nav-card">
@@ -574,9 +576,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
             </svg>
           </div>
-          <span class="nav-card-title">Compare places</span>
-          <span class="nav-card-desc">Side-by-side comparison of counties with delta highlighting — spot the gaps that matter.</span>
-          <span class="nav-card-link">Compare counties &rarr;</span>
+          <span class="nav-card-title" data-en="Compare places" data-es="Comparar lugares">Compare places</span>
+          <span class="nav-card-desc" data-en="Side-by-side comparison of counties with delta highlighting — spot the gaps that matter." data-es="Comparación lado a lado de condados con resaltado de diferencias — detecta las brechas que importan.">Side-by-side comparison of counties with delta highlighting — spot the gaps that matter.</span>
+          <span class="nav-card-link" data-en="Compare counties →" data-es="Comparar condados →">Compare counties →</span>
         </a>
 
         <a href="/map" class="card card-hover card-spectral nav-card">
@@ -585,9 +587,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
             </svg>
           </div>
-          <span class="nav-card-title">See patterns on a map</span>
-          <span class="nav-card-desc">Spatial choropleth at census-tract resolution — see where inequity clusters geographically.</span>
-          <span class="nav-card-link">Open map &rarr;</span>
+          <span class="nav-card-title" data-en="See patterns on a map" data-es="Ver patrones en un mapa">See patterns on a map</span>
+          <span class="nav-card-desc" data-en="Spatial choropleth at census-tract resolution — see where inequity clusters geographically." data-es="Coropletas espaciales a resolución de sección censal — ve dónde se agrupa la inequidad geográficamente.">Spatial choropleth at census-tract resolution — see where inequity clusters geographically.</span>
+          <span class="nav-card-link" data-en="Open map →" data-es="Abrir mapa →">Open map →</span>
         </a>
       </div>
     </div>
@@ -601,7 +603,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Featured County ────────────────────────────────────────── -->
   <section class="section-band reveal" x-show="featuredCounty" x-cloak>
     <div class="section-band-inner">
-      <span class="section-tag">FEATURED COUNTY</span>
+      <span class="section-tag" data-en="FEATURED COUNTY" data-es="CONDADO DESTACADO">FEATURED COUNTY</span>
       <div class="card card-raised featured-card">
         <div class="featured-card-inner">
           <div class="featured-card-left">
@@ -611,21 +613,21 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="featured-stats">
               <div>
                 <div class="featured-stat-val" x-text="fmtPop(featuredCounty.population)"></div>
-                <div class="featured-stat-label">Population</div>
+                <div class="featured-stat-label" data-en="Population" data-es="Población">Population</div>
               </div>
               <div>
                 <div class="featured-stat-val" x-text="featuredCounty.tract_count || '—'"></div>
-                <div class="featured-stat-label">Census Tracts</div>
+                <div class="featured-stat-label" data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</div>
               </div>
               <div>
                 <div class="featured-stat-val" x-text="featuredCounty.indicator_count || '—'"></div>
-                <div class="featured-stat-label">Indicators</div>
+                <div class="featured-stat-label" data-en="Indicators" data-es="Indicadores">Indicators</div>
               </div>
             </div>
           </div>
           <div class="featured-card-right">
             <div class="featured-cta">
-              <a :href="'/county?geoid=' + featuredCounty.geoid" class="btn btn-primary">Explore <span x-text="featuredCounty.name"></span> &rarr;</a>
+              <a :href="'/county?geoid=' + featuredCounty.geoid" class="btn btn-primary"><span data-en="Explore " data-es="Explorar ">Explore </span><span x-text="featuredCounty.name"></span> →</a>
             </div>
           </div>
         </div>
@@ -642,31 +644,31 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <div class="stats-bar reveal">
     <div class="stats-bar-item">
       <div class="stats-bar-val">72</div>
-      <div class="stats-bar-label">Counties</div>
+      <div class="stats-bar-label" data-en="Counties" data-es="Condados">Counties</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
       <div class="stats-bar-val">1,542</div>
-      <div class="stats-bar-label">Tracts</div>
+      <div class="stats-bar-label" data-en="Tracts" data-es="Secciones">Tracts</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
       <div class="stats-bar-val">42</div>
-      <div class="stats-bar-label">Variables</div>
+      <div class="stats-bar-label" data-en="Variables" data-es="Variables">Variables</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
       <div class="stats-bar-val">13</div>
-      <div class="stats-bar-label">Sources</div>
+      <div class="stats-bar-label" data-en="Sources" data-es="Fuentes">Sources</div>
     </div>
   </div>
 
   <!-- ── County Grid Section ────────────────────────────────────── -->
   <section class="section-band section-band--alt reveal" id="counties">
     <div class="section-band-inner">
-      <span class="section-tag">EXPLORE</span>
-      <h2 class="section-band-heading">All 72 Wisconsin Counties</h2>
-      <p class="section-band-subtitle">Select a county to view detailed indicators, evidence cards, and narrative summaries.</p>
+      <span class="section-tag" data-en="EXPLORE" data-es="EXPLORAR">EXPLORE</span>
+      <h2 class="section-band-heading" data-en="All 72 Wisconsin Counties" data-es="Los 72 Condados de Wisconsin">All 72 Wisconsin Counties</h2>
+      <p class="section-band-subtitle" data-en="Select a county to view detailed indicators, evidence cards, and narrative summaries." data-es="Selecciona un condado para ver indicadores detallados, fichas de evidencia y resúmenes narrativos.">Select a county to view detailed indicators, evidence cards, and narrative summaries.</p>
 
       <!-- ── Search ──────────────────────────────────────────────── -->
       <div class="search-wrap">
@@ -674,13 +676,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           type="search"
           x-model="countySearch"
           placeholder="Search counties by name…"
+          data-en-placeholder="Search counties by name…"
+          data-es-placeholder="Buscar condados por nombre…"
           aria-label="Search counties by name"
         >
       </div>
 
       <!-- ── Grid header ────────────────────────────────────────── -->
       <div class="county-grid-header" x-show="!countiesLoading && !countiesError">
-        <span class="county-grid-count" x-text="filteredCounties.length + ' of ' + allCounties.length + ' counties'"></span>
+        <span class="county-grid-count" x-text="gridCount()"></span>
       </div>
 
       <!-- ── Skeleton loading ────────────────────────────────────── -->
@@ -699,7 +703,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <!-- ── Error state ─────────────────────────────────────────── -->
       <div x-show="countiesError" x-cloak class="state-error">
         <span x-text="countiesError"></span>
-        <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em">Retry</button>
+        <button class="btn btn-ghost" @click="loadCounties()" style="margin-left:1em" data-en="Retry" data-es="Reintentar">Retry</button>
       </div>
 
       <!-- ── County grid ─────────────────────────────────────────── -->
@@ -716,7 +720,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <div class="county-card-geoid" x-text="c.geoid"></div>
               <div class="county-card-pop">
                 <span class="county-card-pop-val" x-text="fmtPop(c.population)"></span>
-                <span class="county-card-pop-label">pop.</span>
+                <span class="county-card-pop-label" data-en="pop." data-es="pob.">pop.</span>
               </div>
             </div>
           </template>
@@ -729,7 +733,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         x-cloak
         class="state-empty"
       >
-        <p>No counties match &ldquo;<span x-text="countySearch"></span>&rdquo;</p>
+        <p><span data-en="No counties match " data-es="Ningún condado coincide con ">No counties match </span>&ldquo;<span x-text="countySearch"></span>&rdquo;</p>
       </div>
     </div>
   </section>
@@ -790,23 +794,36 @@ function countyExplorer() {
 
     init() {
       this.loadCounties();
+      /* Track language for reactive dynamic strings */
+      this.lang = window.LangToggle ? window.LangToggle.getLang() : 'en';
+      var self = this;
+      document.addEventListener('tp:langchange', function(e) {
+        self.lang = e.detail.lang;
+      });
+    },
+
+    gridCount() {
+      var L = window.LangToggle;
+      var _ = this.lang; /* ensure Alpine reactivity triggers re-render on lang change */
+      return this.filteredCounties.length + ' ' + (L ? L.t('of') : 'of') + ' ' + this.allCounties.length + ' ' + (L ? L.t('counties') : 'counties');
     },
 
     async loadCounties() {
       this.countiesLoading = true;
       this.countiesError = '';
       try {
-        const resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=72');
-        if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
-        const data = await resp.json();
+        var L = window.LangToggle;
+        var resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=72');
+        if (!resp.ok) throw new Error((L ? L.t('api.error') : 'API error') + ': ' + resp.status + ' ' + resp.statusText);
+        var data = await resp.json();
         this.allCounties = data.items || [];
 
         /* Pick a featured county — cycled by date so it rotates daily */
-        const today = new Date();
+        var today = new Date();
         this.featuredIndex = (today.getDate() - 1) % this.featuredPool.length;
         this.featuredCounty = this.featuredPool[this.featuredIndex];
       } catch (e) {
-        this.countiesError = `Failed to load counties: ${e.message}`;
+        this.countiesError = (L ? L.t('load.failed') : 'Failed to load counties') + ': ' + e.message;
         /* Fallback featured — still show even if API fails */
         this.featuredCounty = this.featuredPool[0];
       } finally {

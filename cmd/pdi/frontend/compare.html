@@ -234,8 +234,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .compare-summary .lead {
     font-weight: 600;
   }
-  .compare-summary .lead-a { color: var(--live); }
-  .compare-summary .lead-b { color: var(--gated); }
+  .compare-summary .lead-a { color: var(--tp-cat-4); }
+  .compare-summary .lead-b { color: var(--tp-cat-5); }
 
   /* ── Category filter bar ───────────────────────────────────── */
   .cat-bar {
@@ -267,6 +267,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     background: var(--accent);
     border-color: var(--accent);
   }
+  /* Rainbow categorical for category tabs */
+  .cat-tab.cat-economic.active       { background: var(--tp-cat-1); border-color: var(--tp-cat-1); color: var(--tp-on-sun); }
+  .cat-tab.cat-health.active         { background: var(--tp-cat-4); border-color: var(--tp-cat-4); color: var(--tp-on-emerald); }
+  .cat-tab.cat-housing.active        { background: var(--tp-cat-3); border-color: var(--tp-cat-3); color: var(--tp-on-ember); }
+  .cat-tab.cat-education.active      { background: var(--tp-cat-2); border-color: var(--tp-cat-2); color: var(--tp-on-ocean); }
+  .cat-tab.cat-demographic.active    { background: var(--tp-cat-8); border-color: var(--tp-cat-8); color: var(--tp-paper); }
+  .cat-tab.cat-environment.active    { background: var(--tp-cat-6); border-color: var(--tp-cat-6); color: var(--tp-on-cyan); }
+  .cat-tab.cat-transportation.active { background: var(--tp-cat-7); border-color: var(--tp-cat-7); color: var(--tp-on-lime); }
+  .cat-tab.cat-food.active           { background: var(--tp-cat-5); border-color: var(--tp-cat-5); color: var(--tp-on-red); }
 
   /* ── Compare table ─────────────────────────────────────────── */
   .compare-table-wrap {
@@ -364,8 +373,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     white-space: nowrap;
   }
 
-  .delta-green  { color: var(--live); }
-  .delta-red    { color: var(--gated); }
+  .delta-green  { color: var(--tp-cat-4); }
+  .delta-red    { color: var(--tp-cat-5); }
   .delta-neutral { color: var(--subtle); }
 
   /* ── Reliability dots ──────────────────────────────────────── */
@@ -649,11 +658,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       >All</button>
       <template x-for="cat in categories" :key="cat">
         <button
-          @click="activeCategory = cat"
-          class="cat-tab"
-          :class="{ active: activeCategory === cat }"
-          x-text="cat + ' (' + categoryCount(cat) + ')'"
-        ></button>
+                @click="activeCategory = cat"
+                class="cat-tab"
+                :class="{ active: activeCategory === cat, [catClass(cat)]: true }"
+                x-text="cat + ' (' + categoryCount(cat) + ')'"
+              ></button>
       </template>
     </div>
 
@@ -1240,6 +1249,20 @@ function compareTool() {
     },
 
     // ── Category inference ───────────────────────────────────
+
+    catClass(cat) {
+      const map = {
+        'economic': 'cat-economic',
+        'health': 'cat-health',
+        'housing': 'cat-housing',
+        'education': 'cat-education',
+        'demographic': 'cat-demographic',
+        'environment': 'cat-environment',
+        'transportation': 'cat-transportation',
+        'food': 'cat-food',
+      };
+      return 'cat-' + (map[cat] || cat);
+    },
 
     inferCategory(varId, name) {
       const s = (varId + ' ' + (name || '')).toLowerCase();
