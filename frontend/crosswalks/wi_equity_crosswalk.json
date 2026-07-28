@@ -1,0 +1,259 @@
+{
+  "dimensions": {
+    "food_access": {
+      "label": "Food Access",
+      "indicators": ["median_hh_income", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1",
+      "notes": "USDA FARA data would extend with food_desert_tracts and grocery_access metrics"
+    },
+    "childcare_access": {
+      "label": "Childcare Access",
+      "indicators": ["poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1",
+      "notes": "YoungStar provider data and childcare desert definitions would extend"
+    },
+    "education_funding": {
+      "label": "Education Funding",
+      "indicators": ["median_hh_income", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "education_equity": {
+      "label": "Education Equity",
+      "indicators": ["pct_poc", "pct_non_hispanic_black", "poverty_rate"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "education_access": {
+      "label": "Education Access",
+      "indicators": ["median_hh_income", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Includes higher education and DACA tuition access policies"
+    },
+    "housing_affordability": {
+      "label": "Housing Affordability",
+      "indicators": ["pct_cost_burdened", "pct_severely_cost_burdened", "median_hh_income"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "housing_stability": {
+      "label": "Housing Stability",
+      "indicators": ["pct_cost_burdened", "median_hh_income", "poverty_rate"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "housing_supply": {
+      "label": "Housing Supply",
+      "indicators": ["pct_cost_burdened", "median_hh_income", "total_population"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Zoning data and permit rates would extend"
+    },
+    "housing_transit": {
+      "label": "Housing and Transit Integration",
+      "indicators": ["total_population", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "TOD analysis requires transit proximity data"
+    },
+    "eviction_prevention": {
+      "label": "Eviction Prevention",
+      "indicators": ["pct_cost_burdened", "poverty_rate", "median_hh_income"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "transit_access": {
+      "label": "Transit Access",
+      "indicators": ["total_population", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "GTFS transit feed data would extend with coverage and frequency metrics"
+    },
+    "transit_safety": {
+      "label": "Transit Safety",
+      "indicators": ["total_population", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Pedestrian and bike fatality data from DOT would extend"
+    },
+    "health_access": {
+      "label": "Healthcare Access",
+      "indicators": ["uninsured_rate", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "health_equity": {
+      "label": "Health Equity",
+      "indicators": ["pct_poc", "uninsured_rate", "poverty_rate"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1",
+      "notes": "Includes LGBTQ and gender-affirming care access policies"
+    },
+    "income_equity": {
+      "label": "Income Equity",
+      "indicators": ["median_hh_income", "poverty_rate", "pct_poc"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "economic_equity": {
+      "label": "Economic Equity",
+      "indicators": ["median_hh_income", "pct_cost_burdened", "poverty_rate", "pct_bachelors_or_higher"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "economic_opportunity": {
+      "label": "Economic Opportunity",
+      "indicators": ["median_hh_income", "pct_bachelors_or_higher", "poverty_rate"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "labor_rights": {
+      "label": "Labor Rights",
+      "indicators": ["median_hh_income", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Union density and wage data from BLS would extend"
+    },
+    "labor_mobility": {
+      "label": "Labor Mobility",
+      "indicators": ["median_hh_income", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Non-compete prevalence data would extend"
+    },
+    "environmental_health": {
+      "label": "Environmental Health",
+      "indicators": ["total_population", "pct_poc"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "EPA EJScreen would extend with pollution burden and proximity scores"
+    },
+    "environmental_justice": {
+      "label": "Environmental Justice",
+      "indicators": ["pct_poc", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "EPA EJScreen and energy consumption data would extend"
+    },
+    "environmental_governance": {
+      "label": "Environmental Governance",
+      "indicators": ["total_population"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "DNR enforcement and rulemaking data would extend"
+    },
+    "climate_equity": {
+      "label": "Climate Equity",
+      "indicators": ["pct_cost_burdened", "total_population"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "EV adoption and carbon emissions data would extend"
+    },
+    "criminal_justice": {
+      "label": "Criminal Justice",
+      "indicators": ["pct_poc", "pct_non_hispanic_black", "poverty_rate"],
+      "methods": ["descriptive", "correlation", "regression"],
+      "priority": "P1"
+    },
+    "legal_equity": {
+      "label": "Legal Equity",
+      "indicators": ["pct_poc", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Public defender caseload data would extend"
+    },
+    "community_safety": {
+      "label": "Community Safety",
+      "indicators": ["poverty_rate", "total_population"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Crime rate and program funding data would extend"
+    },
+    "fiscal_equity": {
+      "label": "Fiscal Equity",
+      "indicators": ["median_hh_income", "pct_cost_burdened"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Shared revenue and levy limit data would extend"
+    },
+    "fiscal_autonomy": {
+      "label": "Fiscal Autonomy",
+      "indicators": ["median_hh_income", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Local revenue and levy restriction data would extend"
+    },
+    "care_quality": {
+      "label": "Care Quality",
+      "indicators": ["uninsured_rate", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2"
+    },
+    "care_access": {
+      "label": "Care Access",
+      "indicators": ["uninsured_rate", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "IRIS waitlist and home care availability data would extend"
+    },
+    "care_workforce": {
+      "label": "Care Workforce",
+      "indicators": ["median_hh_income", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Home health worker wage and vacancy data would extend"
+    },
+    "civil_rights": {
+      "label": "Civil Rights",
+      "indicators": ["pct_poc", "pct_non_hispanic_black", "poverty_rate"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Includes trans employment and ID access for undocumented residents"
+    },
+    "reproductive_rights": {
+      "label": "Reproductive Rights",
+      "indicators": ["uninsured_rate", "poverty_rate", "total_population"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Abortion provider access distance would extend"
+    },
+    "immigration_rights": {
+      "label": "Immigration Rights",
+      "indicators": ["pct_poc", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "ICE detainer and deportation stats would extend"
+    },
+    "rural_equity": {
+      "label": "Rural Equity",
+      "indicators": ["median_hh_income", "poverty_rate", "total_population"],
+      "methods": ["descriptive", "correlation"],
+      "priority": "P2",
+      "notes": "Farm consolidation and cooperative data would extend"
+    },
+    "land_preservation": {
+      "label": "Land Preservation",
+      "indicators": ["total_population", "poverty_rate"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Stewardship acres and farmland loss rate would extend"
+    },
+    "tribal_sovereignty": {
+      "label": "Tribal Sovereignty",
+      "indicators": ["total_population", "pct_poc"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Tribal land boundary data and pipeline route data would extend"
+    },
+    "public_safety": {
+      "label": "Public Safety",
+      "indicators": ["poverty_rate", "total_population"],
+      "methods": ["descriptive"],
+      "priority": "P3",
+      "notes": "Gun violence rate and background check data would extend"
+    }
+  }
+}

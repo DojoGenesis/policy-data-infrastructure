@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Composite Index Builder — PDI</title>
-<meta name="description" content="Composite Index Builder — build custom composite indices from any variable with variable picker, weight sliders, and sensitivity analysis.">
+<meta name="description" content="Build custom composite indices from any variable with variable picker, weight sliders, and sensitivity analysis.">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
@@ -76,25 +76,12 @@
     gap: var(--composite-gap);
   }
 
-  /* ── Section cards ───────────────────────────────────────────── */
-  .section-card {
-    background: var(--plane-base);
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
-    box-shadow: var(--lift);
-    padding: clamp(16px, 2.5vw, 24px);
-  }
-
-  .section-card-heading {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: clamp(10px, 1.5vw, 16px);
+  /* ── Card heading override ───────────────────────────────────── */
+  .card-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: clamp(10px, 1.5vw, 16px);
   }
 
   /* ── Geography autocomplete ──────────────────────────────────── */
@@ -138,25 +125,12 @@
     background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
-  /* Selected GEOID chips */
+  /* Selected geography chips */
   .geoid-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 8px;
-  }
-
-  .geoid-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 0.25em 0.65em;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-    border-radius: var(--r-badge);
-    color: var(--accent);
   }
 
   .geoid-chip-remove {
@@ -174,7 +148,8 @@
     cursor: pointer;
     line-height: 1;
     padding: 0;
-    transition: background-color 120ms ease;
+    margin-left: 2px;
+    transition: background-color 120ms ease, color 120ms ease;
   }
   .geoid-chip-remove:hover {
     background: var(--accent);
@@ -232,23 +207,17 @@
     margin-top: 1px;
   }
 
-  .var-item-badge {
-    flex-shrink: 0;
-    font-size: 0.6rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    padding: 0.15em 0.5em;
-    border-radius: var(--r-badge);
-  }
-
-  .var-item-badge.adversity {
+  /* Direction filter chips */
+  .filter-chip.direction-adversity {
     color: var(--gated);
-    background: color-mix(in srgb, var(--gated) 12%, transparent);
+    border-color: color-mix(in srgb, var(--gated) 30%, transparent);
+    background: color-mix(in srgb, var(--gated) 10%, transparent);
   }
 
-  .var-item-badge.resilience {
+  .filter-chip.direction-resilience {
     color: var(--live);
-    background: color-mix(in srgb, var(--live) 12%, transparent);
+    border-color: color-mix(in srgb, var(--live) 30%, transparent);
+    background: color-mix(in srgb, var(--live) 10%, transparent);
   }
 
   /* Variable filter bar */
@@ -264,7 +233,16 @@
     padding: 0.4em 0.7em;
   }
 
+  .var-filter-bar select {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
   /* ── Weight sliders ──────────────────────────────────────────── */
+  .weight-list {
+    margin-top: clamp(10px, 1.5vw, 14px);
+  }
+
   .weight-item {
     margin-bottom: clamp(10px, 1.5vw, 14px);
   }
@@ -325,18 +303,14 @@
     cursor: pointer;
   }
 
-  /* ── Weight distribution bar ─────────────────────────────────── */
-  .weight-dist {
+  /* Weight distribution bar — uses .chart-bar-track as container */
+  .weight-dist-track {
     display: flex;
-    height: 10px;
-    border-radius: 999px;
-    overflow: hidden;
     gap: 2px;
     margin-bottom: 8px;
   }
 
-  .weight-dist-seg {
-    height: 100%;
+  .weight-dist-track .chart-bar-fill {
     border-radius: 2px;
     transition: width 200ms ease, background-color 200ms ease;
   }
@@ -361,6 +335,7 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    margin-bottom: clamp(10px, 1.5vw, 16px);
   }
 
   .method-option {
@@ -409,6 +384,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+    margin-top: clamp(8px, 1.5vw, 12px);
   }
 
   .preset-label {
@@ -427,13 +403,20 @@
     flex-wrap: wrap;
   }
 
+  .compute-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--bg);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: loader-spin 0.7s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
   /* ── Results ─────────────────────────────────────────────────── */
   .result-card {
-    background: var(--plane-base);
-    border: 1px solid var(--border);
-    border-radius: var(--r-card);
-    box-shadow: var(--lift);
-    padding: clamp(16px, 2.5vw, 24px);
     margin-bottom: var(--composite-gap);
   }
 
@@ -580,10 +563,12 @@
   .sens-stability {
     font-size: 0.72rem;
     font-weight: 600;
-    color: var(--live);
     font-family: var(--font-mono);
     margin-top: 4px;
   }
+  .sens-stability.robust { color: var(--live); }
+  .sens-stability.stable { color: var(--tp-amber); }
+  .sens-stability.moderate { color: var(--gated); }
 
   /* ── Footer ──────────────────────────────────────────────────── */
   .site-footer {
@@ -636,6 +621,8 @@
 </head>
 <body>
 
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+
 <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
@@ -662,7 +649,7 @@
 </header>
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main class="wrap" x-data="compositeBuilder()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+<main id="main" class="wrap" x-data="compositeBuilder()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
   <a href="/" class="back-link">
@@ -688,10 +675,10 @@
     <div class="builder-col">
 
       <!-- ── Geography Selector ────────────────────────────────── -->
-      <div class="section-card" x-data>
-        <div class="section-card-heading">
-          <span>📍 Geographies</span>
-          <span style="font-size:0.65rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--subtle)" x-text="geoids.length + ' selected'"></span>
+      <div class="card">
+        <div class="card-heading">
+          <span class="section-tag" style="margin-bottom:0">📍 Geographies</span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="geoids.length + ' selected'"></span>
         </div>
 
         <div class="geo-search-wrap">
@@ -720,10 +707,10 @@
           </div>
         </div>
 
-        <!-- Selected GEOID chips -->
+        <!-- Selected GEOID chips using .filter-chip pattern -->
         <div class="geoid-chips" x-show="geoids.length > 0">
           <template x-for="geoid in geoids" :key="geoid">
-            <span class="geoid-chip">
+            <span class="filter-chip active" style="cursor:default">
               <span x-text="geoLabel(geoid)"></span>
               <button class="geoid-chip-remove" @click="removeGeoid(geoid)" aria-label="Remove">&times;</button>
             </span>
@@ -736,10 +723,10 @@
       </div>
 
       <!-- ── Variable Picker ───────────────────────────────────── -->
-      <div class="section-card">
-        <div class="section-card-heading">
-          <span>📊 Variables</span>
-          <span style="font-size:0.65rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--subtle)" x-text="variables.length + ' selected'"></span>
+      <div class="card">
+        <div class="card-heading">
+          <span class="section-tag" style="margin-bottom:0">📊 Variables</span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="variables.length + ' selected'"></span>
         </div>
 
         <!-- Filter -->
@@ -749,9 +736,8 @@
             x-model="varSearch"
             placeholder="Filter variables…"
             aria-label="Filter variables"
-            style="font-size:0.78rem;padding:0.4em 0.7em"
           >
-          <select x-model="varDirectionFilter" aria-label="Filter by direction" style="flex:0 0 auto;width:auto;font-size:0.75rem;padding:0.4em 2em 0.4em 0.6em;">
+          <select x-model="varDirectionFilter" aria-label="Filter by direction">
             <option value="">All</option>
             <option value="adversity">Adversity</option>
             <option value="resilience">Resilience</option>
@@ -773,10 +759,11 @@
                 <div class="var-item-meta" x-text="v.source_name + ' · ' + (v.unit || 'index')"></div>
               </div>
               <span
-                class="var-item-badge"
-                :class="v.direction || ''"
+                class="filter-chip"
+                :class="'direction-' + v.direction"
                 x-text="v.direction || ''"
                 x-show="v.direction"
+                style="font-size:0.6rem;padding:0.15em 0.5em;cursor:default"
               ></span>
             </label>
           </template>
@@ -802,18 +789,18 @@
     <div class="builder-col">
 
       <!-- ── Weight Sliders ────────────────────────────────────── -->
-      <div class="section-card">
-        <div class="section-card-heading">
-          <span>⚖️ Weights</span>
+      <div class="card">
+        <div class="card-heading">
+          <span class="section-tag" style="margin-bottom:0">⚖️ Weights</span>
           <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.25em 0.65em" @click="resetEqualWeights()" x-show="variables.length > 0">Reset equal</button>
         </div>
 
-        <!-- Weight distribution bar -->
-        <div class="weight-dist" x-show="variables.length > 0">
-          <template x-for="v in variables" :key="v">
+        <!-- Weight distribution bar using .chart-bar-track -->
+        <div class="chart-bar-track weight-dist-track" x-show="variables.length > 0">
+          <template x-for="(v, idx) in variables" :key="v">
             <div
-              class="weight-dist-seg"
-              :style="'width:' + (rawWeight(v) / weightTotal * 100) + '%;' + weightBarColor(v)"
+              class="chart-bar-fill"
+              :style="'width:' + (rawWeight(v) / weightTotal * 100) + '%;' + weightBarColor(v) + ';border-radius:' + (idx === 0 ? '999px 2px 2px 999px' : (idx === variables.length - 1 ? '2px 999px 999px 2px' : '0'))"
             ></div>
           </template>
         </div>
@@ -827,23 +814,25 @@
         </div>
 
         <!-- Individual weight sliders -->
-        <template x-for="v in variables" :key="v">
-          <div class="weight-item" x-show="variables.length > 0">
-            <div class="weight-item-header">
-              <span class="weight-item-name" x-text="varName(v)" :title="varName(v)"></span>
-              <span class="weight-item-val" x-text="rawWeight(v).toFixed(3)"></span>
+        <div class="weight-list" x-show="variables.length > 0">
+          <template x-for="v in variables" :key="v">
+            <div class="weight-item">
+              <div class="weight-item-header">
+                <span class="weight-item-name" x-text="varName(v)" :title="varName(v)"></span>
+                <span class="weight-item-val" x-text="rawWeight(v).toFixed(3)"></span>
+              </div>
+              <input
+                type="range"
+                class="weight-slider"
+                min="0"
+                max="1"
+                step="0.01"
+                :value="rawWeight(v)"
+                @input="setRawWeight(v, parseFloat($event.target.value))"
+              >
             </div>
-            <input
-              type="range"
-              class="weight-slider"
-              min="0"
-              max="1"
-              step="0.01"
-              :value="rawWeight(v)"
-              @input="setRawWeight(v, parseFloat($event.target.value))"
-            >
-          </div>
-        </template>
+          </template>
+        </div>
 
         <p x-show="variables.length === 0" style="font-size:0.72rem;color:var(--subtle)">
           Select 2+ variables to set weights.
@@ -851,11 +840,11 @@
       </div>
 
       <!-- ── Method & Preset ───────────────────────────────────── -->
-      <div class="section-card">
-        <div class="section-card-heading">⚙️ Method &amp; Preset</div>
+      <div class="card">
+        <span class="section-tag">⚙️ Method &amp; Preset</span>
 
         <!-- Method selector -->
-        <div class="method-select" style="margin-bottom:clamp(10px,1.5vw,16px)">
+        <div class="method-select">
           <label class="method-option" :class="{ active: method === 'geometric_mean' }">
             <input type="radio" value="geometric_mean" x-model="method">
             <div>
@@ -873,7 +862,7 @@
         </div>
 
         <!-- Preset loader -->
-        <div class="preset-bar" style="margin-top:clamp(8px,1.5vw,12px)">
+        <div class="preset-bar">
           <span class="preset-label">Preset:</span>
           <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.35em 0.85em" @click="loadNariPreset()" :disabled="presetLoading">
             <span x-show="!presetLoading">Load NARI v2</span>
@@ -885,8 +874,8 @@
       </div>
 
       <!-- ── Compute ───────────────────────────────────────────── -->
-      <div class="section-card">
-        <div class="section-card-heading">🔬 Compute</div>
+      <div class="card">
+        <span class="section-tag">🔬 Compute</span>
 
         <div class="compute-bar">
           <button
@@ -897,7 +886,7 @@
           >
             <span x-show="!computing">Compute Composite</span>
             <span x-show="computing">
-              <span style="display:inline-block;width:14px;height:14px;border:2px solid var(--bg);border-top-color:transparent;border-radius:50%;animation:loader-spin 0.7s linear infinite;margin-right:6px;vertical-align:middle"></span>
+              <span class="compute-spinner"></span>
               Computing…
             </span>
           </button>
@@ -945,7 +934,7 @@
   <!-- ═══ RESULTS CARDS ═══ -->
   <div x-show="!computing && !computeError && results.length > 0" x-cloak>
     <template x-for="(r, idx) in results" :key="r.geoid">
-      <div class="result-card">
+      <div class="card result-card">
 
         <!-- Geography info -->
         <div class="result-geo-name" x-text="geoLabel(r.geoid)"></div>
@@ -985,7 +974,7 @@
 
         <!-- Sensitivity analysis -->
         <div class="sens-section" x-show="sensitivity && sensitivity.scenarios && sensitivity.scenarios.length > 0">
-          <div class="sens-heading">🔍 Sensitivity Analysis (±<span x-text="perturbationPct"></span>)</div>
+          <div class="sens-heading">🔍 Sensitivity Analysis (<span x-text="perturbationPct"></span>)</div>
 
           <template x-for="sc in relevantScenarios(idx)" :key="sc.perturbed_variable + '_' + sc.direction">
             <div class="sens-scenario">
@@ -1013,9 +1002,14 @@
               </div>
 
               <!-- Stability -->
-              <div class="sens-stability" x-show="sensitivity.stability && sensitivity.stability[sc.perturbed_variable] != null">
+              <div
+                class="sens-stability"
+                x-show="sensitivity.stability && sensitivity.stability[sc.perturbed_variable] != null"
+                :class="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"
+              >
                 Ranking stability:
                 <span x-text="(sensitivity.stability[sc.perturbed_variable] * 100).toFixed(1) + '%'"></span>
+                <span style="font-size:0.62rem;font-weight:400;color:var(--muted);margin-left:4px" x-text="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"></span>
               </div>
             </div>
           </template>
@@ -1053,7 +1047,6 @@ function compositeBuilder() {
 
     // ── Weight state ────────────────────────────────────────────
     rawWeights: {},          // variable_id → raw slider value (0..1)
-    // Normalized weights computed from rawWeights
 
     // ── Method & sensitivity ────────────────────────────────────
     method: 'geometric_mean',
@@ -1242,6 +1235,15 @@ function compositeBuilder() {
         'background-color:var(--tp-red)',
       ];
       return colors[idx % colors.length];
+    },
+
+    // ── Stability label ─────────────────────────────────────────
+    stabilityLabel(val) {
+      if (val == null) return '';
+      if (val >= 0.90) return 'Highly robust';
+      if (val >= 0.70) return 'Stable';
+      if (val >= 0.50) return 'Moderately stable';
+      return 'Low stability';
     },
 
     // ── Preset loader ───────────────────────────────────────────

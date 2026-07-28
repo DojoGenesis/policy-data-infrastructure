@@ -960,6 +960,8 @@ function countyProfile() {
         'rural_character': 'Carácter Rural',
         'environmental_burden': 'Carga Ambiental',
         'labor_market': 'Fortaleza del Mercado Laboral',
+        'cardiovascular_metabolic': 'Cardiovascular y Metabólico',
+        'mental_health_economic_deprivation': 'Salud Mental y Privación Económica',
       };
       return this.factors.map(f => ({...f, label: labelMap[f.factor_name] || f.factor_name}));
     },
@@ -992,6 +994,11 @@ function countyProfile() {
 
         this.geo = geoData;
         this.indicators = indData.indicators || [];
+
+        // Tell the chat adapter which county we're viewing
+        if (window.ChatAdapter) {
+          ChatAdapter.setPageContext({ page: 'county', geoid: this.geoid, name: this.geo.name });
+        }
 
         // Build indicator metadata map from variable catalog
         if (varData.variables) {

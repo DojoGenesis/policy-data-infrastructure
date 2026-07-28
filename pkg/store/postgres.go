@@ -903,6 +903,134 @@ WHERE id = $1`
 	return &p, nil
 }
 
+// --- Evidence card operations ---
+
+// PutEvidenceCards bulk-upserts EvidenceCard records using a pgx Batch.
+// ON CONFLICT (policy_id) DO UPDATE refreshes all columns except id so the
+// same policy_id always maps to its most recent card.
+func (s *PostgresStore) PutEvidenceCards(ctx context.Context, cards []EvidenceCard) error {
+	if len(cards) == 0 {
+		return nil
+	}
+
+	const upsertSQL = `
+INSERT INTO evidence_cards (policy_id, policy_title, category, equity_dimension, title, key_finding, data_quality, findings, indicators, statewide_context, county_variation, top_need_counties, bottom_need_counties)
+VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb)
+ON CONFLICT (policy_id) DO UPDATE SET
+    policy_title        = EXCLUDED.policy_title,
+    category            = EXCLUDED.category,
+    equity_dimension    = EXCLUDED.equity_dimension,
+    title               = EXCLUDED.title,
+    key_finding         = EXCLUDED.key_finding,
+    data_quality        = EXCLUDED.data_quality,
+    findings            = EXCLUDED.findings,
+    indicators          = EXCLUDED.indicators,
+    statewide_context   = EXCLUDED.statewide_context,
+    county_variation    = EXCLUDED.county_variation,
+    top_need_counties   = EXCLUDED.top_need_counties,
+    bottom_need_counties = EXCLUDED.bottom_need_counties`
+
+	batch := &pgx.Batch{}
+	for _, card := range cards {
+		batch.Queue(upsertSQL,
+			card.PolicyID,
+			card.PolicyTitle,
+			card.Category,
+			card.EquityDimension,
+			card.Title,
+			card.KeyFinding,
+			card.DataQuality,
+			card.Findings,
+			card.Indicators,
+			card.StatewideContext,
+			card.CountyVariation,
+			card.TopNeedCounties,
+			card.BottomNeedCounties,
+		)
+	}
+
+	br := s.pool.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for i, card := range cards {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("store: PutEvidenceCards[%d] policy_id=%s: %w", i, card.PolicyID, err)
+		}
+	}
+	return nil
+}
+
+// QueryEvidenceCards returns evidence cards matching the optional filters in f.
+// Results are ordered by category, policy_id. An empty result set returns an
+// empty slice, not an error.
+func (s *PostgresStore) QueryEvidenceCards(ctx context.Context, f EvidenceCardFilter) ([]EvidenceCard, error) {
+	args := []interface{}{}
+	clauses := []string{}
+
+	if f.Category != "" {
+		args = append(args, f.Category)
+		clauses = append(clauses, fmt.Sprintf("category = $%d", len(args)))
+	}
+	if f.EquityDimension != "" {
+		args = append(args, f.EquityDimension)
+		clauses = append(clauses, fmt.Sprintf("equity_dimension = $%d", len(args)))
+	}
+	if f.PolicyID != "" {
+		args = append(args, f.PolicyID)
+		clauses = append(clauses, fmt.Sprintf("policy_id = $%d", len(args)))
+	}
+
+	where := ""
+	if len(clauses) > 0 {
+		where = "WHERE " + strings.Join(clauses, " AND ")
+	}
+
+	limit := f.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	args = append(args, limit)
+	limitClause := fmt.Sprintf("LIMIT $%d", len(args))
+
+	args = append(args, f.Offset)
+	offsetClause := fmt.Sprintf("OFFSET $%d", len(args))
+
+	qSQL := fmt.Sprintf(`
+SELECT id, policy_id, policy_title, category, COALESCE(equity_dimension, ''),
+    COALESCE(title, ''), COALESCE(key_finding, ''), COALESCE(data_quality, ''),
+    COALESCE(findings::text, '[]'), COALESCE(indicators::text, '[]'),
+    COALESCE(statewide_context::text, '{}'), COALESCE(county_variation::text, '{}'),
+    COALESCE(top_need_counties::text, '[]'), COALESCE(bottom_need_counties::text, '[]')
+FROM evidence_cards
+%s
+ORDER BY category, policy_id
+%s %s`, where, limitClause, offsetClause)
+
+	rows, err := s.pool.Query(ctx, qSQL, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryEvidenceCards: %w", err)
+	}
+	defer rows.Close()
+
+	var result []EvidenceCard
+	for rows.Next() {
+		var card EvidenceCard
+		if err := rows.Scan(
+			&card.ID, &card.PolicyID, &card.PolicyTitle, &card.Category,
+			&card.EquityDimension, &card.Title, &card.KeyFinding, &card.DataQuality,
+			&card.Findings, &card.Indicators, &card.StatewideContext,
+			&card.CountyVariation, &card.TopNeedCounties, &card.BottomNeedCounties,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryEvidenceCards scan: %w", err)
+		}
+		result = append(result, card)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryEvidenceCards rows: %w", err)
+	}
+	return result, nil
+}
+
 // ListAnalyses returns a summary of all analysis runs ordered by computed_at
 // descending (most recent first). ScoreCount is populated via a correlated
 // subquery so no JOIN fanout occurs on the result set.

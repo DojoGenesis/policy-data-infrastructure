@@ -98,6 +98,34 @@ img, svg, video, canvas {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   SKIP-TO-CONTENT LINK
+   ──────────────────────────────────────────────────────────────────
+   Visually hidden until focused — first focusable element on every
+   page. When focused, slides into view at the top of the viewport.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 100;
+  padding: 0.5em 1em;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0 0 var(--r-badge) 0;
+  text-decoration: none;
+  transition: top 120ms ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    TYPOGRAPHY
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -850,6 +878,19 @@ html.js .page-view {
 
   .card-hover:hover {
     transform: none;
+  }
+
+  /* Reveal effects — snap to finished state; content must never
+     depend on an animation completing for a reduced-motion visitor. */
+  .reveal,
+  .reveal.in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Skip-link — snap, don't slide */
+  .skip-link {
+    transition: none !important;
   }
 }
 

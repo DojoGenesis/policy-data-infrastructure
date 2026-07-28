@@ -76,6 +76,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     letter-spacing: 0.04em;
   }
 
+  /* ── County card focus ring (keyboard navigation) ──────────── */
+  .county-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
   /* ── Skeleton card placeholders ─────────────────────────────── */
   .skeleton-card .skeleton-line {
     height: 0.85em;
@@ -185,6 +192,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </head>
 <body>
 
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+
 <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
@@ -210,7 +219,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </header>
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main class="wrap" x-data="countyExplorer()" x-init="init()">
+<main id="main" class="wrap" x-data="countyExplorer()" x-init="init()">
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
   <div class="hero">
@@ -249,10 +258,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <!-- ── County grid ───────────────────────────────────────────── -->
   <div x-show="!countiesLoading && !countiesError && filteredCounties.length > 0" x-cloak>
-    <div class="county-grid">
+    <div class="county-grid" @keydown="handleGridKeydown($event)">
       <template x-for="c in filteredCounties" :key="c.geoid">
         <div
           class="card card-hover county-card"
+          tabindex="0"
+          @keydown="handleGridKeydown($event)"
           @click="window.location = '/county?geoid=' + c.geoid"
         >
           <div class="county-card-name" x-text="c.name"></div>
@@ -323,6 +334,49 @@ function countyExplorer() {
       if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
       if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
       return n.toLocaleString();
+    },
+
+    /* ── Arrow-key grid navigation ──────────────────────────── */
+    handleGridKeydown(e) {
+      const grid = this.$el.querySelector('.county-grid');
+      const cards = grid ? grid.querySelectorAll('.county-card') : [];
+      const len = cards.length;
+      if (!len) return;
+
+      const current = document.activeElement;
+      let idx = Array.from(cards).indexOf(current);
+      if (idx === -1) { cards[0].focus(); return; }
+
+      const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          idx = Math.min(idx + 1, len - 1);
+          cards[idx].focus();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          idx = Math.max(idx - 1, 0);
+          cards[idx].focus();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          idx = Math.min(idx + cols, len - 1);
+          cards[idx].focus();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          idx = Math.max(idx - cols, 0);
+          cards[idx].focus();
+          break;
+        case 'Enter':
+          if (current && current.classList.contains('county-card')) {
+            e.preventDefault();
+            current.click();
+          }
+          break;
+      }
     }
   };
 }

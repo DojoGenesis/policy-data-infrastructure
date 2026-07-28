@@ -3,7 +3,37 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
-## 2026-07-26
+## 2026-07-27
+
+### Wave 1: Frontend Reconciliation + Deploy
+- Reconciled dual frontend directories (`frontend/` and `cmd/pdi/frontend/`) — 9 HTML files synced
+  - index.html: merged root's rich county explorer (324 lines) with cmd's motion failsafe + theme detection → 332 lines
+  - county.html: copied root's full dashboard (1,292 lines) → cmd (was 334-line skeleton)
+  - about.html, compare.html, map.html, narrative.html: cmd versions were richer → kept + synced back to root
+  - candidates.html, composites.html, evidence.html: identical
+- Verified static assets in cmd/pdi/frontend/: tracts.geojson (1,542 features, 1.8MB), counties.geojson (72 features, 120KB), evidence_cards.json (70 cards, 166KB), composites/nari_v2.json
+- Cross-compiled Linux binary (40MB), deployed to VPS (root@5.161.84.125), pdi.service restarted
+- All 11 pages serving: index, county, compare, evidence, candidates, map, narrative, about, composite, chat, es/*
+- VPS health confirmed: 6 LISA analyses (1,524 scores each), 70 evidence cards, 42 variables, Francesca Hong policies seeded
+- API endpoints verified: geographies, indicators (Dane County $88,108 median income), analyses, variables, policies, sources
+
+### Wave 2: Three New Data Sources (dispatch: deleg_3fe9e1c5)
+- **CDC SVI** (Social Vulnerability Index): 5 variables (overall + 4 theme scores), county + tract level
+  - `ingest/fetch_cdc_svi.py`, `pkg/datasource/cdc_svi.go`, `cdc_svi_test.go`
+- **FBI NIBRS** (Crime Data): 2 variables (violent_crime_rate, property_crime_rate), county level
+  - `ingest/fetch_fbi_nibrs.py`, `pkg/datasource/fbi_nibrs.go`, `fbi_nibrs_test.go`
+  - Requires FBI_CDE_API_KEY (documented in --dry-run output)
+- **FCC Broadband** (Form 477): 2 variables (broadband_access_pct, multiple_providers_pct), county + tract level
+  - `ingest/fetch_fcc_broadband.py`, `pkg/datasource/fcc_broadband.go`, `fcc_broadband_test.go`
+- 15 new files total, 9 new indicator variables, 3 migrations (009-011)
+- Registrations in fetch.go + pipeline.go, seed_sources.sql updated
+- All gates: go build ✅, go vet ✅, go test ./... -short (10/10 pass) ✅
+- Post-dispatch fixes: FCC registration added to pipeline.go, fbi-nibrs added to seed_sources.sql, migrations renumbered sequentially
+
+### Data Source Count
+- Pre-Wave 2: 13 datasource adapters, 42 variables
+- Post-Wave 2: 16 datasource adapters, 51 variables
+- Sources: ACS, TIGER, CDC PLACES, EPA EJScreen, HRSA, GTFS, WI DPI, HUD CHAS, HMDA, EPA TRI, HUD PIT, USDA Food, BLS LAUS, **CDC SVI**, **FBI NIBRS**, **FCC Broadband**
 
 ### Statewide tract resolution — ACS 2024 (PIP-91)
 - Raised the ACS default vintage 2023 → 2024 across the ACS-facing scripts

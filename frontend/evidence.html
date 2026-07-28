@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evidence Card Gallery — PDI</title>
 <meta name="description" content="Evidence Card Gallery — 70 policy evidence cards with indicators, county-level variation, and key findings from the Policy Data Infrastructure platform.">
 
 <!-- Design tokens — Night Shift + Rainbow, all colors via var() -->
 <link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/motion.css">
 
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
@@ -21,6 +27,15 @@
   /* ── Evidence page-specific ──────────────────────────────────── */
   :root {
     --evidence-gap: clamp(14px, 2vw, 20px);
+  }
+
+  /* ── Thread divider ribbons ──────────────────────────────────── */
+  .thread {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: var(--section-gap, 48px) 0;
+    border: 0;
   }
 
   /* ── Hero ───────────────────────────────────────────────────── */
@@ -72,10 +87,9 @@
     align-items: center;
   }
 
-  .filter-search {
-    flex: 1 1 260px;
+  .search-wrap {
     max-width: 380px;
-    min-width: 200px;
+    margin-bottom: 0;
   }
 
   .filter-select {
@@ -426,7 +440,7 @@
       align-items: stretch;
     }
 
-    .filter-search {
+    .search-wrap {
       max-width: none;
     }
 
@@ -448,32 +462,24 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
+      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="/">Counties</a>
+    <nav class="site-nav">
+      <a href="/">Explorer</a>
       <a href="/compare">Compare</a>
-      <a href="/evidence" aria-current="page">Evidence</a>
-      <a href="/candidates">Candidates</a>
       <a href="/map">Map</a>
+      <a href="/evidence" aria-current="page">Evidence</a>
       <a href="/about">About</a>
     </nav>
-
-    <button class="chat-toggle" aria-label="Toggle chat" title="Chat with PDI">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    </button>
   </div>
 </header>
 
-<!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main class="wrap" x-data="evidenceGallery()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+<main id="main" class="wrap" x-data="evidenceGallery()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
   <a href="/" class="back-link">
@@ -484,7 +490,8 @@
   </a>
 
   <!-- ── Hero ─────────────────────────────────────────────────── -->
-  <div class="hero">
+  <div class="hero reveal">
+    <span class="section-tag">Evidence</span>
     <h1>Evidence Card Gallery</h1>
     <p class="hero-subtitle">
       70 policy evidence cards · <span x-text="allCards.length"></span> cards loaded
@@ -496,7 +503,7 @@
 
   <!-- ── Filter bar ───────────────────────────────────────────── -->
   <div class="filter-bar">
-    <div class="filter-search">
+    <div class="search-wrap">
       <input
         type="search"
         x-model="searchQuery"
@@ -537,6 +544,8 @@
     <span x-show="searchQuery || categoryFilter || equityFilter">(filtered)</span>
   </div>
 
+  <hr class="thread" aria-hidden="true">
+
   <!-- ── Skeleton loading ─────────────────────────────────────── -->
   <div x-show="cardsLoading" x-cloak>
     <div class="card-grid" aria-hidden="true">
@@ -562,8 +571,9 @@
     <div class="card-grid">
       <template x-for="(card, idx) in filteredCards" :key="card.policy_id">
         <div
-          class="card card-hover evidence-card"
+          class="card card-hover evidence-card reveal"
           :class="{ expanded: expandedCard === card.policy_id }"
+          :style="'--d:' + (idx * 80)"
           @click="toggleCard(card.policy_id, $event)"
         >
 
@@ -806,10 +816,10 @@ function evidenceGallery() {
       this.cardsLoading = true;
       this.cardsError = '';
       try {
-        const resp = await fetch('/static/evidence_cards.json');
+        const resp = await fetch('/v1/policy/evidence-cards?limit=100');
         if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
-        this.allCards = data || [];
+        this.allCards = data.cards || [];
       } catch (e) {
         this.cardsError = `Failed to load evidence cards: ${e.message}`;
       } finally {

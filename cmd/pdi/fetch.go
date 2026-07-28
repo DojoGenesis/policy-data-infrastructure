@@ -75,6 +75,7 @@ func runFetch(stateFIPS, countyFIPS, scope string, year int, sourcesFlag string,
 	reg.Register(datasource.NewACSSource(datasource.ACSConfig{Year: year}))
 	reg.Register(datasource.NewTIGERSource(year))
 	reg.Register(datasource.NewCDCPlacesSource(datasource.CDCPlacesConfig{Year: year}))
+	reg.Register(datasource.NewCDCSVISource(datasource.CDCSVIConfig{Year: year}))
 	reg.Register(datasource.NewEPAEJScreenSource(datasource.EPAEJScreenConfig{Year: year}))
 	reg.Register(datasource.NewHRSASource(datasource.HRSAConfig{Year: year}))
 	reg.Register(datasource.NewGTFSSource(datasource.GTFSConfig{Year: year}))
@@ -85,6 +86,8 @@ func runFetch(stateFIPS, countyFIPS, scope string, year int, sourcesFlag string,
 	reg.Register(datasource.NewHUDPITSource(datasource.HUDPITConfig{Year: year}))
 	reg.Register(datasource.NewUSDAFoodSource(datasource.USDAFoodConfig{Year: year}))
 	reg.Register(datasource.NewBLSLAUSSource(datasource.BLSLAUSConfig{Year: year}))
+	reg.Register(datasource.NewFBINIBRSSource(datasource.FBINIBRSConfig{Year: year}))
+	reg.Register(datasource.NewFCCBroadbandSource(datasource.FCCBroadbandConfig{Year: year}))
 
 	// Filter to requested sources.
 	var toFetch []datasource.DataSource

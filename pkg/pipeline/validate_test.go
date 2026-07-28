@@ -65,6 +65,12 @@ func (m *mockValidateStore) QueryPolicies(_ context.Context, _ store.PolicyQuery
 func (m *mockValidateStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) PutEvidenceCards(_ context.Context, _ []store.EvidenceCard) error {
+	return nil
+}
+func (m *mockValidateStore) QueryEvidenceCards(_ context.Context, _ store.EvidenceCardFilter) ([]store.EvidenceCard, error) {
+	return nil, nil
+}
 func (m *mockValidateStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error {
 	return nil
 }

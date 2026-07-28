@@ -3,6 +3,27 @@ const ChatAdapter = {
   _sessionId: 'pdi-web-' + Date.now().toString(36),
   _proxyAvailable: null,
   _systemPrompt: null,  // Built lazily from live API data
+  _pageContext: null,   // {page, geoid, name, indicator, geoid1, geoid2, name1, name2}
+
+  setPageContext(ctx) {
+    this._pageContext = ctx || null;
+    this._systemPrompt = null;  // Invalidate cache so prompt rebuilds
+  },
+
+  _buildPageContextBlock() {
+    if (!this._pageContext) return '';
+    const ctx = this._pageContext;
+    switch (ctx.page) {
+      case 'county':
+        return `\nCURRENT PAGE CONTEXT: The user is currently viewing ${ctx.name || 'a county'} (GEOID: ${ctx.geoid || 'unknown'}). Contextualize your answer relative to this county unless asked otherwise.`;
+      case 'map':
+        return `\nCURRENT PAGE CONTEXT: The user is viewing the LISA cluster map for ${ctx.indicator || 'an indicator'}.`;
+      case 'compare':
+        return `\nCURRENT PAGE CONTEXT: The user is comparing ${ctx.name1 || 'County A'} and ${ctx.name2 || 'County B'}${ctx.geoid1 && ctx.geoid2 ? ' (' + ctx.geoid1 + ' vs ' + ctx.geoid2 + ')' : ''}.`;
+      default:
+        return '';
+    }
+  },
 
   async _buildSystemPrompt() {
     if (this._systemPrompt) return this._systemPrompt;
@@ -65,7 +86,8 @@ The counties where policy interventions save the most money are those with the h
 1. Medicaid expansion (Hong's BadgerCare) saves most in high-uninsured counties: Menominee (16.5%), Iron (11.2%), Florence (10.8%)
 2. Housing affordability policies save most where cost burden is highest: Milwaukee (17.5% poverty + 939K pop = largest absolute burden)
 3. Food access policies save most in high-poverty rural counties: Menominee, Ashland, Forest, Sawyer
-4. Education funding saves most where chronic absence correlates with poverty: Milwaukee, Racine, Kenosha`;
+4. Education funding saves most where chronic absence correlates with poverty: Milwaukee, Racine, Kenosha
+${this._buildPageContextBlock()}`;
 
     return this._systemPrompt;
   },

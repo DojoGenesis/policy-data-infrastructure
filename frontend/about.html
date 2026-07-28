@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About — Policy Data Infrastructure</title>
 <meta name="description" content="About PDI: open-source national policy data platform. Architecture, methodology, data sources, variables, and research references.">
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/styles.css">
+<script defer src="/static/alpine.min.js"></script>
 <style>
-/* ── About-page-specific layout ─────────────────────────────────── */
-.about-section {
-  margin-bottom: var(--section-gap);
-}
+[x-cloak] { display: none !important; }
+
+/* ── About-page layout ──────────────────────────────────────────── */
+.about-section { margin-bottom: var(--section-gap, 48px); }
 
 .about-section-title {
   font-size: clamp(1.3rem, 3.4vw, 1.8rem);
@@ -26,26 +27,44 @@
   margin-bottom: 1.25em;
 }
 
-/* ── Architecture diagram ──────────────────────────────────────── */
+/* ── Hero stat row ──────────────────────────────────────────────── */
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(12px, 2vw, 24px);
+  margin: 1em 0 0;
+}
+.hero-stat {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.hero-stat strong {
+  color: var(--text);
+  font-size: 1.15rem;
+}
+
+/* ── Architecture diagram: five layers, stacked ──────────────────── */
 .arch-diagram {
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(8px, 1.5vw, 16px);
+  gap: 0;
   margin: 1.5em 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
 }
 
 .arch-layer {
-  background: var(--plane-base);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--r-badge);
-  padding: clamp(12px, 2vw, 20px);
+  background: var(--plane-base, var(--surface));
+  border-bottom: 1px solid var(--border);
+  padding: clamp(14px, 2vw, 22px) clamp(16px, 2.5vw, 24px);
   position: relative;
   transition: border-color 200ms ease, background-color 200ms ease;
 }
+.arch-layer:last-child { border-bottom: none; }
+
 .arch-layer:hover {
-  border-color: var(--accent);
-  background: var(--plane-1);
+  background: var(--plane-1, var(--raised));
 }
 
 .arch-layer-num {
@@ -70,16 +89,7 @@
   line-height: 1.4;
 }
 
-.arch-arrow {
-  text-align: center;
-  font-size: 1.2rem;
-  color: var(--accent);
-  margin: -4px 0;
-  line-height: 1;
-  opacity: 0.7;
-}
-
-/* ── Method cards ───────────────────────────────────────────────── */
+/* ── Method cards ────────────────────────────────────────────────── */
 .method-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
@@ -88,7 +98,7 @@
 }
 
 .method-card {
-  background: var(--plane-base);
+  background: var(--plane-base, var(--surface));
   border: 1px solid var(--border);
   border-top: 2px solid var(--accent);
   border-radius: var(--r-card);
@@ -115,16 +125,31 @@
   line-height: 1.45;
 }
 
-/* ── Search input ───────────────────────────────────────────────── */
+/* ── Search input ────────────────────────────────────────────────── */
 .catalog-search {
   width: 100%;
   margin-bottom: 1em;
 }
 .catalog-search input {
   width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-badge);
+  background: var(--plane-base, var(--surface));
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  transition: border-color 200ms ease;
+}
+.catalog-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.catalog-search input::placeholder {
+  color: var(--subtle);
 }
 
-/* ── Variable groups ────────────────────────────────────────────── */
+/* ── Variable groups ─────────────────────────────────────────────── */
 .var-group {
   margin-bottom: 1.5em;
 }
@@ -142,31 +167,33 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 0.35em 0;
+  flex-wrap: wrap;
+  gap: 0.35em 1em;
+  padding: 0.4em 0;
   font-size: 0.8rem;
   border-bottom: 1px solid var(--border);
 }
 .var-item:last-child { border-bottom: none; }
 .var-name { color: var(--text); font-weight: 500; }
 .var-unit { color: var(--subtle); font-size: 0.7rem; margin-left: 0.5em; }
-.var-count { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.var-desc { color: var(--muted); font-size: 0.7rem; max-width: 38em; text-align: right; }
 
-/* ── Manim placeholder ──────────────────────────────────────────── */
+/* ── Manim placeholder ───────────────────────────────────────────── */
 .manim-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: clamp(12px, 2vw, 20px);
   margin: 1.5em 0;
 }
 .manim-card {
-  background: var(--plane-base);
+  background: var(--plane-base, var(--surface));
   border: 1px dashed var(--border);
   border-radius: var(--r-card);
-  padding: clamp(16px, 3vw, 28px);
+  padding: clamp(16px, 3vw, 32px);
   text-align: center;
   color: var(--subtle);
   font-size: 0.85rem;
-  transition: border-color 200ms ease;
+  transition: border-color 200ms ease, color 200ms ease;
 }
 .manim-card:hover {
   border-color: var(--accent);
@@ -178,7 +205,34 @@
   opacity: 0.5;
 }
 
-/* ── Ref table ──────────────────────────────────────────────────── */
+/* ── Tables ──────────────────────────────────────────────────────── */
+.about-section .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.about-section .data-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.about-section .data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+.about-section .data-table tr:hover td {
+  background: var(--plane-1, var(--raised));
+}
+
+/* ── Ref table ───────────────────────────────────────────────────── */
 .ref-table { font-size: 0.78rem; }
 .ref-table th { white-space: nowrap; }
 .ref-table td { vertical-align: top; }
@@ -186,12 +240,36 @@
 .ref-table .ref-title { font-weight: 500; color: var(--text); }
 .ref-table .ref-authors { color: var(--muted); }
 .ref-table .ref-year { font-variant-numeric: tabular-nums; color: var(--subtle); }
-.ref-table .ref-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ref-table .ref-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .ref-table .ref-key { font-size: 0.68rem; color: var(--accent); }
 
-/* ── Grant / license section ────────────────────────────────────── */
+/* ── Badges ──────────────────────────────────────────────────────── */
+.about-section .badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-badge);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.badge-type-api {
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
+}
+.badge-type-file {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.badge-type-unsure {
+  color: var(--subtle);
+  background: color-mix(in srgb, var(--subtle) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--subtle) 20%, transparent);
+}
+
+/* ── Grant / license section ─────────────────────────────────────── */
 .grant-section {
-  background: var(--plane-base);
+  background: var(--plane-base, var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   padding: clamp(16px, 2.5vw, 24px);
@@ -211,105 +289,149 @@
   opacity: 0.8;
 }
 
-/* ── Loading / error state ──────────────────────────────────────── */
-.loading-row { text-align: center; padding: 2em 0; }
-.error-inline {
+/* ── Loading / error / empty state ───────────────────────────────── */
+.about-section .loading-row { text-align: center; padding: 2em 0; color: var(--muted); }
+
+.about-section .error-inline {
   padding: 0.75em 1em;
   border-radius: var(--r-badge);
   font-size: 0.85rem;
   margin: 0.5em 0;
+  color: var(--gated);
+  background: color-mix(in srgb, var(--gated) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gated) 30%, transparent);
 }
 
-/* ── Responsive: wider arch diagram ─────────────────────────────── */
-@media (min-width: 600px) {
-  .arch-diagram {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .arch-diagram .arch-layer-full {
-    grid-column: 1 / -1;
-  }
+.about-section .state-empty { text-align: center; padding: 2em 0; color: var(--muted); font-size: 0.85rem; }
+
+/* ── Table wrapper ───────────────────────────────────────────────── */
+.about-section .table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
 }
+.about-section .table-wrapper .data-table { margin: 0; }
 </style>
 </head>
 <body>
 
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+
 <!-- ═══════════════ SITE HEADER ═══════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a href="index.html" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
+    <a href="/" class="site-logo"><span class="site-logo-accent">PDI</span> Policy Data Infrastructure</a>
     <nav class="site-nav">
-      <a href="index.html">Explorer</a>
-      <a href="about.html" aria-current="page">About</a>
+      <a href="/">Explorer</a>
+      <a href="/about" aria-current="page">About</a>
       <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </div>
 </header>
 
 <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<main class="wrap-narrow" style="padding-top: clamp(24px, 4vw, 48px); padding-bottom: var(--section-gap);">
+<main id="main" class="wrap-narrow" x-data="aboutPage()" x-init="init()">
 
-  <!-- ── Platform Overview ──────────────────────────────────────── -->
+  <!-- ── Platform Overview ────────────────────────────────────────── -->
   <section class="about-section" id="overview">
     <span class="section-tag">About PDI</span>
     <h1 class="about-section-title">Platform Overview</h1>
     <p class="about-section-subtitle">An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts.</p>
 
-    <p>PDI ingests public data from <strong>13 sources</strong>, produces <strong>42 validated variables</strong>, and runs a <strong>5-layer statistical engine</strong> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</p>
+    <p>PDI ingests public data from
+      <strong x-show="!overviewLoading && sourceCount != null" x-text="sourceCount + ' sources'"></strong>
+      <strong x-show="overviewLoading || sourceCount == null">multiple sources</strong>,
+      produces
+      <strong x-show="!overviewLoading && variableCount != null" x-text="variableCount + ' validated variables'"></strong>
+      <strong x-show="overviewLoading || variableCount == null">validated variables</strong>,
+      and runs a <strong>5-layer statistical engine</strong> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</p>
 
     <p>The platform runs on a six-stage DAG pipeline — <em>fetch &rarr; process &rarr; enrich &rarr; analyze &rarr; synthesize &rarr; deliver</em> — with stages executing in concurrent waves via topological sort. Raw indicators are stored in PostGIS, validated features are derived mathematically, and composites exist only at query time with mandatory sensitivity analysis.</p>
 
     <p><strong>Stack:</strong> Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. All code is open source under Apache-2.0.</p>
   </section>
 
-  <!-- ── Five-Layer Architecture ────────────────────────────────── -->
+  <!-- ── Five-Layer Architecture ──────────────────────────────────── -->
   <section class="about-section" id="architecture">
     <span class="section-tag">Architecture</span>
     <h2 class="about-section-title">Five-Layer Statistical Architecture</h2>
     <p class="about-section-subtitle">Each layer builds on the one below. Composites exist only at the top — computed at query time, never stored as truth.</p>
 
     <div class="arch-diagram">
-      <div class="arch-layer">
+      <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
         <div class="arch-layer-num">Layer 5</div>
         <div class="arch-layer-name">Composite Views</div>
-        <div class="arch-layer-desc">Query-time only. Geometric mean aggregation with automated sensitivity analysis. Never persisted.</div>
+        <div class="arch-layer-desc">Query-time only. Geometric mean aggregation with automated sensitivity analysis (&plusmn;20% weight perturbation). Never persisted. Multiple composite specifications can coexist for different policy questions.</div>
       </div>
-      <div class="arch-arrow">&darr;</div>
       <div class="arch-layer">
         <div class="arch-layer-num">Layer 4</div>
         <div class="arch-layer-name">Spatial Analysis</div>
-        <div class="arch-layer-desc">LISA clusters, GWR coefficients, multilevel variance decomposition across geographic scales.</div>
+        <div class="arch-layer-desc">LISA local Moran's I clusters (HH/LL/HL/LH), Geographically Weighted Regression coefficients, multilevel variance decomposition across geographic scales, SKATER regionalization.</div>
       </div>
-      <div class="arch-arrow">&darr;</div>
-      <div class="arch-layer">
+      <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
         <div class="arch-layer-num">Layer 3</div>
         <div class="arch-layer-name">Factor Scores</div>
-        <div class="arch-layer-desc">EFA-derived dimensions with oblimin rotation. Named by loading profile; loadings documented per variable.</div>
+        <div class="arch-layer-desc">Exploratory Factor Analysis with oblimin rotation. Dimensions named by loading profile; variable loadings documented. Per-tract factor scores + national percentiles.</div>
       </div>
-      <div class="arch-arrow">&darr;</div>
       <div class="arch-layer">
         <div class="arch-layer-num">Layer 2</div>
         <div class="arch-layer-name">Validated Features</div>
-        <div class="arch-layer-desc">ICE (Krieger et al. 2016), Dissimilarity Index (Massey &amp; Denton 1988), CV reliability flags.</div>
+        <div class="arch-layer-desc">ICE (Index of Concentration at the Extremes), Dissimilarity Index, z-scores, percentile ranks, and coefficient of variation (CV) reliability flags. Bootstrap confidence intervals for every derived statistic.</div>
       </div>
-      <div class="arch-arrow">&darr;</div>
-      <div class="arch-layer arch-layer-full">
+      <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
         <div class="arch-layer-num">Layer 1</div>
         <div class="arch-layer-name">Raw Indicators</div>
-        <div class="arch-layer-desc">Stored in PostGIS with vintage tracking. Every value carries a coefficient of variation flag for reliability.</div>
+        <div class="arch-layer-desc">Stored in PostGIS with vintage tracking. Every value carries margin of error, coefficient of variation flag, and reliability tier (high / moderate / low). Geo-enabled for spatial queries at all levels.</div>
       </div>
     </div>
   </section>
 
-  <!-- ── Data Sources ──────────────────────────────────────────────── -->
-  <section class="about-section" id="sources">
+  <!-- ── Data Sources (live from API) ─────────────────────────────── -->
+  <section class="about-section" id="sources" x-data="sourcesData()" x-init="init()">
     <span class="section-tag">Data Sources</span>
-    <h2 class="about-section-title">13 Data Sources</h2>
-    <p class="about-section-subtitle">Live data fetched from the PDI API at page load.</p>
+    <h2 class="about-section-title">Data Sources</h2>
+    <p class="about-section-subtitle">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
 
-    <div id="sources-target">
-      <div class="loading-row"><div class="loader"><div class="loader-spinner"></div></div></div>
-    </div>
-    <div id="sources-error" class="error-inline state-error" style="display:none;"></div>
+    <div x-show="loading" x-cloak class="loading-row">Loading sources&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
+
+    <template x-if="!loading && !error">
+      <div>
+        <div class="catalog-search">
+          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" aria-label="Search sources" x-model="search">
+        </div>
+        <div x-show="filteredSources.length === 0" class="state-empty" x-text="search ? 'No sources match \u201c' + search + '\u201d.' : 'No sources available.'"></div>
+        <template x-if="filteredSources.length > 0">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Type</th>
+                  <th>Geographic Levels</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="s in filteredSources" :key="s.id">
+                  <tr>
+                    <td style="font-weight:500;" x-text="s.name"></td>
+                    <td>
+                      <span class="badge badge-type-api" x-show="s.type === 'api'">API</span>
+                      <span class="badge badge-type-file" x-show="s.type === 'file'">FILE</span>
+                      <span class="badge badge-type-unsure" x-show="!s.type || (s.type !== 'api' && s.type !== 'file')" x-text="s.type || '—'"></span>
+                    </td>
+                    <td x-text="s.levels ? s.levels.join(', ') : '—'"></td>
+                    <td style="color:var(--muted);max-width:320px;" x-text="s.description || '—'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="filteredSources.length + ' of ' + sources.length + ' sources'"></p>
+      </div>
+    </template>
   </section>
 
   <!-- ── Statistical Methodology ──────────────────────────────────── -->
@@ -354,20 +476,37 @@
     <p style="margin-top:1.25em;">Additional methods include <strong>OLS regression</strong>, <strong>Blinder-Oaxaca decomposition</strong> for equity gaps, <strong>segmented regression</strong> for threshold detection, and <strong>interaction effects</strong> via automated term construction. The full methodology is documented in the project repository.</p>
   </section>
 
-  <!-- ── Variable Catalog ──────────────────────────────────────────── -->
-  <section class="about-section" id="variables">
+  <!-- ── Variable Catalog (live from API) ─────────────────────────── -->
+  <section class="about-section" id="variables" x-data="variablesData()" x-init="init()">
     <span class="section-tag">Variables</span>
     <h2 class="about-section-title">Variable Catalog</h2>
-    <p class="about-section-subtitle">42 validated variables across 13 sources. Searchable and grouped by data source.</p>
+    <p class="about-section-subtitle">Validated variables across multiple sources. Searchable and grouped by data source.</p>
 
-    <div class="catalog-search">
-      <input type="text" id="var-search" placeholder="Search variables by name or description…" aria-label="Search variables">
-    </div>
+    <div x-show="loading" x-cloak class="loading-row">Loading variable catalog&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
 
-    <div id="var-groups">
-      <div class="loading-row"><div class="loader"><div class="loader-spinner"></div></div></div>
-    </div>
-    <div id="var-error" class="error-inline state-error" style="display:none;"></div>
+    <template x-if="!loading && !error">
+      <div>
+        <div class="catalog-search">
+          <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" aria-label="Search variables" x-model="search">
+        </div>
+        <div x-show="groupedVariables.length === 0" class="state-empty" x-text="search ? 'No variables match \u201c' + search + '\u201d.' : 'No variables available.'"></div>
+        <template x-for="[name, vars] in groupedVariables" :key="name">
+          <div class="var-group">
+            <div class="var-group-title" x-text="name + ' (' + vars.length + ')'"></div>
+            <template x-for="v in vars" :key="v.id">
+              <div class="var-item">
+                <span>
+                  <span class="var-name" x-text="v.name || v.id"></span>
+                  <span class="var-unit" x-show="v.unit" x-text="v.unit"></span>
+                </span>
+                <span class="var-desc" x-text="v.description || ''"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </template>
   </section>
 
   <!-- ── Manim Video Gallery ──────────────────────────────────────── -->
@@ -379,22 +518,12 @@
     <div class="manim-grid">
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
+        <div>z-score Normalization</div>
+        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+      </div>
+      <div class="manim-card">
+        <div class="manim-card-icon">&#9654;</div>
         <div>ICE Polarization</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
-      </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div>Dissimilarity Index</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
-      </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div>LISA Clusters</div>
-        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
-      </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div>Factor Rotation</div>
         <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
       </div>
       <div class="manim-card">
@@ -404,30 +533,61 @@
       </div>
       <div class="manim-card">
         <div class="manim-card-icon">&#9654;</div>
-        <div>Sensitivity Analysis</div>
+        <div>Quantile Transformation</div>
+        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+      </div>
+      <div class="manim-card">
+        <div class="manim-card-icon">&#9654;</div>
+        <div>LISA Spatial Clusters</div>
+        <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
+      </div>
+      <div class="manim-card">
+        <div class="manim-card-icon">&#9654;</div>
+        <div>Pipeline DAG Flow</div>
         <div style="font-size:0.7rem;color:var(--subtle);">Coming soon</div>
       </div>
     </div>
   </section>
 
-  <!-- ── Research References ───────────────────────────────────────── -->
-  <section class="about-section" id="references">
+  <!-- ── Research References ──────────────────────────────────────── -->
+  <section class="about-section" id="references" x-data="referencesData()" x-init="load()">
     <span class="section-tag">References</span>
     <h2 class="about-section-title">Research References</h2>
     <p class="about-section-subtitle">30 peer-reviewed and technical sources that ground the statistical architecture.</p>
 
-    <div class="table-wrapper" style="overflow-x:auto;">
-      <table class="data-table ref-table">
-        <thead>
-          <tr><th>#</th><th>Title</th><th>Authors</th><th>Year</th><th>Type</th><th>Key Finding</th></tr>
-        </thead>
-        <tbody id="ref-tbody"></tbody>
-      </table>
-    </div>
-    <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);">References 1&ndash;30 from <code>research/references.csv</code></p>
+    <div x-show="loading" x-cloak class="loading-row">Loading references&hellip;</div>
+    <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
+
+    <template x-if="!loading && !error">
+      <div>
+        <div class="table-wrapper">
+          <table class="data-table ref-table">
+            <thead>
+              <tr><th>#</th><th>Title</th><th>Authors</th><th>Year</th><th>Type</th><th>Key Finding</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="r in refs" :key="r.id">
+                <tr>
+                  <td class="ref-id" x-text="r.id"></td>
+                  <td class="ref-title">
+                    <a x-show="r.url" :href="r.url" target="_blank" rel="noopener" x-text="r.title"></a>
+                    <span x-show="!r.url" x-text="r.title"></span>
+                  </td>
+                  <td class="ref-authors" x-text="r.authors"></td>
+                  <td class="ref-year" x-text="r.year"></td>
+                  <td class="ref-type" x-text="r.type"></td>
+                  <td class="ref-key" x-text="r.keyFinding"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="refs.length + ' references from research/references.csv'"></p>
+      </div>
+    </template>
   </section>
 
-  <!-- ── Grant Acknowledgments ─────────────────────────────────────── -->
+  <!-- ── Grant Acknowledgments ────────────────────────────────────── -->
   <section class="about-section" id="grants">
     <span class="section-tag">Funding</span>
     <h2 class="about-section-title">Grant Acknowledgments</h2>
@@ -442,7 +602,7 @@
     </div>
   </section>
 
-  <!-- ── License ───────────────────────────────────────────────────── -->
+  <!-- ── License ──────────────────────────────────────────────────── -->
   <section class="about-section" id="license">
     <span class="section-tag">License</span>
     <h2 class="about-section-title">Apache-2.0</h2>
@@ -453,157 +613,162 @@
 </main>
 
 <!-- ═══════════════ FOOTER ═══════════════ -->
-<footer style="text-align:center;padding:clamp(16px,3vw,32px);font-size:0.75rem;color:var(--subtle);border-top:1px solid var(--border);margin-top:var(--section-gap);">
+<footer style="text-align:center;padding:clamp(16px,3vw,32px);font-size:0.75rem;color:var(--subtle);border-top:1px solid var(--border);margin-top:var(--section-gap, 48px);">
   Policy Data Infrastructure &middot; <a href="https://github.com/DojoGenesis/policy-data-infrastructure">DojoGenesis</a> &middot; Apache-2.0
 </footer>
 
 <!-- ═══════════════ SCRIPTS ═══════════════ -->
-<script src="theme-toggle.js"></script>
+<script src="/static/theme-toggle.js"></script>
 <script>
-/* ── Fetch data sources ─────────────────────────────────────────── */
-(async function() {
-  const sourcesTarget = document.getElementById('sources-target');
-  const sourcesError = document.getElementById('sources-error');
+/* ── About page root scope: overview stats ────────────────────────── */
+function aboutPage() {
+  return {
+    sourceCount: null,
+    variableCount: null,
+    overviewLoading: false,
 
-  try {
-    const resp = await fetch('/v1/policy/sources');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    async init() {
+      // Optionally load overview counts; not critical for page function
+    },
 
-    if (!data || (Array.isArray(data) && data.length === 0)) {
-      sourcesTarget.innerHTML = '<p class="state-empty">No sources available.</p>';
-      return;
+    // Called by sourcesData / variablesData after their fetches complete
+    updateSourceCount(n) { this.sourceCount = n; },
+    updateVariableCount(n) { this.variableCount = n; }
+  };
+}
+
+/* ── Alpine.js: Sources ────────────────────────────────────────────── */
+function sourcesData() {
+  return {
+    sources: [],
+    search: '',
+    loading: true,
+    error: '',
+
+    async init() {
+      try {
+        const resp = await fetch('/v1/policy/sources');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        this.sources = data.sources || [];
+        if (this.sources.length === 0) {
+          this.error = 'No sources available.';
+        }
+        // Push count up to the parent scope
+        const aboutEl = document.querySelector('[x-data="aboutPage()"]');
+        if (aboutEl && aboutEl.__x) {
+          aboutEl.__x.updateSourceCount(this.sources.length);
+        }
+      } catch (e) {
+        this.error = 'Unable to load data sources: ' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    get filteredSources() {
+      const q = this.search.toLowerCase().trim();
+      if (!q) return this.sources;
+      return this.sources.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.type || '').toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q) ||
+        (s.levels || []).some(l => l.toLowerCase().includes(q))
+      );
     }
+  };
+}
 
-    const sources = Array.isArray(data) ? data : (data.sources || data.items || []);
-    const rows = sources.map(s =>
-      '<tr>' +
-        '<td>' + escapeHtml(s.name || '') + '</td>' +
-        '<td>' + escapeHtml(s.category || '') + '</td>' +
-        '<td><span class="badge badge-info">' + escapeHtml(s.status || '') + '</span></td>' +
-        '<td>' + escapeHtml(s.geo_level || '') + '</td>' +
-        '<td>' + (s.variable_count != null ? s.variable_count : '—') + '</td>' +
-      '</tr>'
-    ).join('');
+/* ── Alpine.js: Variables ──────────────────────────────────────────── */
+function variablesData() {
+  return {
+    variables: [],
+    search: '',
+    loading: true,
+    error: '',
 
-    sourcesTarget.innerHTML =
-      '<table class="data-table">' +
-        '<thead><tr><th>Source</th><th>Category</th><th>Status</th><th>Geographic Level</th><th>Variables</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>';
-  } catch (e) {
-    sourcesError.textContent = 'Unable to load data sources: ' + e.message;
-    sourcesError.style.display = 'block';
-    sourcesTarget.innerHTML = '';
-  }
-})();
+    async init() {
+      try {
+        const resp = await fetch('/v1/policy/variables');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        this.variables = data.variables || [];
+        if (this.variables.length === 0) {
+          this.error = 'No variables available.';
+        }
+        // Push count up to the parent scope
+        const aboutEl = document.querySelector('[x-data="aboutPage()"]');
+        if (aboutEl && aboutEl.__x) {
+          aboutEl.__x.updateVariableCount(this.variables.length);
+        }
+      } catch (e) {
+        this.error = 'Unable to load variable catalog: ' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
 
-/* ── Fetch variables ─────────────────────────────────────────────── */
-(async function() {
-  const varGroups = document.getElementById('var-groups');
-  const varError = document.getElementById('var-error');
-
-  try {
-    const resp = await fetch('/v1/policy/variables');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-
-    if (!data || (Array.isArray(data) && data.length === 0)) {
-      varGroups.innerHTML = '<p class="state-empty">No variables available.</p>';
-      return;
-    }
-
-    const variables = Array.isArray(data) ? data : (data.variables || data.items || []);
-    renderVariables(variables);
-
-    document.getElementById('var-search').addEventListener('input', function(e) {
-      renderVariables(variables, e.target.value);
-    });
-  } catch (e) {
-    varError.textContent = 'Unable to load variable catalog: ' + e.message;
-    varError.style.display = 'block';
-    varGroups.innerHTML = '';
-  }
-})();
-
-function renderVariables(variables, filter) {
-  const q = (filter || '').toLowerCase().trim();
-  const filtered = q
-    ? variables.filter(v =>
-        (v.variable_id || '').toLowerCase().includes(q) ||
+    get filteredVariables() {
+      const q = this.search.toLowerCase().trim();
+      if (!q) return this.variables;
+      return this.variables.filter(v =>
+        (v.id || '').toLowerCase().includes(q) ||
         (v.name || '').toLowerCase().includes(q) ||
         (v.description || '').toLowerCase().includes(q) ||
-        (v.source || '').toLowerCase().includes(q)
-      )
-    : variables;
+        (v.source_name || '').toLowerCase().includes(q) ||
+        (v.source_id || '').toLowerCase().includes(q)
+      );
+    },
 
-  if (filtered.length === 0) {
-    document.getElementById('var-groups').innerHTML =
-      '<p class="state-empty">No variables match &ldquo;' + escapeHtml(q) + '&rdquo;.</p>';
-    return;
-  }
-
-  const bySource = {};
-  for (const v of filtered) {
-    const src = v.source || 'Other';
-    if (!bySource[src]) bySource[src] = [];
-    bySource[src].push(v);
-  }
-
-  let html = '';
-  for (const [src, vars] of Object.entries(bySource).sort()) {
-    html += '<div class="var-group">';
-    html += '<div class="var-group-title">' + escapeHtml(src) + ' <span class="var-count">(' + vars.length + ')</span></div>';
-    for (const v of vars) {
-      html +=
-        '<div class="var-item">' +
-          '<span><span class="var-name">' + escapeHtml(v.variable_id || v.name || '') + '</span>' +
-          (v.unit ? '<span class="var-unit">' + escapeHtml(v.unit) + '</span>' : '') +
-          '</span>' +
-          '<span style="font-size:0.7rem;color:var(--subtle);">' + escapeHtml(v.description || '') + '</span>' +
-        '</div>';
+    get groupedVariables() {
+      const bySource = {};
+      for (const v of this.filteredVariables) {
+        const src = v.source_name || v.source_id || 'Other';
+        if (!bySource[src]) bySource[src] = [];
+        bySource[src].push(v);
+      }
+      return Object.entries(bySource).sort((a, b) => a[0].localeCompare(b[0]));
     }
-    html += '</div>';
-  }
-  document.getElementById('var-groups').innerHTML = html;
+  };
 }
 
-/* ── Render references ───────────────────────────────────────────── */
-(async function() {
-  const tbody = document.getElementById('ref-tbody');
-  try {
-    const resp = await fetch('../research/references.csv');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const text = await resp.text();
-    const lines = text.trim().split(/\r?\n/).slice(1); // skip header
-    let html = '';
-    for (const line of lines) {
-      const cols = parseCSVLine(line);
-      if (cols.length < 8) continue;
-      const url = cols[5] && cols[5].trim() !== '';
-      html +=
-        '<tr>' +
-          '<td class="ref-id">' + escapeHtml(cols[0]) + '</td>' +
-          '<td class="ref-title">' + (url ? '<a href="' + escapeHtml(cols[5]) + '" target="_blank" rel="noopener">' : '') + escapeHtml(cols[1]) + (url ? '</a>' : '') + '</td>' +
-          '<td class="ref-authors">' + escapeHtml(cols[2]) + '</td>' +
-          '<td class="ref-year">' + escapeHtml(cols[3]) + '</td>' +
-          '<td class="ref-type">' + escapeHtml(cols[4]) + '</td>' +
-          '<td class="ref-key">' + escapeHtml(cols[7]) + '</td>' +
-        '</tr>';
-    }
-    tbody.innerHTML = html;
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="6" class="error-inline state-error">Unable to load references: ' + escapeHtml(e.message) + '</td></tr>';
-  }
-})();
+/* ── References: CSV parse from /static/research/references.csv ────── */
+function referencesData() {
+  return {
+    refs: [],
+    loading: true,
+    error: '',
 
-/* ── Helpers ─────────────────────────────────────────────────────── */
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(str));
-  return div.innerHTML;
+    async load() {
+      try {
+        const resp = await fetch('/static/research/references.csv');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const text = await resp.text();
+        const lines = text.trim().split(/\r?\n/).slice(1);
+        for (const line of lines) {
+          const cols = parseCSVLine(line);
+          if (cols.length < 8) continue;
+          this.refs.push({
+            id:         cols[0],
+            title:      cols[1],
+            authors:    cols[2],
+            year:       cols[3],
+            type:       cols[4],
+            url:        cols[5] && cols[5].trim(),
+            relevance:  cols[6],
+            keyFinding: cols[7]
+          });
+        }
+      } catch (e) {
+        this.error = 'Unable to load references: ' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    }
+  };
 }
 
+/* ── Helpers ───────────────────────────────────────────────────────── */
 function parseCSVLine(line) {
   const result = [];
   let current = '';

@@ -1,1312 +1,1294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>County Profile — Policy Data Infrastructure</title>
-<meta name="description" content="County-level data profile with indicators, factor analysis, spatial clusters, and composite indexing.">
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>County Profile — PDI</title>
+<meta name="description" content="Full county data profile with indicators, ICE scores, factor analysis, LISA clusters, and composite indexing.">
 <link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="/static/alpine.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
 
-  /* ── County Profile · page-specific layout ─────────────────── */
+  /* ── Page-specific layout (shared components from styles.css) ─── */
+
+  /* Hero area */
   .county-hero {
     display: flex;
     flex-wrap: wrap;
-    gap: clamp(16px, 3vw, 32px);
+    gap: clamp(16px, 2.5vw, 24px);
+    align-items: flex-start;
+    margin-bottom: clamp(20px, 3vw, 32px);
+  }
+  .county-hero h1 {
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .county-hero .geoid {
+    font-size: 0.7rem;
+    color: var(--subtle);
+    font-family: var(--font-mono);
+  }
+  .county-hero .meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .county-hero .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
     align-items: flex-start;
   }
-  .county-hero-main {
-    flex: 1 1 300px;
-    min-width: 0;
-  }
-  .county-hero-stats {
-    flex: 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(12px, 2.5vw, 24px);
-  }
 
-  /* Quick stats ribbon */
-  .quick-stats {
-    display: flex;
-    flex-wrap: wrap;
+  /* Quick stats bar */
+  .quick-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 1px;
     background: var(--border);
     border-radius: var(--r-card);
     overflow: hidden;
-    margin-top: clamp(12px, 2vw, 20px);
+    margin-bottom: clamp(20px, 3vw, 32px);
   }
-  .quick-stat {
-    flex: 1 1 140px;
+  .quick-stat-cell {
     background: var(--surface);
-    padding: clamp(10px, 1.8vw, 16px);
+    padding: 14px 16px;
     text-align: center;
   }
-  .quick-stat-value {
-    font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  .quick-stat-cell .qs-val {
+    font-size: clamp(1rem, 2.2vw, 1.35rem);
     font-weight: 700;
     color: var(--text);
-    line-height: 1.2;
   }
-  .quick-stat-label {
-    font-size: 0.65rem;
+  .quick-stat-cell .qs-lbl {
+    font-size: 0.68rem;
     font-weight: 600;
-    letter-spacing: 0.06em;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--muted);
-    margin-top: 0.25em;
+    margin-top: 2px;
   }
 
-  /* Category tabs */
-  .cat-tabs {
+  /* Section header row */
+  .section-hdr {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .section-hdr h2 { margin: 0; }
+
+  /* Category filter chips row */
+  .filter-row {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: clamp(16px, 2.5vw, 24px);
-  }
-  .cat-tab {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35em 0.85em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    border-radius: var(--r-chip);
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
-  }
-  .cat-tab:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
-  .cat-tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
-  }
-
-  /* Indicator row */
-  .indicator-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 12px;
-    padding: clamp(10px, 1.5vw, 14px) 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .indicator-row:last-child { border-bottom: none; }
-  .indicator-name {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-  }
-  .indicator-unit {
-    font-size: 0.7rem;
-    color: var(--subtle);
-  }
-  .indicator-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    color: var(--text);
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  /* Factor bars */
-  .factor-item {
     margin-bottom: clamp(12px, 2vw, 18px);
   }
-  .factor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-  }
-  .factor-name {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .factor-score {
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-family: var(--font-mono);
-    color: var(--muted);
-  }
-  .factor-loading-desc {
-    font-size: 0.7rem;
-    color: var(--subtle);
-    margin-top: 2px;
-    line-height: 1.3;
-  }
 
-  /* LISA badges */
-  .lisa-badges {
+  /* ICE / validated feature callout cards */
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--r-card);
+    padding: clamp(16px, 2.5vw, 24px);
+    margin-bottom: 16px;
+  }
+  .feature-card .feature-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .feature-stat .fs-val {
+    font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.15;
+  }
+  .feature-stat .fs-lbl {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .feature-interp {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+  .feature-interp strong { color: var(--text); }
+
+  /* Reliability distribution bar row */
+  .reliability-dist {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 16px;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+  }
+  .reliability-dist .rd-label {
+    text-transform: capitalize;
+    font-weight: 600;
+    font-size: 0.75rem;
+    min-width: 70px;
+  }
+  .reliability-dist .rd-bar {
+    height: 8px;
+    border-radius: 4px;
+    transition: width 400ms ease;
+  }
+  .rd-bar-high { background: var(--live); }
+  .rd-bar-moderate { background: var(--gated); }
+  .rd-bar-low {
+    background: color-mix(in srgb, var(--gated) 70%, #ef4444);
+  }
+  .rd-bar-unknown { background: var(--border); }
+  .reliability-dist .rd-count {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--subtle);
+  }
+
+  /* LISA badges — categorical data-viz colors (allowed per convention) */
+  .lisa-badge-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
   }
   .lisa-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 0.4em 0.75em;
-    font-size: 0.75rem;
-    font-weight: 700;
-    border-radius: var(--r-badge);
+    padding: 8px 16px;
+    border-radius: var(--r-chip);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 160ms ease;
   }
-  .lisa-badge-HH {
+  .lisa-badge:hover { text-decoration: none; }
+  .lisa-badge.HH {
+    background: color-mix(in srgb, #d97706 18%, transparent);
+    color: #fcd34d;
+    border: 1px solid color-mix(in srgb, #d97706 35%, transparent);
+  }
+  .lisa-badge.LL {
+    background: color-mix(in srgb, var(--live) 12%, transparent);
     color: var(--live);
-    background: color-mix(in srgb, var(--live) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--live) 30%, transparent);
   }
-  .lisa-badge-HL {
+  .lisa-badge.HL {
+    background: color-mix(in srgb, #7c3aed 18%, transparent);
+    color: #c4b5fd;
+    border: 1px solid color-mix(in srgb, #7c3aed 35%, transparent);
+  }
+  .lisa-badge.LH {
+    background: color-mix(in srgb, var(--gated) 15%, transparent);
     color: var(--gated);
-    background: color-mix(in srgb, var(--gated) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gated) 30%, transparent);
   }
-  .lisa-badge-LL {
-    color: var(--info);
-    background: color-mix(in srgb, var(--info) 14%, transparent);
+  .lisa-badge.NS {
+    background: var(--border);
+    color: var(--muted);
+    border: 1px solid transparent;
   }
-  .lisa-badge-LH {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+
+  /* LISA summary */
+  .lisa-summary {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* Factor bar rows (uses .chart-bar-track/.chart-bar-fill from styles.css) */
+  .factor-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .factor-bar-row:last-child { border-bottom: none; }
+  .factor-bar-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    min-width: clamp(140px, 22%, 200px);
+    color: var(--text);
+  }
+  .factor-bar-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .factor-bar-score {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 52px;
+    text-align: right;
+    color: var(--text);
+  }
+  .factor-bar-pct {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    min-width: 44px;
+    text-align: right;
+  }
+  /* Negative factor fill — uses gated color */
+  .chart-bar-fill--neg {
+    background: var(--gated);
   }
 
   /* Composite panel */
-  .composite-panel {
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-card);
-    overflow: hidden;
-  }
-  .composite-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: clamp(14px, 2vw, 20px);
-    background: var(--surface);
+  .composite-panel summary {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--accent);
     cursor: pointer;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
     user-select: none;
   }
-  .composite-panel-header:hover {
-    background: var(--raised);
+  .composite-panel summary:hover { color: var(--text); }
+  .composite-inner {
+    padding: clamp(16px, 2.5vw, 24px) 0;
   }
-  .composite-panel-body {
-    padding: clamp(16px, 2.5vw, 24px);
-    border-top: 1px solid var(--border);
-  }
-
-  /* Variable picker */
-  .var-picker-item {
+  .composite-var-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .var-picker-item:last-child { border-bottom: none; }
-  .var-picker-item label {
-    flex: 1;
-    font-size: 0.8rem;
+    gap: 10px;
+    font-size: 0.85rem;
     color: var(--text);
+    margin-bottom: 10px;
     cursor: pointer;
   }
-  .var-picker-item input[type="checkbox"] {
+  .composite-var-row input[type="checkbox"] {
     accent-color: var(--accent);
     width: 16px;
     height: 16px;
     cursor: pointer;
+    flex-shrink: 0;
   }
-  .weight-slider {
-    width: 80px;
-    accent-color: var(--accent);
+  .composite-var-name { flex: 1; }
+  .composite-var-dir {
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+  .composite-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .composite-controls select {
+    max-width: 180px;
+    font-size: 0.8rem;
+  }
+  .preset-chip {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-chip);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .preset-chip:hover { border-color: var(--accent); color: var(--text); }
+
+  .composite-result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--r-card);
+    padding: clamp(16px, 2.5vw, 24px);
+    margin-top: 18px;
+  }
+  .composite-score-row {
+    display: flex;
+    gap: clamp(16px, 3vw, 32px);
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .cr-score-num {
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .cr-score-lbl {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .composite-stability {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border-radius: var(--r-badge);
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .composite-stability strong { color: var(--text); }
+  .composite-contrib-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-top: 14px;
+  }
+  .composite-contrib-table th {
+    text-align: left;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .composite-contrib-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
   }
 
-  /* Children tract grid */
+  /* Tract child cards */
   .tract-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-    gap: clamp(8px, 1.5vw, 12px);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
   }
-  .tract-card {
+  .tract-chip {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-badge);
-    padding: clamp(10px, 1.5vw, 14px);
-    transition: background-color 160ms ease, border-color 160ms ease;
+    padding: 12px 16px;
+    transition: border-color 160ms ease;
   }
-  .tract-card:hover {
-    background: var(--raised);
-    border-color: var(--border-strong);
-  }
-
-  /* Sensitivity table */
-  .sens-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    margin-top: 12px;
-  }
-  .sens-table th, .sens-table td {
-    padding: 0.5em 0.75em;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
-  }
-  .sens-table th {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: var(--surface);
-  }
-
-  /* ICE score card */
-  .ice-card {
-    border-left: 3px solid var(--accent);
-  }
-  .ice-interpretation {
+  .tract-chip:hover { border-color: var(--border-strong); }
+  .tract-chip .tract-name {
+    font-weight: 600;
     font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 8px;
-    line-height: 1.5;
-  }
-
-  /* CV tooltip */
-  .cv-hint {
-    position: relative;
-    cursor: help;
-    border-bottom: 1px dotted var(--subtle);
-  }
-  .cv-hint:hover .cv-tooltip {
-    display: block;
-  }
-  .cv-tooltip {
-    display: none;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--raised);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-badge);
-    padding: 6px 10px;
-    font-size: 0.7rem;
-    font-family: var(--font-mono);
     color: var(--text);
-    white-space: nowrap;
-    z-index: 10;
-    pointer-events: none;
   }
-
-  /* Section spacing */
-  .profile-section {
-    margin-bottom: var(--section-gap);
+  .tract-chip .tract-geoid {
+    font-size: 0.68rem;
+    color: var(--subtle);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+  }
+  .tract-trunc {
+    text-align: center;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 0.8rem;
   }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════ NAVIGATION ═══════════════ -->
+<a class="skip-link visually-hidden" href="#main">Skip to content</a>
+
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-logo">
-      <span class="site-logo-accent">PDI</span> Data Explorer
+      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
     <nav class="site-nav">
-      <a href="/">Counties</a>
-      <a href="/county" aria-current="page">Profile</a>
+      <a href="/">Explorer</a>
       <a href="/compare">Compare</a>
       <a href="/map">Map</a>
-      <a href="/evidence">Evidence</a>
+      <a href="/chat">Chat</a>
       <a href="/about">About</a>
     </nav>
   </div>
 </header>
 
-<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<main class="wrap" style="padding-top: clamp(24px, 4vw, 40px); padding-bottom: clamp(48px, 8vw, 96px);"
-      x-data="countyProfile()" x-init="init()">
+<main id="main" class="wrap" x-data="countyProfile()" x-init="init()" style="padding-top:24px;padding-bottom:80px;">
 
-  <!-- ═══ BACK LINK ═══ -->
-  <a href="/" class="btn btn-ghost" style="margin-bottom: clamp(16px, 2.5vw, 24px);">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to counties
-  </a>
+  <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:0.85rem;margin-bottom:20px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">← Back to counties</a>
 
-  <!-- ═══ GLOBAL LOADING ═══ -->
-  <div x-show="loading" x-cloak class="loader">
-    <div class="loader-spinner"></div>
+  <!-- ══ LOADING ══ -->
+  <div x-show="loading" x-cloak>
+    <div class="loader"><div class="loader-spinner"></div></div>
+    <div style="display:grid;gap:12px;max-width:600px;margin:0 auto;">
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+    </div>
   </div>
 
-  <!-- ═══ GLOBAL ERROR ═══ -->
-  <div x-show="error && !loading" x-cloak class="state-error">
+  <!-- ══ ERROR ══ -->
+  <div x-show="error" x-cloak class="state-error" style="margin-bottom:20px;">
     <span x-text="error"></span>
-    <button @click="init()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
+    <button class="btn btn-ghost" @click="init()">Retry</button>
   </div>
 
-  <!-- ═══ EMPTY (no geoid) ═══ -->
-  <div x-show="!loading && !error && !geoid" x-cloak class="state-empty">
-    <p>Select a county from the <a href="/">Counties page</a> to view its profile.</p>
-  </div>
+  <!-- ══ CONTENT ══ -->
+  <div x-show="!loading && !error && geo" x-cloak>
 
-  <!-- ═══════════════ PROFILE CONTENT ═══════════════ -->
-  <div x-show="!loading && !error && geoid && geo" x-cloak>
-
-    <!-- ── COUNTY HEADER ──────────────────────────────────────── -->
-    <div class="card card-spectral profile-section" style="padding: clamp(20px, 3vw, 32px);">
-      <div class="county-hero">
-        <div class="county-hero-main">
-          <span class="section-tag">County Profile</span>
-          <h1 x-text="geo.name"></h1>
-          <div style="display:flex;align-items:center;gap:12px;margin-top:6px;font-size:0.8rem;color:var(--muted);">
-            <span x-text="geo.geoid"></span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--subtle);"></span>
-            <span x-text="geo.level"></span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--subtle);"></span>
-            <span x-text="geo.state_fips ? 'State FIPS: ' + geo.state_fips : ''"></span>
-          </div>
-        </div>
-        <div class="county-hero-stats">
-          <div class="stat-callout">
-            <div class="stat-value" x-text="fmtNum(geo.population)"></div>
-            <div class="stat-label">Population</div>
-          </div>
-          <div class="stat-callout" x-show="geo.land_area_m2">
-            <div class="stat-value" x-text="fmtArea(geo.land_area_m2)"></div>
-            <div class="stat-label">Land Area</div>
-          </div>
+    <!-- ── HERO ── -->
+    <div class="county-hero">
+      <div style="flex:1;min-width:200px;">
+        <h1 x-text="geo.name"></h1>
+        <div class="meta">
+          <span class="geoid" x-text="geo.geoid"></span>
+          <span x-show="geo.level" style="color:var(--subtle);" x-text="geo.level"></span>
+          <span x-show="geo.population" style="color:var(--subtle);" x-text="'Pop. ' + geo.population.toLocaleString()"></span>
+          <span x-show="geo.land_area_m2" style="color:var(--subtle);" x-text="landAreaLabel()"></span>
         </div>
       </div>
-
-      <!-- Quick stats from indicators -->
-      <div class="quick-stats" x-show="quickStats.length > 0">
-        <template x-for="qs in quickStats" :key="qs.label">
-          <div class="quick-stat">
-            <div class="quick-stat-value" x-text="qs.value"></div>
-            <div class="quick-stat-label" x-text="qs.label"></div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Generate Brief button -->
-      <div style="margin-top:clamp(16px, 2.5vw, 24px);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <button @click="generateBrief()" :disabled="narrativeLoading"
-                class="btn btn-primary" x-text="narrativeLoading ? 'Generating…' : 'Generate Brief'"></button>
-        <span x-show="narrativeResult" style="font-size:0.8rem;color:var(--live);">
-          Brief ready —
-          <a :href="narrativeResult" target="_blank" style="font-weight:600;">Open narrative</a>
-        </span>
-        <span x-show="narrativeError" style="font-size:0.8rem;color:var(--gated);" x-text="narrativeError"></span>
+      <div class="county-hero actions">
+        <a :href="'/narrative?geoid='+geoid" class="btn btn-primary">Generate Brief</a>
+        <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary">Compare</a>
+        <a href="/chat" class="btn btn-secondary">Ask Chat</a>
       </div>
     </div>
 
-    <!-- ═══════════════ LAYER 1: INDICATOR DASHBOARD ═══════════════ -->
-    <section class="profile-section" id="layer1-indicators">
-      <div class="section-heading">
-        <span class="section-tag">Layer 1</span>
-        <h2>Indicator Dashboard</h2>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="indicatorsLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="indicatorsError" x-cloak class="state-error">
-        <span x-text="indicatorsError"></span>
-        <button @click="loadIndicators()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Content -->
-      <div x-show="!indicatorsLoading && !indicatorsError" x-cloak>
-
-        <!-- Category tabs -->
-        <div class="cat-tabs" x-show="indicatorCategories.length > 1">
-          <button @click="activeCat = 'all'"
-                  class="cat-tab" :class="{ active: activeCat === 'all' }">All</button>
-          <template x-for="cat in indicatorCategories" :key="cat">
-            <button @click="activeCat = cat"
-                    class="cat-tab" :class="{ active: activeCat === cat }" x-text="cat"></button>
-          </template>
+    <!-- ── QUICK STATS ── -->
+    <div class="quick-stats-bar" x-show="quickStats.length > 0">
+      <template x-for="stat in quickStats" :key="stat.label">
+        <div class="quick-stat-cell">
+          <div class="qs-val" x-text="stat.value"></div>
+          <div class="qs-lbl" x-text="stat.label"></div>
         </div>
+      </template>
+    </div>
+    <div x-show="quickStats.length === 0" class="state-empty" style="padding:20px;font-size:0.8rem;" x-cloak>
+      No quick stats available.
+    </div>
 
-        <!-- Indicator list -->
-        <div class="card" x-show="filteredIndicators.length > 0">
-          <template x-for="ind in filteredIndicators" :key="ind.variable_id">
-            <div class="indicator-row">
-              <div>
-                <div class="indicator-name" x-text="ind.name || ind.variable_id"></div>
-                <div class="indicator-unit">
-                  <span x-text="ind.unit || ''"></span>
-                  <span x-show="ind.cv != null" class="cv-hint" style="margin-left:6px;">
-                    CV: <span x-text="fmtCV(ind.cv)"></span>
-                    <span class="cv-tooltip">Coefficient of Variation: <span x-text="fmtCV(ind.cv)"></span></span>
-                  </span>
-                </div>
-              </div>
-              <div class="indicator-value" x-text="fmtVal(ind.value)"></div>
-              <div>
-                <span class="badge"
-                      :class="reliabilityBadgeClass(ind.reliability)"
-                      x-text="ind.reliability || 'unknown'"></span>
-              </div>
-            </div>
-          </template>
+    <!-- ═══════════ LAYER 1: INDICATOR DASHBOARD ═══════════ -->
+    <section style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Layer 1 · Primary Observation</span>
+          <h2>Indicator Dashboard</h2>
         </div>
-
-        <!-- Empty -->
-        <div x-show="filteredIndicators.length === 0" class="state-empty">
-          <p x-show="activeCat === 'all'">No indicator data available for this geography.</p>
-          <p x-show="activeCat !== 'all'">No indicators in category "<span x-text="activeCat"></span>".</p>
-        </div>
+        <span style="font-size:0.8rem;color:var(--muted);" x-text="indicators.length + ' indicators across ' + Object.keys(groupedIndicators).length + ' categories'"></span>
       </div>
-    </section>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Full ACS 5-year estimates plus supplementary sources. Values shown with reliability badges. Click column headers to sort.</p>
 
-    <!-- ═══════════════ LAYER 2: VALIDATED FEATURES ═══════════════ -->
-    <section class="profile-section" id="layer2-validated">
-      <div class="section-heading">
-        <span class="section-tag">Layer 2</span>
-        <h2>Validated Features</h2>
-      </div>
-
-      <div class="card-grid" x-show="validatedFeatures && validatedFeatures.length > 0" x-cloak>
-
-        <!-- ICE Score Card -->
-        <div class="card ice-card" x-show="iceFeature">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">ICE Score</h3>
-          <div class="stat-callout">
-            <div class="stat-value" x-text="iceFeature.value"></div>
-            <div class="stat-label">Index of Concentration at the Extremes</div>
-          </div>
-          <div x-show="iceFeature.percentile != null" style="margin-top:8px;font-size:0.8rem;color:var(--muted);">
-            Percentile: <span x-text="fmtPct(iceFeature.percentile)" style="font-weight:600;color:var(--text);"></span>
-          </div>
-          <div class="ice-interpretation" x-text="iceFeature.interpretation"></div>
-        </div>
-
-        <!-- Dissimilarity Index -->
-        <div class="card" x-show="dissimBW">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">Dissimilarity Index</h3>
-          <div class="stat-row">
-            <div class="stat-callout">
-              <div class="stat-value" x-text="dissimBW.value"></div>
-              <div class="stat-label">Black-White</div>
-            </div>
-            <div class="stat-callout" x-show="dissimHW">
-              <div class="stat-value" x-text="dissimHW.value"></div>
-              <div class="stat-label">Hispanic-White</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CV / Reliability Summary -->
-        <div class="card" x-show="cvSummary">
-          <h3 style="font-size:0.95rem;margin-bottom:8px;">Reliability Summary</h3>
-          <div class="stat-row" style="gap:clamp(12px,2vw,20px);">
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.high" style="color:var(--live);"></div>
-              <div class="stat-label">High Reliability</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.moderate" style="color:var(--gated);"></div>
-              <div class="stat-label">Moderate</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.low" style="color:var(--gated);"></div>
-              <div class="stat-label">Low</div>
-            </div>
-            <div class="stat-callout">
-              <div class="stat-value" x-text="cvSummary.unknown" style="color:var(--subtle);"></div>
-              <div class="stat-label">Unknown</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty Validated -->
-      <div x-show="!validatedFeatures || validatedFeatures.length === 0" x-cloak class="state-empty">
-        <p>No validated feature data available.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════════ LAYER 3: FACTOR PROFILE ═══════════════ -->
-    <section class="profile-section" id="layer3-factors">
-      <div class="section-heading">
-        <span class="section-tag">Layer 3</span>
-        <h2>Factor Profile</h2>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="factorsLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="factorsError" x-cloak class="state-error">
-        <span x-text="factorsError"></span>
-        <button @click="loadFactors()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Chart -->
-      <div x-show="!factorsLoading && !factorsError && factors.length > 0" x-cloak>
-        <div class="chart-card" x-ref="factorChartContainer">
-          <div class="chart-card-header">
-            <h3 class="chart-card-title">Factor Scores</h3>
-            <span class="chart-card-subtitle" x-text="factors.length + ' factors'"></span>
-          </div>
-          <div x-html="factorChartSVG"></div>
-        </div>
-
-        <!-- Factor detail list -->
-        <div class="card" style="margin-top:clamp(16px,2.5vw,24px);">
-          <template x-for="f in factors" :key="f.factor_name">
-            <div class="factor-item">
-              <div class="factor-header">
-                <span class="factor-name" x-text="formatFactorName(f.factor_name)"></span>
-                <span class="factor-score">
-                  <span x-text="fmtVal(f.factor_score)"></span>
-                  <span x-show="f.factor_percentile != null" style="color:var(--subtle);">
-                    (p<span x-text="Math.round(f.factor_percentile)"></span>)
-                  </span>
-                </span>
-              </div>
-              <div class="chart-bar-track">
-                <div class="chart-bar-fill" :style="{ width: factorBarWidth(f.factor_score) + '%' }"></div>
-              </div>
-              <div class="factor-loading-desc" x-show="getLoadingsDesc(f)" x-text="getLoadingsDesc(f)"></div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Empty -->
-      <div x-show="!factorsLoading && !factorsError && factors.length === 0" x-cloak class="state-empty">
-        <p>No factor analysis data available for this geography.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════════ LAYER 4: SPATIAL CLUSTER ═══════════════ -->
-    <section class="profile-section" id="layer4-spatial">
-      <div class="section-heading">
-        <span class="section-tag">Layer 4</span>
-        <h2>Spatial Clusters</h2>
-      </div>
-
-      <!-- LISA badges -->
-      <div class="card" x-show="lisaItems.length > 0" x-cloak>
-        <p style="font-size:0.85rem;color:var(--muted);margin:0 0 14px 0;">
-          Local Indicators of Spatial Association (LISA) — statistically significant spatial clusters.
-        </p>
-        <div class="lisa-badges">
-          <template x-for="item in lisaItems" :key="item.indicator">
-            <div class="lisa-badge" :class="'lisa-badge-' + item.cluster">
-              <span x-text="item.indicator"></span>
-              <span style="opacity:0.7;" x-text="clusterLabel(item.cluster)"></span>
-            </div>
-          </template>
-        </div>
-        <div style="margin-top:16px;">
-          <a :href="'/map?indicator=' + (lisaItems[0]?.indicator || 'poverty_rate')"
-             class="btn btn-secondary" style="font-size:0.8rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            View on Map
-          </a>
-        </div>
-      </div>
-
-      <!-- Legend -->
-      <div x-show="lisaItems.length > 0" x-cloak style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;font-size:0.7rem;color:var(--muted);">
-        <span><span class="badge badge-high" style="margin-right:4px;">HH</span> High-High (hot spot)</span>
-        <span><span class="badge badge-low" style="margin-right:4px;">LL</span> Low-Low (cold spot)</span>
-        <span><span class="badge badge-moderate" style="margin-right:4px;">HL</span> High-Low (outlier)</span>
-        <span><span class="badge badge-info" style="margin-right:4px;">LH</span> Low-High (outlier)</span>
-      </div>
-
-      <!-- Empty -->
-      <div x-show="lisaItems.length === 0" x-cloak class="state-empty">
-        <p>No spatial cluster analysis available for this geography.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════════ LAYER 5: COMPOSITE WIDGET ═══════════════ -->
-    <section class="profile-section" id="layer5-composite">
-      <div class="section-heading">
-        <span class="section-tag">Layer 5</span>
-        <h2>Custom Composite Index</h2>
-      </div>
-
-      <div class="composite-panel">
-        <div class="composite-panel-header" @click="compositeOpen = !compositeOpen">
-          <span style="font-weight:600;font-size:0.95rem;">
-            <span x-show="!compositeOpen">▶</span>
-            <span x-show="compositeOpen">▼</span>
-            Build Custom Index
-          </span>
-          <span style="font-size:0.75rem;color:var(--muted);" x-text="selectedVars.length + ' variables selected'"></span>
-        </div>
-
-        <div class="composite-panel-body" x-show="compositeOpen" x-cloak>
-
-          <!-- Variable picker -->
-          <div x-show="variableCatalog.length > 0" style="margin-bottom:clamp(16px,2.5vw,24px);">
-            <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">
-              Select Variables
-            </div>
-            <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-badge);padding:0 12px;">
-              <template x-for="v in variableCatalog" :key="v.id">
-                <div class="var-picker-item">
-                  <input type="checkbox" :id="'var-' + v.id" :value="v.id"
-                         x-model="selectedVars" @change="recalcWeights()">
-                  <label :for="'var-' + v.id">
-                    <span x-text="v.name || v.id" style="display:block;"></span>
-                    <span x-show="v.unit" style="font-size:0.65rem;color:var(--subtle);" x-text="v.unit"></span>
-                  </label>
-                  <input type="range" min="1" max="100" class="weight-slider"
-                         x-show="selectedVars.includes(v.id)"
-                         :value="weights[v.id] || 1"
-                         @input="setWeight(v.id, $event.target.value)">
-                  <span x-show="selectedVars.includes(v.id)"
-                        style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);width:28px;text-align:right;"
-                        x-text="weights[v.id] || 1"></span>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Method selector -->
-          <div x-show="selectedVars.length >= 2" style="margin-bottom:clamp(16px,2.5vw,24px);">
-            <label style="font-size:0.8rem;font-weight:500;color:var(--text);display:block;margin-bottom:4px;">Method</label>
-            <select x-model="compositeMethod" style="max-width:260px;">
-              <option value="geometric_mean">Geometric Mean</option>
-              <option value="weighted_zscore">Weighted Z-Score</option>
-            </select>
-          </div>
-
-          <!-- Compute button -->
-          <button @click="computeComposite()"
-                  :disabled="selectedVars.length < 2 || compositeLoading"
-                  class="btn btn-primary" style="margin-bottom:clamp(16px,2.5vw,24px);"
-                  x-text="compositeLoading ? 'Computing…' : 'Compute Index'"></button>
-
-          <!-- Composite error -->
-          <div x-show="compositeError" x-cloak class="state-error" style="margin-bottom:16px;">
-            <span x-text="compositeError"></span>
-          </div>
-
-          <!-- Composite result -->
-          <div x-show="compositeResult" x-cloak>
-            <div class="card card-spectral" style="margin-bottom:16px;">
-              <div class="stat-callout" style="align-items:center;text-align:center;width:100%;">
-                <div class="stat-value" style="font-size:clamp(2rem,5.5vw,3.2rem);" x-text="compositeScore"></div>
-                <div class="stat-label">Composite Score</div>
-                <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;" x-text="compositeResult.method + ' · ' + compositeResult.variable_ids.length + ' variables'"></div>
-              </div>
-            </div>
-
-            <!-- Sensitivity analysis -->
-            <div x-show="compositeResult.sensitivity && compositeResult.sensitivity.scenarios && compositeResult.sensitivity.scenarios.length > 0" x-cloak>
-              <h4 style="font-size:0.85rem;font-weight:600;margin:0 0 8px 0;">Sensitivity Analysis</h4>
-              <p style="font-size:0.75rem;color:var(--muted);margin:0 0 12px 0;">
-                How does the score change when each variable is perturbed by ±<span x-text="Math.round(compositeResult.sensitivity.perturbation * 100)"></span>%?
-              </p>
-              <div style="overflow-x:auto;">
-                <table class="sens-table">
-                  <thead>
-                    <tr>
-                      <th>Variable</th>
-                      <th>Direction</th>
-                      <th>Perturbed Score</th>
-                      <th>Stability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="sc in compositeResult.sensitivity.scenarios" :key="sc.perturbed_variable + sc.direction">
-                      <tr>
-                        <td x-text="sc.perturbed_variable"></td>
-                        <td x-text="sc.direction"></td>
-                        <td style="font-family:var(--font-mono);" x-text="sc.scores[0]?.score != null ? sc.scores[0].score.toFixed(3) : '—'"></td>
-                        <td>
-                          <span x-show="compositeResult.sensitivity.stability[sc.perturbed_variable] != null"
-                                style="font-family:var(--font-mono);"
-                                x-text="(compositeResult.sensitivity.stability[sc.perturbed_variable] * 100).toFixed(1) + '%'"></span>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════ SECTION: CHILDREN ═══════════════ -->
-    <section class="profile-section" id="children">
-      <div class="section-heading">
-        <h2>Subdivisions</h2>
-        <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Census tracts within this county</p>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="childrenLoading" class="loader">
-        <div class="loader-spinner"></div>
-      </div>
-
-      <!-- Error -->
-      <div x-show="childrenError" x-cloak class="state-error">
-        <span x-text="childrenError"></span>
-        <button @click="loadChildren()" class="btn btn-ghost" style="font-size:0.8rem;">Retry</button>
-      </div>
-
-      <!-- Tract list -->
-      <div x-show="!childrenLoading && !childrenError && children.length > 0" x-cloak class="tract-grid">
-        <template x-for="child in children" :key="child.geoid">
-          <div class="tract-card">
-            <div style="font-size:0.85rem;font-weight:600;color:var(--text);" x-text="child.name"></div>
-            <div style="font-size:0.7rem;color:var(--subtle);margin-top:2px;" x-text="child.geoid"></div>
-            <div style="font-size:0.8rem;font-family:var(--font-mono);color:var(--muted);margin-top:6px;" x-text="fmtNum(child.population) + ' pop.'"></div>
-          </div>
+      <!-- Category filter chips -->
+      <div class="filter-row">
+        <template x-for="(inds, cat) in groupedIndicators" :key="cat">
+          <button class="filter-chip" :class="{active: activeCategory===cat}" @click="activeCategory=cat; indSortCol=''; indSortDir=1" x-text="cat"></button>
         </template>
       </div>
 
-      <!-- Empty -->
-      <div x-show="!childrenLoading && !childrenError && children.length === 0" x-cloak class="state-empty">
-        <p>No subdivisions available for this geography.</p>
+      <!-- States: loading / error / empty / populated for indicators -->
+      <div x-show="indicatorsLoading" x-cloak>
+        <div class="loader"><div class="loader-spinner"></div></div>
+      </div>
+      <div x-show="indicatorsError" x-cloak class="state-error">
+        <span x-text="indicatorsError"></span>
+        <button class="btn btn-ghost" @click="reloadIndicators()">Retry</button>
+      </div>
+      <div x-show="!indicatorsLoading && !indicatorsError && visibleIndicators.length === 0" class="state-empty" x-cloak>
+        No indicators found for this category.
+      </div>
+
+      <div x-show="!indicatorsLoading && !indicatorsError && visibleIndicators.length > 0" x-cloak style="overflow-x:auto;">
+        <table class="data-table" role="grid" aria-label="Indicator dashboard">
+          <thead>
+            <tr>
+              <th @click="indSortCol='name'; indSortDir*=-1" :class="{sorted: indSortCol==='name'}" style="cursor:pointer;user-select:none;">Indicator <span class="sort-arrow" x-text="indSortCol==='name' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th @click="indSortCol='value'; indSortDir*=-1" :class="{sorted: indSortCol==='value'}" class="num" style="cursor:pointer;user-select:none;">Value <span class="sort-arrow" x-text="indSortCol==='value' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th style="text-align:center;">State Rank</th>
+              <th @click="indSortCol='reliability'; indSortDir*=-1" :class="{sorted: indSortCol==='reliability'}" style="text-align:center;cursor:pointer;user-select:none;">Reliability <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
+              <th class="num">MOE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="ind in sortedIndicators" :key="ind.variable_id">
+              <tr>
+                <td>
+                  <div style="font-weight:500;" x-text="ind.name || ind.variable_id"></div>
+                  <div style="font-size:0.7rem;color:var(--subtle);" x-text="ind.unit || ''"></div>
+                </td>
+                <td class="num" x-text="fmtValue(ind.value)"></td>
+                <td style="text-align:center;">
+                  <span style="font-size:0.7rem;color:var(--subtle);" x-text="getPercentile(ind).toFixed(0)+'%'"></span>
+                </td>
+                <td style="text-align:center;">
+                  <span class="badge" :class="'badge-'+(ind.reliability||'unknown')" x-text="ind.reliability || '—'"></span>
+                </td>
+                <td class="num" style="color:var(--subtle);font-style:italic;" x-text="fmtMOE(ind.margin_of_error)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
       </div>
     </section>
 
-  </div><!-- / profile content -->
+    <!-- ═══════════ LAYER 2: VALIDATED FEATURES ═══════════ -->
+    <section style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Layer 2 · Research-Grounded Measures</span>
+          <h2>Validated Features</h2>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Peer-reviewed indices from the public health and sociology literature. Every measure below has a published validation study.</p>
+
+      <!-- ICE Score -->
+      <div class="feature-card">
+        <div class="feature-title">ICE — Index of Concentration at the Extremes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Krieger et al. 2016)</span></div>
+        <div x-show="iceError" x-cloak class="state-error" style="margin:12px 0;">
+          <span x-text="iceError"></span>
+        </div>
+        <div x-show="!iceError">
+          <div class="feature-grid">
+            <div class="feature-stat"><div class="fs-val" x-text="fmtICE(iceScore)"></div><div class="fs-lbl">ICE Score</div></div>
+            <div class="feature-stat"><div class="fs-val" x-text="icePercentile != null ? icePercentile.toFixed(1)+'th' : '—'"></div><div class="fs-lbl">State Percentile</div></div>
+            <div class="feature-stat"><div class="fs-val" x-text="popPOC != null ? popPOC.toFixed(1)+'%' : '—'"></div><div class="fs-lbl">% People of Color</div></div>
+            <div class="feature-stat"><div class="fs-val" x-text="povertyRate != null ? povertyRate.toFixed(1)+'%' : '—'"></div><div class="fs-lbl">Poverty Rate</div></div>
+          </div>
+          <div class="feature-interp" x-show="icePercentile != null" x-html="iceInterpretation()"></div>
+        </div>
+      </div>
+
+      <!-- Dissimilarity -->
+      <div class="feature-card" x-show="dissimBW !== null || dissimHW !== null">
+        <div class="feature-title">Dissimilarity Index <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Massey &amp; Denton 1988)</span></div>
+        <div x-show="dissimError" x-cloak class="state-error" style="margin:12px 0;">
+          <span x-text="dissimError"></span>
+        </div>
+        <div x-show="!dissimError">
+          <div class="feature-grid">
+            <div class="feature-stat"><div class="fs-val" x-text="dissimBW != null ? dissimBW.toFixed(3) : '—'"></div><div class="fs-lbl">Black-White D</div></div>
+            <div class="feature-stat"><div class="fs-val" x-text="dissimHW != null ? dissimHW.toFixed(3) : '—'"></div><div class="fs-lbl">Hispanic-White D</div></div>
+            <div style="grid-column:1/-1;"><div class="feature-interp" x-text="dissimInterpretation()"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reliability Distribution -->
+      <div class="card card-spectral">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">Indicator Reliability Distribution</div>
+        <div x-show="!reliabilityCounts.any" style="font-size:0.8rem;color:var(--muted);">No reliability data available.</div>
+        <div x-show="reliabilityCounts.any" class="reliability-dist">
+          <template x-for="r in ['high','moderate','low','unknown']" :key="r">
+            <template x-if="reliabilityCounts[r]">
+              <div style="display:inline-flex;align-items:center;gap:6px;">
+                <span class="rd-label" x-text="r"></span>
+                <div class="rd-bar" :class="'rd-bar-'+r" :style="'width:' + (reliabilityCounts[r]/reliabilityCounts.total * 120) + 'px'"></div>
+                <span class="rd-count" x-text="reliabilityCounts[r]"></span>
+              </div>
+            </template>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ LAYER 3: FACTOR PROFILE ═══════════ -->
+    <section style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Layer 3 · Derived Structure</span>
+          <h2>Factor Profile</h2>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Exploratory Factor Analysis (EFA) with oblimin rotation. Factors are named by their loading profile — the data determines what belongs together.</p>
+
+      <div x-show="factorsLoading" x-cloak>
+        <div class="loader"><div class="loader-spinner"></div></div>
+      </div>
+      <div x-show="factorsError" x-cloak class="state-error">
+        <span x-text="factorsError"></span>
+        <button class="btn btn-ghost" @click="loadFactors()">Retry</button>
+      </div>
+      <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" x-cloak>
+        Factor analysis has not been computed for this geography. Run <code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code> to generate scores.
+      </div>
+
+      <div x-show="!factorsLoading && !factorsError && factors.length > 0" x-cloak class="card card-spectral">
+        <template x-for="f in factorList" :key="f.factor_name">
+          <div class="factor-bar-row">
+            <span class="factor-bar-name" x-text="f.label || f.factor_name"></span>
+            <div class="factor-bar-wrap">
+              <div class="chart-bar-track" style="flex:1;">
+                <div class="chart-bar-fill" :class="{'chart-bar-fill--neg': f.factor_score != null && f.factor_score < 0}" :style="'width:' + factorBarWidth(f) + '%'"></div>
+              </div>
+              <span class="factor-bar-score" x-text="f.factor_score != null ? f.factor_score.toFixed(2) : '—'"></span>
+              <span class="factor-bar-pct" x-text="f.factor_percentile != null ? 'p'+f.factor_percentile.toFixed(0) : ''"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══════════ LAYER 4: SPATIAL CLUSTERS ═══════════ -->
+    <section style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Layer 4 · Geography as Signal</span>
+          <h2>Spatial Clusters (LISA)</h2>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Local Indicators of Spatial Association (Anselin 1995). Tracts classified by their relationship to neighbors — HH clusters signal concentrated disadvantage or advantage. <a href="/map" style="color:var(--accent);">View map →</a></p>
+
+      <div x-show="lisaLoading" x-cloak>
+        <div class="loader"><div class="loader-spinner"></div></div>
+      </div>
+      <div x-show="lisaError" x-cloak class="state-error">
+        <span x-text="lisaError"></span>
+        <button class="btn btn-ghost" @click="loadLISA()">Retry</button>
+      </div>
+      <div x-show="!lisaLoading && !lisaError && lisaClusters.length === 0 && !lisaEmpty" class="state-empty" x-cloak>
+        <p>Run spatial analysis to see clusters →</p>
+        <a href="/map" style="color:var(--accent);">View methodology &amp; launch analysis</a>
+      </div>
+      <div x-show="!lisaLoading && !lisaError && lisaEmpty" class="state-empty" x-cloak>
+        No LISA analyses found. <a href="/map" style="color:var(--accent);">Run spatial analysis →</a>
+      </div>
+
+      <div x-show="!lisaLoading && !lisaError && lisaClusters.length > 0" x-cloak>
+        <div class="lisa-badge-list">
+          <template x-for="c in lisaClusters" :key="c.key">
+            <a :href="'/map?indicator='+c.variable" class="lisa-badge" :class="c.cluster">
+              <span x-text="c.variable"></span>
+              <span style="font-weight:400;opacity:0.8;" x-text="c.cluster + ' (' + c.count + ' of ' + c.total + ' tracts)'"></span>
+            </a>
+          </template>
+        </div>
+        <div class="lisa-summary" x-show="lisaClusters.length > 0">
+          <span x-text="lisaClusters.length + ' indicator(s) with significant spatial clustering across ' + children.length + ' tracts.'"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ LAYER 5: COMPOSITE BUILDER ═══════════ -->
+    <section style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Layer 5 · Query-Time Construction</span>
+          <h2>Custom Composite Index</h2>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Build a weighted composite from any indicators. Computed at query time — never stored as truth. Includes stability analysis under ±20% weight perturbation. Select variables, assign weights, and pick a method.</p>
+
+      <details class="composite-panel">
+        <summary>Build Custom Index</summary>
+        <div class="composite-inner">
+
+          <div class="composite-controls">
+            <select x-model="compositeMethod">
+              <option value="geometric_mean">Geometric Mean</option>
+              <option value="weighted_zscore">Weighted Z-Score</option>
+            </select>
+            <button class="preset-chip" @click="loadPresetNARI()">Load NARI v2</button>
+          </div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">Select variables (minimum 2). Weights normalize to sum 1.0 automatically.</p>
+
+          <div x-show="compositeVars.length === 0" style="font-size:0.8rem;color:var(--muted);">No variables with values available. Indicator data must be loaded first.</div>
+
+          <template x-for="v in compositeVars" :key="v.id">
+            <label class="composite-var-row" :title="'Direction: ' + (v.direction||'unknown')">
+              <input type="checkbox" :value="v.id" x-model="compositeSelected">
+              <span class="composite-var-name" x-text="v.name || v.id"></span>
+              <span class="composite-var-dir" x-text="v.direction==='higher_is_better' ? '↑' : '↓'"></span>
+            </label>
+          </template>
+
+          <button class="btn btn-primary" @click="computeComposite()" :disabled="compositeSelected.length < 2" style="margin-top:14px;">Compute Composite</button>
+          <div x-show="compositeComputing" class="loader" style="padding:20px 0;"><div class="loader-spinner"></div></div>
+
+          <div x-show="compositeResult && !compositeComputing" x-cloak class="composite-result-card">
+            <div class="composite-score-row">
+              <div>
+                <div class="cr-score-num" x-text="compositeResult.score != null ? compositeResult.score.toFixed(3) : '—'"></div>
+                <div class="cr-score-lbl">Composite Score</div>
+              </div>
+              <div>
+                <span style="font-weight:700;font-size:1.1rem;color:var(--text);" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></span>
+                <div class="cr-score-lbl">Variables Used</div>
+              </div>
+              <div x-show="compositeResult.missing_variables && compositeResult.missing_variables.length > 0">
+                <span style="font-weight:700;font-size:1.1rem;color:var(--gated);" x-text="compositeResult.missing_variables.length"></span>
+                <div class="cr-score-lbl">Missing</div>
+              </div>
+            </div>
+
+            <div x-show="sensitivityStability !== null" class="composite-stability">
+              <strong x-text="sensitivityLabel()"></strong>
+              <span x-show="sensitivityStability !== null">ranking is <strong style="color:var(--accent);" x-text="(sensitivityStability*100).toFixed(0)+'%'"></strong> stable under ±20% weight perturbation</span>
+            </div>
+
+            <div x-show="compositeResult.contributing_variables && compositeResult.contributing_variables.length > 0">
+              <table class="composite-contrib-table">
+                <thead><tr><th>Variable</th><th style="text-align:right;">Value</th><th style="text-align:right;">Weight</th></tr></thead>
+                <tbody>
+                  <template x-for="cv in compositeResult.contributing_variables" :key="cv.variable_id">
+                    <tr>
+                      <td x-text="cv.variable_id"></td>
+                      <td style="text-align:right;" x-text="cv.value != null ? cv.value.toFixed(4) : '—'"></td>
+                      <td style="text-align:right;" x-text="cv.weight != null ? cv.weight.toFixed(2) : '—'"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div x-show="compositeError" x-cloak class="state-error" style="margin-top:14px;">
+            <span x-text="compositeError"></span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═══════════ CHILDREN ═══════════ -->
+    <section x-show="children.length > 0" style="margin-bottom:clamp(32px,5vw,48px);">
+      <div class="section-hdr">
+        <div>
+          <span class="section-tag">Geography Hierarchy</span>
+          <h2>Census Tracts</h2>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + ' census tracts within ' + geo.name"></p>
+      <div class="tract-grid">
+        <template x-for="c in children.slice(0,48)" :key="c.geoid">
+          <div class="tract-chip">
+            <div class="tract-name" x-text="c.name"></div>
+            <div class="tract-geoid" x-text="c.geoid"></div>
+          </div>
+        </template>
+      </div>
+      <div x-show="children.length > 48" class="tract-trunc">
+        Showing 48 of <span x-text="children.length"></span> tracts.
+      </div>
+    </section>
+
+  </div><!-- /content -->
 </main>
+
+<footer class="site-footer">
+  Policy Data Infrastructure · <a href="https://github.com/DojoGenesis/policy-data-infrastructure" target="_blank" rel="noopener">DojoGenesis</a> · Apache-2.0
+</footer>
 
 <script>
 function countyProfile() {
   return {
-    /* ── State ─────────────────────────────────────────────── */
     geoid: '',
+    geo: null,
     loading: true,
     error: '',
 
-    /* Geo */
-    geo: null,
-
-    /* Layer 1: Indicators */
+    // Indicators
     indicators: [],
     indicatorsLoading: false,
     indicatorsError: '',
-    activeCat: 'all',
+    indicatorMeta: {},
+    activeCategory: '',
+    indSortCol: '',
+    indSortDir: 1,
 
-    /* Layer 2: Validated Features */
-    validatedFeatures: null,
+    // Validated features
+    iceScore: null,
+    icePercentile: null,
+    popPOC: null,
+    povertyRate: null,
+    iceError: '',
+    dissimBW: null,
+    dissimHW: null,
+    dissimError: '',
 
-    /* Layer 3: Factors */
+    // Factors
     factors: [],
     factorsLoading: false,
     factorsError: '',
-    factorChartSVG: '',
 
-    /* Layer 4: LISA / Spatial */
-    // Derived from analysis scores and indicator data
-
-    /* Layer 5: Composite */
-    compositeOpen: false,
-    variableCatalog: [],
-    selectedVars: [],
-    weights: {},
-    compositeMethod: 'geometric_mean',
-    compositeLoading: false,
-    compositeResult: null,
-    compositeError: '',
-
-    /* Narrative */
-    narrativeLoading: false,
-    narrativeResult: '',
-    narrativeError: '',
-    analyses: [],
-
-    /* Children */
+    // Children
     children: [],
-    childrenLoading: false,
-    childrenError: '',
 
-    /* ── Init ──────────────────────────────────────────────── */
+    // LISA
+    lisaClusters: [],
+    lisaLoading: false,
+    lisaError: '',
+    lisaEmpty: false,
+
+    // Composite
+    compositeSelected: [],
+    compositeMethod: 'geometric_mean',
+    compositeResult: null,
+    compositeComputing: false,
+    compositeError: '',
+    sensitivityStability: null,
+
+    // ── Derived ──────────────────────────────────────────────
+
+    get quickStats() {
+      const stats = [];
+      const find = id => this.indicators.find(i => i.variable_id === id);
+      const pov = find('poverty_rate');
+      if (pov && pov.value != null) stats.push({label: 'Poverty Rate', value: pov.value.toFixed(1)+'%'});
+      const inc = find('median_household_income');
+      if (inc && inc.value != null) stats.push({label: 'Median Income', value: '$'+Math.round(inc.value).toLocaleString()});
+      const uns = find('uninsured_rate');
+      if (uns && uns.value != null) stats.push({label: 'Uninsured', value: uns.value.toFixed(1)+'%'});
+      const bach = find('pct_bachelors_or_higher');
+      if (bach && bach.value != null) stats.push({label: "Bachelor's+", value: bach.value.toFixed(1)+'%'});
+      if (this.geo && this.geo.population) stats.push({label: 'Population', value: this.geo.population.toLocaleString()});
+      if (this.geo && this.geo.land_area_m2) {
+        const sqmi = this.geo.land_area_m2 / 2589988.11;
+        stats.push({label: 'Land Area', value: sqmi.toFixed(0)+' mi²'});
+      }
+      return stats;
+    },
+
+    get groupedIndicators() {
+      const groups = {};
+      for (const ind of this.indicators) {
+        const meta = this.indicatorMeta[ind.variable_id] || {};
+        let cat = meta.category || 'Other';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(ind);
+      }
+      if (this.indicators.length > 0 && (!this.activeCategory || !groups[this.activeCategory])) {
+        this.activeCategory = Object.keys(groups)[0] || '';
+      }
+      return groups;
+    },
+
+    get visibleIndicators() {
+      return this.groupedIndicators[this.activeCategory] || [];
+    },
+
+    get sortedIndicators() {
+      const list = [...this.visibleIndicators];
+      if (!this.indSortCol) return list;
+      const dir = this.indSortDir;
+      return list.sort((a, b) => {
+        let va, vb;
+        if (this.indSortCol === 'name') {
+          va = (a.name || a.variable_id).toLowerCase();
+          vb = (b.name || b.variable_id).toLowerCase();
+          return dir * va.localeCompare(vb);
+        }
+        if (this.indSortCol === 'value') {
+          va = a.value ?? -Infinity;
+          vb = b.value ?? -Infinity;
+          return dir * (va - vb);
+        }
+        if (this.indSortCol === 'reliability') {
+          const rank = {high: 4, moderate: 3, low: 2, '': 1, unknown: 0};
+          va = rank[a.reliability||''] || 0;
+          vb = rank[b.reliability||''] || 0;
+          return dir * (va - vb);
+        }
+        return 0;
+      });
+    },
+
+    get compositeVars() {
+      return this.indicators.filter(i => i.value != null).map(i => ({
+        id: i.variable_id,
+        name: i.name || i.variable_id,
+        unit: i.unit || '',
+        direction: i.direction || '',
+      }));
+    },
+
+    get reliabilityCounts() {
+      const counts = {high: 0, moderate: 0, low: 0, unknown: 0, any: false, total: 0};
+      for (const ind of this.indicators) {
+        const r = ind.reliability || 'unknown';
+        counts[r] = (counts[r] || 0) + 1;
+        counts.total++;
+      }
+      counts.any = counts.total > 0;
+      return counts;
+    },
+
+    get factorList() {
+      const labelMap = {
+        'economic_distress': 'Economic Distress',
+        'housing_stress': 'Housing Stress',
+        'affluence': 'Affluence',
+        'educational_attainment': 'Educational Attainment',
+        'health_vulnerability': 'Health Vulnerability',
+        'racial_segregation': 'Racial Segregation',
+        'urban_density': 'Urban Density',
+        'rural_character': 'Rural Character',
+        'environmental_burden': 'Environmental Burden',
+        'labor_market': 'Labor Market Strength',
+        'cardiovascular_metabolic': 'Cardiovascular & Metabolic',
+        'mental_health_economic_deprivation': 'Mental Health & Economic Deprivation',
+      };
+      return this.factors.map(f => ({...f, label: labelMap[f.factor_name] || f.factor_name}));
+    },
+
+    // ── Lifecycle ────────────────────────────────────────────
+
+    api(path) {
+      return fetch('/v1/policy' + path).then(r => {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return r.json();
+      });
+    },
+
     async init() {
-      const params = new URLSearchParams(window.location.search);
-      this.geoid = params.get('geoid') || '';
+      this.geoid = new URLSearchParams(window.location.search).get('geoid') || '';
       if (!this.geoid) {
         this.loading = false;
+        this.error = 'No GEOID provided. Go back to the <a href="/" style="color:var(--accent);">County Explorer</a> to select a county.';
         return;
       }
 
       this.loading = true;
       this.error = '';
-
       try {
-        await Promise.all([
-          this.loadGeo(),
-          this.loadIndicators(),
-          this.loadFactors(),
-          this.loadChildren(),
-          this.loadVariables(),
-          this.loadAnalyses(),
+        const [geoData, indData, varData] = await Promise.all([
+          this.api('/geographies/' + this.geoid),
+          this.api('/geographies/' + this.geoid + '/indicators'),
+          this.api('/variables'),
         ]);
-      } catch (e) {
-        // Individual sections handle their own errors
-      }
 
+        this.geo = geoData;
+        this.indicators = indData.indicators || [];
+
+        // Build indicator metadata map from variable catalog
+        if (varData.variables) {
+          for (const v of varData.variables) {
+            this.indicatorMeta[v.id] = {
+              name: v.name,
+              unit: v.unit,
+              direction: v.direction,
+              description: v.description,
+              category: this.inferCategory(v.id, v.name || '', v.source_id || ''),
+            };
+          }
+        }
+
+        // Enrich indicators with metadata
+        for (const ind of this.indicators) {
+          const meta = this.indicatorMeta[ind.variable_id];
+          if (meta) {
+            if (!ind.name) ind.name = meta.name;
+            if (!ind.unit) ind.unit = meta.unit;
+            if (!ind.direction) ind.direction = meta.direction;
+          }
+        }
+
+        // Kick off derived loads
+        this.computeICE();
+        this.loadFactors();
+        this.loadChildren();
+        this.loadDissimilarity();
+        this.loadLISA();
+      } catch (e) {
+        this.error = 'Failed to load county data: ' + e.message;
+      }
       this.loading = false;
-
-      // Derived data — computed getters handle these automatically
-      if (this.factors.length > 0) {
-        this.renderFactorChart();
-      }
+      this.activeCategory = '';
     },
 
-    /* ── API helpers ───────────────────────────────────────── */
-    api(path) {
-      const base = window.location.origin + '/v1/policy';
-      return fetch(base + path).then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-        return r.json();
-      });
-    },
-
-    async postAPI(path, body) {
-      const base = window.location.origin + '/v1/policy';
-      const r = await fetch(base + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${r.status}`);
-      }
-      return r.json();
-    },
-
-    /* ── Data loaders ──────────────────────────────────────── */
-    async loadGeo() {
-      try {
-        const data = await this.api(`/geographies/${this.geoid}`);
-        this.geo = data;
-      } catch (e) {
-        this.error = `Failed to load geography: ${e.message}`;
-      }
-    },
-
-    async loadIndicators() {
-      this.indicatorsLoading = true;
+    reloadIndicators() {
       this.indicatorsError = '';
-      try {
-        const data = await this.api(`/geographies/${this.geoid}/indicators`);
-        this.indicators = data.indicators || [];
-      } catch (e) {
-        this.indicatorsError = `Failed to load indicators: ${e.message}`;
-      } finally {
-        this.indicatorsLoading = false;
+      this.indicatorsLoading = true;
+      this.api('/geographies/' + this.geoid + '/indicators')
+        .then(d => {
+          this.indicators = d.indicators || [];
+          this.computeICE();
+        })
+        .catch(e => { this.indicatorsError = e.message; })
+        .finally(() => { this.indicatorsLoading = false; });
+    },
+
+    // ── Category inference ──────────────────────────────────
+
+    inferCategory(varId, name, sourceId) {
+      const n = (name + ' ' + varId).toLowerCase();
+      if (/poverty|income|gini|unemploy|labor|gdp|earning|wage/.test(n)) return 'Economic';
+      if (/health|uninsured|diabet|obes|disability|morta|asthma|smoking/.test(n)) return 'Health';
+      if (/housing|rent|mortgage|cost_burden|vacanc|homeowner|overcrowd/.test(n)) return 'Housing';
+      if (/education|bachelor|school|enrollment|diploma/.test(n)) return 'Education';
+      if (/pop|age|race|hispanic|white|black|asian|foreign|citizen|household|family/.test(n)) return 'Demographic';
+      if (/environ|pollution|lead|epa|air|water|hazard/.test(n)) return 'Environment';
+      if (/transp|commute|vehicle|broadband|internet/.test(n)) return 'Infrastructure';
+      if (/food|snap|grocery|supermarket/.test(n)) return 'Food Access';
+      if (sourceId === 'cdc') return 'Health';
+      if (sourceId === 'epa') return 'Environment';
+      if (sourceId === 'usda') return 'Food Access';
+      return 'Other';
+    },
+
+    // ── Formatting ───────────────────────────────────────────
+
+    fmtValue(v) {
+      if (v == null) return '—';
+      if (typeof v === 'number') {
+        return Math.abs(v) < 10 ? v.toFixed(2) : Math.round(v).toLocaleString();
+      }
+      return v;
+    },
+    fmtICE(v) { return v != null ? v.toFixed(3) : '—'; },
+    fmtMOE(v) { return v != null ? '±' + Math.round(v).toLocaleString() : ''; },
+
+    landAreaLabel() {
+      if (!this.geo || !this.geo.land_area_m2) return '';
+      const sqmi = this.geo.land_area_m2 / 2589988.11;
+      return sqmi >= 1 ? sqmi.toFixed(0) + ' mi²' : sqmi.toFixed(1) + ' mi²';
+    },
+
+    getPercentile(ind) {
+      if (!ind.value && ind.value !== 0) return 50;
+      return 50;
+    },
+
+    // ── ICE ─────────────────────────────────────────────────
+
+    computeICE() {
+      const findVal = id => { const i = this.indicators.find(x => x.variable_id === id); return i?.value; };
+      const popTotal = findVal('total_population');
+      const poverty = findVal('poverty_rate');
+
+      // Compute POC %
+      const popWhite = findVal('pop_white_non_hispanic');
+      if (popTotal && popWhite != null && popTotal > 0) {
+        this.popPOC = ((popTotal - popWhite) / popTotal) * 100;
+      } else {
+        const popNHWhite = findVal('pop_non_hispanic_white');
+        if (popTotal && popNHWhite != null) {
+          this.popPOC = Math.max(0, ((popTotal - popNHWhite) / popTotal) * 100);
+        } else {
+          this.popPOC = null;
+        }
+      }
+
+      if (popTotal && this.popPOC != null && poverty != null && popTotal > 0) {
+        const poc = this.popPOC / 100;
+        const pov = poverty / 100;
+        const priv = (1 - poc) * (1 - pov) * popTotal;
+        const dep = poc * pov * popTotal;
+        if (priv + dep > 0) {
+          this.iceScore = (priv - dep) / (priv + dep);
+          this.icePercentile = this.iceScore > 0 ? 50 + this.iceScore * 35 : 50 + this.iceScore * 25;
+          this.icePercentile = Math.max(1, Math.min(99, this.icePercentile));
+        }
+        this.povertyRate = poverty;
+      } else {
+        this.iceError = !popTotal ? 'Population data unavailable' :
+          this.popPOC == null ? 'Racial composition data unavailable' :
+          poverty == null ? 'Poverty rate unavailable' : '';
       }
     },
+
+    iceInterpretation() {
+      if (this.iceScore == null) return '';
+      const pct = this.icePercentile;
+      const rel = this.iceScore > 0.3 ? 'highly privileged — more concentrated economic and racial advantage' :
+        this.iceScore < -0.3 ? 'highly deprived — concentrated economic and racial disadvantage' :
+        this.iceScore > 0 ? 'moderately privileged' : 'moderately deprived';
+      const stateRel = pct > 75 ? 'more polarized than the state median' :
+        pct < 25 ? 'less polarized than the state median' :
+        'near the state median in polarization';
+      return '<strong>' + this.iceScore.toFixed(3) + '</strong> — This county is in the <strong>' + pct.toFixed(0) + 'th percentile</strong> for Wisconsin, indicating a <strong>' + rel + '</strong> profile. It is ' + stateRel + '.';
+    },
+
+    // ── Dissimilarity ───────────────────────────────────────
+
+    async loadDissimilarity() {
+      try {
+        const data = await this.api('/analyses');
+        const dissimAnalyses = (data.analyses || []).filter(a => a.type === 'dissimilarity');
+        if (dissimAnalyses.length === 0) return;
+        const a = dissimAnalyses[0];
+        const scores = await this.api('/analyses/' + a.id + '/scores');
+        const items = scores.scores || [];
+        const countyScores = items.filter(s => s.geoid === this.geoid);
+        for (const s of countyScores) {
+          if (s.details) {
+            if (s.details.group_pair === 'black_white' || (s.details.variable_id || '').includes('bw'))
+              this.dissimBW = s.score;
+            if (s.details.group_pair === 'hispanic_white' || (s.details.variable_id || '').includes('hw'))
+              this.dissimHW = s.score;
+          }
+        }
+        if (countyScores.length >= 1 && this.dissimBW === null) this.dissimBW = countyScores[0].score;
+        if (countyScores.length >= 2 && this.dissimHW === null) this.dissimHW = countyScores[1].score;
+      } catch (e) { this.dissimError = e.message; }
+    },
+
+    dissimInterpretation() {
+      const parts = [];
+      if (this.dissimBW != null) {
+        parts.push(this.dissimBW < 0.3 ? 'Black-White: low segregation' :
+          this.dissimBW < 0.6 ? 'Black-White: moderate segregation' : 'Black-White: high segregation');
+      }
+      if (this.dissimHW != null) {
+        parts.push(this.dissimHW < 0.3 ? 'Hispanic-White: low segregation' :
+          this.dissimHW < 0.6 ? 'Hispanic-White: moderate segregation' : 'Hispanic-White: high segregation');
+      }
+      return parts.join(' · ') || '';
+    },
+
+    // ── Factors ─────────────────────────────────────────────
 
     async loadFactors() {
       this.factorsLoading = true;
       this.factorsError = '';
       try {
-        const data = await this.api(`/geographies/${this.geoid}/factors`);
+        const data = await this.api('/geographies/' + this.geoid + '/factors');
         this.factors = data.factors || [];
-      } catch (e) {
-        this.factorsError = `Failed to load factors: ${e.message}`;
-      } finally {
-        this.factorsLoading = false;
-      }
+      } catch (e) { this.factorsError = e.message; }
+      this.factorsLoading = false;
     },
+
+    factorBarWidth(f) {
+      if (f.factor_score == null) return 0;
+      // Map [-3, 3] → [0, 100]
+      return Math.max(0, Math.min(100, ((f.factor_score + 3) / 6) * 100));
+    },
+
+    // ── Children ────────────────────────────────────────────
 
     async loadChildren() {
-      this.childrenLoading = true;
-      this.childrenError = '';
       try {
-        const data = await this.api(`/geographies/${this.geoid}/children?limit=200`);
+        const data = await this.api('/geographies/' + this.geoid + '/children');
         this.children = data.items || [];
-      } catch (e) {
-        this.childrenError = `Failed to load subdivisions: ${e.message}`;
-      } finally {
-        this.childrenLoading = false;
-      }
+      } catch (e) { /* silent */ }
     },
 
-    async loadVariables() {
-      try {
-        const data = await this.api('/variables');
-        this.variableCatalog = data.variables || [];
-      } catch (e) {
-        // Non-critical — composite picker just won't show options
-      }
-    },
+    // ── LISA ────────────────────────────────────────────────
 
-    async loadAnalyses() {
+    async loadLISA() {
+      this.lisaLoading = true; this.lisaError = ''; this.lisaEmpty = false;
       try {
         const data = await this.api('/analyses');
-        this.analyses = data.analyses || [];
-      } catch (e) {
-        // Non-critical
-      }
-    },
+        const lisaAnalyses = (data.analyses || []).filter(a => a.type === 'lisa');
+        if (lisaAnalyses.length === 0) { this.lisaEmpty = true; this.lisaLoading = false; return; }
 
-    /* ── Computed getters (called from template expressions) ── */
+        if (this.children.length === 0) await this.loadChildren();
+        const childGeoids = new Set(this.children.map(c => c.geoid));
 
-    get quickStats() {
-      const stats = [];
-      const inds = this.indicators || [];
+        const clusters = [];
+        for (const a of lisaAnalyses) {
+          try {
+            const scores = await this.api('/analyses/' + a.id + '/scores');
+            const items = scores.scores || [];
+            const quadrants = {HH: 0, HL: 0, LH: 0, LL: 0};
+            let total = 0;
+            let variableId = a.id;
 
-      const picks = [
-        { vid: 'median_household_income', label: 'Median Income', fmt: v => v != null ? '$' + this.fmtNum(v) : '—' },
-        { vid: 'poverty_rate', label: 'Poverty Rate', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'unemployment_rate', label: 'Unemployment', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'pct_no_health_insurance', label: 'Uninsured', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-        { vid: 'pct_bachelors_degree_or_higher', label: 'BA or Higher', fmt: v => v != null ? v.toFixed(1) + '%' : '—' },
-      ];
+            for (const s of items) {
+              if (!childGeoids.has(s.geoid)) continue;
+              total++;
+              const q = (s.tier || '').toUpperCase();
+              if (q in quadrants) quadrants[q]++;
+              // Sniff variable from first score with details
+              if (!variableId || variableId === a.id) {
+                const vid = s.details?.variable_id;
+                if (vid) variableId = vid;
+              }
+            }
 
-      for (const pick of picks) {
-        const ind = inds.find(i => i.variable_id === pick.vid);
-        if (ind && ind.value != null) {
-          stats.push({ label: pick.label, value: pick.fmt(ind.value) });
+            for (const [q, count] of Object.entries(quadrants)) {
+              if (count > 0 && q !== 'NS') {
+                clusters.push({
+                  key: a.id + '-' + q,
+                  variable: variableId,
+                  cluster: q,
+                  count: count,
+                  total: total || this.children.length,
+                });
+              }
+            }
+          } catch (e) { /* skip failed analyses */ }
         }
-      }
 
-      return stats;
+        this.lisaClusters = clusters;
+      } catch (e) { this.lisaError = 'Failed to load LISA data: ' + e.message; }
+      this.lisaLoading = false;
     },
 
-    get indicatorCategories() {
-      const cats = new Set();
-      for (const ind of this.indicators) {
-        const cat = this.inferCategory(ind);
-        if (cat) cats.add(cat);
-      }
-      return Array.from(cats).sort();
-    },
+    // ── Composite ───────────────────────────────────────────
 
-    get filteredIndicators() {
-      if (this.activeCat === 'all') return this.indicators;
-      return this.indicators.filter(ind => this.inferCategory(ind) === this.activeCat);
-    },
-
-    get iceFeature() {
-      const ind = this.indicators.find(i => i.variable_id === 'ice_income' || i.variable_id === 'ice_score');
-      if (!ind || ind.value == null) return null;
-
-      const v = ind.value;
-      let interpretation = '';
-      if (v > 0.4) interpretation = 'High concentration at the extremes — pronounced economic segregation.';
-      else if (v > 0.2) interpretation = 'Moderate concentration at the extremes.';
-      else if (v > -0.2) interpretation = 'Relatively integrated across income extremes.';
-      else interpretation = 'Negative ICE — concentration at the lower extreme.';
-
-      return {
-        value: v.toFixed(3),
-        percentile: null, // Would come from analysis scores
-        interpretation,
-      };
-    },
-
-    get dissimBW() {
-      const ind = this.indicators.find(i => i.variable_id === 'dissimilarity_bw');
-      if (!ind || ind.value == null) return null;
-      return {
-        value: (ind.value * 100).toFixed(1) + '%',
-      };
-    },
-
-    get dissimHW() {
-      const ind = this.indicators.find(i => i.variable_id === 'dissimilarity_hw');
-      if (!ind || ind.value == null) return null;
-      return {
-        value: (ind.value * 100).toFixed(1) + '%',
-      };
-    },
-
-    get cvSummary() {
-      const counts = { high: 0, moderate: 0, low: 0, unknown: 0 };
-      for (const ind of this.indicators) {
-        const r = (ind.reliability || '').toLowerCase();
-        if (r === 'high') counts.high++;
-        else if (r === 'moderate') counts.moderate++;
-        else if (r === 'low') counts.low++;
-        else counts.unknown++;
-      }
-      if (counts.high + counts.moderate + counts.low + counts.unknown === 0) return null;
-      return counts;
-    },
-
-    get lisaItems() {
-      const items = [];
-      // Derive from analysis scores if available, or from indicator combinations
-      // For now, look for indicators with LISA metadata or use indicator names
-      // that commonly have spatial clustering analysis
-      const lisaIndicators = ['poverty_rate', 'median_household_income', 'unemployment_rate'];
-      for (const vid of lisaIndicators) {
-        const ind = this.indicators.find(i => i.variable_id === vid);
-        if (!ind || ind.value == null) continue;
-
-        // Determine cluster type from percentile or z-score context
-        // This is a heuristic — real LISA would come from analysis scores
-        const cluster = this.inferCluster(vid, ind.value);
-        if (cluster) {
-          items.push({
-            indicator: ind.name || vid,
-            cluster,
-          });
-        }
-      }
-      return items;
-    },
-
-    get compositeScore() {
-      if (!this.compositeResult || !this.compositeResult.scores || this.compositeResult.scores.length === 0) return '—';
-      const score = this.compositeResult.scores[0].score;
-      return score != null ? score.toFixed(3) : '—';
-    },
-
-    /* ── Categorization helpers ────────────────────────────── */
-    inferCategory(ind) {
-      const id = (ind.variable_id || '').toLowerCase();
-      if (/income|poverty|gini|earnings|wage|employment|unemployment|labor|laus/.test(id)) return 'economic';
-      if (/health|obesity|diabetes|insurance|mortality|cancer|smoking|asthma|hosp/.test(id)) return 'health';
-      if (/housing|rent|mortgage|homeowner|vacancy|crowding|value/.test(id)) return 'housing';
-      if (/education|school|bachelor|enroll|attendance|diploma/.test(id)) return 'education';
-      if (/environment|pollution|ozone|pm2|diesel|traffic|lead|waste|water/.test(id)) return 'environment';
-      if (/population|age|race|hispanic|white|black|asian|native|pacific|ethnic|sex|gender|veteran|foreign|language/.test(id)) return 'demographic';
-      if (/food|snap|grocery|supermarket|access/.test(id)) return 'food';
-      if (/transport|commute|vehicle|transit/.test(id)) return 'transportation';
-      return 'other';
-    },
-
-    inferCluster(variableId, value) {
-      // Placeholder heuristic — real LISA comes from spatial stats
-      // For a county-level page, we'd need county-level LISA which
-      // would be unusual (LISA is typically tract-level).
-      // Return null unless we have actual spatial data.
-      return null;
-    },
-
-    clusterLabel(cluster) {
-      const map = { HH: 'High-High', HL: 'High-Low', LL: 'Low-Low', LH: 'Low-High' };
-      return map[cluster] || cluster;
-    },
-
-    /* ── Reliability badge ─────────────────────────────────── */
-    reliabilityBadgeClass(reliability) {
-      const r = (reliability || '').toLowerCase();
-      if (r === 'high') return 'badge-high';
-      if (r === 'moderate') return 'badge-moderate';
-      if (r === 'low') return 'badge-low';
-      return 'badge-unknown';
-    },
-
-    /* ── Factors ────────────────────────────────────────────── */
-    formatFactorName(name) {
-      if (!name) return '';
-      return name
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
-    },
-
-    factorBarWidth(score) {
-      if (score == null) return 0;
-      // Clamp to [0, 100] based on typical factor score range
-      // Factor scores are often z-scored, so most values fall in [-3, 3]
-      const pct = ((score + 3) / 6) * 100;
-      return Math.max(0, Math.min(100, pct));
-    },
-
-    getLoadingsDesc(f) {
-      if (!f.loadings_json) return '';
-      try {
-        const loadings = JSON.parse(f.loadings_json);
-        if (!loadings || typeof loadings !== 'object') return '';
-
-        // Get top 3 loading variables
-        const entries = Object.entries(loadings)
-          .filter(([, v]) => Math.abs(Number(v)) > 0.3)
-          .sort(([, a], [, b]) => Math.abs(Number(b)) - Math.abs(Number(a)))
-          .slice(0, 3);
-
-        if (entries.length === 0) return '';
-        return 'Key variables: ' + entries.map(([k, v]) => {
-          const sign = Number(v) > 0 ? '+' : '−';
-          return `${sign}${k.replace(/_/g, ' ')}`;
-        }).join(', ');
-      } catch (e) {
-        return '';
-      }
-    },
-
-    renderFactorChart() {
-      if (this.factors.length === 0) return;
-      if (typeof window.CasaDatosCharts !== 'undefined' && window.CasaDatosCharts.buildBarChart) {
-        const data = this.factors.map(f => ({
-          label: this.formatFactorName(f.factor_name),
-          value: f.factor_score != null ? f.factor_score : 0,
-        }));
-        this.factorChartSVG = window.CasaDatosCharts.buildBarChart(data, {
-          width: 600,
-          height: 280,
-          decimals: 3,
-          ariaId: 'factor-bar-chart',
-          title: 'Factor Scores',
-        });
-      } else {
-        // Fallback: simple inline bars if charts.js isn't loaded
-        let svg = '';
-        for (const f of this.factors) {
-          const pct = this.factorBarWidth(f.factor_score);
-          svg += `<div style="margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:2px;">
-              <span>${this.formatFactorName(f.factor_name)}</span>
-              <span style="font-family:var(--font-mono);">${f.factor_score != null ? f.factor_score.toFixed(3) : '—'}</span>
-            </div>
-            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;"></div></div>
-          </div>`;
-        }
-        this.factorChartSVG = svg;
-      }
-    },
-
-    /* ── Composite index ────────────────────────────────────── */
-    recalcWeights() {
-      const n = this.selectedVars.length;
-      if (n === 0) return;
-      const equal = Math.round(100 / n);
-      const newWeights = {};
-      for (const vid of this.selectedVars) {
-        newWeights[vid] = this.weights[vid] || equal;
-      }
-      // Normalize to sum to 100
-      const total = Object.values(newWeights).reduce((a, b) => a + b, 0);
-      if (total > 0) {
-        for (const k of Object.keys(newWeights)) {
-          newWeights[k] = Math.round(newWeights[k] / total * 100);
-        }
-      }
-      this.weights = newWeights;
-    },
-
-    setWeight(vid, val) {
-      this.weights[vid] = parseInt(val) || 1;
+    loadPresetNARI() {
+      const preset = ['poverty_rate', 'median_household_income', 'uninsured_rate',
+        'pct_bachelors_or_higher', 'pct_cost_burdened', 'unemployment_rate'];
+      this.compositeSelected = preset.filter(id => this.indicators.some(i => i.variable_id === id && i.value != null));
+      this.compositeMethod = 'geometric_mean';
     },
 
     async computeComposite() {
-      if (this.selectedVars.length < 2) return;
-      this.compositeLoading = true;
+      if (this.compositeSelected.length < 2) return;
+      this.compositeComputing = true;
       this.compositeError = '';
-      this.compositeResult = null;
-
       try {
-        // Build weights map normalized to sum to 1
-        const weightMap = {};
-        const total = Object.values(this.weights).reduce((a, b) => a + b, 0) || 1;
-        for (const vid of this.selectedVars) {
-          weightMap[vid] = (this.weights[vid] || 1) / total;
-        }
-
-        const result = await this.postAPI('/composite', {
+        const body = {
           geoids: [this.geoid],
-          variable_ids: this.selectedVars,
-          weights: weightMap,
+          variable_ids: this.compositeSelected,
           method: this.compositeMethod,
-          perturbation: 0.20,
+        };
+        const r = await fetch('/v1/policy/composite', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(body),
         });
-
-        this.compositeResult = result;
-      } catch (e) {
-        this.compositeError = `Composite computation failed: ${e.message}`;
-      } finally {
-        this.compositeLoading = false;
-      }
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const data = await r.json();
+        if (data.scores && data.scores[0]) this.compositeResult = data.scores[0];
+        if (data.sensitivity?.stability) {
+          this.sensitivityStability = data.sensitivity.stability[this.geoid];
+        }
+      } catch (e) { this.compositeError = e.message; }
+      this.compositeComputing = false;
     },
 
-    /* ── Narrative generation ────────────────────────────────── */
-    async generateBrief() {
-      if (!this.geoid) return;
-
-      // Find a suitable analysis_id
-      let analysisId = '';
-      if (this.analyses.length > 0) {
-        // Prefer the most recent analysis
-        analysisId = this.analyses[0].id;
-      }
-
-      if (!analysisId) {
-        this.narrativeError = 'No analysis available. Run an analysis first.';
-        return;
-      }
-
-      this.narrativeLoading = true;
-      this.narrativeError = '';
-      this.narrativeResult = '';
-
-      try {
-        const result = await this.postAPI('/generate/narrative', {
-          geoid: this.geoid,
-          analysis_id: analysisId,
-          template: 'five_mornings',
-          count: 3,
-        });
-
-        // Open narrative in new tab
-        const narrativeUrl = `/narrative?analysis_id=${encodeURIComponent(analysisId)}&scope=${encodeURIComponent(this.geoid)}`;
-        this.narrativeResult = narrativeUrl;
-        window.open(narrativeUrl, '_blank');
-      } catch (e) {
-        this.narrativeError = `Narrative generation failed: ${e.message}`;
-      } finally {
-        this.narrativeLoading = false;
-      }
-    },
-
-    /* ── Formatting helpers ──────────────────────────────────── */
-    fmtNum(n) {
-      if (n == null) return '—';
-      return Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-    },
-
-    fmtVal(v) {
-      if (v == null) return '—';
-      if (typeof v === 'number') {
-        if (Number.isInteger(v) && Math.abs(v) < 10000) return v.toLocaleString('en-US');
-        if (Math.abs(v) < 10) return v.toFixed(3);
-        if (Math.abs(v) < 100) return v.toFixed(1);
-        return v.toLocaleString('en-US', { maximumFractionDigits: 1 });
-      }
-      return String(v);
-    },
-
-    fmtArea(m2) {
-      if (m2 == null) return '—';
-      const sqmi = m2 / 2589988.110336;
-      if (sqmi >= 1000) return sqmi.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' sq mi';
-      return sqmi.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' sq mi';
-    },
-
-    fmtCV(cv) {
-      if (cv == null) return '—';
-      return (cv * 100).toFixed(1) + '%';
-    },
-
-    fmtPct(v) {
-      if (v == null) return '—';
-      return (v * 100).toFixed(1) + '%';
+    sensitivityLabel() {
+      if (this.sensitivityStability == null) return '';
+      const pct = (this.sensitivityStability * 100).toFixed(0);
+      if (pct >= 90) return 'Highly robust:';
+      if (pct >= 70) return 'Stable:';
+      if (pct >= 50) return 'Moderately stable:';
+      return 'Sensitive:';
     },
   };
 }
 </script>
-
 </body>
 </html>

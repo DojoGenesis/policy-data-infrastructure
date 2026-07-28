@@ -161,6 +161,10 @@ func (m *mockStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]sto
 func (m *mockStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (m *mockStore) PutEvidenceCards(_ context.Context, _ []store.EvidenceCard) error { return nil }
+func (m *mockStore) QueryEvidenceCards(_ context.Context, _ store.EvidenceCardFilter) ([]store.EvidenceCard, error) {
+	return nil, nil
+}
 func (m *mockStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error { return nil }
 func (m *mockStore) QueryFactorScores(_ context.Context, geoid string) ([]store.FactorScore, error) {
 	if m.queryFactorsFn != nil {

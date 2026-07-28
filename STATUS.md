@@ -7,16 +7,17 @@
 
 | Item | Value |
 |------|-------|
-| HEAD | `2922e3a` |
+| HEAD | `9042723` (pending: Wave 1+2 changes uncommitted) |
 | Branch | `main` |
 | Build | Clean |
-| Tests | 380 pass, 0 fail |
-| VPS | `5.161.84.125` — `pdi.service` active |
+| Tests | 380+ pass, 0 fail |
+| VPS | `5.161.84.125` — `pdi.service` active, binary deployed 2026-07-27 |
 | Live API | `https://api.policydatainfrastructure.com` |
 | Static Site | `https://policydatainfrastructure.com` (GitHub Pages, not connected to API) |
-| PostGIS | 72 counties, 34 variables, 21K+ rows |
-| WI tract count | **1,542** (ACS 2024 vintage — verified 2026-07-26 against both the ACS API and TIGERweb; this row previously said 1,652 and CLAUDE.md said ~1,929) |
+| PostGIS | 72 counties, 1,542 tracts, 51 variables, 16 sources |
+| WI tract count | **1,542** (ACS 2024 vintage — verified) |
 | Static tract bundle | `analysis/output/atlas/` — 1,542 tracts x 11 indicators, ACS 2020-2024 |
+| LISA analyses | 6 analyses live on VPS (1,524 scores each) |
 
 ## Service Health
 
@@ -43,22 +44,25 @@
 
 ## What's Live
 
-- 13 datasource adapters (ACS, TIGER, CDC PLACES, EPA EJScreen, HRSA, GTFS, WI DPI, HUD CHAS, HMDA, EPA TRI, HUD PIT, USDA Food, BLS LAUS)
-- REST API with 11 endpoints (9 functional, 2 stubs: pipeline/run, pipeline/events)
+- 16 datasource adapters (ACS, TIGER, CDC PLACES, EPA EJScreen, HRSA, GTFS, WI DPI, HUD CHAS, HMDA, EPA TRI, HUD PIT, USDA Food, BLS LAUS, **CDC SVI**, **FBI NIBRS**, **FCC Broadband**)
+- REST API with 20+ endpoints (geographies, indicators, analyses, variables, policies, compare, composite, aggregate, query, narrative, sources, factors, chat proxy)
 - CORS middleware (configurable origins)
 - Pipeline validation gates (ValidateStage, Config.Validate)
 - Narrative template engine (3 templates, no LLM dependency)
 - VPS deployment with systemd + Caddy + PostGIS
+- Frontend: 10 pages (index, county, compare, evidence, candidates, map, narrative, about, composites, chat) served from embedded filesystem
+- 6 LISA analyses live (1,524 tract scores each) powering the map page
+- 70 evidence cards generated, 42 indicator variables with metadata
+- Francesca Hong policy positions (85) seeded in policies table
+- Grounded chat endpoint proxying to Dojo Gateway
+- 3 new Python ingest scripts (CDC SVI, FBI NIBRS, FCC Broadband) with --dry-run support
 
 ## What's NOT Live (v1 gaps)
 
-### Frontend (no JavaScript calls the API)
-- [ ] County explorer with search
-- [ ] Indicator dashboard with labeled values
-- [ ] Evidence card gallery (live, not hardcoded)
-- [ ] Compare tool
-- [ ] Narrative generation button
-- [ ] Map visualization
+### Frontend (JavaScript calls exist but data-dependent)
+- [ ] Factor scores (Go pipeline needs factor analysis implementation)
+- [ ] Interactive Leaflet map (dispatching now — Wave 3)
+- [ ] Evidence card gallery wired to live API instead of static JSON
 
 ### API Enrichment
 - [ ] `GET /v1/policy/variables` — indicator metadata catalog (ADR-003)

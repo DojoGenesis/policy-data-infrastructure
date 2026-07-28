@@ -263,3 +263,29 @@ type PolicyListResponse struct {
 	Total    int              `json:"total"`
 }
 
+// EvidenceCardResponse is a single evidence card in the API response.
+// JSONB fields are decoded to raw JSON objects for the frontend.
+type EvidenceCardResponse struct {
+	PolicyID           string      `json:"policy_id"`
+	PolicyTitle        string      `json:"policy_title"`
+	Category           string      `json:"category"`
+	EquityDimension    string      `json:"equity_dimension"`
+	Title              string      `json:"title,omitempty"`
+	KeyFinding         string      `json:"key_finding,omitempty"`
+	DataQuality        string      `json:"data_quality,omitempty"`
+	Findings           interface{} `json:"findings"`
+	Indicators         interface{} `json:"indicators"`
+	StatewideContext   interface{} `json:"statewide_context"`
+	CountyVariation    interface{} `json:"county_variation,omitempty"`
+	TopNeedCounties    interface{} `json:"top_need_counties,omitempty"`
+	BottomNeedCounties interface{} `json:"bottom_need_counties,omitempty"`
+}
+
+// EvidenceCardListResponse is the response body for GET /evidence-cards.
+type EvidenceCardListResponse struct {
+	Cards  []EvidenceCardResponse `json:"cards"`
+	Total  int                    `json:"total"`
+	Limit  int                    `json:"limit"`
+	Offset int                    `json:"offset"`
+}
+

@@ -816,10 +816,10 @@ function evidenceGallery() {
       this.cardsLoading = true;
       this.cardsError = '';
       try {
-        const resp = await fetch('/static/evidence_cards.json');
+        const resp = await fetch('/v1/policy/evidence-cards?limit=100');
         if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
         const data = await resp.json();
-        this.allCards = data || [];
+        this.allCards = data.cards || [];
       } catch (e) {
         this.cardsError = `Failed to load evidence cards: ${e.message}`;
       } finally {

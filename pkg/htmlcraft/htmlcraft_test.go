@@ -59,6 +59,10 @@ func (s *stubStore) QueryPolicies(_ context.Context, _ store.PolicyQuery) ([]sto
 func (s *stubStore) GetPolicy(_ context.Context, _ string) (*store.PolicyRecord, error) {
 	return nil, nil
 }
+func (s *stubStore) PutEvidenceCards(_ context.Context, _ []store.EvidenceCard) error { return nil }
+func (s *stubStore) QueryEvidenceCards(_ context.Context, _ store.EvidenceCardFilter) ([]store.EvidenceCard, error) {
+	return nil, nil
+}
 func (s *stubStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error { return nil }
 func (s *stubStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
 	return nil, nil

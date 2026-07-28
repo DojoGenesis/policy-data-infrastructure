@@ -148,6 +148,36 @@ type PolicyQuery struct {
 	Offset    int
 }
 
+// EvidenceCard pairs a policy position with indicator-derived evidence,
+// including findings, linked indicators, and statewide context as JSONB.
+// Primary key is a SERIAL id; policy_id links to the policies table.
+type EvidenceCard struct {
+	ID                 int
+	PolicyID           string
+	PolicyTitle        string
+	Category           string
+	EquityDimension    string
+	Title              string
+	KeyFinding         string
+	DataQuality        string
+	Findings           []byte // JSONB
+	Indicators         []byte // JSONB
+	StatewideContext   []byte // JSONB
+	CountyVariation    []byte // JSONB
+	TopNeedCounties    []byte // JSONB
+	BottomNeedCounties []byte // JSONB
+}
+
+// EvidenceCardFilter provides optional query-parameter filters for
+// listing evidence cards.
+type EvidenceCardFilter struct {
+	Category        string
+	EquityDimension string
+	PolicyID        string
+	Limit           int
+	Offset          int
+}
+
 // Store is the primary data access interface.
 type Store interface {
 	// Geography operations
@@ -178,6 +208,10 @@ type Store interface {
 	PutPolicies(ctx context.Context, policies []PolicyRecord) error
 	QueryPolicies(ctx context.Context, q PolicyQuery) ([]PolicyRecord, error)
 	GetPolicy(ctx context.Context, id string) (*PolicyRecord, error)
+
+	// Evidence card operations
+	PutEvidenceCards(ctx context.Context, cards []EvidenceCard) error
+	QueryEvidenceCards(ctx context.Context, filter EvidenceCardFilter) ([]EvidenceCard, error)
 
 	// Metadata operations
 	QueryVariables(ctx context.Context) ([]VariableMeta, error)

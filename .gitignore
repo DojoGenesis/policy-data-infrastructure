@@ -81,4 +81,5 @@ scratch/
 # CLI subcommand can be committed as a call site with its definition left
 # untracked, and the repo then fails to build from a clean clone.
 /pdi
+/pdi-linux
 .envrc

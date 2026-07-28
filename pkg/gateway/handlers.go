@@ -1246,6 +1246,110 @@ func policyToResponse(p store.PolicyRecord) PolicyResponse {
 	}
 }
 
+// ── GET /evidence-cards ──────────────────────────────────────────────────────
+
+// handleListEvidenceCards returns evidence cards filtered by optional query
+// parameters: category, equity_dimension, policy_id, limit (default 50), offset.
+func (p *PolicyPlugin) handleListEvidenceCards(c *gin.Context) {
+	f := store.EvidenceCardFilter{
+		Category:        c.Query("category"),
+		EquityDimension: c.Query("equity_dimension"),
+		PolicyID:        c.Query("policy_id"),
+		Limit:           50,
+		Offset:          0,
+	}
+
+	if lim := c.Query("limit"); lim != "" {
+		n, err := strconv.Atoi(lim)
+		if err != nil || n < 1 {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "limit must be a positive integer"})
+			return
+		}
+		if n > 1000 {
+			n = 1000
+		}
+		f.Limit = n
+	}
+	if off := c.Query("offset"); off != "" {
+		n, err := strconv.Atoi(off)
+		if err != nil || n < 0 {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "offset must be a non-negative integer"})
+			return
+		}
+		f.Offset = n
+	}
+
+	cards, err := p.store.QueryEvidenceCards(c.Request.Context(), f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "evidence card query failed", Detail: err.Error()})
+		return
+	}
+
+	items := make([]EvidenceCardResponse, 0, len(cards))
+	for _, card := range cards {
+		items = append(items, evidenceCardToResponse(card))
+	}
+
+	c.JSON(http.StatusOK, EvidenceCardListResponse{
+		Cards:  items,
+		Total:  len(items),
+		Limit:  f.Limit,
+		Offset: f.Offset,
+	})
+}
+
+// evidenceCardToResponse converts a store.EvidenceCard to the API response shape,
+// decoding JSONB fields into raw JSON objects for the frontend.
+func evidenceCardToResponse(card store.EvidenceCard) EvidenceCardResponse {
+	resp := EvidenceCardResponse{
+		PolicyID:        card.PolicyID,
+		PolicyTitle:     card.PolicyTitle,
+		Category:        card.Category,
+		EquityDimension: card.EquityDimension,
+		Title:           card.Title,
+		KeyFinding:      card.KeyFinding,
+		DataQuality:     card.DataQuality,
+	}
+	// Decode JSONB fields — on failure, leave as nil so caller gets an empty result.
+	if len(card.Findings) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.Findings, &v); err == nil {
+			resp.Findings = v
+		}
+	}
+	if len(card.Indicators) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.Indicators, &v); err == nil {
+			resp.Indicators = v
+		}
+	}
+	if len(card.StatewideContext) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.StatewideContext, &v); err == nil {
+			resp.StatewideContext = v
+		}
+	}
+	if len(card.CountyVariation) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.CountyVariation, &v); err == nil {
+			resp.CountyVariation = v
+		}
+	}
+	if len(card.TopNeedCounties) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.TopNeedCounties, &v); err == nil {
+			resp.TopNeedCounties = v
+		}
+	}
+	if len(card.BottomNeedCounties) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(card.BottomNeedCounties, &v); err == nil {
+			resp.BottomNeedCounties = v
+		}
+	}
+	return resp
+}
+
 // formatInt formats an integer with thousands separators.
 func formatInt(n int) string {
 	s := strconv.Itoa(n)

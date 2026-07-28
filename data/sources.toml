@@ -246,6 +246,28 @@ wi_dpi_chronic_absence_econ_disadv.
 Non-WI states return empty (graceful no-op). Handles UTF-8 BOM and latin-1 fallback.
 """
 
+[sources.cdc-svi]
+name               = "CDC/ATSDR Social Vulnerability Index (SVI)"
+category           = "health"
+url                = "https://www.atsdr.cdc.gov/placeandhealth/svi/data_documentation_download.html"
+api_key_env        = ""
+rate_limit_per_min = 10
+format             = "csv"
+geo_levels         = ["county", "tract"]
+notes              = """
+Biennial release (2020, 2022; 2024 may be available).
+CDC/ATSDR ranks census tracts and counties on 16 social factors grouped into four themes:
+  1. Socioeconomic Status (below poverty, unemployed, income, no high school diploma)
+  2. Household Characteristics (aged 65+, aged 17-, civilian with a disability,
+     single-parent households, English language proficiency)
+  3. Racial & Ethnic Minority Status (Hispanic or Latino, Black, Asian, AI/AN, NHPI,
+     two or more races, other races)
+  4. Housing Type & Transportation (multi-unit structures, mobile homes, crowding,
+     no vehicle, group quarters)
+Overall SVI percentile and four theme-level percentiles are returned (0.0–1.0 scale).
+Higher percentile = more vulnerable. Direct CSV download, no API key required.
+"""
+
 [sources.epa-tri]
 name               = "EPA Toxics Release Inventory (TRI)"
 category           = "environment"
@@ -260,4 +282,41 @@ Geocode facility lat/lon to census tract via PostGIS ST_Within.
 Key fields: FIPS_CD, LATITUDE, LONGITUDE, CHEMICAL, TOTAL_RELEASES,
 RELEASES_TO_AIR, RELEASES_TO_WATER, RELEASES_TO_LAND.
 Used for: proximity-to-TRI-facility indicator (count within 1 mile of tract centroid).
+"""
+
+[sources.fbi-nibrs]
+name               = "FBI National Incident-Based Reporting System (NIBRS)"
+category           = "crime"
+url                = "https://api.usa.gov/crime/fbi/cde/"
+api_key_env        = "FBI_CDE_API_KEY"
+rate_limit_per_min = 30
+format             = "json"
+geo_levels         = ["state", "county"]
+notes              = """
+FBI Crime Data Explorer (CDE) API providing NIBRS estimation data.
+Requires an api.data.gov API key (sign up at https://api.data.gov/signup/).
+Key variables: violent_crime_rate (per 100K), property_crime_rate (per 100K).
+Data is available at state and county level; county-level uses 5-digit FIPS GEOIDs.
+NIBRS estimation tables provide national estimates based on agency submissions.
+Null sentinel: watch for suppression codes (-1, null for small populations).
+Alternative: CSV bulk downloads from https://cde.ucr.cjis.gov/LATEST/webapp/
+may be used when the API key is unavailable.
+"""
+
+[sources.fcc-broadband]
+name               = "FCC Broadband Access Data (Form 477)"
+category           = "infrastructure"
+url                = "https://www.fcc.gov/form-477-county-data-internet-access-services"
+api_key_env        = ""
+rate_limit_per_min = 20
+format             = "csv"
+geo_levels         = ["state", "county", "tract"]
+notes              = """
+Semi-annual (June and December) county-level and census-tract-level data on
+residential fixed broadband Internet access service connections.
+Key variables: broadband_access_pct (connections per 1,000 households),
+multiple_providers_pct (number of providers available).
+Tract-level data available at:
+https://www.fcc.gov/form-477-census-tract-data-internet-access-services
+CSV download, no API key required.
 """
