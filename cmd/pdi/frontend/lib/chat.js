@@ -374,6 +374,7 @@ const ChatAdapter = {
     // all 72 county names carry the " County" suffix that the header hoists.
     let countyBlock = '';
     let policyBlock = '';
+    let topUninsured = '';
     let countyCount = 0;
     let policyCount = 0;
     try {
@@ -398,6 +399,27 @@ const ChatAdapter = {
             uns != null ? uns : '?'
           ].join('|');
         }).join('\n');
+
+        // Derive the highest-uninsured counties from the SAME live payload.
+        //
+        // These used to be hardcoded in the COST-SAVING framework below as
+        // "Menominee (16.5%), Iron (11.2%), Florence (10.8%)". By 2026-07-29
+        // the live data said Menominee 22.5%, Clark 21.3%, Vernon 14.7% —
+        // Menominee was 6 points off and neither Iron nor Florence was still
+        // in the top five. The model was being handed wrong figures and
+        // presenting them as grounded fact.
+        //
+        // Deriving them means they cannot rot again. Same failure class as
+        // the pinned model ID and the hardcoded exchange count: a literal
+        // that was true once, kept asserting itself after it stopped being
+        // true, and nothing failed loudly enough to notice.
+        topUninsured = items
+          .map(c => ({ n: (c.name || '?').replace(/ County$/, ''), v: Domain.indValue(c, 'uninsured_rate') }))
+          .filter(r => r.v != null)
+          .sort((a, b) => b.v - a.v)
+          .slice(0, 3)
+          .map(r => `${r.n} (${r.v}%)`)
+          .join(', ');
       }
 
       if (policyResp.status === 'fulfilled') {
@@ -498,7 +520,7 @@ ${policyBlock || 'Policy data loading failed'}
 
 COST-SAVING ANALYSIS FRAMEWORK:
 Interventions save the most money in counties with the highest poverty + uninsured rates, because:
-1. Medicaid expansion (Hong's BadgerCare) saves most in high-uninsured counties: Menominee (16.5%), Iron (11.2%), Florence (10.8%)
+1. Medicaid expansion (Hong's BadgerCare) saves most in high-uninsured counties: ${topUninsured || 'see the uninsured_rate column above'}
 2. Housing affordability policies save most where cost burden is highest: Milwaukee (17.5% poverty + 939K pop = largest absolute burden)
 3. Food access policies save most in high-poverty rural counties: Menominee, Ashland, Forest, Sawyer
 4. Education funding saves most where chronic absence correlates with poverty: Milwaukee, Racine, Kenosha
