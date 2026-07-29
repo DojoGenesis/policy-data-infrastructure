@@ -46,7 +46,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* Stat callout: prominent key-number display */
   .stat-callout {
     display: inline-flex; flex-direction: column; align-items: center;
-    background: var(--plane-raised, #f0f4ff);
+    background: var(--raised);
     border: 1px solid var(--accent, #2563eb);
     border-radius: 12px;
     padding: 8px 18px;
@@ -100,7 +100,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     margin: 8px 0 12px; font-size: 0.82rem;
     border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
   }
-  .data-table thead { background: var(--plane-raised, #f0f4ff); }
+  .data-table thead { background: var(--raised); }
   .data-table th {
     padding: 6px 10px; text-align: left; font-weight: 600;
     color: var(--text); border-bottom: 2px solid var(--accent, #2563eb);
@@ -136,19 +136,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Offline banner (ADR-012 I7) ──────────────────────────── */
   .offline-banner {
     display: none;
-    background: color-mix(in srgb, #f59e0b 12%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+    background: color-mix(in srgb, var(--gated) 12%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--gated) 30%, transparent);
     padding: 8px 16px;
     text-align: center;
     font-size: 0.78rem;
-    color: #fcd34d;
+    color: var(--gated);
     font-weight: 500;
   }
   .offline-banner.visible { display: block; }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 <!-- Offline banner (ADR-012 I7) -->
@@ -349,7 +350,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   })();
 })();
 </script>
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 
 <!-- Service Worker registration (ADR-012 I7: PWA offline) -->
 <script>

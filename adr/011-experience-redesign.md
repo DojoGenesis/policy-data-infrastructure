@@ -1,9 +1,34 @@
 # ADR-011: PDI Experience Design — From Toolkit to Product
 
-**Status:** Proposed
+**Status:** Proposed — **persistent-chat-drawer provisions SUPERSEDED 2026-07-28**
 **Date:** 2026-07-28
 **Deciders:** Cruz Morales, Hermes Agent
 **Supersedes:** ADR-007 (frontend architecture), ADR-004 (v1 launch plan)
+
+> ### ⚠️ SUPERSEDED IN PART — the persistent chat drawer (operator decision, 2026-07-28)
+>
+> **The persistent chat drawer has been removed from all 10 pages.** Operator rationale: low
+> expected adoption for this audience. This reverses what this ADR calls "the single biggest
+> UX upgrade" (Highest-Leverage Changes #1), so the reasoning is recorded here rather than
+> left to a commit message.
+>
+> **What is superseded — do not rebuild these:**
+> - §1B — the persistent chat drawer in the layout diagram and under "Persistent:"
+> - §2C — "The Chat as Guide, Not Tool" (proactive per-page suggestions)
+> - Highest-Leverage Changes #1 — "Persistent chat drawer on every page"
+> - Effort tracks 8C and 8I
+> - Consequences — "Chat as companion. The AI becomes the connective tissue between pages."
+>
+> **What still stands:**
+> - `/chat` remains a real destination with its own UI, kept in the main nav. It is powered by
+>   its own inline script plus `lib/api.js`, `lib/domain.js`, `lib/chat.js`, `lib/deeplink.js` —
+>   it never depended on `chat-drawer.js`, which was only a consumer of `window.ChatAdapter`.
+> - The grounded-chat backend is untouched and remains valid: **ADR-005** (gateway-powered chat)
+>   and **ADR-006** (grounded chat / structured query) are NOT superseded. Only the drawer
+>   surface was removed; the capability and its tests remain.
+>
+> Note: `chat-drawer.js` self-mounted to `document.body` with no pathname check, so `/chat`
+> was rendering a floating drawer on top of a full chat page. Removing it also fixes that.
 
 ## Context — Honest Assessment
 

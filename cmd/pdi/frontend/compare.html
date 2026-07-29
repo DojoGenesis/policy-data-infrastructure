@@ -91,7 +91,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-color: var(--accent);
   }
   .autocomplete input::placeholder {
-    color: var(--subtle);
+    color: var(--quiet);
   }
   .autocomplete-dropdown {
     position: absolute;
@@ -132,7 +132,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .autocomplete-item .item-geoid {
     font-size: 0.62rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-family: var(--font-mono);
     flex-shrink: 0;
   }
@@ -185,13 +185,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .selected-county-geoid {
     font-family: var(--font-mono);
     font-size: 0.62rem;
-    color: var(--subtle);
+    color: var(--quiet);
     flex-shrink: 0;
   }
   .selected-county-clear {
     background: none;
     border: none;
-    color: var(--subtle);
+    color: var(--quiet);
     cursor: pointer;
     font-size: 1.1rem;
     line-height: 1;
@@ -238,44 +238,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .compare-summary .lead-b { color: var(--tp-cat-5); }
 
   /* ── Category filter bar ───────────────────────────────────── */
-  .cat-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  .cat-tab {
-    padding: 0.3em 0.7em;
-    font-size: 0.72rem;
-    font-family: var(--font-sans);
-    font-weight: 500;
-    color: var(--muted);
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all 120ms ease;
-    white-space: nowrap;
-  }
-  .cat-tab:hover {
-    color: var(--text);
-    border-color: var(--accent);
-  }
-  .cat-tab.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  /* Rainbow categorical for category tabs */
-  .cat-tab.cat-economic.active       { background: var(--tp-cat-1); border-color: var(--tp-cat-1); color: var(--tp-on-sun); }
-  .cat-tab.cat-health.active         { background: var(--tp-cat-4); border-color: var(--tp-cat-4); color: var(--tp-on-emerald); }
-  .cat-tab.cat-housing.active        { background: var(--tp-cat-3); border-color: var(--tp-cat-3); color: var(--tp-on-ember); }
-  .cat-tab.cat-education.active      { background: var(--tp-cat-2); border-color: var(--tp-cat-2); color: var(--tp-on-ocean); }
-  .cat-tab.cat-demographic.active    { background: var(--tp-cat-8); border-color: var(--tp-cat-8); color: var(--tp-paper); }
-  .cat-tab.cat-environment.active    { background: var(--tp-cat-6); border-color: var(--tp-cat-6); color: var(--tp-on-cyan); }
-  .cat-tab.cat-transportation.active { background: var(--tp-cat-7); border-color: var(--tp-cat-7); color: var(--tp-on-lime); }
-  .cat-tab.cat-food.active           { background: var(--tp-cat-5); border-color: var(--tp-cat-5); color: var(--tp-on-red); }
+  /* .cat-bar / .cat-tab / .cat-tab.active and the per-category hue
+     mapping now live in styles.css (ADR-013 §2A) as the shared,
+     collision-free version -- it draws category hues only from the
+     five non-verdict Rainbow hues, keeping cat-4/5/6 reserved for
+     verdicts (.delta-green/red, .win-a/b, map tiers). Nothing to
+     override here; this page just consumes those shared rules. */
 
   /* ── Compare table ─────────────────────────────────────────── */
   .compare-table-wrap {
@@ -349,7 +317,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .compare-table .var-unit {
     font-size: 0.65rem;
-    color: var(--subtle);
+    color: var(--quiet);
     display: block;
     margin-top: 1px;
   }
@@ -375,7 +343,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .delta-green  { color: var(--tp-cat-4); }
   .delta-red    { color: var(--tp-cat-5); }
-  .delta-neutral { color: var(--subtle); }
+  .delta-neutral { color: var(--quiet); }
 
   /* ── Reliability dots ──────────────────────────────────────── */
   .rel-dot {
@@ -540,7 +508,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.63rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-bottom: 3px;
   }
   .scoreboard-stat .v {
@@ -563,7 +531,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.64rem;
     font-weight: 400;
     font-family: var(--font-mono);
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 2px;
     white-space: nowrap;
   }
@@ -614,8 +582,134 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .zbar-label small {
     font-weight: 400;
-    color: var(--subtle);
+    color: var(--quiet);
     font-size: 0.62rem;
+  }
+
+  /* ══ Statewide distribution strips (small multiples) ═══════════════════
+     One panel per indicator. Every Wisconsin county is a tick on a
+     STANDARDIZED axis (state SD from the state mean), and every panel is
+     drawn on ONE shared axis computed across all panels — DATAVIZ-RULES.md
+     rule 5: a mark further right always means a bigger standardized value,
+     panel to panel. Direction-aware: the axis is oriented so better is
+     always to the right, so only indicators the API gives a direction for
+     are eligible (ADR-013 §2A — never imply a verdict without polarity).
+     County identity colors are the page's existing ones: A = --tp-cat-4,
+     B = --tp-cat-6, the same pair the scoreboard record bar already uses. */
+  .dist-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    padding: clamp(12px, 2vw, 18px);
+    margin-bottom: 14px;
+  }
+  .dist-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 14px;
+    margin-bottom: 4px;
+  }
+  .dist-head h2 {
+    margin: 0;
+    font-size: clamp(0.9rem, 2vw, 1.02rem);
+    font-weight: 600;
+    color: var(--text);
+  }
+  .dist-caption {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0 0 10px;
+  }
+  .dist-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .dist-key .k-mark {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 5px;
+    vertical-align: baseline;
+  }
+  .dist-key .k-a { background: var(--tp-cat-4); border-radius: 50%; }
+  .dist-key .k-b { background: var(--tp-cat-6); transform: rotate(45deg); }
+  .dist-key .k-tick {
+    background: var(--quiet);
+    width: 2px;
+    height: 11px;
+    opacity: 0.75;
+  }
+  .dist-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+    gap: 12px 18px;
+  }
+  .dist-panel {
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--plane-base);
+    padding: 8px 10px 4px;
+  }
+  .dist-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 10px;
+  }
+  .dist-panel-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .dist-panel-verdict {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* The strip's type scales with the SVG, so below ~400px of panel width
+     it would fall under legibility. Hold a floor and let the strip scroll
+     inside its own panel rather than shrinking the labels away. */
+  .dist-strip {
+    overflow-x: auto;
+    margin-top: 2px;
+  }
+  .dist-panel svg {
+    display: block;
+    width: 100%;
+    min-width: 400px;
+    height: auto;
+  }
+
+  /* The strip SVG carries no color of its own — every mark resolves here,
+     from tokens, so a theme switch repaints it through the cascade
+     instead of needing the generator re-run. Axis text is --quiet, never
+     --subtle (DATAVIZ-RULES.md rule 3). */
+  .dist-strip .ds-grid  { stroke: var(--border-strong); stroke-width: 1; }
+  .dist-strip .ds-zero  { stroke: var(--border-strong); stroke-width: 1.5; }
+  .dist-strip .ds-axis  { stroke: var(--border-strong); stroke-width: 1.5; }
+  .dist-strip .ds-tick  { stroke: var(--quiet); stroke-width: 1; opacity: 0.62; }
+  .dist-strip .ds-num   { fill: var(--quiet); font-family: var(--font-mono); font-size: 11px; }
+  .dist-strip .ds-lab   { fill: var(--text); font-family: var(--font-sans); font-size: 11px; }
+  .dist-strip .ds-mark  { stroke: var(--plane-base); stroke-width: 1.5; }
+  .dist-strip .ds-a     { fill: var(--tp-cat-4); }
+  .dist-strip .ds-b     { fill: var(--tp-cat-6); }
+  .dist-strip .ds-stem-a { stroke: var(--tp-cat-4); stroke-width: 1.5; opacity: 0.9; }
+  .dist-strip .ds-stem-b { stroke: var(--tp-cat-6); stroke-width: 1.5; opacity: 0.9; }
+  .dist-note {
+    font-size: 0.68rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 10px 0 0;
   }
 
   /* Materiality chips */
@@ -641,7 +735,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .mat-small,
   .mat-negligible {
-    color: var(--subtle);
+    color: var(--quiet);
     border-color: color-mix(in srgb, var(--text) 14%, transparent);
     background: transparent;
   }
@@ -651,7 +745,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     background: color-mix(in srgb, var(--gated) 10%, transparent);
   }
   .mat-context {
-    color: var(--subtle);
+    color: var(--quiet);
     border-color: color-mix(in srgb, var(--text) 12%, transparent);
     background: transparent;
     font-style: italic;
@@ -659,7 +753,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .mat-detail {
     display: block;
     font-size: 0.62rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 3px;
     line-height: 1.35;
   }
@@ -679,7 +773,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-radius: 3px;
     margin-left: 5px;
     vertical-align: middle;
-    color: var(--subtle);
+    color: var(--quiet);
     border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
   }
 
@@ -715,7 +809,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .methods > summary::-webkit-details-marker { display: none; }
   .methods > summary::before {
     content: '▸ ';
-    color: var(--subtle);
+    color: var(--quiet);
   }
   .methods[open] > summary::before { content: '▾ '; }
   .methods-body {
@@ -743,10 +837,42 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     .zcell { width: 96px; }
     .scoreboard-grid { grid-template-columns: 1fr 1fr; }
   }
+
+  /* ── Light theme: Rainbow-as-text safety (CONTEXTS.md rules 1/2/4) ──
+     .delta-green/red, .win-a/b and .rank-top/bottom are this page's
+     verdict channel -- emerald=better, red=worse, cyan=county B, the
+     platform-wide meaning these hues carry. The mapping is correct in
+     both themes; only raw-hue-as-text fails, because it is tuned for a
+     dark ground and drops under 4.5:1 on cream. Swap to the paired
+     *-deep token (verified AA-normal on --tp-paper) for light only. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .delta-green,
+    :root:not([data-theme="dark"]) .scoreboard-verdict .win-a,
+    :root:not([data-theme="dark"]) .ctx-rank.rank-top,
+    :root:not([data-theme="dark"]) .compare-summary .lead-a { color: var(--tp-emerald-deep); }
+    :root:not([data-theme="dark"]) .delta-red,
+    :root:not([data-theme="dark"]) .ctx-rank.rank-bottom,
+    :root:not([data-theme="dark"]) .compare-summary .lead-b { color: var(--tp-red-deep); }
+    :root:not([data-theme="dark"]) .scoreboard-verdict .win-b { color: var(--tp-cyan-deep); }
+  }
+  :root[data-theme="light"] .delta-green,
+  :root[data-theme="light"] .scoreboard-verdict .win-a,
+  :root[data-theme="light"] .ctx-rank.rank-top,
+  :root[data-theme="light"] .compare-summary .lead-a { color: var(--tp-emerald-deep); }
+  :root[data-theme="light"] .delta-red,
+  :root[data-theme="light"] .ctx-rank.rank-bottom,
+  :root[data-theme="light"] .compare-summary .lead-b { color: var(--tp-red-deep); }
+  :root[data-theme="light"] .scoreboard-verdict .win-b { color: var(--tp-cyan-deep); }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
+       and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
+       __tpMotionFailsafe timer above is the only thing that ever makes .reveal content visible. -->
+  <script defer src="/static/motion.js"></script>
+  <!-- Chart primitives — catColor / cssVar / esc / fmt read the house scale and
+       Night Shift tokens for the statewide-distribution strips (DATAVIZ-RULES.md). -->
+  <script defer src="/static/charts.js"></script>
 </head>
 <body>
 
@@ -1031,6 +1157,80 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </div>
 
+    <!-- ── Statewide distribution: where these two counties actually sit ──
+         Small multiples. One panel per indicator, every county in the state
+         drawn as a tick on a single shared standardized axis, with both
+         selected counties marked by DISTINCT SHAPES and their statewide
+         rank printed directly beside them (DATAVIZ-RULES.md rule 2: color
+         is never the only signal). The visually-hidden table below carries
+         the identical numbers (rule 4) and is generated from the same
+         `distPanels` array as the strips, so the two cannot drift apart. -->
+    <div class="dist-card reveal" x-show="distPanels.length > 0" x-cloak>
+      <div class="dist-head">
+        <h2 data-en="Where these two counties sit statewide" data-es="Dónde se ubican estos dos condados en el estado">Where these two counties sit statewide</h2>
+        <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--quiet);"
+              x-text="'n = ' + ctxN + ' · ' + ctxStateName"></span>
+      </div>
+      <p class="dist-caption"
+         data-en="Each strip is one indicator. Every county in the state is a tick; the axis is statewide standard deviations from the state mean, oriented so better is always to the right. All strips share one scale, so a mark further right always means a bigger standardized value — panel to panel."
+         data-es="Cada franja es un indicador. Cada condado del estado es una marca; el eje son desviaciones estándar estatales respecto a la media, orientado para que lo mejor quede siempre a la derecha. Todas las franjas comparten una sola escala, por lo que una marca más a la derecha siempre significa un valor estandarizado mayor, panel por panel.">Each strip is one indicator. Every county in the state is a tick; the axis is statewide standard deviations from the state mean, oriented so better is always to the right. All strips share one scale, so a mark further right always means a bigger standardized value — panel to panel.</p>
+      <div class="dist-key">
+        <span><i class="k-mark k-a"></i><span x-text="(geo1Name || 'County A') + ' (circle)'"></span></span>
+        <span><i class="k-mark k-b"></i><span x-text="(geo2Name || 'County B') + ' (diamond)'"></span></span>
+        <span><i class="k-mark k-tick"></i><span data-en="one other county" data-es="otro condado">one other county</span></span>
+      </div>
+
+      <div class="dist-panels">
+        <template x-for="p in distPanels" :key="p.id">
+          <div class="dist-panel">
+            <div class="dist-panel-head">
+              <span class="dist-panel-name" x-text="p.name"></span>
+              <span class="dist-panel-verdict" :class="zLabelClass(p.d)" x-text="p.verdict"></span>
+            </div>
+            <div class="dist-strip" x-html="distStripSvg(p, themeTick)"></div>
+          </div>
+        </template>
+      </div>
+
+      <p class="dist-note" x-show="neutralCount > 0" x-cloak>
+        <span data-en="Not shown here:" data-es="No se muestran aquí:">Not shown here:</span>
+        <span x-text="neutralCount"></span>
+        <span data-en="context-only indicators. The API gives them no better/worse direction, so there is no defensible way to orient them on this axis." data-es="indicadores de solo contexto. La API no les asigna dirección mejor/peor, por lo que no hay forma defendible de orientarlos en este eje.">context-only indicators. The API gives them no better/worse direction, so there is no defensible way to orient them on this axis.</span>
+      </p>
+
+      <!-- Accessible table — DATAVIZ-RULES.md rule 4. Same rows, same
+           numbers, same order as the strips above; clipped, not display:none. -->
+      <table class="visually-hidden">
+        <caption data-en="Statewide standing of both counties on the indicators with the largest standardized gaps" data-es="Posición estatal de ambos condados en los indicadores con las mayores brechas estandarizadas">Statewide standing of both counties on the indicators with the largest standardized gaps</caption>
+        <thead>
+          <tr>
+            <th scope="col" data-en="Indicator" data-es="Indicador">Indicator</th>
+            <th scope="col" x-text="(geo1Name || 'County A') + ' value'"></th>
+            <th scope="col" x-text="(geo1Name || 'County A') + ' statewide rank'"></th>
+            <th scope="col" x-text="(geo2Name || 'County B') + ' value'"></th>
+            <th scope="col" x-text="(geo2Name || 'County B') + ' statewide rank'"></th>
+            <th scope="col" data-en="Gap in statewide standard deviations" data-es="Brecha en desviaciones estándar estatales">Gap in statewide standard deviations</th>
+            <th scope="col" data-en="Counties in between" data-es="Condados intermedios">Counties in between</th>
+            <th scope="col" data-en="Better off" data-es="Mejor situado">Better off</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="p in distPanels" :key="'t-' + p.id">
+            <tr>
+              <th scope="row" x-text="p.name"></th>
+              <td x-text="fmtVal(p.d.value1, p.d.unit)"></td>
+              <td x-text="rankLabel(p.d, 1)"></td>
+              <td x-text="fmtVal(p.d.value2, p.d.unit)"></td>
+              <td x-text="rankLabel(p.d, 2)"></td>
+              <td x-text="fmtZ(p.d)"></td>
+              <td x-text="p.d.ctx.between"></td>
+              <td x-text="p.aheadName"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
     <!-- ── Category tabs ─────────────────────────────── -->
     <div class="cat-bar" x-show="categories.length > 0">
       <button
@@ -1223,7 +1423,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             moderate &lt; 0.30, otherwise low.
           </dd>
         </dl>
-        <p style="margin:10px 0 0;color:var(--subtle);">
+        <p style="margin:10px 0 0;color:var(--quiet);">
           Vintage: <span x-text="ctxVintage || '—'"></span>.
           Margins of error are published for
           <span x-text="moeCount"></span> of <span x-text="mergedDiffs.length"></span>
@@ -1311,6 +1511,14 @@ function compareTool() {
     ctxN: 0,
     ctxStateFips: '',
     ctxVintage: '',
+
+    // Bumped on `tp:themechange`, and named in the strips' x-html
+    // expression so Alpine redraws them on a theme switch. The strips
+    // currently need no redraw — every color resolves through CSS classes,
+    // not a token sampled at draw time — but casa-datos CLAUDE.md's
+    // "Generated art after a theme switch" trap is exactly one sampled
+    // color away, and this keeps the escape hatch wired.
+    themeTick: 0,
 
     // ═══════════════ COMPUTED ═══════════════════════════════
 
@@ -1674,6 +1882,191 @@ function compareTool() {
       return n;
     },
 
+    // ═══════ Statewide distribution strips (small multiples) ═══════
+    //
+    // Why this is hand-authored SVG and not a charts.js builder:
+    // `buildBarChart` and `buildSmallMultiples` draw BARS. Neither can
+    // place a mark at a position inside a distribution, `buildSmallMultiples`
+    // prints no per-mark value and draws no axis at all, and both color
+    // marks by ordinal index — which on this page would put emerald on one
+    // panel and red on the next, colliding head-on with the page's own
+    // established vocabulary (emerald = better off, red = worse off).
+    // The house rules still bind and are all honored below: palette and
+    // text colors read from tokens through CasaDatosCharts' own cssVar,
+    // five gridlines on round numbers, --quiet (never --subtle) for axis
+    // text, ONE shared scale across every panel, two color-independent
+    // encoders per mark (shape + printed rank), and a matching
+    // visually-hidden table generated from this same array.
+
+    // Up to six indicators, ranked by the size of the standardized gap.
+    // Directional only: the axis is oriented so better is always to the
+    // right, and an indicator the API marks `neutral` has no defensible
+    // orientation — ADR-013 §2A calls implying a verdict without polarity
+    // actively misleading, so those are excluded and counted in the note.
+    get distPanels() {
+      if (!this.ctxReady) return [];
+      const aName = this.geo1Name || 'County A';
+      const bName = this.geo2Name || 'County B';
+      const short = (s) => String(s).replace(/\s+County$/i, '');
+
+      const panels = [];
+      for (const d of this.gapRanked.slice(0, 6)) {
+        const dist = this.stateDist[d.variable_id];
+        if (!dist || !(dist.sd > 0)) continue;
+        const v1 = dist.values[this.geoid1];
+        const v2 = dist.values[this.geoid2];
+        if (v1 == null || v2 == null) continue;
+
+        // Standardized, then oriented by the API's own direction so a
+        // larger number always means "better off" — the same polarity the
+        // table's Gap column and zAdvantageA already use.
+        const pol = this.polarity(d);
+        const z = (val) => ((val - dist.mean) / dist.sd) * pol;
+
+        const ticks = [];
+        for (const gid in dist.values) {
+          if (gid === this.geoid1 || gid === this.geoid2) continue;
+          ticks.push(z(dist.values[gid]));
+        }
+
+        const aAhead = d.ctx.zAdvantageA > 0;
+        const rk = (r) => (r == null ? '—' : '#' + r + '/' + d.ctx.n);
+        const name = d.name || this.displayName(d.variable_id);
+
+        panels.push({
+          id: d.variable_id,
+          d,
+          name,
+          ticks,
+          zA: z(v1),
+          zB: z(v2),
+          labelA: short(aName) + ' · ' + rk(d.ctx.rank1),
+          labelB: short(bName) + ' · ' + rk(d.ctx.rank2),
+          aheadName: aAhead ? aName : bName,
+          verdict: Math.abs(d.ctx.zGap).toFixed(2) + ' SD · ' + short(aAhead ? aName : bName),
+          a11y: name + ': ' + aName + ' ranks ' + (d.ctx.rank1 || '—') + ' of ' + d.ctx.n
+            + ', ' + bName + ' ranks ' + (d.ctx.rank2 || '—') + ' of ' + d.ctx.n
+            + '. The two are ' + Math.abs(d.ctx.zGap).toFixed(2)
+            + ' statewide standard deviations apart, with ' + d.ctx.between
+            + ' counties in between. ' + (aAhead ? aName : bName) + ' is better off.',
+        });
+      }
+
+      // ONE axis for every panel, computed across every mark in every
+      // panel — DATAVIZ-RULES.md rule 5. A per-panel scale would let two
+      // visually identical strips describe very different distributions.
+      let maxAbs = 0;
+      for (const p of panels) {
+        for (let i = 0; i < p.ticks.length; i++) {
+          const m = Math.abs(p.ticks[i]);
+          if (m > maxAbs) maxAbs = m;
+        }
+        maxAbs = Math.max(maxAbs, Math.abs(p.zA), Math.abs(p.zB));
+      }
+      const raw = Math.max(2, maxAbs * 1.08);
+      const STEPS = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10, 25, 50, 100];
+      let step = STEPS[STEPS.length - 1];
+      for (let s = 0; s < STEPS.length; s++) {
+        if (STEPS[s] >= raw / 2) { step = STEPS[s]; break; }
+      }
+      // Gridlines land at -2·step, -step, 0, +step, +2·step: five ticks on
+      // round numbers, and the axis half-range covers every mark drawn.
+      const axis = { step, half: step * 2 };
+      for (const p of panels) { p.axis = axis; }
+      return panels;
+    },
+
+    // Keep a marker's printed label inside the viewBox. SVG clips at the
+    // viewBox edge, so a label that overflows is a label that vanishes.
+    distTextPos(x, txt, W) {
+      const w = String(txt).length * 6.1 + 12;
+      if (x + 10 + w <= W - 4) return { x: x + 10, anchor: 'start' };
+      if (x - 10 - w >= 4) return { x: x - 10, anchor: 'end' };
+      const cxx = Math.min(Math.max(x, 4 + w / 2), W - 4 - w / 2);
+      return { x: cxx, anchor: 'middle' };
+    },
+
+    // `tick` is the themeTick dependency: naming it in the x-html
+    // expression is what makes Alpine redraw after `tp:themechange`.
+    // Nothing in the returned string depends on the theme today — that is
+    // deliberate, and the classes below are why.
+    distStripSvg(p, tick) {
+      void tick;
+      const C = window.CasaDatosCharts;
+      const esc = (s) => (C && C.esc)
+        ? C.esc(s)
+        : String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+      // viewBox is deliberately close to the panel's rendered width: the
+      // SVG scales to its container, so a wide viewBox in a narrow panel
+      // shrinks every label below legibility.
+      const W = 420, H = 90;
+      const plotL = 50, plotR = 370;
+      const mid = (plotL + plotR) / 2, halfW = (plotR - plotL) / 2;
+      const xAt = (z) => mid + (z / p.axis.half) * halfW;
+
+      // NO color is sampled into this string. This SVG is inline in the
+      // document, so it participates in the page's CSS — every stroke and
+      // fill is a `ds-*` class resolved from tokens in the stylesheet
+      // above. That is what makes the strips survive a theme switch: art
+      // that samples tokens at DRAW time keeps the palette it was drawn
+      // in, and a light-theme reader would get dark-theme ink on a cream
+      // card. Axis text is --quiet, never --subtle (DATAVIZ-RULES.md
+      // rule 3: --subtle measures 3.49:1 on a raised card, under AA).
+      const axisY = 64, tickTop = 50, gridTop = 12, labelY = 80;
+      const yA = 39, yB = 20;
+
+      let grid = '';
+      for (let k = -2; k <= 2; k++) {
+        const gz = k * p.axis.step;
+        const gx = xAt(gz).toFixed(1);
+        grid += '<line class="' + (k === 0 ? 'ds-zero' : 'ds-grid') + '" x1="' + gx + '" y1="' + gridTop
+          + '" x2="' + gx + '" y2="' + axisY + '"/>';
+        const lbl = (gz > 0 ? '+' : gz < 0 ? '−' : '') + Math.abs(gz);
+        grid += '<text class="ds-num" x="' + gx + '" y="' + labelY + '" text-anchor="middle">'
+          + esc(lbl) + '</text>';
+      }
+
+      let ticks = '';
+      for (let i = 0; i < p.ticks.length; i++) {
+        const tx = xAt(p.ticks[i]).toFixed(1);
+        ticks += '<line class="ds-tick" x1="' + tx + '" y1="' + tickTop + '" x2="' + tx
+          + '" y2="' + axisY + '"/>';
+      }
+
+      const axisLine = '<line class="ds-axis" x1="' + plotL + '" y1="' + axisY + '" x2="' + plotR
+        + '" y2="' + axisY + '"/>';
+
+      const xA = xAt(p.zA), xB = xAt(p.zB);
+      const stem = (x, y, cls) => '<line class="' + cls + '" x1="' + x.toFixed(1) + '" y1="' + (y + 6)
+        + '" x2="' + x.toFixed(1) + '" y2="' + axisY + '"/>';
+
+      // Two color-independent encoders per mark (rule 2): a distinct SHAPE
+      // — circle for A, diamond for B — and the rank printed directly
+      // beside it in the page's normal text color, never inside the fill.
+      const markA = '<circle class="ds-mark ds-a" cx="' + xA.toFixed(1) + '" cy="' + yA + '" r="5.2"/>';
+      const r = 5.9;
+      const markB = '<polygon class="ds-mark ds-b" points="'
+        + xB.toFixed(1) + ',' + (yB - r).toFixed(1) + ' '
+        + (xB + r).toFixed(1) + ',' + yB + ' '
+        + xB.toFixed(1) + ',' + (yB + r).toFixed(1) + ' '
+        + (xB - r).toFixed(1) + ',' + yB + '"/>';
+
+      const la = this.distTextPos(xA, p.labelA, W);
+      const lb = this.distTextPos(xB, p.labelB, W);
+      const txt = (pos, y, s) => '<text class="ds-lab" x="' + pos.x.toFixed(1) + '" y="' + (y + 4)
+        + '" text-anchor="' + pos.anchor + '">' + esc(s) + '</text>';
+
+      const id = 'dist-' + String(p.id).replace(/[^A-Za-z0-9_-]/g, '');
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img"'
+        + ' aria-labelledby="' + id + '-t"><title id="' + id + '-t">' + esc(p.a11y) + '</title>'
+        + grid + ticks + axisLine
+        + stem(xA, yA, 'ds-stem-a') + stem(xB, yB, 'ds-stem-b')
+        + markA + markB + txt(la, yA, p.labelA) + txt(lb, yB, p.labelB)
+        + '</svg>';
+    },
+
     // ═══════════════ METHODS ═══════════════════════════════
 
     async init() {
@@ -1684,6 +2077,9 @@ function compareTool() {
 
       // Inject Copy Link button
       PDIDeepLink.autoInjectCopyButton();
+
+      // Redraw the distribution strips after a theme switch. See themeTick.
+      document.addEventListener('tp:themechange', () => { this.themeTick++; });
 
       await this.loadCounties();
 
@@ -2114,6 +2510,13 @@ function compareTool() {
         // materiality. Loaded after the comparison renders so a slow or
         // failed context request never blocks the core result.
         await this.loadStateContext();
+
+        // The distribution card only exists once statewide context lands.
+        // reveals() skips nodes it already revealed, so re-calling it is
+        // how a stack tells the motion kit about newly-shown .reveal nodes.
+        this.$nextTick(() => {
+          if (window.TPMotion) window.TPMotion.reveals('.reveal');
+        });
       } catch (e) {
         this.compareError = `Comparison failed: ${e.message}`;
       } finally {
@@ -2440,6 +2843,13 @@ function compareTool() {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  // Motion engine init. motion.css hides .reveal until motion.js adds .in;
+  // without this call the only thing that ever shows revealed content is
+  // the 2000ms __tpMotionFailsafe timer in the head snippet.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>

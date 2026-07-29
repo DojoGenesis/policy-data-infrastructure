@@ -532,8 +532,11 @@ a:hover {
   color: var(--gated);
 }
 
+/* --quiet, never --subtle for text — see the note above .site-footer
+   small. Measured here: --subtle is 3.96:1 on --bg and 3.46:1 on
+   --plane-1; --quiet is 5.76:1 and 5.03:1. */
 .stat-delta-neutral {
-  color: var(--subtle);
+  color: var(--quiet);
 }
 
 .stat-delta::before {
@@ -562,7 +565,8 @@ a:hover {
    RELIABILITY BADGES
    ──────────────────────────────────────────────────────────────────
    High → --live (green), Moderate → --gated (amber),
-   Low → red-mix, Unknown → --subtle (grey).
+   Low → red-mix, Unknown → --quiet (grey) for the label, --subtle
+   for the tint behind it — a background carries no contrast duty.
    All use color-mix() for the background tint so badges sit on any
    surface without contrast issues.
    ═══════════════════════════════════════════════════════════════════ */
@@ -599,7 +603,7 @@ a:hover {
 
 .badge-unknown,
 .badge-reliability-unknown {
-  color: var(--subtle);
+  color: var(--quiet);
   background: color-mix(in srgb, var(--subtle) 10%, transparent);
 }
 
@@ -944,9 +948,12 @@ textarea:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+/* Placeholder text is text: --quiet, not --subtle. On the --surface
+   an input actually sits on, --subtle is 3.76:1 (dark) / 4.95:1
+   (light) and --quiet is 5.48:1 / 6.90:1. */
 input::placeholder,
 textarea::placeholder {
-  color: var(--subtle);
+  color: var(--quiet);
 }
 
 select {
@@ -1049,6 +1056,134 @@ select option {
   border-color: var(--accent);
   color: var(--bg);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INDICATOR CATEGORY TABS — ADR-013 §2A
+   ──────────────────────────────────────────────────────────────────
+   The pages' catClass() helper emits cat-demographic / cat-economic /
+   cat-education / cat-environment / cat-food / cat-health /
+   cat-housing / cat-transportation onto a .cat-tab inside a .cat-bar.
+   These are the shared-layer rules those class names resolve against.
+
+   ── WHICH RULE APPLIES, AND WHY NOT THE OTHER ONE ────────────────
+   NOT DATAVIZ rule 1. That rule hands --tp-cat-1..8 to series 1..8 of
+   a CHART, where the swatch IS the key — nothing else separates
+   series 3 from series 5, so ordinal assignment buys maximum
+   perceptual distance and is worth spending every hue on. A category
+   tab is navigation chrome that prints its own name ("health (8)").
+   The label is the key; the hue only confirms it. Spending a
+   load-bearing colour here would cost meaning and buy nothing.
+
+   ── THE COLLISION THESE RULES RESOLVE ────────────────────────────
+   Three Rainbow hues are already committed platform-wide:
+     --tp-cat-4 emerald = better off  (.delta-green, .win-a,
+                          .zbar-better, .rank-top, map LL tier)
+     --tp-cat-5 red     = worse off   (.delta-red, .zbar-worse,
+                          .rank-bottom, map HL tier, error states)
+     --tp-cat-6 cyan    = "county B"  (.win-b, .record-bar-b,
+                          .dist-strip .ds-b, map LH tier)
+   On the compare view all three render on the same screen as the tab
+   strip. Assigning categories in ordinal order paints the 4th
+   category emerald and the 5th red directly above a table where
+   emerald means better and red means worse — ADR-013's Visual
+   Principle 2 ("a colour carries ONE meaning") broken in the single
+   most misleading place on the platform.
+
+   Two hard rules, both held below:
+     1. Category hue comes ONLY from the five non-verdict Rainbow
+        hues — sun (1), ocean (2), ember (3), lime (7), violet (8).
+        No rule in this block emits cat-4, cat-5 or cat-6.
+     2. Category hue never enters the verdict CHANNEL. A verdict is
+        text colour or a bar fill; a category is a tab fill or a
+        border. Different colours AND different channels, so the two
+        can never be read for each other.
+
+   Five hues carry eight categories because exactly one tab is active
+   at a time: these are eight mutually exclusive states of one
+   control, not eight concurrent series, so two categories sharing a
+   hue are never on screen together. The pairings are chosen to read
+   as a family rather than as a clash:
+     sun    — economic, housing     (what things cost)
+     ocean  — education, health     (human services)
+     lime   — environment, food     (land, and what grows on it)
+     ember  — transportation        (movement)
+     violet — demographic           (who)
+
+   ── BOTH THEMES, WITHOUT A THEME BLOCK ───────────────────────────
+   --tp-cat-* and --tp-on-* are theme-independent — raw brand hues
+   and fixed ink/paper — so an active tab measures identically in
+   light and dark: sun/ink 10.99:1, ocean/paper 5.90:1, ember/ink
+   4.88:1, lime/ink 7.20:1, violet/paper 6.48:1. All clear AA-normal
+   at the 0.72rem these tabs run at. This is the second reason cat-5
+   is unusable here even setting the verdict clash aside: tokens.css
+   measures --tp-on-red at 3.98:1 and flags it large-text/UI only.
+
+   Colour is not the only signal in either direction: the selected
+   tab is a solid fill at weight 700 against an outlined weight-500
+   rest state, so the selection survives greyscale and a hue the
+   reader cannot distinguish.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.cat-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3em 0.7em;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease,
+              border-color     140ms ease,
+              color            140ms ease;
+}
+
+/* The hue previews on hover and focus — a border, never the label,
+   so it stays out of the verdict channel even here. --cat-hue is
+   unset on the "All" tab, which has no category; it falls back to
+   --accent, the platform's action colour. */
+.cat-tab:hover {
+  color: var(--text);
+  border-color: var(--cat-hue, var(--accent));
+}
+.cat-tab:focus-visible {
+  outline: 2px solid var(--cat-hue, var(--accent));
+  outline-offset: 2px;
+}
+
+.cat-tab.active {
+  font-weight: 700;
+  color: var(--cat-ink, var(--bg));
+  background: var(--cat-hue, var(--accent));
+  border-color: var(--cat-hue, var(--accent));
+}
+
+/* The mapping — the one place a category name and a hue meet. Kept
+   as custom properties rather than eight background declarations so
+   a page can adopt the palette on a non-tab element (a legend swatch,
+   a row rule) without restating the table. */
+.cat-economic,
+.cat-housing        { --cat-hue: var(--tp-cat-1); --cat-ink: var(--tp-on-sun);   }
+.cat-education,
+.cat-health         { --cat-hue: var(--tp-cat-2); --cat-ink: var(--tp-on-ocean); }
+.cat-environment,
+.cat-food           { --cat-hue: var(--tp-cat-7); --cat-ink: var(--tp-on-lime);  }
+.cat-transportation { --cat-hue: var(--tp-cat-3); --cat-ink: var(--tp-on-ember); }
+/* Violet is the bridge hue and has no --tp-on-* helper; paper on it
+   measures 6.48:1, the same footing the others sit on. */
+.cat-demographic    { --cat-hue: var(--tp-cat-8); --cat-ink: var(--tp-paper);    }
 
 /* ═══════════════════════════════════════════════════════════════════
    SKELETON LOADING
@@ -1442,6 +1577,37 @@ html.js .page-view {
 
    Two identical blocks by CSS necessity — a selector list cannot cross
    an @media boundary.
+
+   ── AUDITED 2026-07-28, measured on rendered pixels ───────────────────
+   casa-datos warns that the SIGN of an elevation step flips between
+   themes. Checked here, in ΔL* against each theme's own ground:
+     card (--plane-1)  dark +6.79  light +5.33   both RAISED — correct
+     skeleton pulse    dark +7.44  light −5.63   flips, and must: a
+                       pulse brightens on near-black and darkens on
+                       cream. It flips on its own because --accent does.
+     hero rig 1-4      dark  bloom light −1.5…−3.5  same story, correct;
+                       ink over the warmest wash still reads 12.59:1.
+     --edge            darker than the card on light, lighter on dark —
+                       right polarity both ways (1.81:1 / 2.97:1 at the
+                       warm corner). --lift is a drop shadow on light,
+                       an inset-cream + drop on dark. Correct.
+     band (--plane-band) dark +2.10  light −3.46   THIS ONE FLIPS and is
+                       left alone deliberately: --plane-band is
+                       --bg-alt, whose sign relative to --bg is
+                       tokens.css's own decision, and a band is a TINT
+                       not an elevation — a slightly deeper cream strip
+                       is what a band looks like on paper. Text on it
+                       holds (ink 12.06:1, --quiet 5.70:1). The header
+                       comment on .section-band says it "lifts a section
+                       off the page"; on light it insets it. The words
+                       are wrong, the rendering is not.
+   Known and NOT fixed: .section-band::after's 3px spectral lip washes
+   out on cream exactly like .thread did (--tp-sun 1.10:1 against the
+   band). It is not given the same multiply because that pseudo also
+   carries a 100vmax box-shadow AND z-index: -1, and mix-blend-mode on
+   a negative-z pseudo changes which stacking context it blends into —
+   too much risk for a decorative 3px lip. Revisit only with a full
+   z-index audit.
    ══════════════════════════════════════════════════════════════════════ */
 
 @supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
@@ -1526,30 +1692,62 @@ html.js .page-view {
   }
 }
 
-/* ── THE THEME LAYER — light · thread ribbon ─────────────────────────
-   ADR-013's Consequences flag this case explicitly. The ribbon is raw
-   Rainbow hues laid straight onto the ground, and on cream the warm
+/* ── THE THEME LAYER — light · thread ribbon + select chevron ────────
+   ADR-013's Consequences flag the ribbon case explicitly. The ribbon is
+   raw Rainbow hues laid straight onto the ground, and on cream the warm
    half all but disappears — --tp-sun over --tp-paper is a near-white on
-   a near-white. Multiply is the fix and it is the physically right one:
-   it is what translucent ink on paper actually does, subtracting the
-   channels the hue lacks (sun's blue) instead of averaging toward
-   white. Same spectrum, same 1px — the element just stops washing out.
+   a near-white. Multiply is the physically right correction: it is what
+   translucent ink on paper actually does, subtracting the channels the
+   hue lacks (sun's blue) instead of averaging toward white. Measured on
+   the light ground it roughly doubles every stop's separation
+   (ember 2.71 → 3.25, red 3.33 → 3.95, teal 3.85 → 4.57). The sun end
+   stays faint at 1.49 and is meant to — the sweep fades from
+   transparent at both ends by design, and nothing here is load-bearing.
 
-   Outside the color-mix() @supports gate above: blending needs no
-   color-mix(), and an engine that lands on the dark theme in light mode
-   has no light ground to wash against anyway.
+   INSIDE the color-mix() @supports gate, unlike the version this
+   replaces. The reasoning for keeping it outside was inverted: it is
+   true that an engine without color-mix() has no light ground to wash
+   against, but that is exactly the problem. tokens.css gates its whole
+   light palette on color-mix(), so on such an engine a reader who
+   FORCES data-theme="light" gets the dark palette — and multiply
+   against #0a0a0f drives every stop of the spectrum to 1.01–1.04:1
+   against its own ground. The ribbon does not wash out there; it
+   disappears completely. Gating it here ties the blend to the palette
+   it was measured for.
 
    Not gated to the dot variant's pseudo-elements separately —
    mix-blend-mode on the host blends everything it renders, pseudos
-   included. Decoration only; nothing here is load-bearing.
+   included.
+
+   The select chevron below is the file's one unavoidable literal: an
+   SVG data URI cannot read a CSS custom property, so the stroke has to
+   be written out. The dark value (#9a9aa8) is --muted's dark literal
+   and measures 6.77:1 on --surface; on the light --surface it drops to
+   2.45:1, under the 3:1 WCAG 1.4.11 floor for a UI component, and the
+   chevron is the only affordance saying "this is a dropdown". #3C4D4B
+   is not an invented colour — it is what the light theme's own
+   --muted (--tp-ink 80% into --tp-paper) resolves to, and it measures
+   7.91:1 there.
+
+   Two identical halves by CSS necessity — a selector list cannot cross
+   an @media boundary. Keep them in step.
    ─────────────────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .thread {
+@supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .thread {
+      mix-blend-mode: multiply;
+    }
+    :root:not([data-theme="dark"]) select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233C4D4B' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    }
+  }
+
+  :root[data-theme="light"] .thread {
     mix-blend-mode: multiply;
   }
-}
-:root[data-theme="light"] .thread {
-  mix-blend-mode: multiply;
+  :root[data-theme="light"] select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233C4D4B' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

@@ -57,8 +57,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     inset: 0;
     background:
       radial-gradient(ellipse 60% 70% at 50% 40%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%),
-      radial-gradient(ellipse 80% 50% at 20% 80%, color-mix(in srgb, #8b5cf6 6%, transparent) 0%, transparent 50%),
-      radial-gradient(ellipse 80% 50% at 80% 80%, color-mix(in srgb, #ec4899 5%, transparent) 0%, transparent 50%);
+      radial-gradient(ellipse 80% 50% at 20% 80%, color-mix(in srgb, var(--purple) 6%, transparent) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 50% at 80% 80%, color-mix(in srgb, var(--rust) 5%, transparent) 0%, transparent 50%);
     pointer-events: none;
   }
 
@@ -202,7 +202,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .featured-geoid {
     font-size: 0.7rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-family: var(--font-mono);
     margin-top: 2px;
   }
@@ -233,7 +233,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--subtle);
+    color: var(--quiet);
   }
 
   .featured-cta {
@@ -267,7 +267,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 2px;
   }
 
@@ -314,7 +314,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .county-card-geoid {
     font-size: 0.7rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 2px;
     font-family: var(--font-mono);
   }
@@ -335,7 +335,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .county-card-pop-label {
     font-size: 0.65rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -412,7 +412,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .return-banner .banner-dismiss {
     background: none;
     border: none;
-    color: var(--subtle);
+    color: var(--quiet);
     cursor: pointer;
     font-size: 1.1rem;
     line-height: 1;
@@ -467,9 +467,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     }
   }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 
@@ -885,7 +886,11 @@ function countyExplorer() {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 
 <!-- Service Worker registration (ADR-012 I7: PWA offline) -->
 <script>

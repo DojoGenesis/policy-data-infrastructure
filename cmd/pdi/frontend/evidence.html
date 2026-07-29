@@ -50,7 +50,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .hero-count {
     font-size: 0.75rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 4px;
   }
 
@@ -109,7 +109,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Card result count ──────────────────────────────────────── */
   .results-info {
     font-size: 0.75rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-bottom: clamp(12px, 2vw, 18px);
   }
 
@@ -204,14 +204,23 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.62rem;
     padding: 0.15em 0.55em;
   }
-  .badge-equity.housing_affordability { background: color-mix(in srgb, var(--tp-cat-1) 18%, transparent); color: var(--tp-cat-1); border: 1px solid color-mix(in srgb, var(--tp-cat-1) 25%, transparent); }
-  .badge-equity.health_access         { background: color-mix(in srgb, var(--tp-cat-4) 18%, transparent); color: var(--tp-cat-4); border: 1px solid color-mix(in srgb, var(--tp-cat-4) 25%, transparent); }
-  .badge-equity.food_access           { background: color-mix(in srgb, var(--tp-cat-7) 18%, transparent); color: var(--tp-cat-7); border: 1px solid color-mix(in srgb, var(--tp-cat-7) 25%, transparent); }
-  .badge-equity.education             { background: color-mix(in srgb, var(--tp-cat-2) 18%, transparent); color: var(--tp-cat-2); border: 1px solid color-mix(in srgb, var(--tp-cat-2) 25%, transparent); }
-  .badge-equity.environmental         { background: color-mix(in srgb, var(--tp-cat-6) 18%, transparent); color: var(--tp-cat-6); border: 1px solid color-mix(in srgb, var(--tp-cat-6) 25%, transparent); }
-  .badge-equity.transit               { background: color-mix(in srgb, var(--tp-cat-3) 18%, transparent); color: var(--tp-cat-3); border: 1px solid color-mix(in srgb, var(--tp-cat-3) 25%, transparent); }
-  .badge-equity.economic              { background: color-mix(in srgb, var(--tp-cat-8) 18%, transparent); color: var(--tp-cat-8); border: 1px solid color-mix(in srgb, var(--tp-cat-8) 25%, transparent); }
-  .badge-equity.rural                 { background: color-mix(in srgb, var(--tp-cat-5) 18%, transparent); color: var(--tp-cat-5); border: 1px solid color-mix(in srgb, var(--tp-cat-5) 25%, transparent); }
+  /* Equity dimension -> hue now matches styles.css's shared .cat-economic/
+     .cat-housing/etc. system (ADR-013 §2A; same pairing compare.html's
+     category tabs use), so a dimension reads as the same colour everywhere
+     on the platform. Only the five non-verdict Rainbow hues are spent here
+     -- cat-4 (emerald=better), cat-5 (red=worse) and cat-6 (cyan=county B)
+     are reserved for verdicts elsewhere and never used for a category.
+     Solid hue background + the paired --tp-on-*/--tp-paper ink is the same
+     construction as .cat-tab.active: both anchors are theme-invariant, so
+     this reads correctly in dark AND light with no media override needed. */
+  .badge-equity.housing_affordability,
+  .badge-equity.economic      { --cat-hue: var(--tp-cat-1); --cat-ink: var(--tp-on-sun);   background: var(--cat-hue); border: 1px solid var(--cat-hue); color: var(--cat-ink); }
+  .badge-equity.education,
+  .badge-equity.health_access { --cat-hue: var(--tp-cat-2); --cat-ink: var(--tp-on-ocean); background: var(--cat-hue); border: 1px solid var(--cat-hue); color: var(--cat-ink); }
+  .badge-equity.environmental,
+  .badge-equity.food_access   { --cat-hue: var(--tp-cat-7); --cat-ink: var(--tp-on-lime);  background: var(--cat-hue); border: 1px solid var(--cat-hue); color: var(--cat-ink); }
+  .badge-equity.transit       { --cat-hue: var(--tp-cat-3); --cat-ink: var(--tp-on-ember); background: var(--cat-hue); border: 1px solid var(--cat-hue); color: var(--cat-ink); }
+  .badge-equity.rural         { --cat-hue: var(--tp-cat-8); --cat-ink: var(--tp-paper);    background: var(--cat-hue); border: 1px solid var(--cat-hue); color: var(--cat-ink); }
   .expand-icon {
     display: inline-flex;
     align-items: center;
@@ -299,7 +308,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 0.15em;
   }
 
@@ -317,7 +326,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--subtle);
+    color: var(--quiet);
     border-bottom: 1px solid var(--border-strong);
   }
 
@@ -329,7 +338,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .county-mini-table .county-geoid {
     font-family: var(--font-mono);
-    color: var(--subtle);
+    color: var(--quiet);
     font-size: 0.62rem;
   }
 
@@ -370,7 +379,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   /* ── Methodology / citations ────────────────────────────────── */
   .methodology-note {
     font-size: 0.72rem;
-    color: var(--subtle);
+    color: var(--quiet);
     line-height: 1.5;
     padding: 0.75em 1em;
     background: var(--plane-base);
@@ -463,9 +472,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     text-decoration: none;
   }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 
@@ -918,6 +928,10 @@ function fmtNum(n) {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>

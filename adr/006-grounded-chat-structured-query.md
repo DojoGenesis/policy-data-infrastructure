@@ -1,8 +1,13 @@
 # ADR-006: Ground chat in structured query generation, not vector retrieval
 
-**Status:** Proposed
+**Status:** Proposed — **still valid.** Not superseded.
 **Date:** 2026-07-26
 **Deciders:** Cruz Morales
+
+> **Delivery-surface note (2026-07-28):** this ADR is unchanged and its grounding architecture
+> still ships, tests included. Only the *surface* moved: the persistent chat drawer was removed
+> from all pages by operator decision (see the supersede block at the top of ADR-011). Chat now
+> lives solely at `/chat`. Nothing here specifies a drawer — do not infer one from it.
 **Refines:** ADR-005 (Gateway-Powered Chat Interface) — keeps its architecture, closes
 the hole it names in its own Consequences: *"LLM responses may hallucinate statistics."*
 

@@ -1,8 +1,13 @@
 # ADR-005: Gateway-Powered Chat Interface for v2
 
-**Status:** Proposed
+**Status:** Proposed — **still valid.** Not superseded.
 **Date:** 2026-04-15
 **Deciders:** Alfonso Morales
+
+> **Delivery-surface note (2026-07-28):** this ADR is unchanged and its architecture still
+> ships. Only the *surface* moved: the persistent chat drawer was removed from all pages by
+> operator decision (see the supersede block at the top of ADR-011). Chat now lives solely at
+> `/chat`. Nothing in this ADR specifies a drawer — do not infer one from it.
 
 ## Context
 

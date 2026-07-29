@@ -95,6 +95,101 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   line-height: 1.4;
 }
 
+/* ── Architecture pipeline video — ADR-011 §3B: pipeline_dag.mp4 as
+   system architecture. Same chrome as county.html's video-player
+   pattern (video-wrapper, play-btn overlay standing in for a poster,
+   caption bar) — reproduced locally since those classes live in
+   county.html's own page-scoped <style>, not the shared styles.css. ── */
+.video-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: clamp(20px, 3vw, 28px) 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.video-label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.video-player {
+  margin: 0 0 clamp(14px, 2vw, 20px);
+  max-width: 640px;
+}
+.video-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--bg);
+  box-shadow: var(--lift);
+  border: 1px solid var(--border);
+}
+.video-wrapper video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-card);
+}
+.video-play-btn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 200ms ease;
+}
+.video-play-btn:hover {
+  background: color-mix(in srgb, var(--bg) 35%, transparent);
+}
+.video-play-btn svg {
+  width: 56px;
+  height: 56px;
+  fill: var(--accent);
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+.video-play-btn:hover svg {
+  transform: scale(1.08);
+  opacity: 1;
+}
+.video-caption-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px clamp(12px, 2.5vw, 18px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+  z-index: 3;
+}
+.video-player .loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  background: var(--bg);
+}
+
 /* ── Method cards ────────────────────────────────────────────────── */
 .method-grid {
   display: grid;
@@ -152,7 +247,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   border-color: var(--accent);
 }
 .catalog-search input::placeholder {
-  color: var(--subtle);
+  color: var(--quiet);
 }
 
 /* ── Variable groups ─────────────────────────────────────────────── */
@@ -181,34 +276,43 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 }
 .var-item:last-child { border-bottom: none; }
 .var-name { color: var(--text); font-weight: 500; }
-.var-unit { color: var(--subtle); font-size: 0.7rem; margin-left: 0.5em; }
+.var-unit { color: var(--quiet); font-size: 0.7rem; margin-left: 0.5em; }
 .var-desc { color: var(--muted); font-size: 0.7rem; max-width: 38em; text-align: right; }
 
-/* ── Manim placeholder ───────────────────────────────────────────── */
+/* ── Manim video gallery ────────────────────────────────────────── */
 .manim-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: clamp(12px, 2vw, 20px);
   margin: 1.5em 0;
 }
-.manim-card {
+.manim-video-card {
   background: var(--plane-base, var(--surface));
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-card);
-  padding: clamp(16px, 3vw, 32px);
-  text-align: center;
-  color: var(--subtle);
-  font-size: 0.85rem;
-  transition: border-color 200ms ease, color 200ms ease;
+  overflow: hidden;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
-.manim-card:hover {
+.manim-video-card:hover {
   border-color: var(--accent);
-  color: var(--muted);
+  box-shadow: var(--lift);
 }
-.manim-card-icon {
-  font-size: 2rem;
-  margin-bottom: 0.3em;
-  opacity: 0.5;
+.manim-video-card .video-player {
+  margin: 0;
+  max-width: none;
+}
+.manim-video-card .video-wrapper {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+.manim-video-label {
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  border-top: 1px solid var(--border);
 }
 
 /* ── Tables ──────────────────────────────────────────────────────── */
@@ -245,7 +349,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 .ref-table .ref-id { color: var(--accent); font-weight: 600; }
 .ref-table .ref-title { font-weight: 500; color: var(--text); }
 .ref-table .ref-authors { color: var(--muted); }
-.ref-table .ref-year { font-variant-numeric: tabular-nums; color: var(--subtle); }
+.ref-table .ref-year { font-variant-numeric: tabular-nums; color: var(--quiet); }
 .ref-table .ref-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .ref-table .ref-key { font-size: 0.68rem; color: var(--accent); }
 
@@ -268,31 +372,50 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .badge-type-unsure {
-  color: var(--subtle);
+  color: var(--quiet);
   background: color-mix(in srgb, var(--subtle) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--subtle) 20%, transparent);
 }
 
-/* ── Grant / license section ─────────────────────────────────────── */
-.grant-section {
+/* ── Acknowledgments ─────────────────────────────────────────────── */
+.acks-section {
   background: var(--plane-base, var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  padding: clamp(16px, 2.5vw, 24px);
+  padding: clamp(20px, 2.5vw, 28px);
   margin: 1.5em 0;
 }
-.grant-logos {
+.acks-blurb {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 1em;
+}
+.acks-blurb strong {
+  color: var(--accent);
+}
+.acks-links {
   display: flex;
   flex-wrap: wrap;
-  gap: clamp(16px, 3vw, 32px);
-  align-items: center;
-  margin-top: 0.75em;
+  gap: clamp(10px, 2vw, 18px);
+  margin-top: 1em;
 }
-.grant-logo {
-  font-size: 0.9rem;
+.acks-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: var(--muted);
-  opacity: 0.8;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--r-badge);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.acks-link:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: var(--accent);
 }
 
 /* ── Loading / error / empty state ───────────────────────────────── */
@@ -318,9 +441,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 }
 .about-section .table-wrapper .data-table { margin: 0; }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 
@@ -401,6 +525,21 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="arch-layer-desc">Stored in PostGIS with vintage tracking. Every value carries margin of error, coefficient of variation flag, and reliability tier (high / moderate / low). Geo-enabled for spatial queries at all levels.</div>
       </div>
     </div>
+
+    <!-- Video: Pipeline DAG (ADR-011 §3B — system architecture, not gated behind a separate page) -->
+    <div class="video-label" data-en="📹 How the Ingest Pipeline Runs" data-es="📹 Cómo Funciona el Pipeline de Ingesta">📹 How the Ingest Pipeline Runs</div>
+    <div class="video-player" x-data="pipelineVideo()">
+      <div class="video-wrapper">
+        <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+        <video x-ref="video" src="/static/videos/pipeline_dag.mp4" preload="metadata"
+          @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+          playsinline muted></video>
+        <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="video-caption-bar" data-en="The same dependency graph runs every source adapter through fetch, normalize, upsert, and validate — in topological order." data-es="El mismo grafo de dependencias ejecuta cada adaptador de fuente a través de obtener, normalizar, cargar y validar — en orden topológico.">The same dependency graph runs every source adapter through fetch, normalize, upsert, and validate — in topological order.</div>
+      </div>
+    </div>
   </section>
 
   <hr class="thread" aria-hidden="true">
@@ -448,7 +587,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </table>
           </div>
         </template>
-        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="filteredSources.length + ' of ' + sources.length + ' sources'"></p>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="filteredSources.length + ' of ' + sources.length + ' sources'"></p>
       </div>
     </template>
   </section>
@@ -538,38 +677,92 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <section class="about-section section-band section-band--alt reveal" id="manim">
     <span class="section-tag" data-en="Animations" data-es="Animaciones">Animations</span>
     <h2 class="about-section-title" data-en="Manim Video Gallery" data-es="Galería de Videos de Manim">Manim Video Gallery</h2>
-    <p class="about-section-subtitle" data-en="Statistical concept animations explaining the methodology. Coming soon." data-es="Animaciones de conceptos estadísticos que explican la metodología. Próximamente.">Statistical concept animations explaining the methodology. Coming soon.</p>
+    <p class="about-section-subtitle" data-en="Statistical concept animations explaining the methodology." data-es="Animaciones de conceptos estadísticos que explican la metodología.">Statistical concept animations explaining the methodology.</p>
 
     <div class="manim-grid">
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="z-score Normalization" data-es="Normalización z-score">z-score Normalization</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/zscore.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play z-score video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="z-score Normalization" data-es="Normalización z-score">z-score Normalization</div>
       </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="ICE Polarization" data-es="Polarización ICE">ICE Polarization</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/ice.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play ICE video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="ICE Polarization" data-es="Polarización ICE">ICE Polarization</div>
       </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="Bootstrap Sampling" data-es="Muestreo Bootstrap">Bootstrap Sampling</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/bootstrap_ci.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play bootstrap video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="Bootstrap Sampling" data-es="Muestreo Bootstrap">Bootstrap Sampling</div>
       </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="Quantile Transformation" data-es="Transformación por Cuantiles">Quantile Transformation</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/quantile_classification.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play quantile video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="Quantile Transformation" data-es="Transformación por Cuantiles">Quantile Transformation</div>
       </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="LISA Spatial Clusters" data-es="Clústeres Espaciales LISA">LISA Spatial Clusters</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/lisa_cluster_map.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play LISA video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="LISA Spatial Clusters" data-es="Clústeres Espaciales LISA">LISA Spatial Clusters</div>
       </div>
-      <div class="manim-card">
-        <div class="manim-card-icon">&#9654;</div>
-        <div data-en="Pipeline DAG Flow" data-es="Flujo del Pipeline DAG">Pipeline DAG Flow</div>
-        <div style="font-size:0.7rem;color:var(--subtle);" data-en="Coming soon" data-es="Próximamente">Coming soon</div>
+      <div class="manim-video-card">
+        <div class="video-player" x-data="pipelineVideo()">
+          <div class="video-wrapper">
+            <div class="loader" x-show="!loaded"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/pipeline_dag.mp4" preload="metadata"
+              @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play pipeline DAG video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="manim-video-label" data-en="Pipeline DAG Flow" data-es="Flujo del Pipeline DAG">Pipeline DAG Flow</div>
       </div>
     </div>
   </section>
@@ -609,25 +802,29 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </tbody>
           </table>
         </div>
-        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--subtle);" x-text="refs.length + ' references from research/references.csv'"></p>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="refs.length + ' references from research/references.csv'"></p>
       </div>
     </template>
   </section>
 
   <hr class="thread" aria-hidden="true">
 
-  <!-- ── Grant Acknowledgments ────────────────────────────────────── -->
-  <section class="about-section section-band section-band--alt reveal" id="grants">
-    <span class="section-tag" data-en="Funding" data-es="Financiamiento">Funding</span>
-    <h2 class="about-section-title" data-en="Grant Acknowledgments" data-es="Agradecimientos de Financiamiento">Grant Acknowledgments</h2>
-    <p class="about-section-subtitle" data-en="PDI is supported by grants from Arnold Ventures and the Madison Community Foundation." data-es="PDI cuenta con el apoyo de subvenciones de Arnold Ventures y la Madison Community Foundation.">PDI is supported by grants from Arnold Ventures and the Madison Community Foundation.</p>
+  <!-- ── Acknowledgments ──────────────────────────────────────────── -->
+  <section class="about-section section-band section-band--alt reveal" id="acks">
+    <span class="section-tag" data-en="Acknowledgments" data-es="Agradecimientos">Acknowledgments</span>
+    <h2 class="about-section-title" data-en="Built by TresPies" data-es="Construido por TresPies">Built by TresPies</h2>
+    <p class="about-section-subtitle" data-en="PDI is designed, built, and maintained by Cruz Romero Morales and TresPies — a bilingual lived-experience design and data studio based in Madison, Wisconsin." data-es="PDI es diseñado, construido y mantenido por Cruz Romero Morales y TresPies — un estudio de diseño y datos bilingüe basado en experiencia vivida, ubicado en Madison, Wisconsin.">PDI is designed, built, and maintained by Cruz Romero Morales and TresPies — a bilingual lived-experience design and data studio based in Madison, Wisconsin.</p>
 
-    <div class="grant-section">
-      <div class="grant-logos">
-        <div class="grant-logo">Arnold Ventures</div>
-        <div class="grant-logo">Madison Community Foundation</div>
+    <div class="acks-section">
+      <div class="acks-blurb">
+        <strong>Cruz Romero Morales</strong> is a systems thinker, design engineer, and community data advocate. His work bridges the gap between lived experience and technical infrastructure — building open-source tools that make policy data accessible, legible, and actionable for the communities that everyone else overlooks.
       </div>
-      <p style="margin-top:0.75em;font-size:0.8rem;color:var(--muted);" data-en="Both organizations have provided critical support for data infrastructure and open-source tooling that makes platforms like PDI possible." data-es="Ambas organizaciones han brindado un apoyo fundamental para la infraestructura de datos y las herramientas de código abierto que hacen posibles plataformas como PDI.">Both organizations have provided critical support for data infrastructure and open-source tooling that makes platforms like PDI possible.</p>
+      <div class="acks-links">
+        <a href="https://trespiesdesign.com" class="acks-link" target="_blank" rel="noopener">TresPiesDesign.com</a>
+        <a href="https://trespies.dev" class="acks-link" target="_blank" rel="noopener">trespies.dev</a>
+        <a href="https://cruzromeromorales.com" class="acks-link" target="_blank" rel="noopener">cruzromeromorales.com</a>
+        <a href="https://madisonequitydata.org" class="acks-link" target="_blank" rel="noopener">madisonequitydata.org</a>
+      </div>
     </div>
   </section>
 
@@ -665,6 +862,26 @@ function aboutPage() {
     // Called by sourcesData / variablesData after their fetches complete
     updateSourceCount(n) { this.sourceCount = n; },
     updateVariableCount(n) { this.variableCount = n; }
+  };
+}
+
+/* ── Alpine.js: Pipeline DAG video (ADR-011 §3B) ─────────────────────
+   Simpler than county.html's videoPlayer(): no geoid, no per-visitor
+   caption fetch — the architecture video is the same for everyone. */
+function pipelineVideo() {
+  return {
+    playing: false,
+    loaded: false,
+
+    onLoaded() { this.loaded = true; },
+
+    play() {
+      var vid = this.$refs.video;
+      if (vid) {
+        vid.currentTime = 0;
+        vid.play().catch(function () {});
+      }
+    }
   };
 }
 
@@ -832,6 +1049,10 @@ function parseCSVLine(line) {
   return result;
 }
 </script>
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>

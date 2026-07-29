@@ -49,7 +49,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .portrait-geoid {
     font-size: 0.72rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-family: var(--font-mono);
     display: inline-flex;
     align-items: center;
@@ -264,35 +264,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .feature-interp strong { color: var(--text); }
 
-  /* Reliability distribution bar row */
-  .reliability-dist {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: center;
-    margin-top: 10px;
-    font-size: 0.8rem;
-  }
-  .reliability-dist .rd-label {
-    text-transform: capitalize;
-    font-weight: 600;
-    font-size: 0.75rem;
-    min-width: 70px;
-  }
-  .reliability-dist .rd-bar {
-    height: 8px;
-    border-radius: 4px;
-    transition: width 400ms ease;
-  }
-  .rd-bar-high { background: var(--live); }
-  .rd-bar-moderate { background: var(--gated); }
-  .rd-bar-low { background: color-mix(in srgb, var(--gated) 70%, #ef4444); }
-  .rd-bar-unknown { background: var(--border); }
-  .reliability-dist .rd-count {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--subtle);
-  }
+  /* The hand-rolled `.reliability-dist` / `.rd-bar` rule set that used to live
+     here is gone: that chart is now charts.js buildBarChart (see .pdi-chart
+     below). Its `.rd-count` (text painted with the old --subtle token) is
+     deliberately NOT carried over — that token measures 3.49:1 on a raised
+     card, under AA-normal, and DATAVIZ-RULES rule 3 rules it out for chart
+     text entirely. */
 
   /* LISA badges — categorical data-viz colors */
   .lisa-badge-list {
@@ -342,6 +319,28 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.75rem;
     color: var(--muted);
     margin-top: 8px;
+  }
+
+  /* .lisa-badge.HH and .HL keep their dark-tuned background/border
+     color-mix() washes as-is (low-alpha, read fine on paper too), but
+     their plain hex text — #fcd34d, #c4b5fd — measures 1.35:1 / 1.72:1
+     on the light ground, effectively invisible. Light theme gets a
+     text-only override to an existing AA-verified *-deep token.
+     --tp-ocean-deep for HL's violet measures 7.41:1 rendered (tokens.css
+     documents 8.67:1, but that's against pure --tp-paper; the page's
+     actual light --bg is a few percent darker, so real rendered
+     contrast always undershoots the paper-only number a little — verify
+     rendered, not documented). --tp-ember-deep, the obvious amber match
+     for HH, was the first choice but only clears 4.16:1 rendered — under
+     the 4.5:1 floor. --tp-red-deep clears 5.33:1 rendered and doubles as
+     a defensible semantic fit (HH = hot spot). No new colors invented. */
+  @supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) .lisa-badge.HH { color: var(--tp-red-deep); }
+      :root:not([data-theme="dark"]) .lisa-badge.HL { color: var(--tp-ocean-deep); }
+    }
+    :root[data-theme="light"] .lisa-badge.HH { color: var(--tp-red-deep); }
+    :root[data-theme="light"] .lisa-badge.HL { color: var(--tp-ocean-deep); }
   }
 
   /* Factor bar rows */
@@ -517,7 +516,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .sparkline-label {
     font-size: 0.6rem;
-    color: var(--subtle);
+    color: var(--quiet);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
@@ -545,7 +544,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .tract-chip .tract-geoid {
     font-size: 0.68rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-family: var(--font-mono);
     margin-top: 2px;
   }
@@ -611,7 +610,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     gap: 8px;
     align-items: center;
     font-size: 0.65rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-weight: 500;
   }
 
@@ -774,7 +773,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-size: 0.58rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--subtle);
+    color: var(--quiet);
     font-weight: 600;
   }
   .video-stat.accent .vs-label { color: var(--accent); }
@@ -786,7 +785,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .video-stat.accent .vs-value { color: var(--accent); }
   .video-stat .vs-compare {
     font-size: 0.58rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 1px;
   }
 
@@ -822,10 +821,48 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     display: inline-block;
     flex-shrink: 0;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     CHART PRIMITIVE HOST — charts.js returns a viewBox-only SVG
+     string with no width/height, so the host controls the box.
+     ═══════════════════════════════════════════════════════════ */
+  .pdi-chart {
+    margin-top: 12px;
+    overflow-x: auto;
+  }
+  .pdi-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-width: 560px;   /* below this the axis text scales under ~10px; the host scrolls
+                           instead (DATAVIZ-RULES rule 3 forbids rotating labels to fit) */
+  }
+  /* --quiet, never --subtle: --subtle measures 3.49:1 on a raised card,
+     under AA-normal. See DATAVIZ-RULES.md rule 3. */
+  .chart-note {
+    font-size: 0.72rem;
+    color: var(--quiet);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+  .chart-note strong { color: var(--text); font-weight: 600; }
+  .chart-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
 </style>
-<link rel="stylesheet" href="/static/chat-drawer.css">
 <!-- Language toggle — replaces ES twin files per ADR-011 -->
 <script defer src="/static/lang-toggle.js"></script>
+<!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
+     and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
+     __tpMotionFailsafe timer above is the only thing that ever makes .reveal content visible. -->
+<script defer src="/static/motion.js"></script>
+<!-- Chart primitives — buildBarChart / buildLineChart / buildSmallMultiples (DATAVIZ-RULES.md) -->
+<script defer src="/static/charts.js"></script>
 </head>
 <body>
 
@@ -881,8 +918,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="portrait-geoid">
           <span class="geoid-dot"></span>
           <span x-text="geo.geoid"></span>
-          <span style="color:var(--subtle);" x-text="'· Pop. ' + (geo.population ? geo.population.toLocaleString() : '—')"></span>
-          <span x-show="geo.level" style="color:var(--subtle);" x-text="'· ' + geo.level"></span>
+          <span style="color:var(--quiet);" x-text="'· Pop. ' + (geo.population ? geo.population.toLocaleString() : '—')"></span>
+          <span x-show="geo.level" style="color:var(--quiet);" x-text="'· ' + geo.level"></span>
         </div>
 
         <p class="portrait-sentence" x-html="definingSentence"></p>
@@ -921,7 +958,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
          ═══════════════════════════════════════════════════════════ -->
 
     <!-- ── LAYER 1: Census Indicators ────────────────────────────── -->
-    <section class="section-band" id="layer-1">
+    <section class="section-band reveal" id="layer-1">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-1" data-en="Layer 1 · Primary Observation" data-es="Capa 1 · Observación Primaria">Layer 1 · Primary Observation</span>
         <h2 data-en="Indicator Dashboard" data-es="Panel de Indicadores">Indicator Dashboard</h2>
@@ -961,16 +998,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   <tr>
                     <td>
                       <div style="font-weight:500;" x-text="ind.name || ind.variable_id"></div>
-                      <div style="font-size:0.7rem;color:var(--subtle);" x-text="ind.unit || ''"></div>
+                      <div style="font-size:0.7rem;color:var(--quiet);" x-text="ind.unit || ''"></div>
                     </td>
                     <td class="num" x-text="fmtValue(ind.value)"></td>
                     <td style="text-align:center;">
-                      <span style="font-size:0.7rem;color:var(--subtle);" x-text="getPercentile(ind).toFixed(0)+'%'"></span>
+                      <span style="font-size:0.7rem;color:var(--quiet);" x-text="getPercentile(ind).toFixed(0)+'%'"></span>
                     </td>
                     <td style="text-align:center;">
                       <span class="badge" :class="'badge-'+(ind.reliability||'unknown')" x-text="ind.reliability || '—'"></span>
                     </td>
-                    <td class="num" style="color:var(--subtle);font-style:italic;" x-text="fmtMOE(ind.margin_of_error)"></td>
+                    <td class="num" style="color:var(--quiet);font-style:italic;" x-text="fmtMOE(ind.margin_of_error)"></td>
                     <td style="text-align:center;">
                       <a :href="'/map?indicator=' + encodeURIComponent(ind.variable_id)" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-weight:600;" title="View on Map">🗺️</a>
                     </td>
@@ -1012,8 +1049,38 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </div>
 
+    <!-- Video: Quantile Classification (Layer 1 — how the category breaks above are cut).
+         ADR-011 §3B: "Quantile Classification → appears when category breaks are shown (Layer 1)". -->
+    <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
+      <div x-data="videoPlayer('quantile_classification')" x-init="init()" x-show="geoid" x-cloak>
+        <div class="video-label" data-en="📹 How the Category Breaks Are Cut" data-es="📹 Cómo se Cortan los Rangos de Categoría">📹 How the Category Breaks Are Cut</div>
+        <div class="video-player">
+          <div class="video-wrapper">
+            <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/quantile_classification.mp4" preload="metadata"
+              @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
+              @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="video-stats-bar" x-show="overlayStats.length > 0">
+              <template x-for="stat in overlayStats" :key="stat.label">
+                <span class="video-stat" :class="{accent: stat.accent}">
+                  <span class="vs-label" x-text="stat.label"></span>
+                  <span class="vs-value" x-text="stat.value"></span>
+                  <span class="vs-compare" x-text="stat.comparison" x-show="stat.comparison"></span>
+                </span>
+              </template>
+            </div>
+            <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── LAYER 2: Validated Features ───────────────────────────── -->
-    <section class="section-band" id="layer-2">
+    <section class="section-band reveal" id="layer-2">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-2" data-en="Layer 2 · Research-Grounded Measures" data-es="Capa 2 · Medidas con Base en Investigación">Layer 2 · Research-Grounded Measures</span>
         <h2 data-en="Validated Features" data-es="Características Validadas">Validated Features</h2>
@@ -1057,20 +1124,35 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </div>
         </div>
 
-        <!-- Reliability Distribution -->
+        <!-- Reliability Distribution — charts.js buildBarChart.
+             Was a hand-rolled px-width div row: no axis, no gridlines, no zero
+             reference, no accessible table. buildBarChart gives all four plus the
+             value printed above each bar (DATAVIZ-RULES rule 2) and gridlines on
+             round numbers via niceMax() (rule 3). -->
         <div class="card card-spectral">
-          <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;" data-en="Indicator Reliability Distribution" data-es="Distribución de Confiabilidad de Indicadores">Indicator Reliability Distribution</div>
+          <div class="chart-title" data-en="Indicator Reliability Distribution" data-es="Distribución de Confiabilidad de Indicadores">Indicator Reliability Distribution</div>
           <div x-show="!reliabilityCounts.any" style="font-size:0.8rem;color:var(--muted);" data-en="No reliability data available." data-es="No hay datos de confiabilidad disponibles.">No reliability data available.</div>
-          <div x-show="reliabilityCounts.any" class="reliability-dist">
-            <template x-for="r in ['high','moderate','low','unknown']" :key="r">
-              <template x-if="reliabilityCounts[r]">
-                <div style="display:inline-flex;align-items:center;gap:6px;">
-                  <span class="rd-label" x-text="r"></span>
-                  <div class="rd-bar" :class="'rd-bar-'+r" :style="'width:' + (reliabilityCounts[r]/reliabilityCounts.total * 120) + 'px'"></div>
-                  <span class="rd-count" x-text="reliabilityCounts[r]"></span>
-                </div>
-              </template>
-            </template>
+          <div x-show="reliabilityCounts.any">
+            <div class="pdi-chart" x-html="reliabilityChartSVG"></div>
+            <p class="chart-note" data-en="Indicators grouped by the reliability of their ACS margin of error. Bars start at zero; each count is printed above its own bar, so the chart reads without color." data-es="Indicadores agrupados por la confiabilidad de su margen de error de la ACS. Las barras comienzan en cero; cada conteo se imprime sobre su propia barra, para que el gráfico se lea sin color.">Indicators grouped by the reliability of their ACS margin of error. Bars start at zero; each count is printed above its own bar, so the chart reads without color.</p>
+
+            <!-- DATAVIZ-RULES rule 4: the same data as a real table, clipped not hidden. -->
+            <table class="visually-hidden">
+              <caption data-en="Indicator reliability distribution" data-es="Distribución de confiabilidad de indicadores">Indicator reliability distribution</caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-en="Reliability class" data-es="Clase de confiabilidad">Reliability class</th>
+                  <th scope="col" data-en="Indicators" data-es="Indicadores">Indicators</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row" data-en="High" data-es="Alta">High</th><td x-text="reliabilityCounts.high"></td></tr>
+                <tr><th scope="row" data-en="Moderate" data-es="Moderada">Moderate</th><td x-text="reliabilityCounts.moderate"></td></tr>
+                <tr><th scope="row" data-en="Low" data-es="Baja">Low</th><td x-text="reliabilityCounts.low"></td></tr>
+                <tr><th scope="row" data-en="Unknown" data-es="Desconocida">Unknown</th><td x-text="reliabilityCounts.unknown"></td></tr>
+                <tr><th scope="row" data-en="Total indicators" data-es="Indicadores totales">Total indicators</th><td x-text="reliabilityCounts.total"></td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1105,8 +1187,39 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </div>
 
+    <!-- Video: Bootstrap CI (Layer 2 — reliability, right after the reliability
+         distribution chart above). ADR-011 §3B: "Bootstrap CI → appears when
+         reliability is discussed (Layer 2)". -->
+    <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
+      <div x-data="videoPlayer('bootstrap_ci')" x-init="init()" x-show="geoid" x-cloak>
+        <div class="video-label" data-en="📹 How Reliable Is a Single Estimate?" data-es="📹 ¿Qué Tan Confiable Es una Sola Estimación?">📹 How Reliable Is a Single Estimate?</div>
+        <div class="video-player">
+          <div class="video-wrapper">
+            <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
+            <video x-ref="video" src="/static/videos/bootstrap_ci.mp4" preload="metadata"
+              @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
+              @play="playing=true" @pause="playing=false" @ended="playing=false"
+              playsinline muted></video>
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="video-stats-bar" x-show="overlayStats.length > 0">
+              <template x-for="stat in overlayStats" :key="stat.label">
+                <span class="video-stat" :class="{accent: stat.accent}">
+                  <span class="vs-label" x-text="stat.label"></span>
+                  <span class="vs-value" x-text="stat.value"></span>
+                  <span class="vs-compare" x-text="stat.comparison" x-show="stat.comparison"></span>
+                </span>
+              </template>
+            </div>
+            <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── LAYER 3: Factor Profile ───────────────────────────────── -->
-    <section class="section-band" id="layer-3">
+    <section class="section-band reveal" id="layer-3">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-3" data-en="Layer 3 · Derived Structure" data-es="Capa 3 · Estructura Derivada">Layer 3 · Derived Structure</span>
         <h2 data-en="Factor Profile" data-es="Perfil de Factores">Factor Profile</h2>
@@ -1136,16 +1249,74 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               </div>
             </div>
           </template>
+          <p class="chart-note" data-en="Each bar is centred on the state average: the midpoint is a z-score of 0, left is below average, right is above. The signed score and the state percentile are printed beside every bar." data-es="Cada barra está centrada en el promedio estatal: el punto medio es un puntaje z de 0, la izquierda está por debajo del promedio y la derecha por encima. El puntaje con signo y el percentil estatal se imprimen junto a cada barra.">Each bar is centred on the state average: the midpoint is a z-score of 0, left is below average, right is above. The signed score and the state percentile are printed beside every bar.</p>
+
+          <!-- DATAVIZ-RULES rule 4: identical data, non-visual path. The bars
+               themselves stay hand-rolled on purpose — see the report: they are a
+               DIVERGING encoding around zero, which buildBarChart cannot express. -->
+          <table class="visually-hidden">
+            <caption data-en="Factor scores" data-es="Puntajes de factores">Factor scores</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-en="Factor" data-es="Factor">Factor</th>
+                <th scope="col" data-en="Score (z)" data-es="Puntaje (z)">Score (z)</th>
+                <th scope="col" data-en="State percentile" data-es="Percentil estatal">State percentile</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="f in factorList" :key="'tbl-'+f.factor_name">
+                <tr>
+                  <th scope="row" x-text="f.label || f.factor_name"></th>
+                  <td x-text="f.factor_score != null ? f.factor_score.toFixed(2) : '—'"></td>
+                  <td x-text="f.factor_percentile != null ? f.factor_percentile.toFixed(0) : '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
 
     <!-- ── LAYER 4: Spatial Clusters ─────────────────────────────── -->
-    <section class="section-band" id="layer-4">
+    <section class="section-band reveal" id="layer-4">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-4" data-en="Layer 4 · Geography as Signal" data-es="Capa 4 · Geografía como Señal">Layer 4 · Geography as Signal</span>
         <h2 data-en="Spatial Clusters (LISA)" data-es="Clústeres Espaciales (LISA)">Spatial Clusters (LISA)</h2>
         <p class="layer-context" x-html="layer4Context"></p>
+
+        <!-- ── Tract cluster breakdown — GET /geographies/:geoid/lisa-profile ──
+             The county-level roll-up of every tract's LISA quadrant. Rendered with
+             charts.js buildBarChart so the five cluster types take --tp-cat-1..5 in
+             scale order (DATAVIZ-RULES rule 1), each count is printed above its own
+             bar as the color-independent encoder (rule 2), gridlines land on round
+             numbers from niceMax() (rule 3), and the same five numbers ship as a
+             clipped visually-hidden table (rule 4). A failed or empty response hides it and
+             leaves the rest of Layer 4 untouched. -->
+        <div class="card card-spectral" x-show="lisaProfileRows.length > 0" x-cloak>
+          <div class="chart-title" data-en="Tract Cluster Breakdown" data-es="Desglose de Clústeres por Sección Censal">Tract Cluster Breakdown</div>
+          <div class="pdi-chart" x-html="lisaProfileChartSVG"></div>
+          <p class="chart-note" x-html="lisaProfileNote"></p>
+
+          <table class="visually-hidden">
+            <caption data-en="LISA cluster breakdown by census tract" data-es="Desglose de clústeres LISA por sección censal">LISA cluster breakdown by census tract</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-en="Cluster type" data-es="Tipo de clúster">Cluster type</th>
+                <th scope="col" data-en="Census tracts" data-es="Secciones censales">Census tracts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row" data-en="High-High (HH)" data-es="Alto-Alto (HH)">High-High (HH)</th><td x-text="lisaClusterCount('HH')"></td></tr>
+              <tr><th scope="row" data-en="High-Low (HL)" data-es="Alto-Bajo (HL)">High-Low (HL)</th><td x-text="lisaClusterCount('HL')"></td></tr>
+              <tr><th scope="row" data-en="Low-High (LH)" data-es="Bajo-Alto (LH)">Low-High (LH)</th><td x-text="lisaClusterCount('LH')"></td></tr>
+              <tr><th scope="row" data-en="Low-Low (LL)" data-es="Bajo-Bajo (LL)">Low-Low (LL)</th><td x-text="lisaClusterCount('LL')"></td></tr>
+              <tr><th scope="row" data-en="Not significant (NS)" data-es="No significativo (NS)">Not significant (NS)</th><td x-text="lisaClusterCount('NS')"></td></tr>
+              <tr><th scope="row" data-en="Total tracts analysed" data-es="Total de secciones censales analizadas">Total tracts analysed</th><td x-text="lisaProfileTotal"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="chart-note" x-show="lisaProfileError" x-cloak data-en="The tract cluster breakdown could not be loaded for this county. The spatial cluster list below is unaffected." data-es="No se pudo cargar el desglose de clústeres por sección censal para este condado. La lista de clústeres espaciales de abajo no se ve afectada.">The tract cluster breakdown could not be loaded for this county. The spatial cluster list below is unaffected.</p>
 
         <div x-show="lisaLoading" style="display:none">
           <div class="loader"><div class="loader-spinner"></div></div>
@@ -1208,7 +1379,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </div>
 
     <!-- ── LAYER 5: Composite Builder ────────────────────────────── -->
-    <section class="section-band" id="layer-5">
+    <section class="section-band reveal" id="layer-5">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-5" data-en="Layer 5 · Query-Time Construction" data-es="Capa 5 · Construcción en Tiempo de Consulta">Layer 5 · Query-Time Construction</span>
         <div class="layer-heading">
@@ -1296,7 +1467,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- ═══════════════════════════════════════════════════════════════
          ACT 3 · THE LEVERS — what to do
          ═══════════════════════════════════════════════════════════ -->
-    <section class="section-band" id="levers">
+    <section class="section-band reveal" id="levers">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-1" style="color:var(--tp-lime);" data-en="Act 3 · Policy Levers" data-es="Acto 3 · Palancas de Política">Act 3 · Policy Levers</span>
         <span class="layer-indicator li-1" style="color:var(--tp-lime);" x-show="false"></span>
@@ -1346,7 +1517,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <h3 data-en="🔍 Compare with a Neighboring County" data-es="🔍 Comparar con un Condado Vecino">🔍 Compare with a Neighboring County</h3>
             <p data-en="See how this county's profile stacks up against its neighbors — where does it lead, and where does it lag?" data-es="Descubre cómo se compara el perfil de este condado con sus vecinos — ¿dónde lidera y dónde se queda atrás?">See how this county's profile stacks up against its neighbors — where does it lead, and where does it lag?</p>
             <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary" data-en="Open Compare" data-es="Abrir Comparación">Open Compare</a>
-            <div style="margin-top:10px;font-size:0.72rem;color:var(--subtle);">
+            <div style="margin-top:10px;font-size:0.72rem;color:var(--quiet);">
               <template x-for="n in neighborSuggestions" :key="n.geoid">
                 <a :href="'/compare?geoid1='+geoid+'&geoid2='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="'vs ' + n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
               </template>
@@ -1426,6 +1597,15 @@ function countyProfile() {
     lisaLoading: false,
     lisaError: '',
     lisaEmpty: false,
+
+    // LISA county profile — GET /geographies/:geoid/lisa-profile (ADR-011 §2B Layer 4)
+    lisaProfile: null,
+    lisaProfileError: '',
+
+    // Reactive mirror of the current language. lang-toggle.js swaps data-en/data-es
+    // attributes in the DOM, but chart SVGs are generated in JS and have no
+    // attributes to swap — they re-render off this instead.
+    lang: 'en',
 
     // Composite
     compositeSelected: [],
@@ -1555,8 +1735,18 @@ function countyProfile() {
 
     get layer4Context() {
       const name = this.geo?.name || 'this county';
-      if (this.lisaClusters.length === 0) return 'LISA clusters haven\'t been computed for <strong>' + name + '</strong> yet. Run spatial analysis from the map page to see where patterns concentrate geographically.';
-      return 'LISA clusters show <em>where these patterns concentrate</em> in <strong>' + name + '</strong>. ' +
+      // ADR-011 §2B Layer 4 specifies this sentence verbatim: "LISA clusters show
+      // where these patterns concentrate spatially. The map reveals High-High
+      // clusters in [X] tracts." — [X] is clusters[cluster=="HH"].count from
+      // GET /geographies/:geoid/lisa-profile. Stays English to match the rest of
+      // this paragraph; the bilingual copy of the same number is in lisaProfileNote.
+      const hasProfile = this.lisaProfileRows.length > 0;
+      const hh = hasProfile ? this.lisaClusterCount('HH') : null;
+      const hhSentence = hh != null
+        ? ' The map reveals <strong>High-High clusters in ' + hh + ' tract' + (hh === 1 ? '' : 's') + '</strong>.'
+        : '';
+      if (this.lisaClusters.length === 0 && !hasProfile) return 'LISA clusters haven\'t been computed for <strong>' + name + '</strong> yet. Run spatial analysis from the map page to see where patterns concentrate geographically.';
+      return 'LISA clusters show <em>where these patterns concentrate</em> spatially in <strong>' + name + '</strong>.' + hhSentence + ' ' +
         'Local Indicators of Spatial Association (Anselin 1995) classify each census tract by its relationship to neighbors: ' +
         'High-High clusters signal concentrated advantage or disadvantage, High-Low signals an outlier.';
     },
@@ -1643,6 +1833,101 @@ function countyProfile() {
       return counts;
     },
 
+    /* ═══════════════════════════════════════════════════════════════
+       CHART PRIMITIVES — charts.js (window.CasaDatosCharts)
+       Each build*() is a pure data -> SVG string call. Every getter
+       below has a sibling visually-hidden table element in the
+       markup driven from the SAME state, so the two can never drift
+       (DATAVIZ-RULES rule 4).
+       ═══════════════════════════════════════════════════════════ */
+
+    get reliabilityChartSVG() {
+      const C = window.CasaDatosCharts;
+      const c = this.reliabilityCounts;
+      if (!C || !c.any) return '';
+      const es = this.lang === 'es';
+      const L = es
+        ? { high: 'Alta', moderate: 'Moderada', low: 'Baja', unknown: 'Desconocida' }
+        : { high: 'High', moderate: 'Moderate', low: 'Low', unknown: 'Unknown' };
+      const rows = ['high', 'moderate', 'low', 'unknown'].map(k => ({ label: L[k], value: c[k] || 0 }));
+      return C.buildBarChart(rows, {
+        width: 640,
+        height: 280,
+        decimals: 0,
+        ariaId: 'reliability-dist',
+        title: es ? 'Indicadores por clase de confiabilidad' : 'Indicators by reliability class',
+      });
+    },
+
+    /* Always five rows, always in HH/HL/LH/LL/NS order even when a count
+       is zero — buildBarChart assigns --tp-cat-1..5 by index, so a fixed
+       order is what keeps a colour meaning the same cluster type from one
+       county to the next (DATAVIZ-RULES rule 1). */
+    get lisaProfileRows() {
+      const p = this.lisaProfile;
+      if (!p || !Array.isArray(p.clusters)) return [];
+      const byCode = {};
+      for (const c of p.clusters) {
+        if (c && c.cluster) byCode[String(c.cluster).toUpperCase()] = c.count || 0;
+      }
+      const EN = { HH: 'High-High', HL: 'High-Low', LH: 'Low-High', LL: 'Low-Low', NS: 'Not significant' };
+      const ES = { HH: 'Alto-Alto', HL: 'Alto-Bajo', LH: 'Bajo-Alto', LL: 'Bajo-Bajo', NS: 'No significativo' };
+      const rows = [];
+      let any = false;
+      for (const code of ['HH', 'HL', 'LH', 'LL', 'NS']) {
+        const n = byCode[code] || 0;
+        if (n > 0) any = true;
+        rows.push({ code: code, label: EN[code], labelEs: ES[code], count: n });
+      }
+      return any ? rows : [];
+    },
+
+    lisaClusterCount(code) {
+      const r = this.lisaProfileRows.find(x => x.code === code);
+      return r ? r.count : 0;
+    },
+
+    get lisaProfileTotal() {
+      if (this.lisaProfile && this.lisaProfile.total_tracts != null) return this.lisaProfile.total_tracts;
+      return this.lisaProfileRows.reduce((s, r) => s + r.count, 0);
+    },
+
+    get lisaProfileChartSVG() {
+      const C = window.CasaDatosCharts;
+      const rows = this.lisaProfileRows;
+      if (!C || rows.length === 0) return '';
+      const es = this.lang === 'es';
+      return C.buildBarChart(
+        rows.map(r => ({ label: es ? r.labelEs : r.label, value: r.count })),
+        {
+          width: 640,
+          height: 300,
+          decimals: 0,
+          ariaId: 'lisa-cluster-profile',
+          title: es ? 'Secciones censales por tipo de clúster LISA' : 'Census tracts by LISA cluster type',
+        }
+      );
+    },
+
+    /* Prints every count in prose as well as in the chart, so a narrow
+       viewport that has to scroll the plot horizontally still gets the
+       numbers, and so an ES reader gets the High-High figure in Spanish. */
+    get lisaProfileNote() {
+      if (this.lisaProfileRows.length === 0) return '';
+      const hh = this.lisaClusterCount('HH');
+      const total = this.lisaProfileTotal;
+      if (this.lang === 'es') {
+        return 'De <strong>' + total + '</strong> secciones censales, <strong>' + hh + '</strong> forman clústeres Alto-Alto, ' +
+          this.lisaClusterCount('LL') + ' Bajo-Bajo, ' + this.lisaClusterCount('HL') + ' Alto-Bajo y ' +
+          this.lisaClusterCount('LH') + ' Bajo-Alto; ' + this.lisaClusterCount('NS') + ' no muestran agrupamiento significativo. ' +
+          'Las barras comienzan en cero y cada conteo se imprime sobre su propia barra.';
+      }
+      return 'Of <strong>' + total + '</strong> census tracts, <strong>' + hh + '</strong> form High-High clusters, ' +
+        this.lisaClusterCount('LL') + ' Low-Low, ' + this.lisaClusterCount('HL') + ' High-Low and ' +
+        this.lisaClusterCount('LH') + ' Low-High; ' + this.lisaClusterCount('NS') + ' show no significant clustering. ' +
+        'Bars start at zero and each count is printed above its own bar.';
+    },
+
     get factorList() {
       const labelMap = {
         'economic_distress': 'Economic Distress',
@@ -1690,6 +1975,14 @@ function countyProfile() {
     },
 
     async init() {
+      // Keep `lang` in step with lang-toggle.js so the generated chart SVGs
+      // re-render on a language switch, the way the data-en/data-es markup does.
+      this.lang = (window.LangToggle && window.LangToggle.getLang()) ||
+                  document.documentElement.getAttribute('lang') || 'en';
+      document.addEventListener('tp:langchange', (e) => {
+        this.lang = (e && e.detail && e.detail.lang) || 'en';
+      });
+
       this.geoid = PDIDeepLink.getParam('geoid', '');
       if (!this.geoid) {
         this.loading = false;
@@ -1755,6 +2048,7 @@ function countyProfile() {
         this.loadChildren();
         this.loadDissimilarity();
         this.loadLISA();
+        this.loadLISAProfile();
         this.loadEvidence();
         this.loadSparklines();
 
@@ -1767,6 +2061,14 @@ function countyProfile() {
       }
       this.loading = false;
       this.activeCategory = '';
+
+      // Act 1-3 sat display:none for the whole fetch, so an element carrying
+      // .reveal had no box for IntersectionObserver to intersect. Re-arm now
+      // that the content is actually in layout; reveals() skips anything it
+      // already revealed, so this is safe to call repeatedly.
+      this.$nextTick(() => {
+        if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+      });
 
       // Read deep-link params for layer/indicator/tab
       const layerParam = PDIDeepLink.getParam('layer', '');
@@ -2038,6 +2340,23 @@ function countyProfile() {
       this.lisaLoading = false;
     },
 
+    /* GET /geographies/:geoid/lisa-profile — the county-level roll-up of every
+       tract's LISA quadrant (ADR-011 §2B Layer 4). Deliberately NOT fatal: on a
+       404/500/timeout the card hides itself, layer4Context drops the High-High
+       sentence, and everything else in Layer 4 renders exactly as before. */
+    async loadLISAProfile() {
+      this.lisaProfileError = '';
+      // The endpoint 400s on anything that is not a 5-char county FIPS.
+      if (!this.geoid || this.geoid.length !== 5) return;
+      try {
+        const data = await this.api('/geographies/' + this.geoid + '/lisa-profile');
+        this.lisaProfile = (data && Array.isArray(data.clusters)) ? data : null;
+      } catch (e) {
+        this.lisaProfile = null;
+        this.lisaProfileError = e.message || 'unavailable';
+      }
+    },
+
     // ── Composite ───────────────────────────────────────────
 
     loadPresetNARI() {
@@ -2215,6 +2534,21 @@ function countyProfile() {
     },
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOTION BOOTSTRAP — P0
+   The head snippet adds `html.js` on parse, which immediately arms
+   motion.css's `html.js:not(.no-motion) .reveal { opacity: 0 }`. Only
+   TPMotion.reveals() ever adds the `.in` that reverses it, so without
+   this call the 2000ms __tpMotionFailsafe timer is the only thing that
+   makes .reveal content visible — a two-second blank section.
+   motion.js is `defer`, so it has executed by DOMContentLoaded; if it
+   somehow has not, the failsafe still recovers the page.
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.TPMotion) { return; }
+  window.TPMotion.reveals('.reveal');
+});
 </script>
 
 <script>
@@ -2312,7 +2646,6 @@ function videoPlayer(videoName) {
   };
 }
 </script>
-<script src="/static/chat-drawer.js"></script>
 
 <!-- Service Worker registration (ADR-012 I7: PWA offline) -->
 <script>

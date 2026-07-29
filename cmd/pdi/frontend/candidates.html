@@ -18,6 +18,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
 
+<!-- casa-datos chart primitives — buildBarChart/buildLineChart/buildSmallMultiples.
+     Loaded BEFORE alpine.min.js — see composites.html for why the order
+     matters (Alpine's defer script starts synchronously, ahead of any
+     later defer script, so a chart-reading x-html must not race it). -->
+<script defer src="/static/charts.js"></script>
+
 <!-- Alpine.js — local, no CDN -->
 <script defer src="/static/alpine.min.js"></script>
 
@@ -90,7 +96,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .candidate-tab-placeholder:hover {
     border-color: var(--border) !important;
-    color: var(--subtle) !important;
+    color: var(--quiet) !important;
     background: transparent !important;
   }
 
@@ -124,7 +130,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--subtle);
+    color: var(--quiet);
   }
 
   /* ── Dimension section grouping ─────────────────────────────── */
@@ -157,11 +163,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .priority-P1 { background: color-mix(in srgb, var(--live) 14%, transparent); color: var(--live); }
   .priority-P2 { background: color-mix(in srgb, var(--info) 14%, transparent); color: var(--info); }
-  .priority-P3 { background: color-mix(in srgb, var(--subtle) 14%, transparent); color: var(--subtle); }
+  .priority-P3 { background: color-mix(in srgb, var(--subtle) 14%, transparent); color: var(--quiet); }
 
   .dimension-policy-count {
     font-size: 0.7rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-left: auto;
   }
 
@@ -209,7 +215,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     padding: 0.15em 0.5em;
     border-radius: var(--r-badge);
     border: 1px solid var(--border);
-    color: var(--subtle);
+    color: var(--quiet);
     background: var(--plane-base);
     white-space: nowrap;
   }
@@ -362,7 +368,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .empty-state p {
     font-size: 0.8rem;
-    color: var(--subtle);
+    color: var(--quiet);
     max-width: 42ch;
     margin-inline: auto;
   }
@@ -389,9 +395,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     }
   }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 
@@ -833,6 +840,10 @@ function candidateTracker() {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>

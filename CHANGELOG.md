@@ -3,6 +3,42 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-07-28 (later) — stack capabilities, accessibility, light mode, chat drawer removed
+
+### P0 — `.reveal` content was invisible for 2 seconds on every page load
+`motion.css` declares `html.js:not(.no-motion) .reveal { opacity: 0 }`. The head snippet sets `.js` on every page, but **`motion.js` was loaded by zero pages**, and only it adds the `.in` class that reverses the rule. The 2000ms `__tpMotionFailsafe` timer was the sole thing making content appear. 26 elements across 6 pages (about 9, composites 7, index 5, evidence 2, candidates 2, narrative 1) blanked then snapped in. `motion.js` now loads on all 10 pages and initialises `TPMotion.reveals('.reveal')`, which clears the failsafe on execute.
+
+### Dead stack capability activated
+76KB of vendored casa-datos modules were embedded in the binary and referenced by nothing. `motion.js` (10/10 pages) and `charts.js` (4 pages) are now wired. `parametric.js`, `choropleth.js`, `bilingual-data.js` remain unused — `choropleth.js` deliberately: its `fitToViewBox()` is a linear scale-and-translate, **not a projection**, so it is not a drop-in for the Leaflet map's real GeoJSON.
+
+### Backend capability surfaced
+- `GET /v1/policy/geographies/:geoid/lisa-profile` worked and was never called. Now drives County Profile Layer 4 — ADR-011 §2B's "High-High clusters in [X] tracts" reads from `clusters[cluster=="HH"].count` (Dane: 81 of 738).
+- Videos went from 3 embedded to all 6, placed contextually per ADR-011 §3B. `about.html` had 7 "Coming soon" placeholders and zero videos.
+- Compare's statewide context became visual: standardized distribution strips, one panel per indicator, all 72 counties on a shared axis oriented so better is always right. Neutral-direction indicators excluded, never given an implied verdict.
+
+### Accessibility — measured, not stylistic
+- **`--subtle` (#6e6e80) failed WCAG AA as text**: 3.96:1 on `--bg`, 3.76:1 on `--surface` (AA-normal needs 4.5:1). It was used as a text colour **80 times across 9 files**. All swapped to `--quiet` (7.11:1 / 6.77:1 base; 5.74:1 / 5.46:1 enhanced). Non-text uses (backgrounds, borders, the `NS` polygon fill) deliberately preserved.
+- **LISA map tiers were indistinguishable under colour blindness.** HH ember vs HL red measured dE **4.2** under deuteranopia — effectively identical — on the two most decision-relevant tiers, where a tract's only encoder is its fill until clicked. Swapped to HH=red (`--tp-cat-5`), HL=sun (`--tp-cat-1`): dE **29.0** deuteranopia, **34.4** protanopia, ΔL* **32.2** (survives greyscale). Warm=disadvantage / cool=advantage semantics preserved; HH now carries red, matching the standard LISA convention. Cool pair (LL/LH) was already fine at 43.7 and untouched.
+- **Category tab colours collided with verdict colours.** `cat-health` rendered `--tp-cat-4` (emerald) and `cat-food` `--tp-cat-5` (red) on the same page where those tokens mean better/worse, and `cat-environment` used cyan, County B's identity. Resolved by separating *channel* (verdicts own text+bar-fill; categories own tab-fill+border) and drawing category hues only from the five non-verdict hues. `evidence.html` had a third, independent mapping — now unified.
+
+### Light theme completed (ADR-013 §3C)
+Token and shared layers already supported light; page-scoped `<style>` blocks were dark-only.
+- `#fcd34d` measured **1.35:1** and `#c4b5fd` **1.72:1** on the cream ground — effectively invisible. Replaced with tokens that flip.
+- `fix:` `.thread`'s `mix-blend-mode: multiply` was ungated. On an engine without `color-mix()`, forcing light theme yields the *dark* palette plus multiply — every spectrum stop landed at **1.01–1.04:1**. Not washed out; gone. Now inside the gate.
+- `fix:` `var(--plane-raised, #f0f4ff)` — `--plane-raised` is defined **nowhere**, so the hardcoded light-blue fallback fired in *both* themes.
+- `fix:` tract stroke was `rgba(255,255,255,0.06)` — white on cream, so tract boundaries vanished in light mode. Now theme-aware via `--tract-stroke`.
+- `fix:` `select` chevron was a hardcoded dark-tuned hex at **2.45:1** on light, under the 3:1 floor for the only affordance signalling "dropdown".
+- `narrative.html`'s `#fff`/`#000` confirmed inside `@media print` — correct, left alone.
+
+### Chat drawer removed (operator decision)
+Rationale: low expected adoption. `chat-drawer.js`/`.css` removed from all 10 pages and both assets deleted (24KB that would otherwise ship in the binary). It self-mounted to `document.body` with no pathname check, so `/chat` was rendering a floating drawer over a full chat page — removing it fixes that too. **`/chat` stays** as a destination with its own UI (`lib/api.js`, `lib/domain.js`, `lib/chat.js`, `lib/deeplink.js`), keeps its nav link, and the backend (`/v1/chat`, `pkg/grounding`, Gateway proxy) is untouched and still tested. ADR-011 carries a supersede block naming exactly what not to rebuild; ADR-005/006 got delivery-surface notes and remain valid.
+
+### Hygiene
+Two agent scratch files (`__preview_dist.html`, `_h_parsecheck.html`) were caught inside `cmd/pdi/frontend/`. `//go:embed all:frontend` reads the filesystem, not git, and the `all:` prefix includes underscore-prefixed names — both would have shipped in the binary despite never being committed. Directory verified at 36 entries.
+
+### Gates
+`go build` ✅ · `go vet` ✅ · `go test -short` 10/10 ✅ · all 10 pages: lang+theme toggle, footer, 9-link nav, 0 drawer refs, 0 `--subtle` text, `data-en`==`data-es`, `<div>` balanced ✅
+
 ## 2026-07-28
 
 ### Frontend rebuild — ADR-013 visual layer deployed (4 parallel tracks, PIP-115)

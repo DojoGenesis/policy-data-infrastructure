@@ -16,6 +16,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <link rel="stylesheet" href="/static/leaflet/leaflet.css">
 <script defer src="/static/alpine.min.js"></script>
 <script defer src="/static/leaflet/leaflet.js"></script>
+<!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
+     and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
+     __tpMotionFailsafe timer above is the only thing that ever makes .reveal content visible. -->
+<script defer src="/static/motion.js"></script>
 <style>
   [x-cloak] { display: none !important; }
 
@@ -89,6 +93,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     background: var(--bg);
   }
 
+  /* Tract/county boundary stroke — the separator between adjacent, near-
+     opaque (fillOpacity 0.88) coloured polygons. White at low opacity
+     reads as a fine hairline on the dark canvas but is white-on-cream in
+     light theme, where boundaries disappear entirely. Resolved through
+     _resolveColor() in JS (same as clusterColors/MISSING_COLOR) because
+     Leaflet's renderer needs a literal colour, not a live var() ref. */
+  :root {
+    --tract-stroke: rgba(255,255,255,0.06);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --tract-stroke: rgba(10,10,15,0.22); }
+  }
+  :root[data-theme="light"] { --tract-stroke: rgba(10,10,15,0.22); }
+
   /* ── Leaflet theming — Night Shift ───────────────────────────── */
   .leaflet-container {
     background: var(--bg) !important;
@@ -103,8 +121,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     background: var(--surface) !important;
   }
   .leaflet-control-attribution {
-    background: rgba(10,10,15,0.85) !important;
-    color: var(--subtle) !important;
+    /* was a hardcoded near-black rgba -- fine on dark, but a fixed dark
+       box behind --quiet text breaks on the light theme (dark-on-dark).
+       color-mix against --bg tracks the theme like every other chrome
+       piece here (.map-loadover uses the same technique below). */
+    background: color-mix(in srgb, var(--bg) 85%, transparent) !important;
+    color: var(--quiet) !important;
     font-size: 0.65rem !important;
   }
   .leaflet-control-attribution a { color: var(--muted) !important; }
@@ -219,6 +241,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-radius: 3px;
     flex-shrink: 0;
   }
+  /* Second, colour-independent encoder per tier: its own printed count and
+     share, so the legend reads without relying on the swatch. */
+  .lisa-legend-count {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
 
   /* ── Toggle switch ───────────────────────────────────────────── */
   .toggle-wrap {
@@ -296,6 +327,29 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     border-radius: 2px; margin-right: 6px;
     vertical-align: middle; flex-shrink: 0;
   }
+  /* Share-of-all-tracts bar, in that tier's own map colour. Zero-baselined
+     by construction (width IS the share), one scale across every row, and
+     the number is printed in the adjacent cell — never inside the fill. */
+  .tier-bar {
+    display: block;
+    height: 6px;
+    margin-top: 4px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    overflow: hidden;
+  }
+  .tier-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    min-width: 1px;
+  }
+  .stats-table td.stats-num small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.62rem;
+    color: var(--quiet);
+  }
 
   /* ── Loading / error overlays ────────────────────────────────── */
   .map-loadover {
@@ -319,6 +373,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .state-error { border-color: var(--tp-cat-5); }
   .state-error p { color: var(--tp-cat-5); }
+  /* Raw --tp-cat-5 as text is tuned for a dark ground; swap to the
+     verified-AA-on-paper deep token for light (CONTEXTS.md rule 4). */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .state-error p { color: var(--tp-red-deep); }
+  }
+  :root[data-theme="light"] .state-error p { color: var(--tp-red-deep); }
 
   /* ── Responsive ──────────────────────────────────────────────── */
   @media (max-width: 600px) {
@@ -380,7 +440,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .mp-geoid {
     font-size: 0.65rem;
-    color: var(--subtle);
+    color: var(--quiet);
     font-family: var(--font-mono);
   }
 
@@ -407,7 +467,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 1px;
   }
 
@@ -469,7 +529,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .mp-county-link:hover { text-decoration: underline; }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
 </head>
@@ -528,7 +587,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <option :value="v.id" x-text="v.label + (analysisMap[v.id] ? '' : ' (no data)')"></option>
         </template>
       </select>
-      <span x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]" style="font-size:0.7rem;color:var(--subtle);margin-left:4px;"></span>
+      <span x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]" style="font-size:0.7rem;color:var(--quiet);margin-left:4px;"></span>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;" x-show="availableVintages.length > 0">
@@ -616,13 +675,21 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </div>
 
-    <!-- ── Legend ── -->
+    <!-- ── Legend ──
+         DATAVIZ-RULES.md rule 2: colour is never the only signal. Each tier
+         carries its code (HH/HL/LL/LH/NS), a plain-language description, AND
+         its own tract count and share — so the legend still reads in
+         grayscale, and a reader who cannot separate the ember HH fill from
+         the red HL fill can still tell which tier is which and how big it
+         is. Swatch alone would not satisfy the rule. -->
     <div class="lisa-legend" x-show="mapReady" x-cloak>
       <template x-for="item in legendItems" :key="item.tier">
         <div class="lisa-legend-item">
           <span class="lisa-swatch" :style="'background:' + _resolveColor(item.colorRef)"></span>
           <span x-text="item.tier" style="font-weight:600;"></span>
-          <span style="font-size:0.65rem;color:var(--subtle);" x-text="item.desc"></span>
+          <span style="font-size:0.65rem;color:var(--quiet);" x-text="item.desc"></span>
+          <span class="lisa-legend-count"
+                x-text="tierRow(item.tier).count + ' · ' + tierRow(item.tier).share.toFixed(0) + '%'"></span>
         </div>
       </template>
     </div>
@@ -645,18 +712,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- LEFT: empty spacer (map is already full-width above) -->
     <div></div>
 
-    <!-- RIGHT: Stats panel -->
-    <div class="stats-panel">
+    <!-- RIGHT: Stats panel
+         The cluster distribution is a chart AND a table at once: each row's
+         bar is that tier's share of all tracts, drawn in that tier's own map
+         colour so chart and map can never disagree, zero-baselined by
+         construction, with the count and share printed OUTSIDE the fill
+         (DATAVIZ-RULES.md rules 2 and 5). Rule 4's accessible table is the
+         visible table these bars live inside — strictly stronger than a
+         visually-hidden duplicate, and it cannot drift from the chart
+         because it is the same rows. -->
+    <div class="stats-panel reveal">
       <h3 data-en="Cluster Distribution" data-es="Distribución de Clústeres">Cluster Distribution</h3>
       <div class="stats-summary">
         <span x-text="stats.significant + ' of ' + stats.total + ' tracts significant (p &lt; 0.05)'"></span>
         <br>
-        <span style="font-size:0.7rem;color:var(--subtle);" x-show="stats.missingTracts > 0"
+        <span style="font-size:0.7rem;color:var(--quiet);" x-show="stats.missingTracts > 0"
               x-text="stats.missingTracts + ' tracts with no score data'"></span>
       </div>
       <table class="stats-table">
         <thead>
-          <tr><th data-en="Tier" data-es="Nivel">Tier</th><th data-en="Count" data-es="Cantidad">Count</th></tr>
+          <tr><th data-en="Tier" data-es="Nivel">Tier</th><th data-en="Tracts (share of all)" data-es="Secciones (proporción del total)">Tracts (share of all)</th></tr>
         </thead>
         <tbody>
           <template x-for="row in stats.rows" :key="row.tier">
@@ -664,13 +739,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <td>
                 <span class="stats-dot" :style="'background:' + _resolveColor(row.color)"></span>
                 <span x-text="row.label"></span>
+                <span class="tier-bar">
+                  <span class="tier-bar-fill"
+                        :style="'width:' + row.share.toFixed(1) + '%;background:' + _resolveColor(row.color)"></span>
+                </span>
               </td>
-              <td x-text="row.count"></td>
+              <td class="stats-num">
+                <span x-text="row.count"></span>
+                <small x-text="row.share.toFixed(0) + '%'"></small>
+              </td>
             </tr>
           </template>
         </tbody>
       </table>
-      <div style="font-size:0.65rem;color:var(--subtle);line-height:1.5;">
+      <div style="font-size:0.65rem;color:var(--quiet);line-height:1.5;">
         <p style="margin:4px 0;"><strong>HH</strong> <span data-en="— High value, neighbors also high (concentrated)" data-es="— Valor alto, vecinos también altos (concentrado)">— High value, neighbors also high (concentrated)</span></p>
         <p style="margin:4px 0;"><strong>HL</strong> <span data-en="— High value, neighbors low (outlier)" data-es="— Valor alto, vecinos bajos (atípico)">— High value, neighbors low (outlier)</span></p>
         <p style="margin:4px 0;"><strong>LL</strong> <span data-en="— Low value, neighbors also low (concentrated)" data-es="— Valor bajo, vecinos también bajos (concentrado)">— Low value, neighbors also low (concentrated)</span></p>
@@ -727,9 +809,14 @@ function lisaMap() {
     _countyLayer: null,
 
     /* ── Color scale (5-tier — Rainbow categorical) ────────── */
+    /* HH/HL reassigned from ember/red (dE 20.2 normal, but 4.2 under
+       deuteranopia -- effectively indistinguishable) to red/sun-gold
+       (dE 76.8 normal, 29.0 deuteranopia, DeltaL* 32.2 -- survives full
+       greyscale). Fill is the only encoder pre-click, so this is a
+       colour-vision-accessibility fix, not a palette preference. */
     clusterColors: {
-      'HH': 'var(--tp-cat-3)',   // ember — concentrated disadvantage
-      'HL': 'var(--tp-cat-5)',   // red — outlier (worse than neighbors)
+      'HH': 'var(--tp-cat-5)',   // red — concentrated disadvantage
+      'HL': 'var(--tp-cat-1)',   // sun gold — outlier (worse than neighbors)
       'LL': 'var(--tp-cat-4)',   // emerald — concentrated advantage
       'LH': 'var(--tp-cat-6)',   // cyan — outlier (better than neighbors)
       'NS': 'var(--subtle)'      // muted gray — not significant
@@ -754,8 +841,8 @@ function lisaMap() {
     },
 
     legendItems: [
-      { tier: 'HH', colorRef: 'var(--tp-cat-3)', desc: 'concentrated disadvantage' },
-      { tier: 'HL', colorRef: 'var(--tp-cat-5)', desc: 'outlier: worse than neighbors' },
+      { tier: 'HH', colorRef: 'var(--tp-cat-5)', desc: 'concentrated disadvantage' },
+      { tier: 'HL', colorRef: 'var(--tp-cat-1)', desc: 'outlier: worse than neighbors' },
       { tier: 'LL', colorRef: 'var(--tp-cat-4)', desc: 'concentrated advantage' },
       { tier: 'LH', colorRef: 'var(--tp-cat-6)', desc: 'outlier: better than neighbors' },
       { tier: 'NS', colorRef: 'var(--subtle)',    desc: 'not significant' }
@@ -1144,7 +1231,7 @@ function lisaMap() {
       return {
         fillColor: color,
         weight: 0.5,
-        color: 'rgba(255,255,255,0.06)',
+        color: this._resolveColor('var(--tract-stroke)'),
         fillOpacity: 0.88
       };
     },
@@ -1271,7 +1358,7 @@ function lisaMap() {
 
         // ── ACS indicators ──
         html += '<div class="popup-section">';
-        html += '<div style="font-size:0.65rem;color:var(--subtle);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">ACS Indicators</div>';
+        html += '<div style="font-size:0.65rem;color:var(--quiet);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">ACS Indicators</div>';
         html += self._indicatorRow('Poverty Rate', props.poverty_rate, '%');
         html += self._indicatorRow('Median HH Income', props.median_hh_income, '$');
         html += self._indicatorRow('% People of Color', props.pct_poc, '%');
@@ -1297,7 +1384,7 @@ function lisaMap() {
       });
 
       layer.on('mouseout', function() {
-        layer.setStyle({ weight: 0.5, color: 'rgba(255,255,255,0.06)' });
+        layer.setStyle({ weight: 0.5, color: self._resolveColor('var(--tract-stroke)') });
         layer.unbindTooltip();
       });
     },
@@ -1418,9 +1505,28 @@ function lisaMap() {
         significant: significant,
         missingTracts: missingTracts,
         rows: ['HH', 'HL', 'LL', 'LH', 'NS'].map(tier => ({
-          tier, label: this.clusterLabels[tier], color: this.clusterColors[tier], count: counts[tier]
+          tier, label: this.clusterLabels[tier], color: this.clusterColors[tier], count: counts[tier],
+          // Share of ALL tracts, so every row's bar is on one scale.
+          share: total > 0 ? (counts[tier] / total) * 100 : 0
         }))
       };
+
+      // The stats panel is a .reveal block that only exists once the map is
+      // ready; reveals() skips nodes it already revealed, so re-calling it
+      // is how a stack tells the motion kit about newly-shown nodes.
+      this.$nextTick(() => {
+        if (window.TPMotion) window.TPMotion.reveals('.reveal');
+      });
+    },
+
+    // Tract count and share for one LISA tier — the printed, colour-
+    // independent encoder the legend pairs with each swatch (rule 2).
+    tierRow(tier) {
+      const rows = (this.stats && this.stats.rows) || [];
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].tier === tier) return rows[i];
+      }
+      return { tier, count: 0, share: 0 };
     },
 
     // ═══════════════ HELPERS ══════════
@@ -1432,11 +1538,6 @@ function lisaMap() {
     // ═══════════════ CHAT INTEGRATION ══
     askAboutTract() {
       if (!this.mpTract) return;
-      // Open chat drawer and pre-fill a question
-      if (window.PDIChatDrawer) {
-        window.PDIChatDrawer.open();
-        window.PDIChatDrawer.focus();
-      }
       // Set page context for chat
       if (window.ChatAdapter) {
         ChatAdapter.setPageContext({
@@ -1478,6 +1579,13 @@ function lisaMap() {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  // Motion engine init. motion.css hides .reveal until motion.js adds .in;
+  // without this call the only thing that ever shows revealed content is
+  // the 2000ms __tpMotionFailsafe timer in the head snippet.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>

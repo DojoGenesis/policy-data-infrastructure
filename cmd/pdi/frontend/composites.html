@@ -18,6 +18,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <!-- PDI layout layer — cards, tables, badges, nav -->
 <link rel="stylesheet" href="/static/styles.css">
 
+<!-- casa-datos chart primitives — buildBarChart/buildLineChart/buildSmallMultiples.
+     Loaded BEFORE alpine.min.js: Alpine's own defer script calls start()
+     synchronously the instant it executes (document.readyState is already
+     "interactive" by the time any defer script runs, never "loading"), so
+     Alpine's first DOM pass — and any x-html reading window.CasaDatosCharts —
+     must not run ahead of this file in the defer queue. -->
+<script defer src="/static/charts.js"></script>
+
 <!-- Alpine.js — local, no CDN -->
 <script defer src="/static/alpine.min.js"></script>
 
@@ -209,7 +217,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .var-item-meta {
     font-size: 0.65rem;
-    color: var(--subtle);
+    color: var(--quiet);
     margin-top: 1px;
   }
 
@@ -326,7 +334,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     justify-content: space-between;
     align-items: center;
     font-size: 0.68rem;
-    color: var(--subtle);
+    color: var(--quiet);
   }
 
   .weight-summary-val {
@@ -380,7 +388,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   .method-option-desc {
     font-size: 0.68rem;
-    color: var(--subtle);
+    color: var(--quiet);
     line-height: 1.35;
   }
 
@@ -436,7 +444,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .result-geoid {
     font-size: 0.65rem;
     font-family: var(--font-mono);
-    color: var(--subtle);
+    color: var(--quiet);
     margin-bottom: clamp(10px, 1.5vw, 14px);
   }
 
@@ -452,7 +460,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .result-score-label {
     font-size: 0.65rem;
     font-weight: 600;
-    color: var(--subtle);
+    color: var(--quiet);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-top: 2px;
@@ -526,44 +534,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--text);
   }
 
-  /* Mini bar chart comparing perturbed vs base */
-  .sens-bars {
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    height: 48px;
-    margin-bottom: 2px;
-  }
-
-  .sens-bar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    flex: 1;
-    min-width: 36px;
-  }
-
-  .sens-bar-fill {
+  /* Sensitivity mini bar chart — charts.js buildBarChart() SVG.
+     Replaces the old height-only .sens-bar* divs, whose label used
+     --subtle (DATAVIZ-RULES.md rule 3: 3.49:1 on a raised card, under
+     AA) and printed no value at all, color/height being the only
+     signal (rule 2). buildBarChart's own axis text reads --quiet. */
+  .sens-chart svg {
+    display: block;
     width: 100%;
-    border-radius: 3px 3px 0 0;
-    transition: height 300ms ease;
-    min-height: 3px;
-  }
-
-  .sens-bar-fill.base {
-    background: var(--tp-grad-spectrum);
-  }
-  .sens-bar-fill.perturbed {
-    background: var(--tp-grad-sky);
-  }
-
-  .sens-bar-label {
-    font-size: 0.55rem;
-    font-weight: 600;
-    color: var(--subtle);
-    margin-top: 3px;
-    white-space: nowrap;
+    max-width: 220px;
+    height: auto;
   }
 
   .sens-stability {
@@ -574,29 +554,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .sens-stability.robust { color: var(--tp-cat-4); }
   .sens-stability.stable { color: var(--tp-cat-1); }
-  .sens-stability.moderate { color: var(--tp-cat-5); }
-
-  /* ── Chat toggle ─────────────────────────────────────────────── */
-  .chat-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid var(--border-strong);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-  }
-
-  .chat-toggle:hover {
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
-    color: var(--text);
-    border-color: var(--accent);
-  }
+  /* Neutral, not red: --tp-cat-5 means "worse" everywhere else on the
+     platform (.delta-red, .zbar-worse, map HL tier) and moderate stability
+     is not a bad verdict -- it is a middling finding, not a warning. */
+  .sens-stability.moderate { color: var(--muted); }
 
   /* ── Responsive ──────────────────────────────────────────────── */
   @media (max-width: 700px) {
@@ -604,10 +565,30 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       flex-direction: column;
     }
   }
+
+  /* ── Light theme: Rainbow-as-text safety (CONTEXTS.md rules 1/2/4) ──
+     .direction-adversity/.direction-resilience and .sens-stability
+     .robust/.stable are legitimate verdict/direction reads (red=worse,
+     emerald=better, sun=stable -- consistent with the platform's
+     established meaning for these hues), so the hue itself is correct
+     in both themes. Only the raw-hue-as-text technique fails: it is
+     tuned for a dark ground and drops under 4.5:1 on cream. Swap to the
+     paired *-deep token, verified AA-normal on --tp-paper, for light. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .filter-chip.direction-adversity { color: var(--tp-red-deep); }
+    :root:not([data-theme="dark"]) .filter-chip.direction-resilience { color: var(--tp-emerald-deep); }
+    :root:not([data-theme="dark"]) .sens-stability.robust { color: var(--tp-emerald-deep); }
+    :root:not([data-theme="dark"]) .sens-stability.stable { color: var(--tp-sun-deep); }
+  }
+  :root[data-theme="light"] .filter-chip.direction-adversity { color: var(--tp-red-deep); }
+  :root[data-theme="light"] .filter-chip.direction-resilience { color: var(--tp-emerald-deep); }
+  :root[data-theme="light"] .sens-stability.robust { color: var(--tp-emerald-deep); }
+  :root[data-theme="light"] .sens-stability.stable { color: var(--tp-sun-deep); }
 </style>
-  <link rel="stylesheet" href="/static/chat-drawer.css">
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
   <script defer src="/static/lang-toggle.js"></script>
+  <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
+  <script defer src="/static/motion.js"></script>
 </head>
 <body>
 
@@ -664,7 +645,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📍 Geographies" data-es="📍 Geografías">📍 Geographies</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="geoids.length + ' selected'"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="geoids.length + ' selected'"></span>
         </div>
 
         <div class="geo-search-wrap">
@@ -689,7 +670,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 type="button"
               >
                 <span x-text="g.name"></span>
-                <span style="color:var(--subtle);font-size:0.68rem;margin-left:auto;font-family:var(--font-mono)" x-text="g.geoid"></span>
+                <span style="color:var(--quiet);font-size:0.68rem;margin-left:auto;font-family:var(--font-mono)" x-text="g.geoid"></span>
               </button>
             </template>
           </div>
@@ -705,7 +686,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </template>
         </div>
 
-        <p x-show="geoids.length === 0" style="font-size:0.72rem;color:var(--subtle);margin-top:8px" data-en="Select one or more counties to include in the composite." data-es="Selecciona uno o más condados para incluir en el índice compuesto.">
+        <p x-show="geoids.length === 0" style="font-size:0.72rem;color:var(--quiet);margin-top:8px" data-en="Select one or more counties to include in the composite." data-es="Selecciona uno o más condados para incluir en el índice compuesto.">
           Select one or more counties to include in the composite.
         </p>
       </div>
@@ -714,7 +695,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📊 Variables" data-es="📊 Variables">📊 Variables</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--subtle)" x-text="variables.length + ' selected'"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="variables.length + ' selected'"></span>
         </div>
 
         <!-- Filter -->
@@ -759,7 +740,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </template>
         </div>
 
-        <p x-show="filteredVariables.length === 0 && !varsLoading" style="font-size:0.75rem;color:var(--subtle);padding:1em 0;text-align:center" data-en="No variables match your filter." data-es="Ninguna variable coincide con tu filtro.">
+        <p x-show="filteredVariables.length === 0 && !varsLoading" style="font-size:0.75rem;color:var(--quiet);padding:1em 0;text-align:center" data-en="No variables match your filter." data-es="Ninguna variable coincide con tu filtro.">
           No variables match your filter.
         </p>
 
@@ -824,7 +805,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           </template>
         </div>
 
-        <p x-show="variables.length === 0" style="font-size:0.72rem;color:var(--subtle)" data-en="Select 2+ variables to set weights." data-es="Selecciona 2 o más variables para ajustar las ponderaciones.">
+        <p x-show="variables.length === 0" style="font-size:0.72rem;color:var(--quiet)" data-en="Select 2+ variables to set weights." data-es="Selecciona 2 o más variables para ajustar las ponderaciones.">
           Select 2+ variables to set weights.
         </p>
       </div>
@@ -858,7 +839,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <span x-show="!presetLoading" data-en="Load NARI v2" data-es="Cargar NARI v2">Load NARI v2</span>
             <span x-show="presetLoading" data-en="Loading…" data-es="Cargando…">Loading…</span>
           </button>
-          <span style="font-size:0.65rem;color:var(--subtle)" data-en="Neighborhood Adversity &amp; Resilience Index" data-es="Neighborhood Adversity &amp; Resilience Index">Neighborhood Adversity &amp; Resilience Index</span>
+          <span style="font-size:0.65rem;color:var(--quiet)" data-en="Neighborhood Adversity &amp; Resilience Index" data-es="Neighborhood Adversity &amp; Resilience Index">Neighborhood Adversity &amp; Resilience Index</span>
         </div>
         <p x-show="presetError" x-cloak class="state-error" style="margin-top:8px;font-size:0.75rem" x-text="presetError"></p>
       </div>
@@ -881,7 +862,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </span>
           </button>
 
-          <span style="font-size:0.7rem;color:var(--subtle)" x-show="!canCompute && !computing">
+          <span style="font-size:0.7rem;color:var(--quiet)" x-show="!canCompute && !computing">
             <span x-show="geoids.length === 0" data-en="Select geographies" data-es="Selecciona geografías">Select geographies</span>
             <span x-show="geoids.length > 0 && variables.length < 2" data-en="Select 2+ variables" data-es="Selecciona 2 o más variables">Select 2+ variables</span>
           </span>
@@ -976,22 +957,27 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 <span :style="'color:' + (sc.direction === 'increase' ? 'var(--gated)' : 'var(--info)')" x-text="sc.direction === 'increase' ? '+' + perturbationPct : '-' + perturbationPct"></span>
               </div>
 
-              <!-- Mini bar chart: base vs perturbed -->
-              <div class="sens-bars">
-                <div class="sens-bar">
-                  <div class="sens-bar-fill base" :style="'height:' + barHeight(r.score) + 'px'"></div>
-                  <div class="sens-bar-label" data-en="Base" data-es="Base">Base</div>
-                </div>
-                <template x-for="ps in relevantPerturbed(idx, sc.perturbed_variable)" :key="ps.geoid">
-                  <div class="sens-bar">
-                    <div
-                      class="sens-bar-fill perturbed"
-                      :style="'height:' + barHeight(ps.score) + 'px'"
-                    ></div>
-                    <div class="sens-bar-label" x-text="sc.direction === 'increase' ? '+' : '−'"></div>
-                  </div>
-                </template>
-              </div>
+              <!-- Sensitivity mini bar chart: base vs perturbed, via charts.js buildBarChart
+                   (DATAVIZ-RULES.md rules 2/3/5: zero-baselined, value printed above bar,
+                   --quiet axis text) — replaces the old height-only divs with no value label. -->
+              <div class="sens-chart" x-html="sensChartSVG(idx, sc)"></div>
+              <table class="visually-hidden">
+                <caption data-en="Sensitivity comparison: base vs perturbed composite score" data-es="Comparación de sensibilidad: puntuación compuesta base frente a perturbada">Sensitivity comparison: base vs perturbed composite score</caption>
+                <thead>
+                  <tr>
+                    <th data-en="Scenario" data-es="Escenario">Scenario</th>
+                    <th data-en="Composite score" data-es="Puntuación compuesta">Composite score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="row in sensChartData(idx, sc)" :key="row.label">
+                    <tr>
+                      <td x-text="row.label"></td>
+                      <td x-text="row.value.toFixed(3)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
 
               <!-- Stability -->
               <div
@@ -1376,6 +1362,34 @@ function compositeBuilder() {
       return Math.max(4, (score / maxScore) * 44);
     },
 
+    // ── Sensitivity mini bar chart (charts.js) ───────────────────
+    // One data array feeds BOTH the SVG (sensChartSVG) and the
+    // visually-hidden <table> in the markup, so the two can never
+    // drift apart (casa-datos CLAUDE.md verification checklist).
+    sensChartData(resultIdx, sc) {
+      const r = this.results[resultIdx];
+      const base = r && r.score != null ? r.score : 0;
+      const dirSign = sc.direction === 'increase' ? '+' : '−';
+      const data = [{ label: 'Base', value: base }];
+      this.relevantPerturbed(resultIdx, sc.perturbed_variable).forEach((ps) => {
+        data.push({ label: dirSign + this.perturbationPct.replace('±', ''), value: ps.score != null ? ps.score : 0 });
+      });
+      return data;
+    },
+
+    sensChartSVG(resultIdx, sc) {
+      if (!window.CasaDatosCharts) return '';
+      const data = this.sensChartData(resultIdx, sc);
+      const ariaId = 'sens-' + resultIdx + '-' + sc.perturbed_variable + '-' + sc.direction;
+      return window.CasaDatosCharts.buildBarChart(data, {
+        width: 220,
+        height: 150,
+        decimals: 3,
+        ariaId: ariaId,
+        title: 'Composite score sensitivity: base vs perturbed ' + sc.perturbed_variable
+      });
+    },
+
     maxResultScore() {
       let max = 0;
       for (const r of this.results) {
@@ -1387,6 +1401,10 @@ function compositeBuilder() {
 }
 </script>
 
-<script src="/static/chat-drawer.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+  });
+</script>
 </body>
 </html>
