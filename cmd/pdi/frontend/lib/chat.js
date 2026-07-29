@@ -54,6 +54,28 @@ const ChatAdapter = {
     html = html.replace(
       /\{\{table:\s*([^}]+?)\s*\}\}/g,
       function(match, content) {
+        // Two layouts are accepted on purpose.
+        //
+        // The documented one is a single flat pipe-separated list. But the
+        // system prompt now ships its county/policy data as one pipe-delimited
+        // record PER LINE, and the model demonstrably carries that convention
+        // into its {{table:...}} output (measured: 3 of 4 tables came back
+        // multi-line). Flat-chunking such content silently scrambles the
+        // columns — the newline lands inside a cell, every subsequent cell
+        // shifts, and the user sees a wrong-but-plausible table.
+        //
+        // So: if the content has line breaks, treat each line as a row. This
+        // is strictly more robust than instructing the model not to do it,
+        // which was tried first and did not hold.
+        if (content.indexOf('\n') !== -1) {
+          var rows = content.split('\n')
+            .map(function(r) { return r.trim(); })
+            .filter(function(r) { return r.length > 0; })
+            .map(function(r) {
+              return r.split('|').map(function(c) { return c.trim(); });
+            });
+          if (rows.length > 1) return ChatAdapter._buildDataTableRows(rows);
+        }
         var cells = content.split('|').map(function(c) { return c.trim(); });
         // First row is headers; remaining cells split into rows of header-length
         // If only one row of data, treat all as a single-row table with first cells as headers
@@ -121,6 +143,30 @@ const ChatAdapter = {
     }
 
     return '<div class="mini-chart">' + bars + '</div>';
+  },
+
+  // Build an HTML data table from already-delimited rows (one array per row).
+  // Row 0 is the header; every other row is padded/truncated to its width so a
+  // ragged model response can never shift cells into the wrong column.
+  _buildDataTableRows(rows) {
+    if (!rows || rows.length === 0) return '';
+    var cols = rows[0].length;
+    if (cols === 0) return '';
+
+    var html = '<table class="data-table"><thead><tr>';
+    for (var i = 0; i < cols; i++) {
+      html += '<th>' + ChatAdapter._escapeHtml(rows[0][i] || '') + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+    for (var r = 1; r < rows.length; r++) {
+      html += '<tr>';
+      for (var c = 0; c < cols; c++) {
+        html += '<td>' + ChatAdapter._escapeHtml(rows[r][c] || '') + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
   },
 
   // Build an HTML data table from cell array.
@@ -314,9 +360,22 @@ const ChatAdapter = {
   async _buildSystemPrompt() {
     if (this._systemPrompt) return this._systemPrompt;
 
-    // Fetch live data to ground the chat
-    let countyLines = '';
-    let policyLines = '';
+    // Fetch live data to ground the chat.
+    //
+    // ── Why this is tabular and not prose ──────────────────────────────────
+    // This prompt is re-sent on EVERY message, so its size sets how many
+    // people the public chat can serve under the operator's daily cap. The
+    // prose "key=value" form used here previously spent ~45% of its bytes
+    // re-stating column names and the same candidate identity on every row.
+    // Both blocks are now header-declared and pipe-delimited: the header
+    // names the columns once, the rows carry only values. This is LOSSLESS —
+    // every field that was here before is still here. Verified safe against
+    // the live payload: no county name or policy field contains a "|", and
+    // all 72 county names carry the " County" suffix that the header hoists.
+    let countyBlock = '';
+    let policyBlock = '';
+    let countyCount = 0;
+    let policyCount = 0;
     try {
       const [countyResp, policyResp] = await Promise.allSettled([
         PDI.counties(),
@@ -325,67 +384,99 @@ const ChatAdapter = {
 
       if (countyResp.status === 'fulfilled') {
         const items = countyResp.value.items || [];
-        countyLines = items.map(c => {
+        countyCount = items.length;
+        countyBlock = items.map(c => {
           const pov = Domain.indValue(c, 'poverty_rate');
           const inc = Domain.indValue(c, 'median_household_income');
           const uns = Domain.indValue(c, 'uninsured_rate');
-          return `${c.name} (${c.geoid}): pop=${c.population?.toLocaleString() || '?'}, poverty=${pov != null ? pov + '%' : '?'}, income=$${inc ? Math.round(inc).toLocaleString() : '?'}, uninsured=${uns != null ? uns + '%' : '?'}`;
+          return [
+            (c.name || '?').replace(/ County$/, ''),
+            c.geoid || '?',
+            c.population != null ? c.population : '?',
+            pov != null ? pov : '?',
+            inc != null ? Math.round(inc) : '?',
+            uns != null ? uns : '?'
+          ].join('|');
         }).join('\n');
       }
 
       if (policyResp.status === 'fulfilled') {
         const policies = policyResp.value || [];
-        policyLines = policies.map(p =>
-          `${p.id}: ${p.candidate} (${p.office || '?'}, ${p.state || '?'}) — ${p.title} [${p.equity_dimension || '?'}] — ${p.description || ''}`
-        ).join('\n');
+        policyCount = policies.length;
+
+        // Hoist the repeated "Candidate (Office, State)" into ONE header per
+        // candidate rather than repeating it on every row.
+        //
+        // CAREFUL: this dataset is NOT single-candidate. As of 2026-07-29 it is
+        // 70 Francesca Hong (Governor, WI) + 15 Zohran Mamdani (Mayor, NY).
+        // Hoisting a single global candidate header would silently relabel all
+        // 15 Mamdani positions as Hong's — a factual corruption invisible to
+        // any structural check. Grouping is what keeps attribution correct, and
+        // the grouping is computed from the data (not hardcoded), so a third
+        // candidate would get their own header automatically.
+        const groups = [];
+        const byKey = Object.create(null);
+        for (const p of policies) {
+          const key = `${p.candidate || '?'} ${p.office || '?'} ${p.state || '?'}`;
+          if (!byKey[key]) {
+            byKey[key] = {
+              candidate: p.candidate || '?',
+              office: p.office || '?',
+              state: p.state || '?',
+              rows: []
+            };
+            groups.push(byKey[key]);
+          }
+          byKey[key].rows.push(p);
+        }
+        policyBlock = groups.map(g => {
+          const prefixes = Array.from(
+            new Set(g.rows.map(p => String(p.id || '').split('-')[0]).filter(Boolean))
+          ).join('/');
+          const header = `# ${g.candidate} — ${g.office}, ${g.state} — ${g.rows.length} positions` +
+                         (prefixes ? ` (ids ${prefixes}-*)` : '');
+          const body = g.rows.map(p => [
+            p.id || '?',
+            p.title || '?',
+            p.equity_dimension || '?',
+            p.description || ''
+          ].join('|')).join('\n');
+          return header + '\n' + body;
+        }).join('\n');
       }
     } catch (_) {}
 
-    this._systemPrompt = `You are the Policy Data Infrastructure assistant. You answer questions about Wisconsin county-level social determinants data, policy positions, and their connections. You have COMPLETE ACCESS to the live dataset below. Use it to answer precisely. Do not hedge or say "I recommend checking the Census Bureau" — you HAVE the data.
+    this._systemPrompt = `You are the Policy Data Infrastructure assistant. You answer questions about Wisconsin county-level social determinants data, candidate policy positions, and their connections. You have COMPLETE ACCESS to the live dataset below. Use it to answer precisely. Do not hedge or say "I recommend checking the Census Bureau" — you HAVE the data.
 
 INSTRUCTIONS:
-- When asked about a county, cite its exact poverty rate, income, and uninsured rate from the data below
-- When asked about policies, explain which equity dimensions they address and which counties have the worst indicators in those dimensions
-- When asked "which policies will help which counties most", cross-reference the policy equity_dimensions with county indicators
-- For cost-saving questions, prioritize policies addressing the highest-burden counties (highest poverty, worst health outcomes, most cost-burdened)
-- Always cite the data source: Census ACS 2023 5-Year for demographics, CDC PLACES 2022 for health outcomes, USDA FARA 2019 for food access
-- Use specific numbers, not ranges
+- For a county, cite its exact poverty rate, income, and uninsured rate from the data below. Use specific numbers, never ranges.
+- For a policy, name the equity dimension it addresses and which counties are worst on that dimension's indicators.
+- For "which policies help which counties most", cross-reference policy equity_dimension against county indicators.
+- For cost-saving questions, prioritize policies addressing the highest-burden counties (highest poverty, worst health outcomes, most cost-burdened).
+- Cite sources: Census ACS 2023 5-Year (demographics), CDC PLACES 2022 (health outcomes), USDA FARA 2019 (food access).
 
-QUERY OPERATIONS — When answering, plan responses using these analytical operations:
-- lookup: find a specific value for a geography-indicator pair
-- rank: order geographies by an indicator value (top N, bottom N, or statewide ranking)
-- compare: side-by-side comparison of two or more geographies across multiple indicators
-- aggregate: summary statistics (mean, median, min, max) across a set of geographies
-- threshold: filter geographies above or below a cutoff value
-- distribution: describe the spread of values — range, quartiles, skew, histogram shape
-- correlation: identify relationships between two indicators across geographies (positive/negative, strength)
-- explain: combine data with methodology to explain why a geography has a particular value (causal factors, context)
-- time_series: compare data across vintage years (e.g., 2019 vs 2023 trends)
+QUERY OPERATIONS — plan each answer as one of: lookup (one geography-indicator value) · rank (top N, bottom N, statewide order) · compare (2+ geographies across indicators) · aggregate (mean, median, min, max) · threshold (filter above/below a cutoff) · distribution (range, quartiles, skew, shape) · correlation (direction and strength between two indicators) · explain (data + methodology: why a geography has this value) · time_series (across vintages, e.g. 2019 vs 2023).
 
-RICH FORMATTING TOKENS — Use these to present data visually. They render as styled components:
-- Stat callouts: {{stat:value:label}} — for highlighting a key statistic (e.g., {{stat:17.5%:poverty rate}})
-- Mini bar charts: {{chart:name1=val1, name2=val2, ...}} — for comparing values across entities (e.g., {{chart:Menominee=17.5, Dane=9.2, State=11.3}})
-- Data tables: {{table:h1|h2|row1c1|row1c2|row2c1|row2c2|...}} — for structured comparisons (e.g., {{table:County|Poverty|Income|Menominee|17.5%|$45,200|Dane|9.2%|$78,900|State|11.3%|$72,400}})
+RICH FORMATTING TOKENS — these render as styled components:
+- {{stat:value:label}} — highlight one key statistic, e.g. {{stat:17.5%:poverty rate}}
+- {{chart:name1=val1, name2=val2, ...}} — compare values across entities, e.g. {{chart:Menominee=17.5, Dane=9.2, State=11.3}}
+- {{table:h1|h2|row1c1|row1c2|row2c1|row2c2|...}} — structured comparison, e.g. {{table:County|Poverty|Income|Menominee|17.5%|$45,200|Dane|9.2%|$78,900}}
 
-Use these tokens whenever presenting numeric comparisons, rankings, or key findings. Mix them with narrative text — don't put all tokens in a block. Place stat callouts inline with explanations, tables after comparisons, and charts for rankings of 3-6 items.
+CRITICAL — two hard rules for every {{...}} token. (1) Never nest one token inside another: a {{table:...}} or {{chart:...}} contains plain values only, never a {{stat:...}}. (2) Never put a line break inside a token — a {{table:...}} is ONE flat pipe-separated list on a SINGLE line: every header cell, then every data cell in row order, separated only by "|". The DATA BLOCKS below happen to use one pipe-delimited record per line; that is an input format for you to read, and must never be copied into an output token. Breaking either rule makes the table render as scrambled columns or as raw text.
 
-SPATIAL NARRATION — When the user asks you to "walk through," "compare," "explain," or "recommend," act as a spatial narrator. You guide the user through the page, section by section, telling a story about the data:
+Use them whenever presenting numeric comparisons, rankings, or key findings. Mix with narrative — never a block of bare tokens. Stat callouts inline with the explanation, tables after comparisons, charts for rankings of 3-6 items.
 
-- WALK-THROUGH: When asked to "walk me through this county," narrate each layer (1-5) in order. For each layer, describe what the user is seeing, cite key values, and use {{scroll:layer-N}} to trigger the page to scroll to that section. Structure: introduce the county → Layer 1 (primary observation) → Layer 2 (research-grounded measures) → Layer 3 (derived structure) → Layer 4 (geography as signal) → Layer 5 (query-time construction) → evidence cards / policy levers. Keep each layer description to 2-3 sentences.
-
-- COMPARISON: When asked to compare, fetch or compute the comparison values. Use {{chart:...}} for visual side-by-side. Cite specific numbers — "Dane County's poverty rate is 9.2% vs the state average of 11.3%." If comparing to neighbors, list specific neighboring counties and their values. End with actionable insight: which direction the gap runs and what it means.
-
-- EXPLANATION: When asked "why is this tract an outlier/cluster," explain the LISA methodology: "A High-High cluster means both this tract AND its neighbors have high values — it's not just this tract being high, it's the neighborhood being high together." Cite the tract's specific value and its neighbors' values. Explain what spatial autocorrelation means in plain language.
-
-- RECOMMENDATION: When asked "what should I do about this," cross-reference the county's worst indicators with policy evidence cards. Match policy equity dimensions to the county's highest-burden areas. For each recommendation: (1) name the policy lever, (2) cite the specific county data that justifies it, (3) state the equity dimension it addresses. Use {{highlight:card-N}} to draw attention to relevant evidence cards.
-
-NAVIGATION COMMANDS — You can control the page the user sees. Use these tokens to guide attention:
-- {{scroll:layer-N}} — scrolls the page to Layer N (county profile sections). Use layer numbers 1-5.
-- {{map:indicator=X&zoom=N}} — updates the map view to show indicator X at zoom level N
-- {{highlight:card-N}} — highlights evidence card N on the page
+NAVIGATION COMMANDS — you control the page the user sees. Use sparingly, only when they add to the narrative; don't spam them.
+- {{scroll:layer-N}} — scroll to Layer N of a county profile (N is 1-5)
+- {{map:indicator=X&zoom=N}} — update the map to indicator X at zoom level N
+- {{highlight:card-N}} — highlight evidence card N
 - {{layer:N}} — shorthand for {{scroll:layer-N}}
 
-Use navigation commands sparingly — only when they add value to the narrative. Don't spam them.
+SPATIAL NARRATION — when asked to "walk through," "compare," "explain," or "recommend," narrate the page section by section:
+- WALK-THROUGH ("walk me through this county"): narrate layers 1-5 in order, 2-3 sentences each, describing what the user sees and citing key values, with {{scroll:layer-N}} to scroll to each. Order: introduce the county → L1 primary observation → L2 research-grounded measures → L3 derived structure → L4 geography as signal → L5 query-time construction → evidence cards / policy levers.
+- COMPARISON: compute the values and show {{chart:...}} side-by-side. Cite specific numbers — "Dane County's poverty rate is 9.2% vs the state average of 11.3%." If comparing neighbors, name them and their values. End with which direction the gap runs and what it means.
+- EXPLANATION ("why is this tract an outlier/cluster"): explain LISA methodology — "A High-High cluster means both this tract AND its neighbors have high values — it's not just this tract being high, it's the neighborhood being high together." Cite the tract's value and its neighbors'. Define spatial autocorrelation in plain language.
+- RECOMMENDATION ("what should I do about this"): cross-reference the county's worst indicators with policy evidence cards, matching equity dimensions to its highest-burden areas. For each: (1) name the policy lever, (2) cite the county data justifying it, (3) state the equity dimension. Use {{highlight:card-N}} for relevant evidence cards.
 
 EQUITY DIMENSION → INDICATOR MAPPING:
 - housing_affordability, housing_stability → poverty_rate, median_household_income (cost-burdened counties)
@@ -397,14 +488,16 @@ EQUITY DIMENSION → INDICATOR MAPPING:
 - transit_access → poverty_rate, median_household_income (transit deserts in rural poor counties)
 - rural_equity → poverty_rate in northern/rural counties
 
-WISCONSIN COUNTY DATA (72 counties, Census ACS 2023 5-Year):
-${countyLines || 'Data loading failed — provide general analysis based on known WI patterns'}
+WISCONSIN COUNTY DATA (${countyCount || 72} counties, Census ACS 2023 5-Year). Pipe-delimited; the trailing " County" is omitted from each name (row 1 is Adams County). Columns:
+name|geoid|population|poverty_rate(%)|median_household_income($)|uninsured_rate(%)
+${countyBlock || 'Data loading failed — provide general analysis based on known WI patterns'}
 
-CANDIDATE POLICY POSITIONS (85 total):
-${policyLines || 'Policy data loading failed'}
+CANDIDATE POLICY POSITIONS (${policyCount || 85} total). Pipe-delimited and grouped by candidate: each "# Candidate — Office, State" header applies to EVERY row beneath it until the next such header. Columns:
+id|title|equity_dimension|description
+${policyBlock || 'Policy data loading failed'}
 
 COST-SAVING ANALYSIS FRAMEWORK:
-The counties where policy interventions save the most money are those with the highest poverty + uninsured rates, because:
+Interventions save the most money in counties with the highest poverty + uninsured rates, because:
 1. Medicaid expansion (Hong's BadgerCare) saves most in high-uninsured counties: Menominee (16.5%), Iron (11.2%), Florence (10.8%)
 2. Housing affordability policies save most where cost burden is highest: Milwaukee (17.5% poverty + 939K pop = largest absolute burden)
 3. Food access policies save most in high-poverty rural counties: Menominee, Ashland, Forest, Sawyer

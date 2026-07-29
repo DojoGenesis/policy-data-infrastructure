@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -67,6 +69,31 @@ func runServe(port int) error {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
+
+	// Trusted proxies. gin's default is to trust EVERY peer (0.0.0.0/0 and
+	// ::/0) with ForwardedByClientIP on, which makes c.ClientIP() return the
+	// leftmost X-Forwarded-For entry — a value the caller controls end to end.
+	// That is fine when nothing depends on client identity and actively
+	// dangerous the moment something does, which /v1/chat's per-client budget
+	// now does.
+	//
+	// The live topology is Cloudflare → Caddy → this process on localhost:8340,
+	// so the only legitimate proxy hop is loopback. Trusting exactly that makes
+	// c.ClientIP() resolve to the real peer instead of to a header. Override
+	// with PDI_TRUSTED_PROXIES (comma-separated CIDRs) when the reverse proxy
+	// is not on the same host — a container network, for instance.
+	trustedProxies := []string{"127.0.0.1/32", "::1/128"}
+	if v := strings.TrimSpace(os.Getenv("PDI_TRUSTED_PROXIES")); v != "" {
+		trustedProxies = nil
+		for _, p := range strings.Split(v, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				trustedProxies = append(trustedProxies, p)
+			}
+		}
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		return fmt.Errorf("serve: trusted proxies %v: %w", trustedProxies, err)
+	}
 
 	// CORS — allow browser clients from any policydatainfrastructure.com origin
 	// plus localhost for development. Configurable via CORS_ORIGINS env var
@@ -134,12 +161,23 @@ func runServe(port int) error {
 	// Never log the value. Only its presence is ever printed or reported.
 	gwToken := strings.TrimSpace(os.Getenv("DOJO_GATEWAY_TOKEN"))
 
-	r.POST("/v1/chat", newChatProxyHandler(gwTarget, gwToken, &http.Client{Timeout: 3 * time.Minute}))
+	// Cost cap. /v1/chat is public and unauthenticated, so the only thing
+	// bounding model spend is this ledger. See pkg/gateway/chatbudget.go.
+	chatCfg, budgetWarnings := gateway.ChatBudgetConfigFromEnv()
+	for _, w := range budgetWarnings {
+		fmt.Printf("  chat budget: %s\n", w)
+	}
+	chatBudget := gateway.NewChatBudget(chatCfg)
+
+	r.POST("/v1/chat", newChatProxyHandler(gwTarget, gwToken, &http.Client{Timeout: 3 * time.Minute}, chatBudget))
 	authState := "no credential — DOJO_GATEWAY_TOKEN unset, chat returns 503"
 	if gwToken != "" {
 		authState = "service credential configured (DOJO_GATEWAY_TOKEN)"
 	}
 	fmt.Printf("  chat:     /v1/chat → %s/v1/chat [%s]\n", gwTarget, authState)
+	fmt.Printf("  budget:   $%.2f/day ≈ %d exchanges @ $%.4f · per client $%.4f ≈ %d exchanges · resets 00:00 UTC · in-memory (a restart clears the day's tally)\n",
+		chatCfg.DailyBudgetUSD, chatCfg.ExchangesPerDay(), chatCfg.ReferenceExchangeUSD(),
+		chatCfg.PerClientDailyUSD(), chatCfg.ExchangesPerClientPerDay())
 
 	// Serve embedded frontend static files.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
@@ -238,6 +276,21 @@ func runServe(port int) error {
 	return nil
 }
 
+const (
+	// maxChatRequestBytes caps the request body. Purely an out-of-memory
+	// guard: the real body is ~25 KB, so this is 80x headroom, and anything
+	// approaching it would be refused by the per-client budget long before it
+	// arrived here. Without it, io.ReadAll below will happily buffer whatever
+	// a caller sends.
+	maxChatRequestBytes = 2 << 20 // 2 MiB
+
+	// maxSettleBodyBytes caps how much of the upstream response is buffered in
+	// order to read its usage block. Chat replies are single-digit KB;
+	// anything larger is streamed straight through and settled at the
+	// pre-estimate rather than held in memory.
+	maxSettleBodyBytes = 1 << 20 // 1 MiB
+)
+
 // newChatProxyHandler builds the /v1/chat proxy handler.
 //
 // It is a constructor rather than an inline closure so the auth behaviour can be
@@ -258,7 +311,23 @@ func runServe(port int) error {
 //     unauthenticated request only produces an upstream 401 whose body looks like
 //     the Gateway rejecting the *user*, which is the confusion that let this bug
 //     live in production.
-func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.HandlerFunc {
+//
+// Spend control (added 2026-07-29): every admitted request reserves a
+// conservative cost estimate against a daily dollar budget and settles against
+// the Gateway's reported usage afterwards. The budget applies to ALL requests,
+// including ones carrying an inbound Authorization header. Exempting those
+// would be defensible in principle — a request on someone else's credential
+// does not spend PDI's money — but the exemption would key off a header the
+// caller controls, so anyone holding a leaked DOJO_GATEWAY_TOKEN could present
+// it inbound and spend PDI's credit outside the ledger. One rule, no bypass.
+func newChatProxyHandler(gwTarget, gwToken string, client *http.Client, budget *gateway.ChatBudget) gin.HandlerFunc {
+	if budget == nil {
+		// A missing budget is a programming error, not a request to disable
+		// the cap. Substitute the default rather than serving uncapped.
+		budget = gateway.NewChatBudget(gateway.DefaultChatBudgetConfig())
+	}
+	cfg := budget.Config()
+
 	return func(c *gin.Context) {
 		authz := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authz == "" && gwToken != "" {
@@ -268,6 +337,11 @@ func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.Hand
 			// 503, not 401: the visitor did nothing wrong — the server is
 			// missing configuration. Distinguishable from an upstream 401 by
 			// both status and the absence of the Gateway's "success" field.
+			//
+			// Checked before the budget on purpose: a server that cannot call
+			// upstream spends nothing, so its budget can never be the reason
+			// it is refusing, and answering 429 here would misdirect the
+			// operator to the wrong knob.
 			c.JSON(http.StatusServiceUnavailable, gateway.ErrorResponse{
 				Error:  "chat is not configured on this server",
 				Detail: "DOJO_GATEWAY_TOKEN is not set, so PDI holds no credential for the Dojo Gateway. No request was sent upstream. An operator must configure the service credential before chat can answer.",
@@ -275,14 +349,40 @@ func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.Hand
 			return
 		}
 
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxChatRequestBytes)
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				c.JSON(http.StatusRequestEntityTooLarge, gateway.ErrorResponse{
+					Error:  "chat request is too large",
+					Detail: fmt.Sprintf("The request body exceeds %d bytes. No request was sent upstream.", maxChatRequestBytes),
+				})
+				return
+			}
 			c.JSON(http.StatusBadRequest, gateway.ErrorResponse{Error: "read body failed"})
 			return
 		}
+
+		// Admission: reserve the pessimistic cost. A pre-estimate cannot know
+		// how long the answer will run, so it assumes the top of the observed
+		// range; settlement below corrects it against the real usage.
+		clientKey, _ := gateway.ClientKey(c)
+		estimate := cfg.EstimateRequestUSD(len(body))
+		reservation, denial := budget.Reserve(clientKey, estimate)
+		if denial != nil {
+			denial.Abort(c)
+			return
+		}
+		// Catch-all: any exit path that does not settle explicitly (including a
+		// panic unwinding into gin.Recovery) books the conservative estimate.
+		// Settle is idempotent, so the explicit calls below win.
+		defer reservation.Settle(estimate)
+
 		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST",
-			gwTarget+"/v1/chat", strings.NewReader(string(body)))
+			gwTarget+"/v1/chat", bytes.NewReader(body))
 		if err != nil {
+			reservation.Settle(0) // nothing left this process
 			c.JSON(http.StatusInternalServerError, gateway.ErrorResponse{Error: "build proxy request failed"})
 			return
 		}
@@ -292,6 +392,10 @@ func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.Hand
 
 		resp, err := client.Do(proxyReq)
 		if err != nil {
+			// No response at all: the Gateway was unreachable, so no model
+			// ran. Charging for it would let an outage burn the day's budget
+			// and lock chat out for hours after the Gateway came back.
+			reservation.Settle(0)
 			// err may embed the request URL but never a header value.
 			c.JSON(http.StatusBadGateway, gateway.ErrorResponse{
 				Error:  "gateway unreachable",
@@ -307,6 +411,39 @@ func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.Hand
 				extraHeaders[h] = v
 			}
 		}
-		c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, extraHeaders)
+		contentType := resp.Header.Get("Content-Type")
+
+		// A stream cannot be buffered without breaking it, and an oversized
+		// body must not be held in memory. Both keep the estimate.
+		if strings.Contains(strings.ToLower(contentType), "text/event-stream") || resp.ContentLength > maxSettleBodyBytes {
+			reservation.Settle(estimate)
+			c.DataFromReader(resp.StatusCode, resp.ContentLength, contentType, resp.Body, extraHeaders)
+			return
+		}
+
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxSettleBodyBytes+1))
+		if readErr != nil || len(respBody) > maxSettleBodyBytes {
+			reservation.Settle(estimate)
+			c.DataFromReader(resp.StatusCode, resp.ContentLength, contentType,
+				io.MultiReader(bytes.NewReader(respBody), resp.Body), extraHeaders)
+			return
+		}
+
+		// Settlement. Real usage beats the guess whenever the Gateway reports
+		// it; the fallbacks below are ordered so that an unrecognised shape
+		// costs the estimate rather than nothing.
+		actual := estimate
+		if promptTokens, completionTokens, ok := gateway.UsageFromResponse(respBody); ok {
+			actual = cfg.CostUSD(promptTokens, completionTokens)
+		} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			// The Gateway refused — bad request, auth, upstream failure. Those
+			// are decided before or instead of generation, so no tokens were
+			// billed. A 2xx with no usage block, by contrast, means a model
+			// almost certainly did run, and keeps the estimate.
+			actual = 0
+		}
+		reservation.Settle(actual)
+
+		c.DataFromReader(resp.StatusCode, int64(len(respBody)), contentType, bytes.NewReader(respBody), extraHeaders)
 	}
 }
