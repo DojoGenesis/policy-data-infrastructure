@@ -81,6 +81,23 @@
      Walks all elements that carry the target language attribute
      and sets textContent. Elements without a translation retain
      their current textContent (English fallback). */
+  /* Attributes that can carry user-visible text and therefore need a
+     translated pair. `placeholder` was the only one supported until
+     2026-07-29, which left every aria-label and title on every page
+     stuck in English regardless of the selected language — an
+     accessibility hole for Spanish screen-reader users, not a polish
+     issue: a sighted user could at least read the translated label
+     next to the control, while a screen-reader user got only the
+     untranslated one.
+
+     Convention: data-<lang>-<attr>, e.g.
+       <button aria-label="Dismiss"
+               data-en-aria-label="Dismiss"
+               data-es-aria-label="Descartar">
+     `placeholder` keeps working exactly as before — it is just one
+     entry in this list now rather than a special case. */
+  var TRANSLATABLE_ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+
   function swapDOM(lang) {
     var attr = 'data-' + lang;
     var els = d.querySelectorAll('[' + attr + ']');
@@ -91,12 +108,14 @@
         el.textContent = text;
       }
     }
-    /* Input placeholders */
-    var placeholderAttr = attr + '-placeholder';
-    var inputs = d.querySelectorAll('[' + placeholderAttr + ']');
-    for (var j = 0; j < inputs.length; j++) {
-      var val = inputs[j].getAttribute(placeholderAttr);
-      if (val !== null) { inputs[j].placeholder = val; }
+    for (var a = 0; a < TRANSLATABLE_ATTRS.length; a++) {
+      var name = TRANSLATABLE_ATTRS[a];
+      var src = attr + '-' + name;
+      var nodes = d.querySelectorAll('[' + src + ']');
+      for (var j = 0; j < nodes.length; j++) {
+        var val = nodes[j].getAttribute(src);
+        if (val !== null) { nodes[j].setAttribute(name, val); }
+      }
     }
   }
 
@@ -116,10 +135,17 @@
   }
 
   /* ── Init ───────────────────────────────────────────────────── */
+  /* True once init() has run a first swapDOM. addStrings() reads this to
+     decide whether a late registration needs an immediate re-swap: before
+     init the upcoming swap will pick the strings up anyway, after it the
+     DOM has already been walked and needs a second pass. */
+  var inited = false;
+
   function init() {
     /* Apply detected language */
     d.documentElement.setAttribute('lang', currentLang);
     swapDOM(currentLang);
+    inited = true;
 
     /* ── Build toggle button ────────────────────────────────── */
     var header = d.querySelector('.site-header-inner');
@@ -164,20 +190,117 @@
       header.appendChild(pair);
     }
 
-    /* ── Expose public API ──────────────────────────────────── */
-    w.LangToggle = {
-      getLang: function () { return currentLang; },
-      setLang: setLang,
-      toggle: toggleLang,
-      isES:  function () { return currentLang === 'es'; },
-      isEN:  function () { return currentLang === 'en'; },
-      t: function (key) {
-        var entry = T[key];
-        if (!entry) return key;
-        return entry[currentLang] || entry.en || key;
-      }
-    };
   }
+
+  /* ── Alpine bridge ─────────────────────────────────────────────
+     swapDOM cannot reach Alpine-rendered text. x-text overwrites
+     textContent from its own expression on every reactive update, so
+     an element carrying both x-text and a data-es pair renders the
+     English expression result and silently discards the translation.
+     That is why ~200 strings stayed English in Spanish mode across
+     the ten pages while the surrounding chrome translated correctly.
+
+     A store, not a helper function, is the fix. Alpine tracks store
+     reads inside expressions, so any expression calling
+     $store.i18n.t(...) re-evaluates automatically when .lang changes.
+     A plain global t() would return the right string but would never
+     tell Alpine to re-render, leaving the page in the old language
+     until something else happened to touch the same component.
+
+       <span x-text="$store.i18n.t('compare.tied')"></span>
+
+     ORDERING — measured, not assumed. Alpine 3.14.9 loaded with defer
+     does NOT wait for DOMContentLoaded: it starts as soon as its own
+     deferred script executes, dispatching alpine:init at
+     readyState === 'interactive'. Verified event order on this site:
+
+       alpine:init (interactive) -> alpine:initialized -> DOMContentLoaded
+
+     So an alpine:init listener registered by a script that runs after
+     alpine.min.js never fires, and a store registered later is too
+     late for Alpine's FIRST pass — every $store.i18n expression in the
+     initial render would evaluate against an undefined store and that
+     binding would be dead for the life of the page.
+
+     The load order therefore matters: lang-toggle.js must appear
+     BEFORE alpine.min.js in every page. Both are defer, and deferred
+     scripts execute in document order, so tag position is what
+     guarantees this. Both paths below are kept anyway — the listener
+     for the correct order, the immediate call for a page that ever
+     regresses to loading Alpine first (late registration still works;
+     it just cannot rescue the first render). */
+  function translate(key) {
+    var entry = T[key];
+    if (!entry) { return key; }
+    return entry[currentLang] || entry.en || key;
+  }
+
+  var storeReady = false;
+  function registerStore() {
+    if (storeReady) { return; }
+    if (!w.Alpine || typeof w.Alpine.store !== 'function') { return; }
+    storeReady = true;
+    w.Alpine.store('i18n', {
+      lang: currentLang,
+      /* Reading this.lang is what registers the reactive dependency —
+         do not "optimize" it away by calling translate(key) directly,
+         or expressions stop re-rendering on language change. */
+      t: function (key) { return this.lang && translate(key); },
+      is: function (l) { return this.lang === l; }
+    });
+  }
+
+  d.addEventListener('alpine:init', registerStore);
+  registerStore();
+
+  /* ── Public API ────────────────────────────────────────────────
+     Assigned at module level, NOT inside init(). init() is a
+     DOMContentLoaded handler, so exposing the API there meant no
+     inline page script could call LangToggle at parse time — which is
+     exactly when a page needs to register its own strings, before
+     Alpine evaluates the expressions that read them. */
+  w.LangToggle = {
+    getLang: function () { return currentLang; },
+    setLang: setLang,
+    toggle: toggleLang,
+    isES:  function () { return currentLang === 'es'; },
+    isEN:  function () { return currentLang === 'en'; },
+    t: translate,
+
+    /* Register page-scoped strings:
+
+         LangToggle.addStrings({
+           'compare.tied': { en: 'Tied', es: 'Empatado' }
+         });
+
+       Page strings live with the page rather than in one shared map
+       here. That matches how this repo already scopes CSS, keeps a
+       page's vocabulary readable next to the markup that uses it, and
+       lets several pages be translated in parallel without every
+       change landing in this file.
+
+       Keys are namespaced by page (compare.*, county.*) by convention;
+       nothing enforces it, but a collision silently overwrites, so
+       keep the prefix. Re-swaps immediately if the DOM is already
+       initialised, so a late registration still takes effect. */
+    addStrings: function (map) {
+      if (!map || typeof map !== 'object') { return; }
+      for (var k in map) {
+        if (Object.prototype.hasOwnProperty.call(map, k)) { T[k] = map[k]; }
+      }
+      if (inited) { swapDOM(currentLang); }
+    }
+  };
+
+  /* Keep the store in step with the toggle. setLang fires this event
+     after swapDOM, so static and Alpine text change in one frame
+     rather than visibly staggering. */
+  d.addEventListener('tp:langchange', function (e) {
+    if (w.Alpine && typeof w.Alpine.store === 'function') {
+      var s = w.Alpine.store('i18n');
+      if (s) { s.lang = (e.detail && e.detail.lang) || currentLang; }
+    }
+  });
 
   if (d.readyState === 'loading') {
     d.addEventListener('DOMContentLoaded', init);

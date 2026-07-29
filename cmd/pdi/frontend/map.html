@@ -25,6 +25,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      The _leafletReady() guard in init() is the belt to this reorder's braces —
      a reorder is invisible to a future editor, a guard is not. Keep both. -->
 <script defer src="/static/leaflet/leaflet.js"></script>
+<!-- Language toggle — replaces ES twin files per ADR-011.
+     MUST load before alpine.min.js: Alpine 3.14.9 with defer starts at
+     readyState "interactive" (verified order: alpine:init -> alpine:initialized
+     -> DOMContentLoaded), so lang-toggle.js has to register the $store.i18n
+     Alpine store BEFORE Alpine's first pass. Registering later still works as
+     an API, but every $store.i18n expression in the initial render would have
+     already evaluated against an undefined store and stayed dead. Deferred
+     scripts run in document order, so this tag's position is the guarantee. -->
+<script defer src="/static/lang-toggle.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 <!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
      and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
@@ -539,8 +548,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .mp-county-link:hover { text-decoration: underline; }
 </style>
-  <!-- Language toggle — replaces ES twin files per ADR-011 -->
-  <script defer src="/static/lang-toggle.js"></script>
 </head>
 <body>
 <a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>

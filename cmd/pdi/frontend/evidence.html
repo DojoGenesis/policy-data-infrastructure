@@ -19,6 +19,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <link rel="stylesheet" href="/static/styles.css">
 
 <!-- Alpine.js — local, no CDN -->
+<!-- Language toggle — replaces ES twin files per ADR-011.
+     MUST load before alpine.min.js: Alpine 3.14.9 with defer starts at
+     readyState "interactive" (verified order: alpine:init -> alpine:initialized
+     -> DOMContentLoaded), so lang-toggle.js has to register the $store.i18n
+     Alpine store BEFORE Alpine's first pass. Registering later still works as
+     an API, but every $store.i18n expression in the initial render would have
+     already evaluated against an undefined store and stayed dead. Deferred
+     scripts run in document order, so this tag's position is the guarantee. -->
+<script defer src="/static/lang-toggle.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
@@ -472,8 +481,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     text-decoration: none;
   }
 </style>
-  <!-- Language toggle — replaces ES twin files per ADR-011 -->
-  <script defer src="/static/lang-toggle.js"></script>
   <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
   <script defer src="/static/motion.js"></script>
 </head>
