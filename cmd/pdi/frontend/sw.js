@@ -10,16 +10,21 @@ const STATIC_CACHE = 'pdi-static-v1';
 const API_CACHE = 'pdi-api-v1';
 const MAX_API_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
-// Resources to pre-cache on install
+// Resources to pre-cache on install.
+// Every entry MUST resolve — cache.addAll() rejects the whole batch if any
+// single request 404s, so one stale path silently precaches nothing at all.
+// chat-drawer.js/.css were removed 2026-07-28 and deleted from disk; leaving
+// them here would have failed the entire precache.
 const PRECACHE_URLS = [
   '/',
   '/static/tokens.css',
   '/static/motion.css',
   '/static/styles.css',
   '/static/alpine.min.js',
+  '/static/motion.js',
+  '/static/charts.js',
   '/static/lang-toggle.js',
-  '/static/chat-drawer.js',
-  '/static/chat-drawer.css',
+  '/static/theme-toggle.js',
   '/static/lib/api.js',
   '/static/lib/domain.js',
   '/static/lib/chat.js',
