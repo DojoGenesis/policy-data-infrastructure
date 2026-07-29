@@ -181,6 +181,17 @@ func (e *Engine) Generate(ctx context.Context, req GenerateRequest) (*Document, 
 	if req.Selection == "" {
 		req.Selection = "by_tier"
 	}
+	if strings.TrimSpace(req.ScopeName) == "" {
+		// A caller (historically the gateway's HTTP handlers) can reach this
+		// with no human-readable scope name resolved. Normalizing it here,
+		// alongside the other request defaults above, means every downstream
+		// use of req.ScopeName — the title, the subtitle/body prose, the
+		// per-profile propagation below, and every {{.ScopeName}} template
+		// interpolation — gets the same real fallback instead of an empty
+		// string. See unknownScopeName in story.go for why "" is never let
+		// through as-is.
+		req.ScopeName = unknownScopeName
+	}
 
 	// 1. Select geographies.
 	var profiles []GeographyProfile

@@ -912,7 +912,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ═══ RESULTS CARDS ═══ -->
   <div x-show="!computing && !computeError && results.length > 0" x-cloak>
     <template x-for="(r, idx) in results" :key="r.geoid">
-      <div class="card result-card reveal" :style="'--d:' + (idx * 80)">
+      <!-- idx % 8, not raw idx: --d feeds motion.css's transition-delay
+           (calc(var(--d,0) * 1ms), --motion-reveal-delay-step: 80ms). results is a
+           flat vertical stack that reaches 72 rows at county scope, so the raw index
+           put the last card's delay at 5.68s — it would sit at opacity 0 for seconds
+           after scrolling into view, indistinguishable from the blank-page bug fixed
+           on evidence.html. These cards are a single column (.result-card is a
+           margin-stacked block, not a grid), so 8 comfortably exceeds how many are
+           ever on screen at once: each visible run still staggers relative to itself,
+           the delay just stops compounding down the whole list. Caps at 560ms. -->
+      <div class="card result-card reveal" :style="'--d:' + ((idx % 8) * 80)">
 
         <!-- Geography info -->
         <div class="result-geo-name" x-text="geoLabel(r.geoid)"></div>

@@ -1223,3 +1223,130 @@ func TestComposite_MethodWeightedZScore(t *testing.T) {
 		t.Errorf("expected method=weighted_zscore, got %q", resp.Method)
 	}
 }
+
+// ── Test: POST /generate/narrative — P0 regression (missing scope name) ────
+//
+// Root cause: handleGenerateNarrative built narrative.GenerateRequest
+// without ever populating ScopeName, so every narrative generated through
+// the HTTP API rendered its heading as "Five Mornings in " with the county
+// name missing (TODO.md P0, found 2026-07-28). cmd/pdi/generate.go (the CLI
+// path) always resolves ScopeName via store.GetGeography before calling
+// Engine.Generate, which is why the bug only reproduced through the
+// API/frontend and never via the CLI.
+//
+// These tests drive the actual HTTP handler through the Gin router — not
+// Engine.Generate directly — because the bug was in the handler's request
+// construction, not in the engine itself. The pre-existing
+// TestEngineRenderHTML_FiveMornings (pkg/narrative/engine_test.go) calls
+// Engine.Generate with ScopeName already populated and therefore can never
+// observe this class of regression; that gap is exactly what let this ship.
+
+func TestHandleGenerateNarrative_TitleIncludesScopeName(t *testing.T) {
+	rank1 := 1
+	s := &mockStore{
+		geographies: []geo.Geography{
+			{GEOID: "55025", Level: geo.County, Name: "Dane County, WI"},
+			{GEOID: "55025000100", Level: geo.Tract, Name: "South Madison Tract 1"},
+		},
+		scores: []store.AnalysisScore{
+			{AnalysisID: "test-analysis", GEOID: "55025000100", Score: 92.0, Rank: &rank1, Percentile: 97.0, Tier: "critical"},
+		},
+	}
+	r := newTestRouter(s)
+
+	body := `{"geoid":"55025","analysis_id":"test-analysis"}`
+	req, _ := http.NewRequest(http.MethodPost, "/v1/generate/narrative", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/html")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	html := w.Body.String()
+
+	// This is the literal P0: the heading used to render exactly this,
+	// with the county name missing after "in ".
+	if strings.Contains(html, "Five Mornings in </h1>") || strings.Contains(html, "Five Mornings in <") {
+		t.Errorf("heading rendered with the county name missing (P0 regression):\n%s", html)
+	}
+	if !strings.Contains(html, "<h1>Five Mornings in Dane County, WI</h1>") {
+		t.Errorf("expected heading to contain resolved scope name %q; got:\n%s", "Dane County, WI", html)
+	}
+}
+
+// TestHandleGenerateNarrative_UnresolvableGEOIDFallsBackGracefully covers
+// the fallback chosen for the gateway's scope-name resolution: when
+// GetGeography can't resolve a name for the requested GEOID (not found, DB
+// error, etc.), the narrative must still generate — with the GEOID itself
+// standing in for the name — rather than failing the request or leaving the
+// title with a dangling "... in ".
+func TestHandleGenerateNarrative_UnresolvableGEOIDFallsBackGracefully(t *testing.T) {
+	rank1 := 1
+	s := &mockStore{
+		geographies: []geo.Geography{
+			// The scope GEOID "99999" is deliberately absent from the
+			// store; only the chapter-level tract exists, so profile
+			// selection succeeds while the scope-name lookup itself fails.
+			{GEOID: "55025000100", Level: geo.Tract, Name: "South Madison Tract 1"},
+		},
+		scores: []store.AnalysisScore{
+			{AnalysisID: "test-analysis", GEOID: "55025000100", Score: 92.0, Rank: &rank1, Percentile: 97.0, Tier: "critical"},
+		},
+	}
+	r := newTestRouter(s)
+
+	body := `{"geoid":"99999","analysis_id":"test-analysis"}`
+	req, _ := http.NewRequest(http.MethodPost, "/v1/generate/narrative", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/html")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (narrative should still generate when the scope name can't be resolved); body: %s", w.Code, w.Body.String())
+	}
+
+	html := w.Body.String()
+	if !strings.Contains(html, "<h1>Five Mornings in 99999</h1>") {
+		t.Errorf("expected fallback heading to contain the raw GEOID %q; got:\n%s", "99999", html)
+	}
+}
+
+// TestHandleServeNarrative_NoScopeFallsBackToGenericLabel covers GET
+// /generate/narrative/:analysis_id (handleServeNarrative), which takes scope
+// from an optional query parameter and shared the exact same
+// GenerateRequest-construction bug the POST handler had. With no scope
+// supplied and no analysis-derived GEOID available (mockStore.GetAnalysis
+// always errors), the title must still be grammatical — never the bare
+// "Five Mornings in " string the P0 reported.
+func TestHandleServeNarrative_NoScopeFallsBackToGenericLabel(t *testing.T) {
+	rank1 := 1
+	s := &mockStore{
+		geographies: []geo.Geography{
+			{GEOID: "55025000100", Level: geo.Tract, Name: "South Madison Tract 1"},
+		},
+		scores: []store.AnalysisScore{
+			{AnalysisID: "test-analysis", GEOID: "55025000100", Score: 92.0, Rank: &rank1, Percentile: 97.0, Tier: "critical"},
+		},
+	}
+	r := newTestRouter(s)
+
+	req, _ := http.NewRequest(http.MethodGet, "/v1/generate/narrative/test-analysis", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	html := w.Body.String()
+	if strings.Contains(html, "<h1>Five Mornings in </h1>") {
+		t.Errorf("heading regressed to the dangling P0 string:\n%s", html)
+	}
+	if !strings.Contains(html, "<h1>Five Mornings in the selected area</h1>") {
+		t.Errorf("expected generic fallback heading; got:\n%s", html)
+	}
+}

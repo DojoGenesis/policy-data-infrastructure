@@ -601,11 +601,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Card grid ────────────────────────────────────────────── -->
   <div x-show="!cardsLoading && !cardsError && filteredCards.length > 0" x-cloak>
     <div class="card-grid">
+      <!-- idx % 12, not raw idx: --d feeds motion.css's transition-delay
+           (idx * 1ms per motion's --motion-reveal-delay-step: 80ms). filteredCards
+           is a flat list up to 70 long, so the raw index pushed the last card's
+           delay past 5.5s — it sat at opacity 0 for seconds after scrolling into
+           view, indistinguishable from still being broken. 12 comfortably covers
+           this grid's column count (auto-fill, minmax(260px,1fr)) at any realistic
+           viewport, so every on-screen row still staggers in relative to itself;
+           it just stops the delay from compounding across the whole list. -->
       <template x-for="(card, idx) in filteredCards" :key="card.policy_id">
         <div
           class="card card-hover evidence-card reveal"
           :class="{ expanded: expandedCard === card.policy_id }"
-          :style="'--d:' + (idx * 80)"
+          :style="'--d:' + ((idx % 12) * 80)"
           @click="toggleCard(card.policy_id, $event)"
         >
 
@@ -709,7 +717,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               </div>
               <!-- Compare link: uses first and last of top_need -->
               <div x-show="card.bottom_need_counties && card.bottom_need_counties.length && card.top_need_counties && card.top_need_counties.length" style="margin-top:10px;">
-                <a :href="'/compare?geoid1=' + card.top_need_counties[0].geoid + '&geoid2=' + card.bottom_need_counties[0].geoid" class="nav-pill" style="font-size:0.68rem;" data-en="Compare most vs least affected →" data-es="Comparar más afectado vs. menos afectado →">Compare most vs least affected →</a>
+                <!-- x-show above only gates visibility — Alpine still evaluates this
+                     :href on every card, including hidden ones, so the indexing must
+                     be null-safe on its own. Optional chaining covers both an empty
+                     array ([0] undefined) and a missing field (array itself undefined). -->
+                <a :href="'/compare?geoid1=' + card.top_need_counties?.[0]?.geoid + '&geoid2=' + card.bottom_need_counties?.[0]?.geoid" class="nav-pill" style="font-size:0.68rem;" data-en="Compare most vs least affected →" data-es="Comparar más afectado vs. menos afectado →">Compare most vs least affected →</a>
               </div>
             </div>
 
@@ -888,6 +900,16 @@ function evidenceGallery() {
         this.cardsError = `Failed to load evidence cards: ${e.message}`;
       } finally {
         this.cardsLoading = false;
+
+        // The card grid's .reveal nodes only exist once Alpine's x-for
+        // renders filteredCards, which happens after cardsLoading flips
+        // false — the boot-time reveals() call at the bottom of this file
+        // ran long before that. reveals() skips nodes it already
+        // revealed, so re-calling it here is safe (same pattern as
+        // compare.html / county.html).
+        this.$nextTick(() => {
+          if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+        });
       }
     },
 

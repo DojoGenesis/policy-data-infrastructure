@@ -538,6 +538,46 @@ func TestDefaultTitle(t *testing.T) {
 	}
 }
 
+// TestDefaultTitle_EmptyScopeName is the second-layer defense against the P0
+// where the gateway's HTTP handlers built a GenerateRequest without ever
+// setting ScopeName, producing the literal string "Five Mornings in " with
+// nothing after it. Engine.Generate now normalizes req.ScopeName before
+// defaultTitle ever sees it (see TestGenerateTableDriven's "blank ScopeName"
+// case below), but defaultTitle re-checks its own input independently so a
+// future direct caller — one that bypasses Generate — can't reproduce the
+// bug either. Covers both a bare empty string and a whitespace-only one, to
+// confirm the fix is a real substitution and not a cosmetic TrimSpace that
+// would leave "" untouched.
+func TestDefaultTitle_EmptyScopeName(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		scopeName string
+	}{
+		{"empty string", ""},
+		{"whitespace only", "   "},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := defaultTitle(tc.scopeName, "five_mornings")
+			if got == "Five Mornings in " {
+				t.Fatalf("defaultTitle(%q, ...) = %q — the exact P0 bug string", tc.scopeName, got)
+			}
+			if !strings.Contains(got, unknownScopeName) {
+				t.Errorf("defaultTitle(%q, ...) = %q, want it to contain the fallback %q", tc.scopeName, got, unknownScopeName)
+			}
+		})
+	}
+
+	// The other three templates share the same vulnerable pattern
+	// ("<label>: " + scopeName) and must not be left with a dangling
+	// "<label>: " either.
+	for _, tmplName := range []string{"equity_profile", "comparison_brief", "unknown_template"} {
+		got := defaultTitle("", tmplName)
+		if !strings.Contains(got, unknownScopeName) {
+			t.Errorf("defaultTitle(\"\", %q) = %q, want it to contain the fallback %q", tmplName, got, unknownScopeName)
+		}
+	}
+}
+
 // ─── Table-driven Generate tests ─────────────────────────────────────────────
 
 func TestGenerateTableDriven(t *testing.T) {
@@ -589,6 +629,23 @@ func TestGenerateTableDriven(t *testing.T) {
 			wantChapMin: 1,
 			wantTitle:   "Null County",
 		},
+		{
+			// Regression coverage for the P0 where a caller (the gateway's
+			// HTTP handlers) never populated ScopeName: doc.Title must never
+			// come back as the bare "Five Mornings in " with nothing after
+			// it. ScopeName is intentionally omitted (zero value "") to
+			// simulate exactly that caller.
+			name: "blank ScopeName — must not render a dangling title",
+			req: GenerateRequest{
+				Template:     "five_mornings",
+				ScopeGEOID:   "55025",
+				AnalysisID:   "test-analysis",
+				ChapterCount: 1,
+				Selection:    "by_tier",
+			},
+			wantChapMin: 1,
+			wantTitle:   unknownScopeName,
+		},
 	}
 
 	// For the all-nil case, stand up a store whose indicators are all nil-valued.
@@ -618,6 +675,11 @@ func TestGenerateTableDriven(t *testing.T) {
 			}
 			if !strings.Contains(doc.Title, tc.wantTitle) {
 				t.Errorf("doc.Title = %q, want substring %q", doc.Title, tc.wantTitle)
+			}
+			// No case in this table should ever produce the bare P0 string
+			// (a dangling "Five Mornings in " with nothing after it).
+			if doc.Title == "Five Mornings in " {
+				t.Errorf("doc.Title = %q — the exact P0 bug string", doc.Title)
 			}
 			if len(doc.Chapters) < tc.wantChapMin {
 				t.Errorf("got %d chapters, want at least %d", len(doc.Chapters), tc.wantChapMin)

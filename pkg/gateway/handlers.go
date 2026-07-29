@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -487,6 +488,50 @@ func (p *PolicyPlugin) handleCompare(c *gin.Context) {
 	})
 }
 
+// resolveScopeName returns a human-readable name for geoid, mirroring the
+// lookup cmd/pdi/generate.go performs via store.GetGeography so that a
+// narrative generated through the HTTP API gets the same title as one
+// generated through the CLI for the same scope. This is the fix for the P0
+// where every API-generated narrative rendered "Five Mornings in " with the
+// county name missing — the handlers below built narrative.GenerateRequest
+// without ever populating ScopeName.
+//
+// When geoid is empty (a caller supplied only an analysis_id), it first
+// tries to recover a GEOID from the analysis record's ScopeGEOID.
+//
+// This never returns an error and never panics: a lookup failure (not
+// found, a DB error, or an analysis/geoid that resolves to nothing at all)
+// degrades to a fallback rather than blocking narrative generation — a
+// narrative should still generate even when the scope name can't be
+// resolved. When a GEOID is known but its name isn't, the GEOID itself is
+// returned (e.g. "55025") since it's still more useful to a reader than a
+// blank title and mirrors the CLI's own fallback-to-GEOID behavior. When
+// nothing is known at all, "" is returned and pkg/narrative's
+// Engine.Generate / defaultTitle substitute their own generic fallback so
+// the title can never again render with a dangling "... in ".
+func resolveScopeName(ctx context.Context, s store.Store, geoid, analysisID string) string {
+	if geoid == "" && analysisID != "" {
+		a, err := s.GetAnalysis(ctx, analysisID)
+		if err != nil {
+			log.Printf("gateway: resolveScopeName: GetAnalysis(%s): %v", analysisID, err)
+		} else if a != nil {
+			geoid = a.ScopeGEOID
+		}
+	}
+	if geoid == "" {
+		return ""
+	}
+	g, err := s.GetGeography(ctx, geoid)
+	if err != nil {
+		log.Printf("gateway: resolveScopeName: GetGeography(%s): %v", geoid, err)
+		return geoid
+	}
+	if g == nil || g.Name == "" {
+		return geoid
+	}
+	return g.Name
+}
+
 // ── POST /generate/narrative ────────────────────────────────────────────────
 
 // handleGenerateNarrative generates a full HTML narrative using pkg/narrative
@@ -521,6 +566,7 @@ func (p *PolicyPlugin) handleGenerateNarrative(c *gin.Context) {
 	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
 		Template:     tmplName,
 		ScopeGEOID:   req.GEOID,
+		ScopeName:    resolveScopeName(ctx, p.store, req.GEOID, req.AnalysisID),
 		AnalysisID:   req.AnalysisID,
 		ChapterCount: count,
 	})
@@ -568,6 +614,7 @@ func (p *PolicyPlugin) handleServeNarrative(c *gin.Context) {
 	doc, err := eng.Generate(ctx, narrative.GenerateRequest{
 		Template:     tmpl,
 		ScopeGEOID:   scope,
+		ScopeName:    resolveScopeName(ctx, p.store, scope, analysisID),
 		AnalysisID:   analysisID,
 		ChapterCount: count,
 	})

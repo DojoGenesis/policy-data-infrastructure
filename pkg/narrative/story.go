@@ -1,6 +1,9 @@
 package narrative
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // Document is the full narrative output ready for rendering.
 type Document struct {
@@ -29,8 +32,28 @@ type Chapter struct {
 	Narrative string
 }
 
+// unknownScopeName substitutes for a blank or whitespace-only scope name so
+// that titles and narrative prose never render with a dangling preposition
+// (e.g. "Five Mornings in ") or an empty clause (e.g. "profiles 5
+// neighborhoods in ,"). Two independent layers apply it:
+//
+//  1. Engine.Generate normalizes GenerateRequest.ScopeName up front, before
+//     it flows into the title, the subtitle/body prose, per-profile
+//     ScopeName propagation, and every {{.ScopeName}} template
+//     interpolation — the fix for the reported bug (an API caller that
+//     never set ScopeName).
+//  2. defaultTitle re-checks its own input here so that any future direct
+//     caller of defaultTitle — one that bypasses Generate entirely — can't
+//     reproduce the bug either. This is not a cosmetic trim: an empty or
+//     all-whitespace string is replaced with real fallback text, not just
+//     passed through.
+const unknownScopeName = "the selected area"
+
 // defaultTitle returns a reasonable document title for the given scope and template.
 func defaultTitle(scopeName, tmplName string) string {
+	if strings.TrimSpace(scopeName) == "" {
+		scopeName = unknownScopeName
+	}
 	switch tmplName {
 	case "five_mornings":
 		return "Five Mornings in " + scopeName

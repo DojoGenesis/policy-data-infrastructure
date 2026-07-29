@@ -572,7 +572,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Policy cards (.card + .card-grid from styles.css) -->
         <div class="card-grid">
-          <template x-for="pol in dim.policies" :key="pol.id">
+          <template x-for="(pol, idx) in dim.policies" :key="pol.id">
             <div class="card policy-card reveal" :style="'--d:' + (idx * 80)">
               <div class="policy-card-header">
                 <span class="policy-card-id" x-text="pol.id"></span>
@@ -739,6 +739,16 @@ function candidateTracker() {
         }
       } finally {
         this.loading = false;
+
+        // The dimension/policy-card grid's .reveal nodes only exist once
+        // Alpine's x-for renders selectedDimensions, which happens after
+        // loading flips false — the boot-time reveals() call at the bottom
+        // of this file ran long before that. reveals() skips nodes it
+        // already revealed, so re-calling it here is safe (same pattern as
+        // compare.html / county.html).
+        this.$nextTick(() => {
+          if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+        });
       }
     },
 
@@ -834,6 +844,16 @@ function candidateTracker() {
     // ── Select candidate ─────────────────────────────────────────
     selectCandidate(key) {
       this.selectedCandidate = key;
+
+      // selectedDimensions is keyed x-for (dim.key / pol.id): switching
+      // candidates tears down the old policy-card .reveal nodes and mounts
+      // a brand new set that the existing IntersectionObserver never saw.
+      // Same gap as the initial load, same fix — reveals() skips nodes it
+      // already revealed, so this is safe to call on every switch.
+      this.$nextTick(() => {
+        if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+      });
+
       // Sync URL with candidate param
       if (key) {
         PDIDeepLink.syncURL({ candidate: key });

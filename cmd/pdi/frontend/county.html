@@ -25,6 +25,26 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
   [x-cloak] { display: none !important; }
 
+  /* DEFECT 1 (mobile horizontal overflow) — .visually-hidden (styles.css)
+     gives an element position:absolute + width:1px + height:1px +
+     overflow:hidden + clip:rect(0,0,0,0), which clips a normal block to
+     nothing. A <table> ignores that: under the default table-layout:auto
+     a table's used width is at least the sum of its columns' min-content
+     widths, so the 1px is ignored. The 3-column "Factor scores" table in
+     Layer 3 rendered at 477px (absolutely positioned inside
+     #layer-3, position:relative) and pushed
+     document.documentElement.scrollWidth to 493px at a 375px viewport —
+     118px of sideways scroll, measured. table-layout:fixed makes the
+     table honor the specified width instead of deriving it from content,
+     without changing `display`, so the table keeps its implicit
+     table/row/cell roles for screen readers (the whole point of this
+     element per DATAVIZ-RULES rule 4). Verified rendered: scrollWidth
+     375 == clientWidth 375 after this rule, in both themes. Scoped to
+     all three .visually-hidden tables on the page (Layer 1, 3, 4) since
+     they share the same latent defect even though only Layer 3's is wide
+     enough to overflow at 375px today. */
+  table.visually-hidden { table-layout: fixed; }
+
   /* ═══════════════════════════════════════════════════════════════
      ACT 1 · THE PORTRAIT — above-fold hero
      ═══════════════════════════════════════════════════════════ */
@@ -188,12 +208,74 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .li-1::before { background: var(--tp-sun); }
   .li-2 { color: var(--tp-ember); }
   .li-2::before { background: var(--tp-ember); }
-  .li-3 { color: var(--tp-teal); }
-  .li-3::before { background: var(--tp-teal); }
+  /* DEFECT 2 (WCAG AA contrast). Raw --tp-teal/--tp-ocean are dark,
+     muted hues — fine as text on the light paper ground, but on the
+     dark ground (rgb(10,10,15) body) two dark colors sit too close in
+     luminance: measured 4.1:1 (teal) / 3.12:1 (ocean) at this 11.2px/700
+     size, under the 4.5:1 AA-normal floor. Brightened with color-mix
+     toward white — a straight tint holds hue (verified rendered: teal
+     stays ~189°, ocean ~199°, the same ~10° gap the raw tokens had) so
+     li-3/li-5 keep their own identity apart from li-4's much brighter,
+     more saturated raw cyan. Verified rendered on the dark ground:
+     5.81:1 / 5.89:1. Light theme is handled by the override block below
+     — a plain tint toward white makes light-theme contrast WORSE, not
+     better, so light needs its own (opposite-direction) fix, not just
+     an absence of this one. */
+  .li-3 { color: color-mix(in srgb, var(--tp-teal) 80%, white 20%); }
+  .li-3::before { background: color-mix(in srgb, var(--tp-teal) 80%, white 20%); }
   .li-4 { color: var(--tp-cyan); }
   .li-4::before { background: var(--tp-cyan); }
-  .li-5 { color: var(--tp-ocean); }
-  .li-5::before { background: var(--tp-ocean); }
+  .li-5 { color: color-mix(in srgb, var(--tp-ocean) 70%, white 30%); }
+  .li-5::before { background: color-mix(in srgb, var(--tp-ocean) 70%, white 30%); }
+
+  /* DEFECT 2, light theme. The brief that flagged li-3/li-5 in dark
+     theme also claimed "light theme measured 0 contrast failures" on
+     this page — measured directly (getComputedStyle, fresh load, no
+     cached state), that is not so: li-1/li-2/li-3/li-4's raw tokens are
+     bright, saturated hues that read fine on the near-black dark ground
+     but are all near-illegible on the light ground (body
+     rgb(231,230,223)) — rendered 1.2:1 / 2.71:1 / 3.85:1 / 2.2:1. li-5's
+     raw --tp-ocean already clears 5.05:1 there, so it is restored to
+     the raw token (undoing the dark-theme tint above, which would
+     otherwise carry through and make light-theme contrast worse).
+     li-3 reuses the existing --tp-teal-deep token (6.34:1 rendered here
+     — no new color). li-1/li-2/li-4 have no ready *-deep token that
+     clears 4.5 rendered against THIS background — sun-deep measures
+     3.89, ember-deep 4.16 (matches the identical number already
+     measured for the .lisa-badge.HH fix below), cyan-deep 3.89 — all
+     short, all measured, not assumed from the *-deep doc comments
+     (which are against pure --tp-paper, lighter than this page's actual
+     --bg — see the .lisa-badge comment above for the same undershoot).
+     Each gets a custom color-mix darken instead, hue held the same way
+     the dark-theme tint above holds it, just toward black rather than
+     white. Verified rendered: 5.15:1 / 5.51:1 / 6.72:1. Gated the same
+     way the .lisa-badge fix above is gated, and for the same reason:
+     an engine without color-mix() keeps the unscoped (imperfect but
+     unchanged) rule above rather than an invalid declaration. */
+  @supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) .li-1 { color: color-mix(in srgb, var(--tp-sun) 45%, black 55%); }
+      :root:not([data-theme="dark"]) .li-1::before { background: color-mix(in srgb, var(--tp-sun) 45%, black 55%); }
+      :root:not([data-theme="dark"]) .li-2 { color: color-mix(in srgb, var(--tp-ember) 65%, black 35%); }
+      :root:not([data-theme="dark"]) .li-2::before { background: color-mix(in srgb, var(--tp-ember) 65%, black 35%); }
+      :root:not([data-theme="dark"]) .li-3 { color: var(--tp-teal-deep); }
+      :root:not([data-theme="dark"]) .li-3::before { background: var(--tp-teal-deep); }
+      :root:not([data-theme="dark"]) .li-4 { color: color-mix(in srgb, var(--tp-cyan) 50%, black 50%); }
+      :root:not([data-theme="dark"]) .li-4::before { background: color-mix(in srgb, var(--tp-cyan) 50%, black 50%); }
+      :root:not([data-theme="dark"]) .li-5 { color: var(--tp-ocean); }
+      :root:not([data-theme="dark"]) .li-5::before { background: var(--tp-ocean); }
+    }
+    :root[data-theme="light"] .li-1 { color: color-mix(in srgb, var(--tp-sun) 45%, black 55%); }
+    :root[data-theme="light"] .li-1::before { background: color-mix(in srgb, var(--tp-sun) 45%, black 55%); }
+    :root[data-theme="light"] .li-2 { color: color-mix(in srgb, var(--tp-ember) 65%, black 35%); }
+    :root[data-theme="light"] .li-2::before { background: color-mix(in srgb, var(--tp-ember) 65%, black 35%); }
+    :root[data-theme="light"] .li-3 { color: var(--tp-teal-deep); }
+    :root[data-theme="light"] .li-3::before { background: var(--tp-teal-deep); }
+    :root[data-theme="light"] .li-4 { color: color-mix(in srgb, var(--tp-cyan) 50%, black 50%); }
+    :root[data-theme="light"] .li-4::before { background: color-mix(in srgb, var(--tp-cyan) 50%, black 50%); }
+    :root[data-theme="light"] .li-5 { color: var(--tp-ocean); }
+    :root[data-theme="light"] .li-5::before { background: var(--tp-ocean); }
+  }
 
   .layer-context {
     font-size: clamp(1rem, 1.6vw, 1.15rem);
@@ -1613,7 +1695,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <section class="section-band reveal" id="levers">
       <div class="wrap layer-inner">
         <span class="layer-indicator li-1" style="color:var(--tp-lime);" data-en="Act 3 · Policy Levers" data-es="Acto 3 · Palancas de Política">Act 3 · Policy Levers</span>
-        <span class="layer-indicator li-1" style="color:var(--tp-lime);" x-show="false"></span>
         <h2 data-en="Levers" data-es="Palancas">Levers</h2>
         <p class="layer-context" x-html="leversContext"></p>
 

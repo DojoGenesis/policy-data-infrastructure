@@ -3,6 +3,44 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-07-29 — two blank pages, the narrative title, and two stale doc claims
+
+Frontend usability pass toward the operator's 4/10 → 8/10 target (PIP-116). Everything below was measured from rendered pixels in headless Chromium across 10 pages × 2 themes × 3 viewports, not inferred from CSS — per `pdi-verify-per-page-not-shared-layer`, this repo's page-scoped `<style>` blocks make shared-layer reasoning produce inverted conclusions.
+
+### P0 — `/evidence` and `/candidates` rendered as blank pages
+Both showed nothing below the header. 70 of 71 `.reveal` elements sat at `opacity: 0` **permanently, even after a full scroll** — the content was in the DOM (~19,875 chars of text on /evidence), just invisible. Two independent causes:
+
+- **The reveal observer never saw Alpine's nodes.** `motion.js`'s `reveals()` runs `querySelectorAll` once and observes only what exists at that moment. Both pages called it a single time at boot; Alpine then rendered the ~70 cards via `x-for` *afterward*, so those nodes were never observed and never got `.in`. Proof: `TPMotion.revealAll('.reveal')` took /candidates from 70 hidden to 0. Fixed by re-calling `reveals()` in a `$nextTick` after load — the pattern already precedented at `compare.html:2518` and `county.html:2224`, which the 2026-07-28 boot-time wiring never extended to dynamically-rendered content.
+- **One JS error per page.** `candidates.html:576` referenced `idx` inside an `x-for` that only declared `pol`. `evidence.html:712` dereferenced `card.top_need_counties[0].geoid`, where exactly **1 of 70** cards has that array empty — a single card poisoned the whole page. The sibling `x-show` gates *visibility* only; Alpine still evaluates `:href` on hidden elements. `index.html:690` already documents this exact trap in a comment — the lesson was learned there and never propagated.
+
+Verified: 0 hidden reveals, 0 pageerrors, known cards at opacity 1, on both pages in normal **and** reduced-motion modes.
+
+### Reveal stagger compounded to 5.5 seconds
+`--d` feeds motion.css's `transition-delay: calc(var(--d,0) * 1ms)` at an 80ms step. On flat lists using raw `idx * 80`, the 70th card's fade-in did not *begin* until 5.52s after it was marked `.in` — visually identical to the blanking bug, and the reason an initial measurement still showed 60 hidden after a forced reveal. Capped to `idx % 12` on `evidence.html` (grid) and `idx % 8` on `composites.html:915` (single-column stack that reaches 72 rows at county scope — latent, not yet reported). `candidates.html` left at raw `idx`: its index resets per equity dimension and is already bounded.
+
+### P0 — every API-generated narrative read "Five Mornings in "
+Root cause was **not** the template engine, as TODO recorded. `pkg/gateway/handlers.go` built `narrative.GenerateRequest` without ever setting `ScopeName`, so `defaultTitle()` concatenated an empty string. The CLI path sets it correctly — which is why this reproduced only through the API. Fixed with `resolveScopeName()`: GEOID → `store.GetGeography`, falling back to the analysis record's `ScopeGEOID`, then to the raw GEOID (traceable, unlike a blank), then to a generic label. Wired into **both** `handleGenerateNarrative` and `handleServeNarrative` — the latter had the identical bug and was not in the original report. `Engine.Generate` now also normalizes a blank `ScopeName`, covering every `{{.ScopeName}}` interpolation rather than the title alone. 5 regression tests added, each verified to fail against the pre-fix code.
+
+### Landing page had no `<h1>`
+`/` was the only page of ten without one — the hero was a `<p class="hero-statement">` and the first heading was an `<h2>`. No document-title landmark for screen readers, heading outline starting at h2, SEO penalty on the primary entry point. Promoted to `<h1>`; the `.hero-statement` class already set both `font-size` and full margin control and outranks the shared element selectors, so rendering is unchanged — verified pixel-identical (36px/600, 783×92 box, gradient `em` intact) in both themes.
+
+### `/county` overflowed 118px on mobile — cause was an invisible table, not the nav
+At 375px `scrollWidth` was 493 against a 375 `clientWidth`. The obvious suspects — nav anchors sitting past the right edge — were a red herring: `.site-nav` is a deliberate scroll rail (`overflow-x:auto; min-width:0`), so its children's `getBoundingClientRect()` legitimately extends past the viewport without contributing to document overflow. Walking the DOM for the ancestor whose *own* `scrollWidth > clientWidth` found `<section id="layer-3">`, and inside it the Layer 3 accessible data table (`<table class="visually-hidden">`) rendering at **477px instead of 1px**. Root cause is a CSS table quirk: `.visually-hidden` sets `width:1px`, but a `<table>` under default `table-layout:auto` computes its used width from column min-content and ignores the smaller explicit width. Being `position:absolute` inside a `position:relative` section, the oversized box still counted toward scrollable overflow while painting nothing. Fixed with `table.visually-hidden { table-layout: fixed }`, scoped to all three such tables on the page (Layers 1, 3, 4 share the latent defect; only Layer 3's was wide enough to overflow today). `display` untouched, so the implicit ARIA table/row/cell roles survive for screen readers.
+
+### `.layer-indicator` contrast — worse in light theme than the audit reported
+Dark theme li-3 (4.1:1) and li-5 (3.12:1) failed AA as expected. Light theme was reported clean by the initial sweep and was in fact **worse**: li-1 1.2:1, li-2 2.71:1, li-3 3.85:1, li-4 2.2:1 — four failures, saturated hues that read fine on the near-black ground and nearly vanish on cream. All six failing cells fixed via hue-preserving `color-mix()` (toward white on dark, toward black or `--tp-teal-deep` on light), gated behind the same `@supports (color-mix())` pattern the file already uses so non-supporting engines keep the original rule rather than an invalid declaration. Now measured 5.05–13.11:1 across all 5 indicators × 2 themes × 3 viewports.
+
+**Why the sweep missed it — a measurement bug worth recording.** The audit's contrast probe parsed only `rgb()`/`rgba()`. Chromium computes `color-mix()` to **`color(srgb r g b)` with 0–1 floats**, which the regex silently skipped rather than flagged — so every element already using `color-mix()` was invisible to the audit and counted as "no failure." Any future contrast tooling in this repo must handle both notations; a parse failure must be reported, never treated as a pass.
+
+### Two STATUS.md / TODO.md claims were stale — corrected
+- "**Theme toggle renders nowhere** … ADR-013 §3C is NOT satisfied" — false. Measured present and *rendering* on **10/10** pages.
+- "language toggle half-migrated: `lang-toggle.js` on index only, 10 stale `es/` twins remain" — false. Loaded on 10/10 pages, and the `es/` directory no longer exists.
+
+Both originals were reasoned from the shared script layer instead of measured per page. Runtime i18n gaps are real and remain open (Alpine `x-text` bypasses the swap layer entirely).
+
+### Tooling
+Added a local dev proxy (scratchpad, not committed): serves `cmd/pdi/frontend/` from disk so edits are live, forwards `/v1/*` to the live API. Lets the frontend run against real data without a local PostGIS — the Docker DB on this machine is empty and an SSH tunnel on `[::1]:5433` shadows it for IPv6 localhost connections, which is why `PDI_DATABASE_URL` defaults fail here.
+
 ## 2026-07-28 (later) — stack capabilities, accessibility, light mode, chat drawer removed
 
 ### P0 — `.reveal` content was invisible for 2 seconds on every page load

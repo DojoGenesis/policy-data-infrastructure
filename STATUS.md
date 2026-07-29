@@ -1,7 +1,26 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-07-28 (frontend rebuild, 4 parallel tracks — PIP-115)
+> Last agent update: 2026-07-29 (frontend usability pass, 4 parallel tracks — PIP-116)
+
+## Frontend Usability Pass (2026-07-29, PIP-116)
+
+Measured in headless Chromium across 10 pages × 2 themes × 3 viewports. **Not committed or deployed** — working tree only.
+
+| Item | Before | After |
+|---|---|---|
+| `/evidence`, `/candidates` | **Blank pages** — 70/71 cards at opacity 0 permanently | All 70 cards render; 0 hidden, 0 pageerrors, normal + reduced-motion |
+| `/county` mobile 375px | 118px horizontal overflow | 0px — at 375/768/1280, both themes |
+| `.layer-indicator` contrast | dark li-3 4.1:1, li-5 3.12:1; **light li-1 1.2 / li-2 2.71 / li-3 3.85 / li-4 2.2** | 5.05–13.11:1 across 5 indicators × 2 themes × 3 viewports |
+| Landing `<h1>` | Zero — only page of ten without one | 1, rendering pixel-identical (36px/600, 783×92) |
+| API narrative title | "Five Mornings in " on every generated narrative | Resolves the real scope name; 5 regression tests |
+| Reveal stagger | Last card's fade began 5.52s after reveal | Capped at 880ms (evidence) / 560ms (composites) |
+| JS errors across all 10 pages | 2 | 0 |
+| Horizontal overflow across all 10 pages | 1 page | 0 |
+
+Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 packages ✅ · vendored kit files (`motion.js`, `motion.css`, `tokens.css`) and `styles.css` all unmodified.
+
+**Largest remaining experience gap:** cold empty states on the tool pages (`/compare`, `/chat`, `/composite`) — scouted, recommendation recorded in TODO.md P1. Blocked on the Alpine `x-text` i18n gap.
 
 ## Quick Reference
 
@@ -36,8 +55,8 @@
 | ADR-013 site footer | ✅ `.site-footer` was 6 uses / 0 rules — now styled; AA contrast verified |
 | ADR-013 §3B skeleton states | ✅ spectral edge + pulse; fixed shorthand clobbering `.card`'s edge |
 | Unified header/footer across pages | ✅ 10/10 pages, headers byte-identical bar `aria-current` |
-| ADR-013 §3C light/dark toggle | ❌ **script loads on 8 pages but renders no button** — see TODO P0 |
-| ADR-011 §1C language toggle | ❌ half-migrated: `lang-toggle.js` on index only, 10 stale `es/` twins remain |
+| ADR-013 §3C light/dark toggle | ✅ **verified 2026-07-29** — `theme-toggle.js` on 10/10 pages and the button *renders* on all 10, measured in-browser. The prior ❌ ("script loads but renders no button") was stale |
+| ADR-011 §1C language toggle | ✅ **verified 2026-07-29** — `lang-toggle.js` on 10/10 pages, toggle renders on all 10, and the `es/` twin directory is gone. The prior ❌ ("index only, 10 stale twins remain") was stale. Runtime i18n gaps remain (Alpine `x-text` bypasses the swap layer) — see TODO P1 |
 | Compare beyond raw deltas | ✅ statewide rank, standardized gap, polarity-aware, materiality |
 
 ## Service Health
