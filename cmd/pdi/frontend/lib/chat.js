@@ -414,8 +414,15 @@ ${this._buildPageContextBlock()}`;
     return this._systemPrompt;
   },
 
-  // ── Placeholders (fallback when chat proxy is unavailable) ──────────────────
+  // ── Suggestion prompts ──────────────────────────────────────────────────────
 
+  // Example questions, used ONLY as suggestion chips (chat.html falls back to
+  // this list when _getSuggestedQuestions is unavailable).
+  //
+  // These are NOT answers and must never be emitted through send(). They used to
+  // be streamed back as a fake reply whenever the backend was unreachable, which
+  // is how a hard 401 on /v1/chat reached production unnoticed: the chat looked
+  // like it was working while answering nothing. See _emitUnavailable().
   _placeholders: [
     "Try asking: 'Which policies will help Menominee County the most?' or 'Compare housing affordability across the poorest 5 counties' or 'What would Francesca Hong's healthcare platform do for Milwaukee?'",
     "I can cross-reference 85 policy positions with 72 counties of indicator data. Ask me which policies address which problems in which places.",
@@ -481,36 +488,22 @@ ${this._buildPageContextBlock()}`;
 
   // ── Chat Send ──────────────────────────────────────────────────────────────
 
-  async _checkProxy() {
-    if (this._proxyAvailable !== null) return this._proxyAvailable;
-    try {
-      const r = await fetch('/v1/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'ping', session_id: this._sessionId, stream: false }),
-        signal: AbortSignal.timeout(8000)
-      });
-      this._proxyAvailable = r.ok;
-    } catch (_) {
-      this._proxyAvailable = false;
-    }
-    return this._proxyAvailable;
-  },
+  // There is deliberately no availability pre-flight here any more. The old
+  // _checkProxy() burned a real /v1/chat round trip, cached the verdict for the
+  // whole session, and — worst of all — routed every failure into a canned
+  // "answer". send() now makes exactly one attempt and reports what actually
+  // happened.
 
   async send(userMessage, onChunk, onDone) {
-    const available = await this._checkProxy();
-    if (available) {
-      await this._sendToGateway(userMessage, onChunk, onDone);
-    } else {
-      await this._sendPlaceholder(userMessage, onChunk, onDone);
-    }
+    await this._sendToGateway(userMessage, onChunk, onDone);
   },
 
   async _sendToGateway(userMessage, onChunk, onDone) {
+    let r;
     try {
       const systemPrompt = await this._buildSystemPrompt();
 
-      const r = await fetch('/v1/chat', {
+      r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -522,35 +515,162 @@ ${this._buildPageContextBlock()}`;
           stream: false
         })
       });
-
-      if (!r.ok) {
-        const errBody = await r.text();
-        onChunk(`Error (${r.status}): ${errBody.substring(0, 200)}`);
-        onDone();
-        return;
-      }
-
-      const data = await r.json();
-      const content = data.content || data.message || JSON.stringify(data);
-
-      // Stream for UX (character-by-character simulated typing)
-      for (let i = 0; i < content.length; i += 5) {
-        onChunk(content.substring(i, Math.min(i + 5, content.length)));
-        await new Promise(resolve => setTimeout(resolve, 8));
-      }
-      onDone();
     } catch (err) {
-      onChunk(`Connection error: ${err.message}`);
-      onDone();
+      // No HTTP response at all — DNS, TLS, CORS, dropped connection, or the
+      // device is offline. Distinct from "the server answered with an error".
+      this._proxyAvailable = false;
+      this._lastFailure = { kind: 'unreachable', detail: err && err.message };
+      this._emitUnavailable('unreachable', { detail: err && err.message }, onChunk, onDone);
+      return;
+    }
+
+    if (!r.ok) {
+      // The server responded and said no. Surface its own words verbatim —
+      // that is the signal that was previously swallowed by the placeholder.
+      let raw = '';
+      try { raw = await r.text(); } catch (_) {}
+      this._proxyAvailable = false;
+      this._lastFailure = { kind: 'server-error', status: r.status, detail: raw };
+      this._emitUnavailable('server-error', { status: r.status, detail: this._extractServerReason(raw) }, onChunk, onDone);
+      return;
+    }
+
+    let data = null;
+    try {
+      data = await r.json();
+    } catch (err) {
+      this._proxyAvailable = false;
+      this._lastFailure = { kind: 'unreadable', detail: err && err.message };
+      this._emitUnavailable('unreadable', { detail: 'response was not valid JSON' }, onChunk, onDone);
+      return;
+    }
+
+    // A 200 with no usable text is still a non-answer. Never fall back to
+    // JSON.stringify(data) — dumping the envelope into the bubble reads as
+    // content and hides the fact that no answer arrived.
+    const content = (data && (data.content || data.message)) || '';
+    if (typeof content !== 'string' || content.trim() === '') {
+      this._proxyAvailable = false;
+      this._lastFailure = { kind: 'unreadable', detail: 'empty content field' };
+      this._emitUnavailable('unreadable', { detail: 'the reply contained no answer text' }, onChunk, onDone);
+      return;
+    }
+
+    this._proxyAvailable = true;
+    this._lastFailure = null;
+
+    // Stream for UX (character-by-character simulated typing)
+    for (let i = 0; i < content.length; i += 5) {
+      onChunk(content.substring(i, Math.min(i + 5, content.length)));
+      await new Promise(resolve => setTimeout(resolve, 8));
+    }
+    onDone();
+  },
+
+  // ── Honest failure reporting ────────────────────────────────────────────────
+
+  // Last failure recorded by _sendToGateway, for debugging. Never rendered raw.
+  _lastFailure: null,
+
+  // Pull the human-readable reason out of an error body. PDI's own ErrorResponse
+  // ({error, detail}) and the Dojo Gateway's ({error, success}) both key on
+  // "error", so one path covers both. Falls back to truncated raw text.
+  _extractServerReason(raw) {
+    if (!raw) return '';
+    try {
+      const j = JSON.parse(raw);
+      if (j && typeof j.error === 'string') {
+        return j.detail ? j.error + ' — ' + j.detail : j.error;
+      }
+    } catch (_) {}
+    return raw.length > 300 ? raw.substring(0, 300) + '…' : raw;
+  },
+
+  // Emits a single, clearly-labelled non-answer notice and finishes.
+  //
+  // Sent as ONE chunk on purpose: chat.html re-renders innerHTML per chunk, so a
+  // partially-streamed block would render as broken markup — and the simulated
+  // typing animation is exactly what made the old canned reply feel like a real
+  // response. A failure should not type itself out.
+  //
+  // kind: 'unreachable' | 'server-error' | 'unreadable'
+  _emitUnavailable(kind, info, onChunk, onDone) {
+    try {
+      onChunk(this._unavailableHtml(kind, info || {}));
+    } finally {
+      if (typeof onDone === 'function') onDone();
     }
   },
 
-  async _sendPlaceholder(userMessage, onChunk, onDone) {
-    const response = this._placeholders[Math.floor(Math.random() * this._placeholders.length)];
-    for (let i = 0; i < response.length; i += 4) {
-      onChunk(response.substring(i, Math.min(i + 4, response.length)));
-      await new Promise(resolve => setTimeout(resolve, 15));
+  // Per-status plain-English cause. Operators and visitors both read this.
+  _statusHint(status) {
+    if (status === 401 || status === 403) {
+      return 'The chat backend rejected this site’s credential, so the question never reached a model. This is a server configuration problem — rewording the question will not help.';
     }
-    onDone();
+    if (status === 404) {
+      return 'This deployment has no chat backend: nothing is serving /v1/chat. Static builds of the Atlas ship without one.';
+    }
+    if (status === 429) {
+      return 'The chat backend is rate-limited right now. Waiting a minute and asking again may work.';
+    }
+    if (status === 503) {
+      return 'The chat backend is not configured or not running. An operator has to fix it — retrying will not.';
+    }
+    if (status >= 500) {
+      return 'The chat backend failed while handling the question. This is a server-side fault, not a problem with what you asked.';
+    }
+    return 'The chat backend refused the request.';
+  },
+
+  // Builds the notice. Single line — no newlines anywhere — because chat.html
+  // runs .replace(/\n/g,'<br>') over the rendered string, and a <br> injected
+  // inside a tag would corrupt the markup. Every interpolated value is escaped.
+  _unavailableHtml(kind, info) {
+    var esc = ChatAdapter._escapeHtml;
+    var title, lead, cause = '', reason = info.detail || '';
+
+    if (kind === 'server-error') {
+      title = 'Not an answer — chat backend returned an error';
+      lead = 'Your question was sent but not answered. The chat backend replied with HTTP ' +
+             esc(String(info.status)) + '. Nothing below this line comes from the dataset.';
+      cause = ChatAdapter._statusHint(info.status);
+    } else if (kind === 'unreadable') {
+      title = 'Not an answer — unreadable reply from the chat backend';
+      lead = 'The chat backend responded, but its reply contained no answer. Nothing here comes from the dataset.';
+      cause = 'This usually means the backend is misconfigured or returned an unexpected payload shape.';
+    } else {
+      title = 'Not an answer — chat backend unreachable';
+      lead = 'Your question was not delivered. The browser could not reach the chat backend, so there is no answer to give and nothing here comes from the dataset.';
+      cause = 'You may be offline, or the chat backend may be down.';
+    }
+
+    var h = '<div class="chat-unavailable" role="alert" style="border-left:3px solid var(--tp-red);background:var(--tp-red-soft);border-radius:6px;padding:12px 14px;color:var(--text)">';
+    h += '<div style="font-weight:700;text-transform:uppercase;letter-spacing:0.06em;font-size:0.7rem;margin-bottom:8px">' + esc(title) + '</div>';
+    h += '<div style="margin-bottom:8px">' + esc(lead) + '</div>';
+    h += '<div style="margin-bottom:8px">' + esc(cause) + '</div>';
+
+    if (reason) {
+      h += '<div style="font-size:0.78rem;opacity:0.85;margin-bottom:8px">Backend said: <code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word">' +
+           esc(reason) + '</code></div>';
+    }
+
+    // The graceful part: what genuinely still works, and what the visitor will be
+    // able to ask once chat is back. Framed in the future tense so it can never be
+    // read as a reply to what they just asked.
+    h += '<div style="font-size:0.82rem;opacity:0.9">The rest of the Atlas is unaffected — county profiles, the cluster map, comparisons, and evidence cards are all still live.</div>';
+
+    var qs = [];
+    try { qs = ChatAdapter._getSuggestedQuestions() || []; } catch (_) {}
+    if (qs.length) {
+      h += '<div style="font-size:0.82rem;opacity:0.9;margin-top:8px">Once chat is working again, questions like these will be answerable:</div>';
+      h += '<ul style="margin:6px 0 0;padding-left:20px;font-size:0.82rem;opacity:0.9">';
+      for (var i = 0; i < Math.min(qs.length, 3); i++) {
+        h += '<li>' + esc(qs[i]) + '</li>';
+      }
+      h += '</ul>';
+    }
+
+    h += '</div>';
+    return h;
   }
 };

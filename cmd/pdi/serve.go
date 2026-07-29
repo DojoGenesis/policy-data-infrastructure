@@ -124,38 +124,22 @@ func runServe(port int) error {
 		gatewayURL = "http://localhost:7340"
 	}
 	gwTarget := strings.TrimRight(gatewayURL, "/")
-	r.POST("/v1/chat", func(c *gin.Context) {
-		body, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "read body failed"})
-			return
-		}
-		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST",
-			gwTarget+"/v1/chat", strings.NewReader(string(body)))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "build proxy request failed"})
-			return
-		}
-		proxyReq.Header.Set("Content-Type", "application/json")
-		proxyReq.Header.Set("Accept", c.GetHeader("Accept"))
 
-		client := &http.Client{Timeout: 3 * time.Minute}
-		resp, err := client.Do(proxyReq)
-		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "gateway unreachable", "detail": err.Error()})
-			return
-		}
-		defer resp.Body.Close()
+	// Service credential for the upstream Gateway, read once at startup with
+	// the same env-var pattern as DOJO_GATEWAY_URL above. The Gateway requires
+	// `Authorization: Bearer <jwt>` across its whole /v1 group, so forwarding
+	// without one is a guaranteed 401 whose body is the *Gateway's* error, not
+	// PDI's — which is precisely how a broken chat shipped unnoticed.
+	//
+	// Never log the value. Only its presence is ever printed or reported.
+	gwToken := strings.TrimSpace(os.Getenv("DOJO_GATEWAY_TOKEN"))
 
-		extraHeaders := map[string]string{}
-		for _, h := range []string{"Content-Type", "Cache-Control", "Connection"} {
-			if v := resp.Header.Get(h); v != "" {
-				extraHeaders[h] = v
-			}
-		}
-		c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, extraHeaders)
-	})
-	fmt.Printf("  chat:     /v1/chat → %s/v1/chat\n", gwTarget)
+	r.POST("/v1/chat", newChatProxyHandler(gwTarget, gwToken, &http.Client{Timeout: 3 * time.Minute}))
+	authState := "no credential — DOJO_GATEWAY_TOKEN unset, chat returns 503"
+	if gwToken != "" {
+		authState = "service credential configured (DOJO_GATEWAY_TOKEN)"
+	}
+	fmt.Printf("  chat:     /v1/chat → %s/v1/chat [%s]\n", gwTarget, authState)
 
 	// Serve embedded frontend static files.
 	feFS, _ := fs.Sub(frontendFS, "frontend")
@@ -252,4 +236,77 @@ func runServe(port int) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	return nil
+}
+
+// newChatProxyHandler builds the /v1/chat proxy handler.
+//
+// It is a constructor rather than an inline closure so the auth behaviour can be
+// exercised against a stub upstream without standing up Postgres — the header
+// logic is the part that broke in production, so it has to be testable on its own.
+//
+// Credential precedence:
+//  1. An inbound client `Authorization` header, forwarded verbatim. Nothing sends
+//     one today, but when authenticated visitors exist the Gateway should see
+//     *their* identity for quota and audit purposes, not a shared service
+//     credential silently substituted underneath them. PDI never inspects,
+//     rewrites, or stores the value; the Gateway remains the only validator, so a
+//     bad client token correctly yields the Gateway's 401 rather than being
+//     quietly upgraded to full service access.
+//  2. The DOJO_GATEWAY_TOKEN service credential — the anonymous-visitor path, and
+//     the one that carries every request on the live site today.
+//  3. Neither: fail fast with PDI's own ErrorResponse. Forwarding an
+//     unauthenticated request only produces an upstream 401 whose body looks like
+//     the Gateway rejecting the *user*, which is the confusion that let this bug
+//     live in production.
+func newChatProxyHandler(gwTarget, gwToken string, client *http.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authz := strings.TrimSpace(c.GetHeader("Authorization"))
+		if authz == "" && gwToken != "" {
+			authz = "Bearer " + gwToken
+		}
+		if authz == "" {
+			// 503, not 401: the visitor did nothing wrong — the server is
+			// missing configuration. Distinguishable from an upstream 401 by
+			// both status and the absence of the Gateway's "success" field.
+			c.JSON(http.StatusServiceUnavailable, gateway.ErrorResponse{
+				Error:  "chat is not configured on this server",
+				Detail: "DOJO_GATEWAY_TOKEN is not set, so PDI holds no credential for the Dojo Gateway. No request was sent upstream. An operator must configure the service credential before chat can answer.",
+			})
+			return
+		}
+
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gateway.ErrorResponse{Error: "read body failed"})
+			return
+		}
+		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), "POST",
+			gwTarget+"/v1/chat", strings.NewReader(string(body)))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gateway.ErrorResponse{Error: "build proxy request failed"})
+			return
+		}
+		proxyReq.Header.Set("Content-Type", "application/json")
+		proxyReq.Header.Set("Accept", c.GetHeader("Accept"))
+		proxyReq.Header.Set("Authorization", authz)
+
+		resp, err := client.Do(proxyReq)
+		if err != nil {
+			// err may embed the request URL but never a header value.
+			c.JSON(http.StatusBadGateway, gateway.ErrorResponse{
+				Error:  "gateway unreachable",
+				Detail: err.Error(),
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		extraHeaders := map[string]string{}
+		for _, h := range []string{"Content-Type", "Cache-Control", "Connection"} {
+			if v := resp.Header.Get(h); v != "" {
+				extraHeaders[h] = v
+			}
+		}
+		c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, extraHeaders)
+	}
 }
