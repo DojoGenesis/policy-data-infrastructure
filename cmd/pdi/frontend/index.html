@@ -246,6 +246,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     margin-top: clamp(12px, 2vw, 16px);
   }
 
+  /* Inline provenance for the story's figures. Deliberately visible rather
+     than tucked into a comment: the numbers above are hand-maintained
+     literals from external sources (BEA, Census, USDA ERS) and will go
+     stale, so a reader gets the vintage alongside the claim and can judge
+     it. --quiet, not --subtle: --subtle measures 3.96:1 on --bg and fails
+     AA as text; --quiet clears it at 7.11:1. */
+  .featured-sources {
+    font-size: 0.68rem;
+    color: var(--quiet);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+
   .featured-stats {
     display: flex;
     flex-wrap: wrap;
@@ -704,14 +717,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="featured-name" x-text="featuredCounty?.name || ''"></div>
             <div class="featured-geoid" x-text="featuredCounty?.geoid || ''"></div>
             <p class="featured-story" x-text="featuredCounty?.story || ''"></p>
+            <p class="featured-sources" x-show="featuredCounty?.sources" x-text="featuredCounty?.sources || ''"></p>
             <div class="featured-stats">
               <div>
                 <div class="featured-stat-val" x-text="fmtPop(featuredCounty?.population)"></div>
                 <div class="featured-stat-label" data-en="Population" data-es="Población">Population</div>
               </div>
+              <!-- Was "Census Tracts", a hardcoded per-county count with no live
+                   source: the API ignores parent/county filters on tract queries
+                   (?level=tract&parent_geoid= returns 0, &parent= and &county_fips=
+                   both return all 1,542), so deriving it would mean pulling ~230KB
+                   onto the landing page for one number. Replaced with poverty rate,
+                   which the featured county's own indicators call already returns at
+                   no extra cost and which is far more decision-relevant here. -->
               <div>
-                <div class="featured-stat-val" x-text="featuredCounty?.tract_count || '—'"></div>
-                <div class="featured-stat-label" data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</div>
+                <div class="featured-stat-val" x-text="featuredCounty?.poverty_rate != null ? featuredCounty.poverty_rate + '%' : '—'"></div>
+                <div class="featured-stat-label" data-en="Poverty Rate" data-es="Tasa de Pobreza">Poverty Rate</div>
               </div>
               <div>
                 <div class="featured-stat-val" x-text="featuredCounty?.indicator_count || '—'"></div>
@@ -838,30 +859,85 @@ function countyExplorer() {
      every single page load, online and offline alike, and threw. The
      pool is hoisted out of the state object so the day's pick can be
      resolved synchronously, before Alpine ever walks the template. */
+  /* Identity and prose ONLY — no numeric stats live in this pool.
+     Every figure shown on the card is derived at runtime in
+     hydrateFeatured() from the same live API the rest of the page uses.
+
+     This is deliberate, and it is the second time this failure class has
+     been fixed here. Commit dc84998 removed hardcoded top-uninsured
+     counties from the chat prompt after they drifted 6 points off and the
+     model was presenting them as grounded fact. This pool had drifted the
+     same way, and worse:
+
+       population       916205 / 575347 / 4255   (live: 927656 / 564777 / 4256)
+       indicator_count  42 / 42 / 28             (live: 19 for all three)
+       tract_count      297 / 107 / 2            (no per-county source; stat replaced)
+       geoid '55141'    labelled "Menominee County" — 55141 is WOOD County.
+                        Menominee is 55078. One day in three the card told the
+                        Menominee Indian Reservation's story under a heading and
+                        an "Explore" link that both pointed at a different county.
+
+     A literal that was true once keeps asserting itself after it stops
+     being true, and nothing fails loudly enough to notice. Derived values
+     cannot rot; when the API is unreachable the stats render "—", because
+     an absent number is honest and a stale one is not. */
   var FEATURED_POOL = [
       {
         geoid: '55079',
         name: 'Milwaukee County',
-        population: 916205,
-        tract_count: 297,
-        indicator_count: 42,
-        story: 'Home to Wisconsin\'s largest city, Milwaukee County anchors the state\'s economy with a $100B+ GDP — yet 26% of its residents live in a census tract flagged for persistent poverty. The county carries the heaviest equity load in the state, with health insurance gaps and food-access deserts concentrated in historically redlined neighborhoods. The data here is the densest in the platform: 297 tracts, every indicator populated.'
+        /* Figures fact-checked against primary federal sources 2026-07-29.
+           Both prior claims were wrong, not merely stale:
+             "$100B+ GDP"  -> county GDP is $78.8B. $100B+ appears to be the
+                              4-county MSA (~$131B, BEA) mislabelled as county.
+             "26% of its residents live in a persistent-poverty tract"
+                           -> 25.8% is the share of TRACTS (78 of 302). The
+                              resident-weighted share is ~20.7%. The denominator
+                              was mislabelled, so the sentence now says tracts.
+           Any figure carrying a source below is a hand-maintained literal and
+           WILL go stale — BEA restates county GDP annually. That is an accepted
+           tradeoff (operator decision 2026-07-29): the vintage is rendered on
+           the card so staleness is visible to a reader rather than silent.
+           Re-check when the vintage shown is more than ~2 years old. */
+        story: 'Home to Wisconsin\'s largest city, Milwaukee County anchors the state\'s economy with a $78.8B county GDP — yet roughly a quarter of its census tracts are flagged for persistent poverty. The county carries the heaviest equity load in the state, with health-insurance gaps and food-access deserts concentrated in historically redlined neighborhoods.',
+        sources: 'GDP: U.S. Bureau of Economic Analysis, GDP by County (CAGDP2), 2024 · Persistent poverty: USDA ERS Poverty Area Measures, Sept 2025 (78 of 302 tracts)'
       },
       {
         geoid: '55025',
         name: 'Dane County',
-        population: 575347,
-        tract_count: 107,
-        indicator_count: 42,
-        story: 'The fastest-growing county in Wisconsin, driven by Madison\'s tech and university sectors. Dane County added 48,000 residents in the last decade — but housing-cost burden jumped 12 points over the same period, hitting renter households hardest. The prosperity gap between the isthmus and the rural townships is one of the widest in the Midwest.'
+        /* Fact-checked 2026-07-29. Both prior claims were wrong:
+             "added 48,000 residents in the last decade"
+                  -> actual 2010->2020 decennial growth was +73,431. Every
+                     10-year PEP window also lands near 70-73K. The old figure
+                     UNDERSTATED reality by ~50% — the true number is the
+                     stronger claim, which is why it is worth correcting rather
+                     than dropping.
+             "housing-cost burden jumped 12 points over the same period"
+                  -> renter 30%+ cost burden went ~46% (ACS 2011-15) to ~50.4%
+                     (ACS 2022): about +4 points, not +12. The owner/renter
+                     DIVERGENCE is well evidenced (the blended rate fell over
+                     the same span), so the qualitative point survives; the
+                     magnitude does not, and no single number is asserted now.
+           Dropped entirely: "fastest-growing county". Largest absolute gain is
+           supported; "fastest" is a RATE claim nobody verified, so it is gone
+           rather than hedged. Same vintage-visibility tradeoff as Milwaukee. */
+        story: 'Driven by Madison\'s tech and university sectors, Dane County added more than 73,000 residents between the 2010 and 2020 censuses — while cost burden climbed for renter households even as it eased for owners. The prosperity gap between the isthmus and the rural townships is among the widest in the state.',
+        sources: 'Population: U.S. Census Bureau, 2010 & 2020 Decennial Census · Renter cost burden: HUD CHAS / ACS 2011-15 (UW–Madison IRP) and ACS 2022 (Wisconsin Policy Forum)'
       },
       {
-        geoid: '55141',
+        geoid: '55078',
         name: 'Menominee County',
-        population: 4255,
-        tract_count: 2,
-        indicator_count: 28,
-        story: 'The smallest and most rural county in Wisconsin, coextensive with the Menominee Indian Reservation. With just 4,255 residents across two census tracts, Menominee is where data sparsity meets deep need — fewer than 30 of 42 indicators are populated here, and the poverty rate runs 2.6× the state average. This is why open data matters: without it, a county of 4,000 people is invisible to policy.'
+        /* Rewritten 2026-07-29. The previous story's premise was false: it
+           claimed "fewer than 30 of 42 indicators are populated here" and
+           framed Menominee as where "data sparsity meets deep need." The
+           live API reports 19 indicators for Menominee — every one of them
+           populated, exactly as for Milwaukee and Dane. There is no sparsity
+           to point at. The true and sharper fact is that Menominee has the
+           HIGHEST poverty rate of all 72 counties (21.2%, ~2.0x the county
+           mean), which the derived stats row now shows rather than asserts. */
+        story: 'The smallest and most rural county in Wisconsin, coextensive with the Menominee Indian Reservation. Fewer than five thousand residents live here — and they carry the highest poverty rate of any county in the state. This is why open data matters: without it, a county this small is invisible to policy.',
+        /* No external citation needed: every claim here is checkable against
+           PDI's own API, which is the point worth making on this card. */
+        sources: 'Poverty rank and population: PDI, ACS via /v1/policy — highest of all 72 Wisconsin counties'
       }
   ];
 
@@ -958,7 +1034,55 @@ function countyExplorer() {
       /* Note: featuredCounty is deliberately NOT set here. It is local
          data resolved at construction, so an API outage must not be able
          to blank the page's centrepiece — and an API success must not be
-         the thing that finally fills it in. */
+         the thing that finally fills it in.
+
+         What IS filled in here is the card's numbers, never its identity.
+         Population rides along on the county list we just fetched, so it
+         costs nothing extra. See hydrateFeatured() for the rest. */
+      this.hydrateFeatured();
+    },
+
+    /* ── Featured card: derive every number, hard-code none ────────
+       The card paints immediately from FEATURED_POOL (name, geoid, story)
+       and its stats fill in a moment later from live data. Ordering is
+       deliberate: identity never waits on the network, and numbers never
+       come from a literal that can go stale — see the note above the pool
+       for the four that already had.
+
+       Failure is silent and safe by design. Every stat binding falls back
+       to "—", so an unreachable API yields a card with a name, a story and
+       three dashes rather than a card confidently showing last year's
+       population. Absent beats wrong; that is the whole point of this. */
+    async hydrateFeatured() {
+      var f = this.featuredCounty;
+      if (!f) { return; }
+
+      // 1. Population — from the 72-county payload loadCounties() just got.
+      var match = (this.allCounties || []).find(function (c) { return c.geoid === f.geoid; });
+      if (match && match.population != null) {
+        this.featuredCounty = Object.assign({}, this.featuredCounty, { population: match.population });
+      }
+
+      // 2. Poverty rate + indicator count — one call, both numbers.
+      //    `indicator_count` counts indicators that actually carry a value,
+      //    not rows returned: "19 indicators" should mean 19 real readings.
+      try {
+        var resp = await fetch('/v1/policy/geographies/' + encodeURIComponent(f.geoid) + '/indicators');
+        if (!resp.ok) { return; }
+        var data = await resp.json();
+        var inds = data.indicators || [];
+        var withValue = inds.filter(function (i) { return i.value != null; });
+        var pov = inds.find(function (i) { return i.variable_id === 'poverty_rate' && i.value != null; });
+        this.featuredCounty = Object.assign({}, this.featuredCounty, {
+          indicator_count: withValue.length || null,
+          poverty_rate: pov ? pov.value : null
+        });
+      } catch (e) {
+        /* Leave the stats as they are — the bindings render "—". No error
+           surface here on purpose: a featured card is not load-bearing, and
+           a red error box where a spotlight should be is worse than a quiet
+           gap. The county grid below carries its own error state. */
+      }
     },
 
     fmtPop(n) {
