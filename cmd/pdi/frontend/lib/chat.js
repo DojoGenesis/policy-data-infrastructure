@@ -506,12 +506,18 @@ ${this._buildPageContextBlock()}`;
       r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // No `model` field on purpose. This used to pin
+        // 'claude-sonnet-4-20250514', which the Gateway retired — every request
+        // 500'd with "model ... not found in provider anthropic" while the UI
+        // showed a canned answer, so nobody noticed. Omitting it lets the
+        // Gateway route to its configured default, which is the thing that
+        // actually tracks model availability. Pin a model here only if a
+        // specific one is required, and expect to revisit it when it ages out.
         body: JSON.stringify({
           message: userMessage,
           session_id: this._sessionId,
           system_prompt: systemPrompt,
           provider: 'anthropic',
-          model: 'claude-sonnet-4-20250514',
           stream: false
         })
       });
