@@ -9,7 +9,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDI — Policy Data Infrastructure</title>
-<meta name="description" content="Policy Data Infrastructure — open-source platform making public data accessible across 72 Wisconsin counties, 1,542 tracts, 42 variables from 13 sources.">
+<!-- Counts here are deliberately ROUNDED, not exact. This is the one place
+     the scale figures cannot be hydrated — it is read by crawlers and link
+     unfurlers before any script runs, so it is a literal by necessity. It
+     said "42 variables from 13 sources" against a live 51 and 9 until
+     2026-07-29. Hedged wording means a routine data load no longer silently
+     makes the search snippet false; revisit only when an order of magnitude
+     changes. Exact live counts are in the scale strip, which hydrates. -->
+<meta name="description" content="Policy Data Infrastructure — open-source platform making public data accessible across all 72 Wisconsin counties and 1,500+ census tracts, with 50+ indicators drawn from federal and state open-data sources.">
 
 <!-- PWA — ADR-012 I7: offline support + installable web app -->
 <meta name="theme-color" content="#0a0a14">
@@ -615,25 +622,41 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
        Sits inside the hero's bloom, above the first thread: the
        statement's receipt. data-count carries the target for
        TPMotion.counters(); the literal text is what a JS-off or
-       reduced-motion visitor reads, so the two must always agree. -->
+       reduced-motion visitor reads, so the two must always agree.
+
+       The literals below are a SHIP-TIME FALLBACK, not the source of
+       truth. data-scale-key binds each figure to a live count that
+       hydrateScaleStrip() (bottom of file) fetches and writes back into
+       both data-count and the text. Two of these were wrong when the
+       hydration was added on 2026-07-29 — "42 variables" against a live
+       51, and "13 sources" against a live 9 — the same rot class as the
+       featured card's stats and chat.js's top-uninsured list before it.
+       Correcting the literal alone would only reset the clock; the
+       hydration is what stops it happening a fourth time.
+
+       Keep the literal honest anyway: it is what a JS-off visitor and
+       every crawler reads, and it is the fallback when the API is
+       unreachable. Unlike the featured card, a stale-but-close scale
+       figure is better than a dash here — this strip is the hero's
+       receipt, and an empty receipt reads as a broken page. -->
   <div class="stats-bar reveal" style="--d:120">
     <div class="stats-bar-item">
-      <div class="stats-bar-val" data-count="72" data-duration="900" data-locale="en-US">72</div>
+      <div class="stats-bar-val" data-scale-key="counties" data-count="72" data-duration="900" data-locale="en-US">72</div>
       <div class="stats-bar-label" data-en="Counties" data-es="Condados">Counties</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
-      <div class="stats-bar-val" data-count="1542" data-duration="900" data-locale="en-US">1,542</div>
+      <div class="stats-bar-val" data-scale-key="tracts" data-count="1542" data-duration="900" data-locale="en-US">1,542</div>
       <div class="stats-bar-label" data-en="Tracts" data-es="Secciones">Tracts</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
-      <div class="stats-bar-val" data-count="42" data-duration="900" data-locale="en-US">42</div>
+      <div class="stats-bar-val" data-scale-key="variables" data-count="51" data-duration="900" data-locale="en-US">51</div>
       <div class="stats-bar-label" data-en="Variables" data-es="Variables">Variables</div>
     </div>
     <div class="stats-bar-sep"></div>
     <div class="stats-bar-item">
-      <div class="stats-bar-val" data-count="13" data-duration="900" data-locale="en-US">13</div>
+      <div class="stats-bar-val" data-scale-key="sources" data-count="9" data-duration="900" data-locale="en-US">9</div>
       <div class="stats-bar-label" data-en="Sources" data-es="Fuentes">Sources</div>
     </div>
   </div>
@@ -1167,6 +1190,93 @@ function countyExplorer() {
       }
     });
   });
+</script>
+
+<script>
+  /* ── Scale strip hydration ───────────────────────────────────────
+     The four hero figures are the platform's headline claim about its own
+     size, and they were hand-maintained literals: "42 variables from 13
+     sources" against a live 51 and 9. Same failure class as the featured
+     card's stats and the chat prompt's top-uninsured list (dc84998) — a
+     number that was true once, still asserting itself, with nothing
+     failing loudly enough to notice.
+
+     Correcting the literals alone would just restart that clock, so the
+     displayed value is now read from the API on every load and the literal
+     demoted to a ship-time fallback.
+
+     Racing the count-up is the only subtlety. counters() animates toward
+     whatever data-count holds when it fires, and it fires the moment the
+     strip reveals — well before these fetches land. So:
+       1. data-count is rewritten as soon as a value arrives. If counters()
+          has not fired yet (the common case on a cold load), it simply
+          animates to the correct number and nothing else is needed.
+       2. After the animation window has certainly closed, the text is
+          reconciled once. That covers the case where counters() already
+          finished on the stale target.
+     When the literal already matches live — which is the normal state —
+     both steps are no-ops and nothing moves on screen. The correction path
+     is invisible unless it is actually needed.
+
+     Failure is silent by design: any fetch that rejects leaves that figure
+     at its literal. A hero strip is not the place to surface an API error,
+     and unlike the featured card's per-county stats, a slightly stale
+     platform-scale number is not a false claim about a specific place. */
+  (function () {
+    var SOURCES = {
+      counties:  '/v1/policy/geographies?level=county&state_fips=55&limit=1',
+      tracts:    '/v1/policy/geographies?level=tract&limit=1',
+      variables: '/v1/policy/variables',
+      sources:   '/v1/policy/sources'
+    };
+    /* `total` is authoritative on all four: verified 2026-07-29 that it
+       reports the unfiltered count, not the page size, at limit 1/5/100/1000.
+       (TODO.md carried a stale note claiming it echoed the limit — measured
+       false.) limit=1 keeps the geography payloads to a single row, since
+       only the count is wanted. */
+    function readTotal(d) {
+      if (!d || typeof d !== 'object') { return null; }
+      if (typeof d.total === 'number') { return d.total; }
+      var arr = d.variables || d.sources || d.items;
+      return Array.isArray(arr) ? arr.length : null;
+    }
+
+    function apply(el, n, writeText) {
+      if (n == null || !isFinite(n) || n <= 0) { return; }
+      el.setAttribute('data-count', String(n));
+      if (!writeText) { return; }
+      var loc = el.getAttribute('data-locale') || 'en-US';
+      var next;
+      try { next = Number(n).toLocaleString(loc); } catch (e) { next = String(n); }
+      if (el.textContent.trim() !== next) { el.textContent = next; }
+    }
+
+    function hydrate() {
+      Object.keys(SOURCES).forEach(function (key) {
+        var el = document.querySelector('[data-scale-key="' + key + '"]');
+        if (!el) { return; }
+        fetch(SOURCES[key])
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            var n = readTotal(d);
+            if (n == null) { return; }
+            apply(el, n, false);
+            /* Reconcile the rendered text once the count-up can no longer be
+               mid-flight. data-duration is the tween length; the padding
+               covers reveal delay (--d) and scheduling jitter. */
+            var dur = parseInt(el.getAttribute('data-duration'), 10) || 900;
+            setTimeout(function () { apply(el, n, true); }, dur + 600);
+          })
+          .catch(function () { /* keep the literal — see note above */ });
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hydrate);
+    } else {
+      hydrate();
+    }
+  })();
 </script>
 
 <!-- Service Worker registration (ADR-012 I7: PWA offline) -->
