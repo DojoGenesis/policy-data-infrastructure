@@ -772,7 +772,17 @@ function candidateTracker() {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         const vars = data.variables || [];
-        this.availableIndicators = new Set(vars.map(v => v.variable_id));
+        // `.id`, not `.variable_id` — GET /v1/policy/variables returns
+        // {variables:[{id,name,description,unit,direction,source_id,source_name}]}.
+        // There is no variable_id field on this payload, so mapping it produced a
+        // Set containing only `undefined`: every dimension scored matchPct 0, every
+        // indicator chip rendered "Not yet available in PDI", and the page reported
+        // "Avg Indicator Coverage 0%" while the data was in fact present. Note the
+        // sibling `variable_id` key on the /compare differences[] payload is real —
+        // it's a different response shape, which is what makes this easy to mix up.
+        // compare.html:2173, composites.html:1166, about.html:956 and lib/api.js:64
+        // all read `.id` correctly; this was the lone outlier.
+        this.availableIndicators = new Set(vars.map(v => v.id));
       } catch (e) {
         // If variable catalog fails, fall back to empty set
         // (all indicators show as unavailable)
