@@ -506,18 +506,28 @@ ${this._buildPageContextBlock()}`;
       r = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // No `model` field on purpose. This used to pin
-        // 'claude-sonnet-4-20250514', which the Gateway retired — every request
-        // 500'd with "model ... not found in provider anthropic" while the UI
-        // showed a canned answer, so nobody noticed. Omitting it lets the
-        // Gateway route to its configured default, which is the thing that
-        // actually tracks model availability. Pin a model here only if a
-        // specific one is required, and expect to revisit it when it ages out.
+        // ── Model routing ────────────────────────────────────────────────
+        // Operator decision 2026-07-29: chat is open to the public and runs on
+        // DeepSeek v4 Pro via OpenRouter rather than Anthropic, so free usage
+        // does not spend Anthropic credits.
+        //
+        // These two values are a PINNED pair and pinning rots — the previous
+        // pin ('claude-sonnet-4-20250514') was retired upstream and every
+        // request 500'd with "model ... not found in provider anthropic" for an
+        // unknown period, invisible because the UI answered with a canned
+        // placeholder. The placeholder path is gone now, so the same failure
+        // would surface immediately as "NOT AN ANSWER — HTTP 500".
+        //
+        // To change model: check what the Gateway actually offers first —
+        //   GET /v1/models  (534 entries; 13 deepseek/*, plus anthropic/*)
+        // Both `provider: 'openrouter'` and omitting provider entirely resolve
+        // this model; the explicit provider is kept so the routing is legible.
         body: JSON.stringify({
           message: userMessage,
           session_id: this._sessionId,
           system_prompt: systemPrompt,
-          provider: 'anthropic',
+          provider: 'openrouter',
+          model: 'deepseek/deepseek-v4-pro',
           stream: false
         })
       });
