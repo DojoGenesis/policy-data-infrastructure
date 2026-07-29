@@ -28,6 +28,9 @@ func (m *mockValidateStore) GetGeography(_ context.Context, _ string) (*geo.Geog
 func (m *mockValidateStore) QueryGeographies(_ context.Context, _ store.GeoQuery) ([]geo.Geography, error) {
 	return m.geographies, nil
 }
+func (m *mockValidateStore) CountGeographies(_ context.Context, _ store.GeoQuery) (int, error) {
+	return len(m.geographies), nil
+}
 func (m *mockValidateStore) PutIndicators(_ context.Context, _ []store.Indicator) error { return nil }
 func (m *mockValidateStore) PutIndicatorsBatch(_ context.Context, _ []store.Indicator, _ int) error {
 	return nil

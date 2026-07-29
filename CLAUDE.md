@@ -200,7 +200,7 @@ python3 analysis/evidence_cards.py             # generate
 - PDI-specific large files to watch:
   - `analysis/output/*.csv` — 1-50MB. NEVER read whole. Use `wc -l` first.
   - `analysis/output/evidence_cards.json` — ~500KB when fully populated
-  - `data/sources.toml` — small (<12KB), safe to read whole
+  - `data/sources.toml` — ~36KB as of 2026-07-28 (18 sources, each with operational quirks documented). No longer trivially small; prefer a targeted read of the `[sources.<name>]` block you need. Note the keys use **hyphens** (`acs-5yr`, `bls-laus`, `cdc-places`) — a grep whose character class omits `-` will silently match only 5 of the 18
   - All migration SQL files — <5KB each, safe to read whole
 
 ### Quick CSV null diagnostic

@@ -2,13 +2,21 @@
 # Manifest of all upstream data sources for policy-data-infrastructure.
 # Fields:
 #   name             - Human-readable source name
-#   category         - Data category (demographic, geographic, housing, environment, health, economic, flood, food)
+#   category         - Data category (demographic, geographic, boundaries, housing, environment,
+#                       health, economic, food, transit, education, crime, infrastructure, flood)
 #   url              - Base URL or URL template ({year} substituted at fetch time)
 #   api_key_env      - Environment variable name holding the API key (omit if no key needed)
 #   rate_limit_per_min - Requests per minute (with API key where noted)
 #   format           - Response format: json, shapefile, csv, geojson, gdb
 #   geo_levels       - List of supported geography levels
 #   notes            - Any important usage notes
+#
+# Authoritative cross-check: pkg/datasource/registry.go defines the DataSource interface;
+# cmd/pdi/fetch.go and cmd/pdi/pipeline.go register the 16 Go adapters that actually ship
+# (Name() return values match the [sources.*] keys below, hyphenated). fips.go, national.go,
+# and registry.go are infrastructure, not sources. Two entries below (fema-nfhl, osm) are
+# documented for future/manual use — neither has a Go adapter or an ingest/fetch_*.py script
+# yet; see their notes.
 
 [sources.acs-5yr]
 name               = "American Community Survey 5-Year Estimates"
@@ -17,65 +25,138 @@ url                = "https://api.census.gov/data/{year}/acs/acs5"
 api_key_env        = "CENSUS_API_KEY"
 rate_limit_per_min = 500   # 500 req/min with key; 45 req/min without
 format             = "json"
-geo_levels         = ["state", "county", "tract", "block_group"]
+geo_levels         = ["state", "county", "tract"]
 notes              = """
-Key ACS tables used:
-  B19013 - Median household income
-  B03002 - Race and Hispanic or Latino origin
-  S1701  - Poverty status in the past 12 months
-  B01001 - Sex by age
-  B15003 - Educational attainment (population 25+)
-  S2701  - Health insurance coverage
-  B25106 - Tenure by housing costs as a percentage of income
-  B25070 - Gross rent as a percentage of household income
-  B16001 - Language spoken at home by ability to speak English
+ACS tables actually fetched (verified against pkg/datasource/acs.go and ingest/fetch_acs.py —
+these two implementations are NOT identical, see below):
+  B19013 - Median household income                          (Go + Python)
+  B03002 - Race and Hispanic or Latino origin                (Go + Python)
+  S1701  - Poverty status in the past 12 months               (Go + Python, /acs5/subject dataset)
+  B01001 - Sex by age (total population)                     (Go + Python)
+  S2701  - Health insurance coverage                          (Go + Python, /acs5/subject dataset)
+  B25106 - Tenure by housing costs as a percentage of income  (Go + Python; Python uses only the
+                                                                 006/010/024/028 cost-burden cells,
+                                                                 Go additionally fetches 014/018/022/
+                                                                 032/036/040)
+  B15003 - Educational attainment (population 25+)            (ingest/fetch_acs.py ONLY — not in
+                                                                 the Go adapter's acsVariables list)
+  B19001 - Household income by race, for ICE computation       (ingest/fetch_acs_b19001.py, a
+                                                                 separate companion script — see
+                                                                 analysis/output/wi_ice_b19001.csv)
+Detail tables (B-prefix) hit /acs/{year}/acs5; subject tables (S-prefix) hit
+/acs/{year}/acs5/subject — same base URL, different path suffix.
 Earliest available 5-year: 2009 (covering 2005–2009).
+
+CRITICAL — API key is REQUIRED (verified 2026-07-26). A keyless request no longer degrades to a
+rate-limited success: the Census API answers 302 -> /data/missing_key.html, and both Go's
+http.Client and Python's urllib follow that redirect automatically, so the caller gets an HTML
+page back instead of JSON. The failure surfaces as a JSON-decode error far from the real cause,
+not as an auth error. ingest/lib/census.py.require_api_key() converts this into a clear message
+at the top of a fetch script; the Go adapter (acs.go) has no equivalent guard, so a Go-side fetch
+with no CENSUS_API_KEY set will hit the same confusing failure.
+
+CRITICAL — null sentinel is -666666666, not null/0. Applies to both the Go adapter (acs.go, see
+the -666666666 check near the float parser) and Python (ingest/lib/census.py NULL_SENTINEL).
+Always convert via safe_int()/safe_float() (Python) or the equivalent Go sentinel check.
 """
 
 [sources.tiger]
-name               = "TIGER/Line Shapefiles"
-category           = "geographic"
-url                = "https://www2.census.gov/geo/tiger/TIGER{year}"
+name               = "TIGER/Line Boundaries (via TIGERweb REST)"
+category           = "boundaries"   # matches TIGERSource.Category() in pkg/datasource/tiger.go
+url                = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS{year}/MapServer"
 api_key_env        = ""
-rate_limit_per_min = 60
-format             = "shapefile"
-geo_levels         = ["state", "county", "tract", "block_group", "place", "zcta"]
+rate_limit_per_min = 120   # self-imposed: ingest/lib/tigerweb.py pages at a 0.5s delay (_RATE_DELAY);
+                            # no documented ArcGIS REST server-side limit was found
+format             = "geojson"
+geo_levels         = ["state", "county", "tract", "block_group", "place"]
 notes              = """
-Bulk downloads via FTP/HTTPS. Large files (state tract files ~50–200 MB each).
-Use ingest/fetch_tiger.py for parallel downloads with retry logic.
-Load with ogr2ogr or shp2pgsql into PostGIS geography columns.
-Key layers: TRACT, BG, COUNTY, STATE, PLACE, ZCTA5.
+CRITICAL — the old bulk GeoJSON path is gone (404). This repo used to download
+https://www2.census.gov/geo/tiger/GENZ{year}/json/cb_{year}_{st}_{level}_500k.json — verified
+2026-07-26, that directory 404s; the Census now publishes those cartographic boundary layers as
+shapefiles only (GENZ{year}/shp/... still exists). ingest/fetch_tiger.py now reads TIGERweb's
+ArcGIS REST service instead (see ingest/lib/tigerweb.py), which serves the same geometry as
+GeoJSON directly and is vintage-matched to the ACS release (tigerWMS_ACS{year} — verified
+1,542 WI tracts from this service against 1,542 from the ACS API for 2024).
+
+CRITICAL — TIGERweb attribute names differ from the old bulk TIGER files: STATE/COUNTY/AREALAND/
+AREAWATER (TIGERweb) vs STATEFP/COUNTYFP/ALAND/AWATER (bulk files, and what lib/db.py's
+bulk_load_geographies() expects). ingest/fetch_tiger.py.normalize_props() adds the bulk-style
+aliases; without it, state_fips/county_fips/land area silently write as NULL — the load still
+"succeeds", which is the dangerous part.
+
+Layer IDs within tigerWMS_ACS{year} (verified against the 2024 service 2026-07-26, stable across
+vintages of this service): state=80, county=82, tract=8, block_group=10, place=28. Political
+overlay layers also exist in lib/tigerweb.py but are NOT exposed via fetch_tiger.py's --levels
+CLI flag (used programmatically for policy-impact overlays): congressional=54 (119th Congress),
+state_upper=56 (WI Senate), state_lower=58 (WI Assembly), school_unified=14.
+
+Secondary/legacy path: pkg/datasource/tiger.go (the registered Go adapter) downloads bulk
+TIGER/Line shapefile ZIPs (.../TIGER{year}/TRACT/tl_{year}_{statefips}_tract.zip, tract level
+only, hardcoded) and cartographic-boundary ZIPs (.../GENZ{year}/shp/cb_{year}_{statefips}_
+tract_500k.zip). Its FetchCounty/FetchState both return "not implemented" (TIGER provides
+geometry, not tabular indicators) — the actual geography-seeding pipeline runs through
+ingest/fetch_tiger.py + TIGERweb, not through this Go adapter's tabular interface. Shapefile
+(.shp/.dbf) parsing in the Go adapter is marked TODO and not implemented.
+
+Server-side generalization: ingest/lib/tigerweb.py passes maxAllowableOffset=0.0005 degrees
+(~55m) by default — WI tracts go from ~21 MB at full resolution to ~750 KB with no visible
+difference in a choropleth. Pass simplify=None for full resolution (used when feeding PostGIS,
+which does its own simplification at query time).
 """
 
 [sources.hud-chas]
 name               = "HUD Comprehensive Housing Affordability Strategy (CHAS)"
 category           = "housing"
-url                = "https://www.huduser.gov/portal/datasets/cp.html"
+url                = "https://www.huduser.gov/portal/datasets/cp/{year}thru{year+4}-140-csv.zip"
 api_key_env        = ""
-rate_limit_per_min = 30
+rate_limit_per_min = 30   # unverified — no rate-delay constant found in hud_chas.go (single ZIP
+                            # download per process invocation); HUD does not publish a limit
 format             = "csv"
-geo_levels         = ["state", "county", "tract"]
+geo_levels         = ["tract"]   # native output is tract (11-digit GEOID); FetchCounty/FetchState
+                                   # filter the same national tract file by FIPS prefix, not a
+                                   # coarser storage grain
 notes              = """
-Custom tabulations of ACS data for affordable housing analysis.
-Datasets released with a 2–3 year lag relative to ACS vintage.
-Key tables: housing cost burden by income category, tenure, and race/ethnicity.
-Download via HUD User data portal; no API key required.
+Custom tabulations of ACS microdata for affordable housing analysis, produced by HUD at a 2–3
+year lag relative to the ACS vintage. "140" in the URL is the Census summary-level code for
+census tracts (e.g. 2016thru2020-140-csv.zip). Old url pointed at the HTML landing page
+(.../datasets/cp.html) rather than the fetchable ZIP — use the landing page only to find the
+current vintage window if the pattern above 404s.
+
+pkg/datasource/hud_chas.go downloads the ZIP once per process, extracts the tract CSV in-memory,
+and derives 5 indicators (cost burden >30%, >50%, housing problems, extremely-low-income renters,
+overcrowding) from named columns (T1_est1, T8_est10/11, T9_est10/11, T1_est4, T4_est2/3,
+T1_est11). Column names are stable across CHAS vintages 2012–2020 per the adapter's own comment;
+if HUD changes the schema, the adapter fails at column-lookup with an explicit missing-column
+error rather than silently mis-mapping data.
 """
 
 [sources.epa-ejscreen]
 name               = "EPA EJScreen Environmental Justice Screening Tool"
 category           = "environment"
-url                = "https://gaftp.epa.gov/EJSCREEN"
+url                = "https://zenodo.org/records/14767363/files/{year}.zip?download=1"
 api_key_env        = ""
-rate_limit_per_min = 20
+rate_limit_per_min = 20   # ingest/fetch_epa_ejscreen.py RATE_LIMIT_DELAY = 3.0s -> ~20 req/min courtesy limit
 format             = "csv"
-geo_levels         = ["tract", "block_group"]
+geo_levels         = ["block_group", "tract"]   # native is block_group; --tract flag population-
+                                                   # weight-averages up to tract
 notes              = """
-Annual release; block-group level EJ indices.
-Includes percentile ranks for: PM2.5, ozone, DSLPM, cancer risk,
-respiratory hazard, traffic proximity, lead paint, proximity to RMP/NPL/TSDF facilities,
-wastewater discharge, drinking water non-compliance, underground storage tanks.
-National percentile ranks relative to all US block groups.
+CRITICAL — the old base URL is dead. EPA removed EJScreen from gaftp.epa.gov in February 2025;
+that server is offline. ingest/fetch_epa_ejscreen.py now tries a community preservation mirror on
+Zenodo first: https://zenodo.org/records/14767363/files/{year}.zip?download=1 (confirmed live for
+2023 and earlier as of this script; for 2024+ vintages the URL must be updated manually — check
+https://gaftp.epa.gov/EJSCREEN/{year}/ and the Zenodo record for the current filename first).
+Warning: the Zenodo full-year ZIP is ~5.9 GB; the script warns before downloading.
+
+Block-group level EJ indices with percentile ranks for: PM2.5, ozone, DSLPM, cancer risk,
+respiratory hazard, traffic proximity, lead paint (pre-1960 housing), proximity to RMP/NPL/TSDF
+facilities, wastewater discharge, underground storage tanks. National percentile ranks relative
+to all US block groups. Use --tract to population-weight-average block groups up to tract level.
+
+pkg/datasource/epa_ejscreen.go's FetchCounty/FetchState both return HTTP 501 — the EJScreen REST
+broker (ejscreenRESTbroker.aspx) requires point/bbox geometry input and doesn't support bulk
+state-wide export, so the Go adapter only carries the schema/identity, not a working fetch path.
+Its error messages point to "ingest/ejscreen_csv.py", which does not exist in this repo — the
+real script is ingest/fetch_epa_ejscreen.py.
 """
 
 [sources.hmda]
@@ -88,10 +169,15 @@ format             = "csv"
 geo_levels         = ["state", "county", "tract"]
 notes              = """
 Loan-level data on mortgage applications, originations, and denials.
-Filter by: action_taken, derived_race, loan_purpose, census_tract.
+Filter by: action_taken (1=originated, 3=denied — the only two codes pkg/datasource/hmda.go
+requests), derived_race, loan_purpose, census_tract.
 Used for: denial rate disparities by race/ethnicity, loan-to-income ratios,
 manufactured housing, refinance activity.
-Large files: national file ~20–40 GB/year. Use tract-level aggregation at ingest.
+Large files: national file ~20–40 GB/year. The adapter never fetches the national file — it
+always scopes requests to one county (FetchCounty) or loops one request per county in the state
+(FetchState, via the AllStateFIPS list). The CFPB API does not support tract-level filtering
+directly; tract is the finest grain the adapter produces by grouping county-scoped rows in-memory
+on the 11-digit census_tract column.
 """
 
 [sources.bls-laus]
@@ -99,14 +185,32 @@ name               = "Bureau of Labor Statistics Local Area Unemployment Statist
 category           = "economic"
 url                = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 api_key_env        = "BLS_API_KEY"
-rate_limit_per_min = 50   # 500 series/day unregistered; higher with key
+rate_limit_per_min = 50   # self-imposed inter-request pacing (blsRateDelay = 1200ms in
+                            # pkg/datasource/bls_laus.go and ingest/fetch_bls_laus.py both agree).
+                            # This is NOT the series-per-request or queries-per-day cap — see notes.
 format             = "json"
-geo_levels         = ["state", "county", "metropolitan_area"]
+geo_levels         = ["county"]   # FetchState loops over all counties in the state; there is no
+                                    # separate state-level (LAUST) series in this adapter
 notes              = """
-Monthly unemployment rates and labor force estimates by county and state.
-Series ID format: LAUCNssssss03 (unemployment rate), 04 (unemployed), 06 (labor force).
-County FIPS embedded in series ID.
-Registered key raises daily series limit to 500; unregistered 25/day.
+Monthly unemployment rates and labor force estimates by county (state-level FetchState is
+"all counties in this state", not a distinct statewide series).
+Series ID format: LAUCN{SS}{CCC}00000000{MM} — SS=2-digit state FIPS, CCC=3-digit county FIPS,
+MM=measure code (03=unemployment rate, 04=unemployed count, 05=employed count, 06=labor force).
+
+CRITICAL GOTCHAS (from pkg/datasource/bls_laus.go's own "CRITICAL GOTCHAS" doc comment,
+production-verified):
+  1. Fill zeros: series IDs use EIGHT fill zeros ("00000000"), not nine. LAUCN550250000000003 is
+     correct; a 9-zero series ID returns empty data with no error.
+  2. Unregistered batch limit: BLS silently truncates at 25 series per request (HTTP 200 even
+     when data is dropped) — do not send more than 25 series per request without a key. This
+     codebase's own blsBatchSizeRegistered constant conservatively batches at 50 with a key, well
+     under BLS's documented registered limit of 500 series/request.
+  3. annualaverage=true silently drops ALL data when combined with a year range and an
+     unregistered key. Compute annual averages client-side from the 12 monthly (M01-M12) values
+     instead of requesting the annual-average series directly.
+  4. Rate-limit response: status=REQUEST_FAILED_OVER_LIMIT appears in the JSON body — HTTP 200,
+     not an HTTP error — when the daily query limit is hit. 25 queries/day unregistered, 500/day
+     with a registered key. Wait until next UTC midnight; do not retry same day.
 """
 
 [sources.fema-nfhl]
@@ -118,10 +222,15 @@ rate_limit_per_min = 10
 format             = "gdb"
 geo_levels         = ["county", "tract"]  # intersected at tract level after load
 notes              = """
+NOT YET IMPLEMENTED — no Go adapter exists (not in pkg/datasource/, not registered in
+pkg/datasource/registry.go / cmd/pdi/fetch.go / cmd/pdi/pipeline.go) and no ingest/fetch_nfhl.py
+or similar script exists in ingest/ as of this audit. The fields below describe the intended
+design, not a verified working fetch path — treat url/format/rate_limit as unverified until an
+adapter or script is built and this note is updated.
+
 FIRM (Flood Insurance Rate Map) data in File Geodatabase format.
 Key layers: S_FLD_HAZ_AR (flood hazard areas), S_FIRM_PAN (map panels).
 Zone codes: A/AE (100-yr floodplain), X (500-yr or outside), VE (coastal).
-Use ingest/fetch_nfhl.py for county-by-county downloads.
 Large: national GDB ~10 GB. Load with ogr2ogr into PostGIS.
 Intersect with census tracts to compute percent area in floodplain per tract.
 """
@@ -131,30 +240,55 @@ name               = "CDC PLACES: Local Data for Better Health"
 category           = "health"
 url                = "https://data.cdc.gov/resource/cwsq-ngmh.json"
 api_key_env        = "CDC_PLACES_APP_TOKEN"
-rate_limit_per_min = 100   # higher with Socrata app token
+rate_limit_per_min = 90   # pkg/datasource/cdc_places.go paces at 650ms/req (~90/min, "with margin").
+                            # ingest/fetch_cdc_places.py paces differently: ~54/min (1.1s) without a
+                            # token, ~300/min (0.2s) with one — see the env var mismatch note below.
 format             = "json"
-geo_levels         = ["county", "tract", "zcta"]
+geo_levels         = ["tract"]   # locationname is the 11-digit tract GEOID in both the Go adapter
+                                   # and the Python script; "county" only appears as a query-time
+                                   # GEOID-prefix filter, not a distinct stored level. No zcta.
 notes              = """
-Model-based estimates of chronic disease prevalence and risk behaviors.
+Model-based estimates of chronic disease prevalence and risk behaviors, at census tract level
+only (from PLACES 2020 onward; this is the "cwsq-ngmh" Census Tract Data resource, not the
+separate county-level PLACES resource — the county dataset is not used by this codebase).
 Key measures: OBESITY, DIABETES, BPHIGH, MHLTH, PHLTH, CASTHMA,
 SMOKING, CSMOKING, BINGE, LPA (leisure-time physical inactivity),
 CHECKUP, DENTAL, COLON_SCREEN, MAMMOUSE, ACCESS2.
-Census tract estimates available from PLACES 2020 onward.
-Socrata SODA API; app token recommended for production use.
+
+CRITICAL — filter with datavaluetypeid='CrdPrv' (crude prevalence), NOT
+data_value_type='CrudePrev' — the column name changed between PLACES versions and the old name
+fails silently (returns zero rows, not an error). Both pkg/datasource/cdc_places.go and
+ingest/fetch_cdc_places.py already use the correct datavaluetypeid='CrdPrv' filter as of this
+audit; a stale print statement in fetch_cdc_places.py (line ~82) still SAYS
+"data_value_type=CrudePrev" even though the actual $where clause a few lines below is correct —
+don't be misled by the log line if you're grepping for the filter.
+
+CRITICAL — env var mismatch between the two implementations: the Go adapter reads
+CDC_PLACES_APP_TOKEN (falls back from cfg.AppToken, sent as the X-App-Token header — this is the
+name documented above and in CLAUDE.md). ingest/fetch_cdc_places.py instead reads
+SOCRATA_APP_TOKEN — a different env var name, with no fallback to CDC_PLACES_APP_TOKEN. Setting
+only one of the two leaves the other pipeline running unauthenticated (1 req/sec, no error).
 """
 
 [sources.usda-foodaccess]
 name               = "USDA Food Access Research Atlas"
 category           = "food"
-url                = "https://www.ers.usda.gov/data-products/food-access-research-atlas/"
+url                = "https://www.ers.usda.gov/media/5627/food-access-research-atlas-data-download-2019.zip"
 api_key_env        = ""
-rate_limit_per_min = 10
+rate_limit_per_min = 10   # pkg/datasource/usda_food.go and ingest/fetch_usda_food.py both pace at
+                            # a 2.0s delay with an inline comment claiming "~10 req/min" — note the
+                            # literal math on 2.0s is closer to 30/min; 10 is the documented intent
+                            # in both files, so kept as the conservative figure
 format             = "csv"
 geo_levels         = ["tract"]
 notes              = """
 Tract-level food access indicators: LAPOP1 (low access at 1 mile, urban),
 LAPOP10 (low access at 10 miles, rural), LILATracts_1And10, SNAP access flags.
-Updated with each decennial Census / ACS revision cycle.
+Updated with each decennial Census / ACS revision cycle. Current vintage hardcoded to 2019 (most
+recent as of this audit) in usdaFoodDataURL — the media/{id}/... path is an ERS-assigned numeric
+ID that changes per vintage, not a predictable {year}-substitutable pattern. If the URL above
+404s, visit https://www.ers.usda.gov/data-products/food-access-research-atlas/ to find the
+current media ID and update pkg/datasource/usda_food.go's usdaFoodDataURL constant.
 Manual download from ERS website; no API. Check for updated vintage annually.
 """
 
@@ -167,6 +301,12 @@ rate_limit_per_min = 5   # Geofabrik: courtesy limits apply; use Overpass sparin
 format             = "geojson"  # via Overpass API; PBF for full extracts
 geo_levels         = ["city", "neighborhood", "point_of_interest"]
 notes              = """
+NOT YET IMPLEMENTED — no Go adapter exists (not in pkg/datasource/, not registered in
+pkg/datasource/registry.go / cmd/pdi/fetch.go / cmd/pdi/pipeline.go) and no ingest/fetch_*.py
+script for OSM exists in ingest/ as of this audit. The fields below describe the intended design,
+not a verified working fetch path — treat url/format/rate_limit as unverified until an adapter or
+script is built and this note is updated.
+
 Two use patterns:
   1. Overpass API (https://overpass-api.de/api/interpreter) for targeted POI queries.
      Rate-limit aggressively: max 2 req/min, prefer off-peak hours.
@@ -181,35 +321,68 @@ name               = "HUD Point-in-Time Homelessness Count"
 category           = "housing"
 url                = "https://www.hudexchange.info/resource/3031/pit-and-hic-data-since-2007/"
 api_key_env        = ""
-rate_limit_per_min = 10
+rate_limit_per_min = 60   # pkg/datasource/hud_pit.go paces at hudPITRateDelay = 1000ms between
+                            # sequential file operations; HUD does not publish a rate limit for
+                            # what is really a single annual CSV/XLSX download, not a paginated API
 format             = "csv"
 geo_levels         = ["coc"]   # Continuum of Care geography
 notes              = """
+CRITICAL — there is no stable, version-agnostic direct CSV download URL. The url above
+(hudexchange.info/resource/3031/...) is an HTML landing page, not a CSV — pkg/datasource/
+hud_pit.go's hudPITDefaultURL constant is intentionally left EMPTY for exactly this reason.
+Direct download URLs are year-specific and change with each annual release (e.g. the 2023
+national PIT CSV was at https://www.huduser.gov/portal/sites/default/files/xls/2007-2023-PIT-
+Counts-by-CoC.xlsx). Callers MUST set HUDPITConfig.CSVURL to a direct, current-year download
+link found by hand from the landing page; the adapter errors if the URL is empty or the server
+returns HTML instead of CSV/XLSX content.
+
 Annual (January) count of sheltered and unsheltered persons experiencing homelessness.
 Reported by Continuum of Care (CoC) — not census geography.
-CoC boundaries overlap counties; use crosswalk table to apportion to counties.
-Key fields: TotalHomeless, Sheltered_ES, Sheltered_TH, Unsheltered,
-Chronically_Homeless, Veterans, Youth.
-Crosswalk from CoC to county: HUD CoC-to-County shapefile (data/crosswalks/).
+Key fields: TotalHomeless, Sheltered_ES, Sheltered_TH, Unsheltered, Chronically_Homeless. HUD PIT
+CSVs use inconsistent column names across vintages; pkg/datasource/hud_pit.go resolves columns by
+scanning the header for canonical substrings (case-insensitive) rather than fixed offsets.
+
+CoC-to-county crosswalk: there is NO shapefile in data/crosswalks/ (that directory currently
+holds only wi_equity_crosswalk.json). The actual crosswalk is a small, WI-only, hardcoded Go map
+literal (cocCountyFIPS in pkg/datasource/hud_pit.go), e.g. "WI-500": ["55025"], "WI-501":
+["55079"], covering roughly a dozen Wisconsin CoCs. It is not a general national CoC-to-county
+mapping — extending this source to another state means adding entries to that Go map, not
+pointing at an external shapefile.
 """
 
 [sources.hrsa]
 name               = "HRSA Health Professional Shortage Areas & Health Centers"
 category           = "health"
-url                = "https://data.hrsa.gov/data/download"
+url                = "https://data.hrsa.gov/DataDownload/DD_Files/"
 api_key_env        = ""
-rate_limit_per_min = 30
+rate_limit_per_min = 60   # pkg/datasource/hrsa.go paces at hrsaRateDelay = 1000ms between the 4
+                            # bulk CSV downloads; HRSA does not publish a rate limit
 format             = "csv"
-geo_levels         = ["county"]
+geo_levels         = ["county", "tract"]   # native measurement is county; for tract-level output
+                                             # the county value is propagated to every tract GEOID
+                                             # under that county (see note below)
 notes              = """
-Four national CSV bulk downloads (no API key required):
-  1. BCD_HPSA_FCT_DET — Primary Care HPSA designations + scores (0–25)
-  2. BCD_HPSA_FCT_DET_DEN — Dental HPSA designations + scores
-  3. BCD_HPSA_FCT_DET_MH — Mental Health HPSA designations + scores
-  4. Health Center Service Delivery Sites — FQHC locations
-County-level FIPS GEOIDs. Max-score aggregation when multiple HPSAs per county.
+Four national CSV bulk downloads (no API key required), verified against pkg/datasource/hrsa.go's
+actual URL constants — note the exact filenames, which differ from what earlier versions of this
+manifest listed (BCD_HPSA_FCT_DET.csv and BCD_HPSA_FCT_DET_DEN.csv are NOT real filenames):
+  1. https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_PC.csv — Primary Care HPSA
+     designations + scores (0–25)
+  2. https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_DH.csv — Dental Health HPSA
+     designations + scores (suffix is _DH, not _DEN)
+  3. https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_MH.csv — Mental Health HPSA
+     designations + scores
+  4. https://data.hrsa.gov/DataDownload/DD_Files/Health_Center_Service_Delivery_and_LookAlike_Sites.csv
+     — FQHC / look-alike site locations
+County-level FIPS GEOIDs, via the "State and County Federal Information Processing Standard Code"
+column. Max-score aggregation when multiple HPSAs per county. For tract-level output, the
+county's value is propagated (duplicated) to every census tract whose GEOID begins with that
+5-digit county FIPS — this is fan-out, not independent tract measurement; don't mistake identical
+values across every tract in a county for a bug.
 Variables: hrsa_hpsa_primary_care, hrsa_hpsa_dental, hrsa_hpsa_mental_health,
 hrsa_fqhc_count, hrsa_hpsa_designation.
+Because the CSVs are full national snapshots (no county-filter API), FetchCounty/FetchState
+download the full file and filter in-memory; a per-source in-process cache avoids redundant
+downloads within a single binary invocation.
 """
 
 [sources.gtfs]
@@ -222,39 +395,69 @@ format             = "csv"
 geo_levels         = ["tract"]
 notes              = """
 GTFS static feeds (ZIP of CSVs: stops.txt, stop_times.txt, trips.txt, calendar.txt).
-Each transit agency publishes its own feed — FeedsByState config maps state FIPS to URLs.
-Default: Madison Metro Transit for WI. Stops geocoded to tract via Census geocoder.
+Each transit agency publishes its own feed — the DefaultFeeds map in pkg/datasource/gtfs.go
+(state FIPS -> []string of feed URLs) is the actual config name; only "55" (Wisconsin, Madison
+Metro Transit) is seeded. Stops geocoded to tract via the Census geocoder
+(geocoding.geo.census.gov/geocoder/geographies/coordinates), paced at a 200ms courtesy delay
+(gtfsRateDelay) — a per-stop-lookup pacing, separate from the rate_limit_per_min above, which
+describes fetching the static GTFS ZIP itself (not rate-limited by the transit agency).
 Variables: gtfs_stop_count, gtfs_daily_trips, gtfs_trips_per_hour.
-National-ready: add feed URLs per state; returns 501 for states with no configured feeds.
+National-ready: add feed URLs per state to DefaultFeeds; returns a 501-equivalent error for
+states with no configured feeds, directing callers to the Python ingest path.
 """
 
 [sources.wi-dpi]
 name               = "Wisconsin Department of Public Instruction (WISEdash)"
 category           = "education"
-url                = "https://wisedash.dpi.wi.gov/Dashboard/wkedp-download"
+url                = "https://dpi.wi.gov/sites/default/files/wise/downloads/enrollment_certified_{school_year}.zip"
 api_key_env        = ""
-rate_limit_per_min = 10
+rate_limit_per_min = 30   # wiDPIRateDelay = 2s in pkg/datasource/wi_dpi.go, matched independently
+                            # by both ingest/fetch_wi_dpi.py and ingest/fetch_wi_dpi_attendance.py
 format             = "csv"
-geo_levels         = ["district", "school"]
+geo_levels         = ["district"]   # output GEOID is the 4-digit district code only; "school" is
+                                      # present in the raw long-format rows but is pivoted away —
+                                      # not a stored output level
 notes              = """
-WI-specific education data from WISEdash certified downloads.
-Two ZIP files: enrollment (by district/race/gender) and attendance (by district).
+WI-specific education data from WISEdash certified downloads. The url above is the enrollment
+ZIP template — old url pointed at the wisedash.dpi.wi.gov dashboard/portal page, not either
+actual download host (both live under dpi.wi.gov/sites/default/files/wise/downloads/). Attendance
+uses a separate template: attendance_dropouts_certified_{school_year}.zip, with a documented
+fallback to a legacy path (.../imce/wisedash/downloads/...) if the primary 404s
+(wiDPIAttendanceFallbackURL in wi_dpi.go) — try the fallback before assuming a year has no data.
+Two ZIP files: enrollment (by district/race/gender) and attendance (by district). Each ZIP
+contains one long-format CSV (one row per school x GROUP_BY x GROUP_BY_VALUE); the adapter pivots
+to wide, district-level indicators — school-level rows are consumed but not stored separately.
 GEOID convention: wi-dist-XXXX (4-digit district code, not census FIPS).
-Variables: wi_dpi_enrollment, wi_dpi_chronic_absence_rate, wi_dpi_attendance_rate,
-wi_dpi_chronic_absence_black, wi_dpi_chronic_absence_hispanic, wi_dpi_chronic_absence_white,
-wi_dpi_chronic_absence_econ_disadv.
+Variables: wi_dpi_enrollment, wi_dpi_attendance_rate (from the raw data), and
+wi_dpi_chronic_absence_rate (DERIVED as 100 - attendance_rate, not independently reported),
+plus the same chronic-absence rate broken out by subgroup: wi_dpi_chronic_absence_black,
+wi_dpi_chronic_absence_hispanic, wi_dpi_chronic_absence_white, wi_dpi_chronic_absence_econ_disadv.
 Non-WI states return empty (graceful no-op). Handles UTF-8 BOM and latin-1 fallback.
 """
 
 [sources.cdc-svi]
 name               = "CDC/ATSDR Social Vulnerability Index (SVI)"
 category           = "health"
-url                = "https://www.atsdr.cdc.gov/placeandhealth/svi/data_documentation_download.html"
+url                = "https://svi.cdc.gov/Documents/Data/{filename}"
 api_key_env        = ""
-rate_limit_per_min = 10
+rate_limit_per_min = 10   # unverified — no rate-delay constant found in cdc_svi.go or
+                            # fetch_cdc_svi.py; these are 1-2 direct CSV downloads per vintage,
+                            # not a paginated/rate-limited API
 format             = "csv"
 geo_levels         = ["county", "tract"]
 notes              = """
+Old url (atsdr.cdc.gov/.../data_documentation_download.html) is the documentation/landing page,
+not the download host — ingest/fetch_cdc_svi.py actually pulls from svi.cdc.gov/Documents/Data/.
+Filename pattern is NOT consistent across vintages: 2022 is "SVI_2022_US_county.csv" /
+"SVI_2022_US_tract.csv" (underscore before the year), but 2020 is "SVI2020_US_county.csv" /
+"SVI2020_US_tract.csv" (no underscore before the year) — see SVI_FILES in fetch_cdc_svi.py.
+Don't assume the underscore placement when constructing a URL for a new vintage; check the
+documentation page first.
+
+pkg/datasource/cdc_svi.go's FetchCounty and FetchState both return HTTP 501 unconditionally — the
+Go adapter carries the schema/identity only, to register the source in the pipeline. The only
+working fetch path is ingest/fetch_cdc_svi.py; do not expect data from the Go interface directly.
+
 Biennial release (2020, 2022; 2024 may be available).
 CDC/ATSDR ranks census tracts and counties on 16 social factors grouped into four themes:
   1. Socioeconomic Status (below poverty, unemployed, income, no high school diploma)
@@ -271,17 +474,32 @@ Higher percentile = more vulnerable. Direct CSV download, no API key required.
 [sources.epa-tri]
 name               = "EPA Toxics Release Inventory (TRI)"
 category           = "environment"
-url                = "https://data.epa.gov/efservice/tri_facility/json"
+url                = "https://data.epa.gov/efservice/tri_facility/state_abbr/{STATE}/rows/{start}:{end}/json"
 api_key_env        = ""
-rate_limit_per_min = 30
+rate_limit_per_min = 28   # pkg/datasource/epa_tri.go paces at epaTriRateDelay = 2100ms (~28.5/min);
+                            # pagination is 1000 facility records/page (epaTriPageSize), stops on
+                            # an empty response
 format             = "json"
-geo_levels         = ["facility"]   # geocoded to tract at ingest
+geo_levels         = ["county"]   # pkg/datasource/epa_tri.go aggregates ALL facility-level
+                                    # records to county totals; there is no tract-level output —
+                                    # see note below
 notes              = """
-Annual facility-level toxic release data.
-Geocode facility lat/lon to census tract via PostGIS ST_Within.
-Key fields: FIPS_CD, LATITUDE, LONGITUDE, CHEMICAL, TOTAL_RELEASES,
-RELEASES_TO_AIR, RELEASES_TO_WATER, RELEASES_TO_LAND.
-Used for: proximity-to-TRI-facility indicator (count within 1 mile of tract centroid).
+Facility-level data is fetched from the Envirofacts REST API and immediately SUMMED to the
+county level (5-digit GEOID = 2-digit state FIPS + facility's 3-digit COUNTY_FIPS, falling back
+to the facility's FIPS_CD field when COUNTY_FIPS is absent). Variables produced:
+epa_tri_facility_count, epa_tri_total_releases_lbs, epa_tri_air_releases_lbs,
+epa_tri_carcinogen_releases — all county-level aggregates, NOT per-facility rows.
+
+Old url appended "/json" directly after "tri_facility", which is not the real path shape — the
+JSON format suffix belongs at the END of the full query path (.../state_abbr/{STATE}/rows/
+{start}:{end}/json), after the state filter and pagination range, not immediately after the
+resource name.
+
+Tract-level attribution (proximity-to-facility via PostGIS ST_Within on facility lat/lon) is
+explicitly NOT implemented: the Go adapter's own comment says this requires
+"ingest/fetch_epa_tri.py, not yet implemented" — and as of this audit, no ingest/fetch_epa_tri.py
+file exists in ingest/ at all. County-level aggregation via the Go adapter is the only working
+path for this source today.
 """
 
 [sources.fbi-nibrs]
@@ -289,16 +507,28 @@ name               = "FBI National Incident-Based Reporting System (NIBRS)"
 category           = "crime"
 url                = "https://api.usa.gov/crime/fbi/cde/"
 api_key_env        = "FBI_CDE_API_KEY"
-rate_limit_per_min = 30
+rate_limit_per_min = 30   # fbiNIBRSRateDelay = 2s in pkg/datasource/fbi_nibrs.go ("~30 req/min
+                            # with margin") — matches ingest/fetch_fbi_nibrs.py's own 2.0s delay
 format             = "json"
-geo_levels         = ["state", "county"]
+geo_levels         = ["county"]   # county is the only level either implementation actually
+                                    # targets (5-digit FIPS); see stub warning below
 notes              = """
+CRITICAL — as of this audit, pkg/datasource/fbi_nibrs.go's FetchCounty and FetchState are BOTH
+unwired stubs. With no API key they return a "set FBI_CDE_API_KEY" error; WITH a valid key they
+still return "fbi-nibrs: API fetch not yet wired — see TODO markers in fbi_nibrs.go" — the actual
+HTTP call to the CDE API is commented out (TODO block) in both methods. The source is registered
+in the pipeline (cmd/pdi/fetch.go, cmd/pdi/pipeline.go) and will show up in Registry.All(), but
+does not return real indicator data yet even when configured correctly. Do not spend time
+debugging "why is fbi-nibrs returning no rows" as a data/config problem — check fbi_nibrs.go's
+TODO markers first.
+
 FBI Crime Data Explorer (CDE) API providing NIBRS estimation data.
 Requires an api.data.gov API key (sign up at https://api.data.gov/signup/).
-Key variables: violent_crime_rate (per 100K), property_crime_rate (per 100K).
-Data is available at state and county level; county-level uses 5-digit FIPS GEOIDs.
+Key variables: fbi_violent_crime_rate, fbi_property_crime_rate (both per 100,000 population —
+note the fbi_ prefix on the actual VariableDef IDs in fbi_nibrs.go).
 NIBRS estimation tables provide national estimates based on agency submissions.
-Null sentinel: watch for suppression codes (-1, null for small populations).
+Null handling: suppressed values (FBI suppresses populations with fewer than 10 reported
+incidents) appear as raw "-1", "null", or "" and are converted to nil *float64.
 Alternative: CSV bulk downloads from https://cde.ucr.cjis.gov/LATEST/webapp/
 may be used when the API key is unavailable.
 """
@@ -306,17 +536,31 @@ may be used when the API key is unavailable.
 [sources.fcc-broadband]
 name               = "FCC Broadband Access Data (Form 477)"
 category           = "infrastructure"
-url                = "https://www.fcc.gov/form-477-county-data-internet-access-services"
+url                = "https://www.fcc.gov/sites/default/files/fixed_broadband_deployment_data_{period}.csv"
 api_key_env        = ""
-rate_limit_per_min = 20
+rate_limit_per_min = 40   # ingest/fetch_fcc_broadband.py RATE_LIMIT_DELAY = 1.5s -> 40 req/min
 format             = "csv"
-geo_levels         = ["state", "county", "tract"]
+geo_levels         = ["county"]   # both pkg/datasource/fcc_broadband.go and
+                                    # ingest/fetch_fcc_broadband.py only parse the county-level
+                                    # file; tract-level is a documented-but-unimplemented separate URL
 notes              = """
-Semi-annual (June and December) county-level and census-tract-level data on
-residential fixed broadband Internet access service connections.
-Key variables: broadband_access_pct (connections per 1,000 households),
-multiple_providers_pct (number of providers available).
-Tract-level data available at:
-https://www.fcc.gov/form-477-census-tract-data-internet-access-services
-CSV download, no API key required.
+Semi-annual (June and December) county-level data on residential fixed broadband Internet access
+service connections. {period} is a monYYYY token (e.g. jun2024, dec2024) — ingest/
+fetch_fcc_broadband.py currently HARDCODES FCC_COUNTY_CSV_URL to "...jun2024.csv" with a TODO
+comment to update it manually each semi-annual release; there is no automatic latest-release
+discovery. If the fetch 404s, that hardcoded period is almost certainly stale — check
+https://www.fcc.gov/form-477-county-data-internet-access-services for the current filename.
+
+Key variables: fcc_broadband_access_pct (connections per 1,000 households, county-level),
+fcc_multiple_providers_pct (% of tracts in the county with 2+ providers, county-level).
+Tract-level data exists at the separate URL
+https://www.fcc.gov/form-477-census-tract-data-internet-access-services but is NOT implemented
+by either the Go adapter or the Python script — both parse the county-level file only.
+
+CRITICAL — pkg/datasource/fcc_broadband.go's FetchCounty and FetchState both literally
+`return nil, nil` — a SILENT empty success, not an error, not a 501. Calling the Go adapter
+directly gives you zero indicators and zero diagnostics; it will not tell you to go run the
+Python script. Real ingestion runs through ingest/fetch_fcc_broadband.py; this is the sharpest
+version of the "government API silent data drop" pattern in this codebase because the silence is
+in this repo's own Go code, not an upstream API. CSV download, no API key required.
 """

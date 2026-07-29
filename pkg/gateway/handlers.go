@@ -25,7 +25,15 @@ import (
 
 // handleListGeographies lists geographies with optional query-parameter filters.
 //
-// Query params: level, parent_geoid, state_fips, name, limit (default 50), offset.
+// Query params: level, parent_geoid, state_fips, name, limit (default 50),
+// offset, include_retired, retired_only.
+//
+// Retired geographies — rows superseded by a later census vintage but retained
+// for their historical indicator data — are excluded by default, so the counts
+// this endpoint reports describe the current world (e.g. level=tract yields the
+// 1,542 tracts the map draws, not the 1,669 rows the table holds). Temporal
+// callers opt in with include_retired=true, or isolate the historical set with
+// retired_only=true. See ADR-012 §Integration 5.
 func (p *PolicyPlugin) handleListGeographies(c *gin.Context) {
 	q := store.GeoQuery{
 		Limit:  50,
@@ -43,6 +51,8 @@ func (p *PolicyPlugin) handleListGeographies(c *gin.Context) {
 	q.ParentGEOID = c.Query("parent_geoid")
 	q.StateFIPS = c.Query("state_fips")
 	q.NameSearch = c.Query("name")
+	q.IncludeRetired = queryBool(c, "include_retired")
+	q.RetiredOnly = queryBool(c, "retired_only")
 
 	if lim := c.Query("limit"); lim != "" {
 		n, err := strconv.Atoi(lim)
@@ -70,6 +80,15 @@ func (p *PolicyPlugin) handleListGeographies(c *gin.Context) {
 		return
 	}
 
+	// Total is the count of ALL rows matching the filters, not the size of this
+	// page. Reporting len(items) capped pagination at the page size and made
+	// clients that loop while offset < total stop early.
+	total, err := p.store.CountGeographies(c.Request.Context(), q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "count failed", Detail: err.Error()})
+		return
+	}
+
 	items := make([]GeographyResponse, 0, len(geos))
 	for _, g := range geos {
 		items = append(items, p.geoFromStore(g, nil, nil))
@@ -77,7 +96,8 @@ func (p *PolicyPlugin) handleListGeographies(c *gin.Context) {
 
 	c.JSON(http.StatusOK, GeographyListResponse{
 		Items:  items,
-		Total:  len(items),
+		Total:  total,
+		Count:  len(items),
 		Limit:  q.Limit,
 		Offset: q.Offset,
 	})
@@ -161,7 +181,7 @@ func (p *PolicyPlugin) handleGetChildren(c *gin.Context) {
 
 	childLevel, ok := geo.ChildLevel(parent.Level)
 	if !ok {
-		c.JSON(http.StatusOK, GeographyListResponse{Items: []GeographyResponse{}, Total: 0, Limit: 200, Offset: 0})
+		c.JSON(http.StatusOK, GeographyListResponse{Items: []GeographyResponse{}, Total: 0, Count: 0, Limit: 200, Offset: 0})
 		return
 	}
 
@@ -181,14 +201,26 @@ func (p *PolicyPlugin) handleGetChildren(c *gin.Context) {
 		}
 	}
 
-	geos, err := p.store.QueryGeographies(c.Request.Context(), store.GeoQuery{
-		Level:       childLevel,
-		ParentGEOID: geoid,
-		Limit:       limit,
-		Offset:      offset,
-	})
+	childQ := store.GeoQuery{
+		Level:          childLevel,
+		ParentGEOID:    geoid,
+		IncludeRetired: queryBool(c, "include_retired"),
+		RetiredOnly:    queryBool(c, "retired_only"),
+		Limit:          limit,
+		Offset:         offset,
+	}
+
+	geos, err := p.store.QueryGeographies(c.Request.Context(), childQ)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "query failed", Detail: err.Error()})
+		return
+	}
+
+	// Same pagination contract as GET /geographies: Total counts every matching
+	// child, not just this page.
+	total, err := p.store.CountGeographies(c.Request.Context(), childQ)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "count failed", Detail: err.Error()})
 		return
 	}
 
@@ -199,7 +231,8 @@ func (p *PolicyPlugin) handleGetChildren(c *gin.Context) {
 
 	c.JSON(http.StatusOK, GeographyListResponse{
 		Items:  items,
-		Total:  len(items),
+		Total:  total,
+		Count:  len(items),
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -283,11 +316,13 @@ func (p *PolicyPlugin) handleQuery(c *gin.Context) {
 	}
 
 	q := store.GeoQuery{
-		ParentGEOID: req.ParentGEOID,
-		StateFIPS:   req.StateFIPS,
-		NameSearch:  req.NameSearch,
-		Limit:       req.Limit,
-		Offset:      req.Offset,
+		ParentGEOID:    req.ParentGEOID,
+		StateFIPS:      req.StateFIPS,
+		NameSearch:     req.NameSearch,
+		IncludeRetired: req.IncludeRetired,
+		RetiredOnly:    req.RetiredOnly,
+		Limit:          req.Limit,
+		Offset:         req.Offset,
 	}
 	if q.Limit == 0 {
 		q.Limit = 50
@@ -304,6 +339,12 @@ func (p *PolicyPlugin) handleQuery(c *gin.Context) {
 	geos, err := p.store.QueryGeographies(c.Request.Context(), q)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "query failed", Detail: err.Error()})
+		return
+	}
+
+	total, err := p.store.CountGeographies(c.Request.Context(), q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "count failed", Detail: err.Error()})
 		return
 	}
 
@@ -343,7 +384,8 @@ func (p *PolicyPlugin) handleQuery(c *gin.Context) {
 
 	c.JSON(http.StatusOK, GeographyListResponse{
 		Items:  items,
-		Total:  len(items),
+		Total:  total,
+		Count:  len(items),
 		Limit:  q.Limit,
 		Offset: q.Offset,
 	})
@@ -1741,6 +1783,21 @@ func buildLISACaptions(countyName string, lisaProfile *store.LISACountyProfile) 
 
 // parseCSV splits a comma-separated query param into a slice, trimming whitespace.
 // Used for multi-vintage queries: ?vintage=2019,2021,2023
+// queryBool reads an optional boolean query parameter. An absent, empty, or
+// unparseable value yields false, so a malformed flag degrades to the safe
+// default rather than rejecting the request.
+func queryBool(c *gin.Context, key string) bool {
+	v := c.Query(key)
+	if v == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return b
+}
+
 func parseCSV(s string) []string {
 	if s == "" {
 		return nil

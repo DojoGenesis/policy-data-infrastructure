@@ -14,8 +14,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <link rel="stylesheet" href="/static/motion.css">
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/leaflet/leaflet.css">
-<script defer src="/static/alpine.min.js"></script>
+<!-- P0 FIX (map rendered "L is not defined" instead of tracts): Leaflet MUST
+     precede Alpine. Deferred scripts execute in document order, and the parser
+     sets readyState to "interactive" BEFORE running them — so alpine.min.js
+     starts Alpine synchronously the instant it executes, firing
+     x-init="init()" before any deferred script that follows it has run. With
+     Alpine first, init() reached L.map(...) with L still undefined and the
+     page rendered the error card instead of a map. Leaflet-then-Alpine makes L
+     guaranteed-defined by the time init() runs.
+     The _leafletReady() guard in init() is the belt to this reorder's braces —
+     a reorder is invisible to a future editor, a guard is not. Keep both. -->
 <script defer src="/static/leaflet/leaflet.js"></script>
+<script defer src="/static/alpine.min.js"></script>
 <!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
      and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
      __tpMotionFailsafe timer above is the only thing that ever makes .reveal content visible. -->
@@ -556,7 +566,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </header>
 
 <!-- ═══════════════ MAIN ═══════════════ -->
-<main id="main" x-data="lisaMap()" x-init="init()" class="wrap map-page">
+<!-- No x-init="init()" here ON PURPOSE. Alpine 3.14.9 already calls a data
+     object's init() method automatically during component setup, so the
+     explicit x-init ran it a SECOND time (verified in-browser: 2 calls with
+     x-init, 1 without). Production hid this because both calls died on the
+     same undefined `L`; once Leaflet loads, call #1 builds the map and call #2
+     throws Leaflet's "Map container is already initialized" over a working
+     map. initLeafletMap() is idempotent as a backstop, but do not re-add
+     x-init — it is redundant, not harmless. -->
+<main id="main" x-data="lisaMap()" class="wrap map-page">
 
   <!-- ── Back link ── -->
   <a href="/" class="btn btn-ghost" style="margin-bottom:0;">
@@ -778,7 +796,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 function lisaMap() {
   return {
     // ── State ──────────────────────────────────────────────────
-    selectedVariable: PDIDeepLink.getParam('indicator', 'poverty_rate'),
+    // window.PDIDeepLink is defined by the NON-deferred /static/lib/deeplink.js
+    // at the foot of <body>, which today runs before deferred Alpine. Add
+    // `defer` to that tag and an unguarded call here would throw INSIDE x-data
+    // — killing the whole component, so not even the error card would render.
+    // Same class of load-order hazard as the Leaflet race; same treatment.
+    selectedVariable: (window.PDIDeepLink ? window.PDIDeepLink.getParam('indicator', 'poverty_rate') : 'poverty_rate'),
     selectedVintage: '',
     availableVintages: [],
     showCounties: false,
@@ -807,6 +830,7 @@ function lisaMap() {
     _map: null,
     _tractLayer: null,
     _countyLayer: null,
+    _urlSyncBound: false,
 
     /* ── Color scale (5-tier — Rainbow categorical) ────────── */
     /* HH/HL reassigned from ember/red (dE 20.2 normal, but 4.2 under
@@ -866,20 +890,50 @@ function lisaMap() {
       return v ? v.label : this.selectedVariable;
     },
 
+    // ═══════════════ LOAD-ORDER GUARDS ══
+    /* Alpine starts — and therefore runs x-init="init()" — the moment
+       alpine.min.js executes. Every other library this page uses arrives on a
+       separate <script> tag, so "is it there yet?" is a real question at
+       init() time, not a theoretical one. Two guards below; neither replaces
+       correct <script> ordering in <head>, they only make a wrong order
+       recoverable instead of fatal. */
+
+    // Resolves true once window.L exists, false if it never shows up.
+    // Immediate (already-resolved promise) in the correct-script-order case,
+    // so the happy path costs one microtask and nothing else.
+    _leafletReady(timeoutMs) {
+      if (typeof L !== 'undefined') return Promise.resolve(true);
+      var limit = timeoutMs || 5000;
+      return new Promise(function (resolve) {
+        var deadline = Date.now() + limit;
+        (function poll() {
+          if (typeof L !== 'undefined') return resolve(true);
+          if (Date.now() >= deadline) return resolve(false);
+          setTimeout(poll, 25);
+        })();
+      });
+    },
+
+    // URL param read that degrades to the default instead of throwing when
+    // deeplink.js has not executed yet.
+    _param(name, fallback) {
+      return window.PDIDeepLink ? window.PDIDeepLink.getParam(name, fallback) : fallback;
+    },
+
     // ═══════════════ INIT ═══════════════
     async init() {
       this.mapLoading = true; this.mapError = '';
       this.loadingMessage = 'Loading LISA analyses…';
 
       // Inject Copy Link button
-      PDIDeepLink.autoInjectCopyButton();
+      if (window.PDIDeepLink) window.PDIDeepLink.autoInjectCopyButton();
 
       // Read map view params from URL
-      var latParam = parseFloat(PDIDeepLink.getParam('lat', ''));
-      var lngParam = parseFloat(PDIDeepLink.getParam('lng', ''));
-      var zoomParam = parseInt(PDIDeepLink.getParam('zoom', ''));
-      var geoidParam = PDIDeepLink.getParam('geoid', '');
-      var indicatorParam = PDIDeepLink.getParam('indicator', '');
+      var latParam = parseFloat(this._param('lat', ''));
+      var lngParam = parseFloat(this._param('lng', ''));
+      var zoomParam = parseInt(this._param('zoom', ''));
+      var geoidParam = this._param('geoid', '');
+      var indicatorParam = this._param('indicator', '');
 
       // Apply indicator from URL (cross-page link from county profile or evidence)
       if (indicatorParam) {
@@ -887,6 +941,15 @@ function lisaMap() {
       }
 
       try {
+        // Wait for Leaflet rather than assuming it. Surfaces the existing
+        // error state with an actionable message on timeout instead of
+        // throwing a bare "L is not defined" at the user.
+        this.loadingMessage = 'Loading map library…';
+        if (!(await this._leafletReady())) {
+          throw new Error('Map library (Leaflet) did not load. Check that /static/leaflet/leaflet.js is reachable, then retry.');
+        }
+        this.loadingMessage = 'Loading LISA analyses…';
+
         this.initLeafletMap();
 
         // Apply URL view params after map init
@@ -929,10 +992,14 @@ function lisaMap() {
           });
         }
 
-        // Listen for map move/zoom to sync URL
-        var syncMapURL = this.syncMapURL.bind(this);
-        this._map.on('moveend', syncMapURL);
-        this._map.on('zoomend', syncMapURL);
+        // Listen for map move/zoom to sync URL. Bound once — init() re-runs on
+        // every Retry click, and .on() would stack a fresh listener each time.
+        if (!this._urlSyncBound) {
+          var syncMapURL = this.syncMapURL.bind(this);
+          this._map.on('moveend', syncMapURL);
+          this._map.on('zoomend', syncMapURL);
+          this._urlSyncBound = true;
+        }
       } catch (e) {
         this.mapError = e.message || 'Failed to load map data.';
         console.error('Map init failed:', e);
@@ -952,6 +1019,21 @@ function lisaMap() {
 
     // ═══════════════ LEAFLET MAP INIT ══
     initLeafletMap() {
+      // Idempotent. init() is re-entrant by design — it is the Retry button's
+      // handler (@click="init()") — and L.map() throws "Map container is
+      // already initialized" on a second call against the same element. That
+      // made Retry throw on any already-built map, and it is what surfaced
+      // when the x-init double-call above stopped being masked by the L error.
+      // Reuse the existing map + layers; init() re-fetches and re-renders into
+      // them, which is exactly what a retry should do.
+      if (this._map) return;
+
+      // Second line of defence: init() already awaited _leafletReady(), but
+      // this method is a plausible thing for future code to call directly.
+      if (typeof L === 'undefined') {
+        throw new Error('Map library (Leaflet) is not available.');
+      }
+
       // Fix Leaflet's default icon path — use vendored markers
       L.Icon.Default.imagePath = '/static/leaflet/images/';
 
@@ -1194,10 +1276,10 @@ function lisaMap() {
 
     // ═══════════════ MAP URL SYNC ══════
     syncMapURL() {
-      if (!this._map) return;
+      if (!this._map || !window.PDIDeepLink) return;
       var center = this._map.getCenter();
       var zoom = this._map.getZoom();
-      PDIDeepLink.syncURL({
+      window.PDIDeepLink.syncURL({
         indicator: this.selectedVariable,
         lat: center.lat.toFixed(4),
         lng: center.lng.toFixed(4),
@@ -1402,6 +1484,13 @@ function lisaMap() {
 
     // ═══════════════ DOWNLOAD AS PNG ═══
     async downloadPNG() {
+      // _map stays null when init() bailed (e.g. Leaflet never loaded). The
+      // button is still clickable next to the error card, so guard rather than
+      // throw an uncaught TypeError.
+      if (!this._map) {
+        alert('Map is not loaded yet — nothing to download.');
+        return;
+      }
       const mapContainer = this._map.getContainer();
       const svgEl = mapContainer.querySelector('svg');
       if (!svgEl) {

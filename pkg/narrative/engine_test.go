@@ -212,6 +212,9 @@ func (m *mockStore) QueryGeographies(_ context.Context, _ store.GeoQuery) ([]geo
 	}
 	return out, nil
 }
+func (m *mockStore) CountGeographies(_ context.Context, _ store.GeoQuery) (int, error) {
+	return len(m.geographies), nil
+}
 func (m *mockStore) PutIndicators(_ context.Context, _ []store.Indicator) error { return nil }
 func (m *mockStore) QueryIndicators(_ context.Context, q store.IndicatorQuery) ([]store.Indicator, error) {
 	if len(q.GEOIDs) == 0 {

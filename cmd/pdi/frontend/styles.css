@@ -287,12 +287,50 @@ a:hover {
    Sticky, dark ground with backdrop blur. The 1px spectral bottom
    edge is --border-strong at rest, --accent-mix on hover/scroll (the
    stack applies .scrolled via JS).
+
+   LAYOUT — the header has three fixed parts and two registers.
+
+   Parts, left to right:
+     .site-logo    the wordmark. Static markup.
+     .site-nav     nine peer links. Static markup.
+     .lang-pair    ES/EN + the theme flipper. NOT in the HTML —
+                   lang-toggle.js appends it to .site-header-inner at
+                   runtime and theme-toggle.js appends the button
+                   inside it. The layout must reserve room for a third
+                   child that is absent at first paint.
+
+   Registers (the flip is at 600px, an existing breakpoint):
+     < 600px   one row. The lockup falls back to the PDI monogram,
+               the nav is a horizontal rail, toggles pinned right.
+               A phone keeps a ~48px bar.
+     >= 600px  two rows. Wordmark left + toggles right on row one;
+               the nav takes the full content width on row two, where
+               nine links fit outright from ~768px up.
+
+   Why two rows rather than one: the row budget does not close. At the
+   widest the content box is --wrap (1120px) minus 64px padding =
+   1056px, against a 244px wordmark + a 774px nav + 54px of toggles =
+   1072px. Nine links have never fit beside the wordmark at ANY width
+   — the 800px clipping was the visible half of a defect that also
+   wrapped the wordmark at 1920px. Giving the nav its own row closes
+   the budget with ~280px to spare at desktop, so the next link added
+   costs nothing. (Nav grew 4 -> 9 in one session; assume it grows.)
+
+   Two invariants hold in both registers:
+     - the wordmark never wraps and never shrinks (nowrap + flex 0 0);
+     - the nav absorbs its own overflow (min-width:0 + overflow-x),
+       so it can never push a sibling out of the viewport.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Language toggle ──────────────────────────────────────────── */
 .lang-pair {
   display: inline-flex;
   align-items: center;
+  /* Injected last and never sacrificed: these two controls are the
+     only way to change language or theme, so they hold their width
+     while the nav gives ground. */
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .lang-link {
@@ -335,14 +373,32 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: clamp(48px, 7vw, 64px);
+  /* min-height, never height. A hard box is what turned an overflowing
+     nav into a *clipped* wordmark: the bar could not grow, so the
+     three-line lockup was cut by the 56px edge. The clamp is unchanged,
+     so the bar renders at exactly its old height whenever the content
+     fits — but it can no longer cut anything that does not. */
+  min-height: clamp(48px, 7vw, 64px);
+  column-gap: clamp(10px, 2vw, 20px);
   max-width: var(--wrap);
   margin-inline: auto;
   padding-inline: clamp(16px, 3vw, 32px);
 }
 
 .site-logo {
-  font-size: 1.1rem;
+  /* The wordmark is the one thing that must never give. Before, it was
+     the only text-shrinkable child of the row, so it silently absorbed
+     the whole of the nav's overflow — squeezed to 115px and wrapped to
+     three lines. flex 0 0 auto takes it out of that negotiation;
+     nowrap makes a mid-word break impossible at any width. */
+  flex: 0 0 auto;
+  white-space: nowrap;
+  /* Base register (<600px) shows the monogram only — see the register
+     note above. font-size:0 collapses the wordmark text node visually
+     while leaving it in the DOM and in this link's accessible name, so
+     "PDI Policy Data Infrastructure" is still what a screen reader
+     announces. The full size is restored at >=600px. */
+  font-size: 0;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text);
@@ -352,20 +408,63 @@ a:hover {
 
 .site-logo-accent {
   color: var(--accent);
+  font-size: 1.1rem;   /* carries the lockup on its own in the monogram register */
 }
 
 .site-nav {
   display: flex;
   align-items: center;
-  gap: clamp(4px, 1.5vw, 12px);
+  gap: 8px;
   font-size: 0.875rem;
   font-weight: 500;
+
+  /* ── The rail ────────────────────────────────────────────────
+     min-width: 0 is the load-bearing declaration. A flex item will
+     not shrink below its min-content width unless you say so, and
+     this nav's min-content is 774px — wider than the row at every
+     viewport. Without it the deficit had to go somewhere, and it went
+     to the siblings: the wordmark wrapped and .lang-pair was pushed
+     clean off the viewport (measured at x=913 in an 800px window,
+     with the document itself scrolling horizontally to 957px).
+     With it, the nav takes its own overflow as scroll and no sibling
+     ever moves. Nine links stay in the DOM at full size; scrolling
+     and Tab both reach every one of them. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Sized past the 28px trailing fade below, so a link reached by Tab
+     is not parked under the gradient. It also softens a Chromium quirk
+     rather than curing it: sequential focus navigation into a
+     horizontal scroller updates scrollLeft only every other Tab, so a
+     focused link can sit partly outside the rail. Reproduced on a bare
+     nine-link flex scroller with none of this stylesheet loaded (3 of 9
+     clipped, worst 68px at a 181px rail), so it is the engine, not this
+     header — and 32px measurably improves it here (worst 41px). Every
+     link still receives focus, in DOM order, and activates.
+     Not scroll-behavior: motion.css sets `smooth` on html, but
+     scroll-behavior does not inherit — a fresh scroll container in this
+     header computes `auto`, so there is nothing here to override. */
+  scroll-padding-inline: 32px;
+  overscroll-behavior-x: contain;     /* a nav swipe must not page-back */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;              /* a scrollbar here would eat the bar */
+  -ms-overflow-style: none;
+  /* overflow-y:hidden would crop a focus ring; the padding buys room
+     for it and the matching negative margin gives the height back. */
+  padding-block: 4px;
+  margin-block: -4px;
 }
+.site-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .site-nav a {
   display: inline-flex;
   align-items: center;
-  padding: 0.35em 0.75em;
+  /* 0 0 auto: links hold their label width rather than squashing into
+     unreadable slivers when the rail is narrower than the nav. */
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0.35em 0.6em;
   border-radius: var(--r-badge);
   color: var(--muted);
   text-decoration: none;
@@ -380,6 +479,57 @@ a:hover {
 .site-nav a[aria-current="page"] {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--text);
+}
+
+/* ── Compact register: < 600px ─────────────────────────────────────
+   One row, monogram lockup, nav as a rail. The rail is ~205px wide at
+   320px against a 704px nav, so it is scrollable by construction at
+   every width in this band — which is why the trailing fade is safe to
+   state unconditionally here and nowhere else. An always-on fade over a
+   nav that actually fits would be a lie about there being more. */
+@media (max-width: 599px) {
+  .site-nav {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+}
+
+/* ── Masthead register: >= 600px ───────────────────────────────────
+   Row one: wordmark left, toggles right (justify-content: space-between
+   already places them). Row two: the nav, full content width.
+   flex-basis:100% is what forces the break — the nav cannot share a
+   line with anything, so it always lands on its own, whatever else the
+   header ends up holding. order: keeps .lang-pair on row one even
+   though the JS appends it after the nav in DOM order. */
+@media (min-width: 600px) {
+  .site-header-inner {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-block: 8px;
+  }
+
+  .site-logo  { order: 1; font-size: 1.1rem; }   /* full wordmark returns */
+  .lang-pair  { order: 2; }
+  .site-nav   { order: 3; flex-basis: 100%; }
+}
+
+/* ── >= 1200px: the nav gets its original spacing back ─────────────
+   Below this the stock 12px gap and 0.75em pills overrun the row — at
+   768px they need 774px against 722px, the "nearly fits" case that
+   reads as broken rather than as a rail. The tighter pills buy the fit
+   outright through the whole mid-range. From 1200px the row is the full
+   --wrap content box and the nav returns to exactly the density it had
+   before this fix, with room to spare.
+
+   1200 rather than 900 because of Spanish. The ES labels are 64px wider
+   than the EN ones (838px vs 774px at stock spacing), which at 900px
+   left 7.9px of slack — a margin thin enough to go negative on any font
+   stack that rasterises a percent wider than this one, and it would do
+   so silently on someone else's machine. At 1200 the same nav has 218px
+   of slack in Spanish. Measured, both languages, not assumed. */
+@media (min-width: 1200px) {
+  .site-nav   { gap: 12px; }
+  .site-nav a { padding: 0.35em 0.75em; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1354,6 +1504,14 @@ html.js .page-view {
    Mobile-first: everything above is the base (mobile) layout.
    These are purely additive — wider viewports get more columns,
    larger type, bigger gaps.
+
+   NOT the only breakpoints in this file. The site header carries its
+   own 600px and 900px queries, kept beside the header rules rather
+   than here on purpose: its layout flip is a single component's
+   behaviour, and splitting it a thousand lines from the rules it
+   modifies is how a header that clipped its own wordmark at every
+   width from 320 to 1920 went unnoticed. Same breakpoints, stated
+   where they can be read against what they change.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── ≥600px (tablet portrait / large phone landscape) ──────────── */

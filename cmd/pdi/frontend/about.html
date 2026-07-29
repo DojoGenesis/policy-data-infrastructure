@@ -469,7 +469,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 
-<main id="main" class="wrap-narrow" x-data="aboutPage()" x-init="init()">
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init()
+     during component setup, so pairing it with x-init runs it a second time.
+     aboutPage()'s init() is a no-op today, but the redundant call is still
+     the same defect fixed in map.html / county.html — do not re-add it. The
+     same issue repeats below at sourcesData() and variablesData(); referencesData()
+     further down uses x-init="load()" (a different method, not this bug) and
+     is left alone on purpose. -->
+<main id="main" class="wrap-narrow" x-data="aboutPage()">
 
   <!-- ── Platform Overview ────────────────────────────────────────── -->
   <section class="about-section section-band reveal" id="overview">
@@ -545,7 +552,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Data Sources (live from API) ─────────────────────────────── -->
-  <section class="about-section section-band reveal" id="sources" x-data="sourcesData()" x-init="init()">
+  <!-- No `x-init="init()"`: same double-init issue as aboutPage() above —
+       Alpine auto-calls a data object's own init(). Here it would double the
+       GET /v1/policy/sources fetch. Do not re-add it. -->
+  <section class="about-section section-band reveal" id="sources" x-data="sourcesData()">
     <span class="section-tag" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</span>
     <h2 class="about-section-title" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</h2>
     <p class="about-section-subtitle" data-en="Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level." data-es="Datos en vivo obtenidos de la API de PDI al cargar la p\u00e1gina. Se puede buscar por nombre, tipo, descripci\u00f3n o nivel geogr\u00e1fico.">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
@@ -639,7 +649,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <hr class="thread" aria-hidden="true">
 
   <!-- ── Variable Catalog (live from API) ─────────────────────────── -->
-  <section class="about-section section-band reveal" id="variables" x-data="variablesData()" x-init="init()">
+  <!-- No `x-init="init()"`: same double-init issue as aboutPage() above —
+       Alpine auto-calls a data object's own init(). Here it would double the
+       GET /v1/policy/variables fetch. Do not re-add it. -->
+  <section class="about-section section-band reveal" id="variables" x-data="variablesData()">
     <span class="section-tag" data-en="Variables" data-es="Variables">Variables</span>
     <h2 class="about-section-title" data-en="Variable Catalog" data-es="Catálogo de Variables">Variable Catalog</h2>
     <p class="about-section-subtitle" data-en="Validated variables across multiple sources. Searchable and grouped by data source." data-es="Variables validadas de múltiples fuentes. Se pueden buscar y agrupar por fuente de datos.">Validated variables across multiple sources. Searchable and grouped by data source.</p>

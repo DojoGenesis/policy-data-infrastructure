@@ -12,6 +12,12 @@ type QueryRequest struct {
 	Offset      int      `json:"offset"`
 	VariableIDs []string `json:"variable_ids"` // inline indicators to fetch
 	Vintage     string   `json:"vintage"`
+	// IncludeRetired also returns geographies retired by a later census
+	// vintage. Omitted/false returns current geographies only.
+	IncludeRetired bool `json:"include_retired"`
+	// RetiredOnly restricts the result to retired geographies (temporal
+	// analysis, ADR-012 §I5). Implies IncludeRetired.
+	RetiredOnly bool `json:"retired_only"`
 }
 
 // CompareRequest is the body for POST /compare.
@@ -120,9 +126,16 @@ type ScoreResponse struct {
 }
 
 // GeographyListResponse wraps a paginated list of geographies.
+//
+// Total is the number of geographies matching the request's filters across all
+// pages — it is what a client should paginate against. Count is the number of
+// items in this page (Total was previously set to the page size, which silently
+// capped paginating clients at the first page). Retired geographies are
+// excluded from both unless the request opts in.
 type GeographyListResponse struct {
 	Items  []GeographyResponse `json:"items"`
 	Total  int                 `json:"total"`
+	Count  int                 `json:"count"`
 	Limit  int                 `json:"limit"`
 	Offset int                 `json:"offset"`
 }

@@ -26,6 +26,11 @@ type mockStore struct {
 	indicators  []store.Indicator
 	scores      []store.AnalysisScore
 
+	// retiredGEOIDs marks entries in geographies as retired (migration 013:
+	// geographies.retired_at IS NOT NULL). geo.Geography has no lifecycle
+	// field, so the mock keeps the marker beside the rows.
+	retiredGEOIDs map[string]bool
+
 	// Optionally override behaviour per-test.
 	getGeographyFn func(ctx context.Context, geoid string) (*geo.Geography, error)
 
@@ -54,19 +59,35 @@ func (m *mockStore) GetGeography(ctx context.Context, geoid string) (*geo.Geogra
 	return nil, errNotFound{}
 }
 
+// matchesGeoQuery mirrors the WHERE clause of PostgresStore.QueryGeographies,
+// including the retirement predicate, but not LIMIT/OFFSET.
+func (m *mockStore) matchesGeoQuery(g geo.Geography, q store.GeoQuery) bool {
+	if q.Level != "" && g.Level != q.Level {
+		return false
+	}
+	if q.ParentGEOID != "" && g.ParentGEOID != q.ParentGEOID {
+		return false
+	}
+	if q.StateFIPS != "" && g.StateFIPS != q.StateFIPS {
+		return false
+	}
+	retired := m.retiredGEOIDs[g.GEOID]
+	switch {
+	case q.RetiredOnly:
+		return retired
+	case q.IncludeRetired:
+		return true
+	default:
+		return !retired
+	}
+}
+
 func (m *mockStore) QueryGeographies(_ context.Context, q store.GeoQuery) ([]geo.Geography, error) {
 	var out []geo.Geography
 	for _, g := range m.geographies {
-		if q.Level != "" && g.Level != q.Level {
-			continue
+		if m.matchesGeoQuery(g, q) {
+			out = append(out, g)
 		}
-		if q.ParentGEOID != "" && g.ParentGEOID != q.ParentGEOID {
-			continue
-		}
-		if q.StateFIPS != "" && g.StateFIPS != q.StateFIPS {
-			continue
-		}
-		out = append(out, g)
 	}
 	// Apply limit/offset.
 	if q.Offset >= len(out) {
@@ -77,6 +98,18 @@ func (m *mockStore) QueryGeographies(_ context.Context, q store.GeoQuery) ([]geo
 		out = out[:q.Limit]
 	}
 	return out, nil
+}
+
+// CountGeographies counts every matching row, deliberately ignoring
+// Limit/Offset — that is the behaviour the pagination total depends on.
+func (m *mockStore) CountGeographies(_ context.Context, q store.GeoQuery) (int, error) {
+	n := 0
+	for _, g := range m.geographies {
+		if m.matchesGeoQuery(g, q) {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (m *mockStore) PutIndicators(_ context.Context, indicators []store.Indicator) error {
@@ -425,6 +458,159 @@ func TestListGeographies_LimitCappedAt1000(t *testing.T) {
 	// Cap is applied to the limit field in response.
 	if resp.Limit > 1000 {
 		t.Errorf("limit should be capped at 1000, got %d", resp.Limit)
+	}
+}
+
+// ── Test: GET /v1/geographies — pagination total ─────────────────────────────
+
+// Total previously reported len(items), i.e. the page size, so a client looping
+// while offset < total stopped after the first page. It must report every row
+// matching the filters.
+func TestListGeographies_TotalIsFullCountNotPageSize(t *testing.T) {
+	s := &mockStore{}
+	for i := 0; i < 7; i++ {
+		s.geographies = append(s.geographies, geo.Geography{
+			GEOID:     "5500" + strconv.Itoa(i),
+			Level:     geo.County,
+			Name:      "County " + strconv.Itoa(i),
+			StateFIPS: "55",
+		})
+	}
+	r := newTestRouter(s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/geographies?limit=3", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d — body: %s", w.Code, w.Body.String())
+	}
+
+	var resp GeographyListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if len(resp.Items) != 3 {
+		t.Errorf("expected a page of 3 items, got %d", len(resp.Items))
+	}
+	if resp.Total != 7 {
+		t.Errorf("total must be the unfiltered match count (7), got %d", resp.Total)
+	}
+	if resp.Count != 3 {
+		t.Errorf("count must be the page size (3), got %d", resp.Count)
+	}
+
+	// Filters still narrow the total rather than being ignored by it.
+	w2 := httptest.NewRecorder()
+	req2, _ := http.NewRequest(http.MethodGet, "/v1/geographies?limit=3&state_fips=17", nil)
+	r.ServeHTTP(w2, req2)
+
+	var resp2 GeographyListResponse
+	if err := json.NewDecoder(w2.Body).Decode(&resp2); err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if resp2.Total != 0 {
+		t.Errorf("expected total=0 for a non-matching filter, got %d", resp2.Total)
+	}
+}
+
+// ── Test: GET /v1/geographies — retired geographies ──────────────────────────
+
+// Retired tracts (2010-vintage rows kept for their historical indicator data)
+// must not appear in default listings or in the total, but must remain
+// reachable through an explicit opt-in for temporal analysis (ADR-012 §I5).
+func TestListGeographies_RetiredFiltering(t *testing.T) {
+	s := &mockStore{
+		geographies: []geo.Geography{
+			{GEOID: "55025000100", Level: geo.Tract, Name: "Tract 1", StateFIPS: "55", ParentGEOID: "55025"},
+			{GEOID: "55025000200", Level: geo.Tract, Name: "Tract 2", StateFIPS: "55", ParentGEOID: "55025"},
+			{GEOID: "55025990000", Level: geo.Tract, Name: "Retired Tract", StateFIPS: "55", ParentGEOID: "55025"},
+		},
+		retiredGEOIDs: map[string]bool{"55025990000": true},
+	}
+	r := newTestRouter(s)
+
+	get := func(t *testing.T, url string) GeographyListResponse {
+		t.Helper()
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, url, nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200 for %s, got %d — body: %s", url, w.Code, w.Body.String())
+		}
+		var resp GeographyListResponse
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+		return resp
+	}
+
+	def := get(t, "/v1/geographies?level=tract")
+	if def.Total != 2 || len(def.Items) != 2 {
+		t.Errorf("default listing should show 2 current tracts, got total=%d items=%d", def.Total, len(def.Items))
+	}
+	for _, it := range def.Items {
+		if it.GEOID == "55025990000" {
+			t.Errorf("retired tract leaked into the default listing")
+		}
+	}
+
+	all := get(t, "/v1/geographies?level=tract&include_retired=true")
+	if all.Total != 3 || len(all.Items) != 3 {
+		t.Errorf("include_retired=true should show all 3, got total=%d items=%d", all.Total, len(all.Items))
+	}
+
+	only := get(t, "/v1/geographies?level=tract&retired_only=true")
+	if only.Total != 1 || len(only.Items) != 1 {
+		t.Fatalf("retired_only=true should show 1, got total=%d items=%d", only.Total, len(only.Items))
+	}
+	if only.Items[0].GEOID != "55025990000" {
+		t.Errorf("retired_only returned %q", only.Items[0].GEOID)
+	}
+
+	// A malformed flag degrades to the safe default instead of 400-ing.
+	junk := get(t, "/v1/geographies?level=tract&include_retired=yesplease")
+	if junk.Total != 2 {
+		t.Errorf("unparseable include_retired should fall back to excluding retired, got total=%d", junk.Total)
+	}
+}
+
+// Children of a county are the county-profile path; retired tracts must not
+// appear there either, and the child total must count every match.
+func TestGetChildren_ExcludesRetiredAndCountsAll(t *testing.T) {
+	s := &mockStore{
+		geographies: []geo.Geography{
+			{GEOID: "55025", Level: geo.County, Name: "Dane County", StateFIPS: "55"},
+			{GEOID: "55025000100", Level: geo.Tract, Name: "Tract 1", StateFIPS: "55", ParentGEOID: "55025"},
+			{GEOID: "55025000200", Level: geo.Tract, Name: "Tract 2", StateFIPS: "55", ParentGEOID: "55025"},
+			{GEOID: "55025000300", Level: geo.Tract, Name: "Tract 3", StateFIPS: "55", ParentGEOID: "55025"},
+			{GEOID: "55025990000", Level: geo.Tract, Name: "Retired Tract", StateFIPS: "55", ParentGEOID: "55025"},
+		},
+		retiredGEOIDs: map[string]bool{"55025990000": true},
+	}
+	r := newTestRouter(s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/geographies/55025/children?limit=2", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d — body: %s", w.Code, w.Body.String())
+	}
+	var resp GeographyListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if len(resp.Items) != 2 {
+		t.Errorf("expected a page of 2 children, got %d", len(resp.Items))
+	}
+	if resp.Total != 3 {
+		t.Errorf("expected total=3 current child tracts, got %d", resp.Total)
+	}
+	for _, it := range resp.Items {
+		if it.GEOID == "55025990000" {
+			t.Errorf("retired tract leaked into the children listing")
+		}
 	}
 }
 

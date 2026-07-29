@@ -444,6 +444,130 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     text-align: center;
   }
 
+  /* ── Cold open · the /narrative landing state ─────────────────── */
+  .cold-open {
+    padding-top: clamp(8px, 2vw, 20px);
+  }
+  .cold-open-title {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.35em;
+  }
+  .cold-open-lead {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--muted);
+    max-width: 62ch;
+    margin-bottom: clamp(24px, 4vw, 36px);
+  }
+
+  /* Three-step explainer */
+  .how-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(12px, 2vw, 20px);
+    margin-bottom: clamp(28px, 4vw, 40px);
+  }
+  .how-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    padding: clamp(14px, 2vw, 20px);
+  }
+  .how-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6em;
+    height: 1.6em;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    margin-bottom: 0.6em;
+  }
+  .how-step h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.35em;
+  }
+  .how-step p {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* Note shown when ?geoid= has no analysis yet */
+  .cold-open-note {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+    background: color-mix(in srgb, var(--info) 8%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--info) 22%, transparent);
+    border-left: 3px solid var(--info);
+    border-radius: var(--r-badge);
+    padding: 0.85em 1em;
+    margin-bottom: clamp(20px, 3vw, 28px);
+  }
+
+  /* Catalog */
+  .cold-open-pick { margin-bottom: clamp(20px, 3vw, 28px); }
+  .pick-help {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0.5em 0 clamp(12px, 2vw, 16px);
+  }
+  .pick-status {
+    font-size: 0.85rem;
+    color: var(--muted);
+    padding: 0.9em 0;
+  }
+  .pick-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 8px;
+  }
+  .pick-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    padding: 0.75em 0.9em;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-badge);
+    text-decoration: none;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  }
+  .pick-item:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    border-color: var(--border-strong);
+    border-left-color: var(--accent);
+    text-decoration: none;
+    transform: translateX(2px);
+  }
+  .pick-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .pick-meta {
+    font-size: 0.72rem;
+    color: var(--quiet);
+    font-family: var(--font-mono);
+  }
+  .cold-open-foot {
+    font-size: 0.82rem;
+    color: var(--quiet);
+    padding-top: clamp(12px, 2vw, 16px);
+    border-top: 1px solid var(--border);
+  }
+
   /* ── Skeleton loader ──────────────────────────────────────────── */
   .prose-skeleton {
     padding-top: clamp(24px, 4vw, 40px);
@@ -565,7 +689,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 
-<main id="main" x-data="narrativeReader()" x-init="init()"
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init()
+     during component setup, so pairing it with x-init runs the whole component
+     twice — a double narrative/catalog fetch and a duplicate tp:langchange
+     listener registration. Same defect fixed in map.html / county.html. Do
+     not re-add it. -->
+<main id="main" x-data="narrativeReader()"
       style="padding-top:clamp(24px,4vw,40px);padding-bottom:clamp(48px,8vw,96px);">
 
   <!-- ── Toolbar ─────────────────────────────────────────────────── -->
@@ -611,12 +740,66 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <button @click="loadNarrative()" class="btn btn-ghost" style="font-size:0.8rem;" data-en="Retry" data-es="Reintentar">Retry</button>
   </div>
 
-  <!-- ── Empty · no analysis_id ──────────────────────────────────── -->
-  <div x-show="!loading && !error && !analysisId" x-cloak class="state-empty">
-    <p data-en="No analysis specified." data-es="No se especificó ningún análisis.">No analysis specified.</p>
-    <p style="font-size:0.8rem;color:var(--quiet);margin-top:0.5em;" data-en="Open a narrative from the County Profile page." data-es="Abre una narrativa desde la página de Perfil del Condado.">
-      Open a narrative from the County Profile page.
+  <!-- ── Cold open · no analysis pinned ──────────────────────────────
+       This is a top-level nav destination, so it must be a starting
+       point rather than a wall: it explains what a narrative is, then
+       lists the analyses that are actually ready to read. -->
+  <div x-show="!loading && !error && !analysisId" x-cloak class="cold-open wrap-narrow">
+
+    <h1 class="cold-open-title" data-en="Narrative Reader" data-es="Lector de Narrativas">Narrative Reader</h1>
+    <p class="cold-open-lead" data-en="A narrative turns one county's statistical analysis into something you can actually read: five human-centered mornings, each grounded in census indicators, each ending in the policy levers the evidence supports." data-es="Una narrativa convierte el análisis estadístico de un condado en algo que de verdad se puede leer: cinco mañanas centradas en las personas, cada una basada en indicadores del censo y cerrada con las palancas de política que la evidencia respalda.">A narrative turns one county's statistical analysis into something you can actually read: five human-centered mornings, each grounded in census indicators, each ending in the policy levers the evidence supports.</p>
+
+    <!-- What a narrative is — renders even when the API is unreachable -->
+    <div class="how-row">
+      <div class="how-step">
+        <span class="how-num">1</span>
+        <h3 data-en="An analysis" data-es="Un análisis">An analysis</h3>
+        <p data-en="Every narrative is built on a stored analysis run — a composite index, a spatial cluster map, or a correlation matrix over census indicators." data-es="Cada narrativa se construye sobre un análisis almacenado: un índice compuesto, un mapa de agrupaciones espaciales o una matriz de correlación sobre indicadores del censo.">Every narrative is built on a stored analysis run — a composite index, a spatial cluster map, or a correlation matrix over census indicators.</p>
+      </div>
+      <div class="how-step">
+        <span class="how-num">2</span>
+        <h3 data-en="Five mornings" data-es="Cinco mañanas">Five mornings</h3>
+        <p data-en="The engine turns those numbers into five chapters, one per structural pattern it found — poverty, housing cost, health access, and whatever else the data surfaces." data-es="El motor convierte esas cifras en cinco capítulos, uno por cada patrón estructural encontrado: pobreza, costo de vivienda, acceso a salud y lo demás que revelen los datos.">The engine turns those numbers into five chapters, one per structural pattern it found — poverty, housing cost, health access, and whatever else the data surfaces.</p>
+      </div>
+      <div class="how-step">
+        <span class="how-num">3</span>
+        <h3 data-en="Policy levers" data-es="Palancas de política">Policy levers</h3>
+        <p data-en="Each chapter closes with the policy positions the indicators support, so the brief ends in something a reader can act on." data-es="Cada capítulo cierra con las posiciones de política que los indicadores respaldan, para que el informe termine en algo accionable.">Each chapter closes with the policy positions the indicators support, so the brief ends in something a reader can act on.</p>
+      </div>
+    </div>
+
+    <!-- Arrived from a County Profile whose county has no analysis yet -->
+    <p class="cold-open-note" x-show="noAnalysisNote()" x-cloak x-text="noAnalysisNote()"></p>
+
+    <!-- ── The catalog · what is ready to read right now ───────────── -->
+    <div class="cold-open-pick">
+      <span class="section-tag" data-en="Open a narrative" data-es="Abrir una narrativa">Open a narrative</span>
+      <p class="pick-help" data-en="These analyses are published and ready. Pick one to read its full brief." data-es="Estos análisis están publicados y listos. Elige uno para leer su informe completo.">These analyses are published and ready. Pick one to read its full brief.</p>
+
+      <div x-show="catalogState === 'loading'" x-cloak class="pick-status" data-en="Loading available analyses…" data-es="Cargando análisis disponibles…">Loading available analyses…</div>
+
+      <div x-show="catalogState === 'error'" x-cloak class="pick-status">
+        <span data-en="Could not reach the analysis catalog." data-es="No se pudo acceder al catálogo de análisis.">Could not reach the analysis catalog.</span>
+        <button @click="loadCatalog()" class="btn btn-ghost" style="font-size:0.78rem;margin-left:0.5em;" data-en="Retry" data-es="Reintentar">Retry</button>
+      </div>
+
+      <div class="pick-list" x-show="catalogState === 'ready' && catalog.length > 0" x-cloak>
+        <template x-for="a in catalog" :key="a.id">
+          <a class="pick-item" :href="'/narrative?analysis_id=' + encodeURIComponent(a.id)">
+            <span class="pick-name" x-text="placeLabel(a)"></span>
+            <span class="pick-meta" x-text="metaLabel(a)"></span>
+          </a>
+        </template>
+      </div>
+
+      <div x-show="catalogState === 'ready' && catalog.length === 0" x-cloak class="pick-status" data-en="No analyses have been published yet." data-es="Aún no se ha publicado ningún análisis.">No analyses have been published yet.</div>
+    </div>
+
+    <p class="cold-open-foot">
+      <span data-en="Looking for a county that isn't listed?" data-es="¿Buscas un condado que no aparece?">Looking for a county that isn't listed?</span>
+      <a href="/" data-en="Browse all 72 counties in the Explorer." data-es="Explora los 72 condados en el Explorador.">Browse all 72 counties in the Explorer.</a>
     </p>
+
   </div>
 
   <hr class="thread" aria-hidden="true" x-show="!loading && !error && narrativeHTML" x-cloak>
@@ -668,17 +851,157 @@ function narrativeReader() {
     copied: false,
     observer: null,
 
+    /* ── Cold-open state ─────────────────────────────────────── */
+    geoid: '',                 // from ?geoid= (County Profile links here)
+    catalog: [],               // curated for display
+    rawAnalyses: [],           // every analysis, newest first
+    catalogState: 'loading',   // 'loading' | 'ready' | 'error'
+    countyNames: {},           // geoid -> "Dane County"
+    lang: 'en',
+
+    /* Dynamic strings can't carry data-en/data-es (Alpine owns their
+       textContent), so they pick a language through here instead. */
+    t(en, es) { return this.lang === 'es' ? es : en; },
+
     /* ── Init ────────────────────────────────────────────────── */
     init() {
+      this.lang = (window.LangToggle && window.LangToggle.getLang()) ||
+                  (document.documentElement.getAttribute('lang') || 'en').slice(0, 2);
+      document.addEventListener('tp:langchange', (e) => {
+        this.lang = (e && e.detail && e.detail.lang) || 'en';
+      });
+
       const params = new URLSearchParams(window.location.search);
       this.analysisId = params.get('analysis_id') || '';
+      this.geoid = (params.get('geoid') || '').trim();
 
-      if (!this.analysisId) {
-        this.loading = false;
+      // Deep link — unchanged behaviour.
+      if (this.analysisId) {
+        this.loadNarrative();
         return;
       }
 
+      // Cold open. Show the page immediately, then fill the catalog.
+      // If the visitor came from a County Profile (?geoid=55079), the
+      // catalog load resolves that county to its newest analysis and
+      // opens it — those links used to dead-end here.
+      this.loading = false;
+      this.loadCatalog();
+    },
+
+    /* ── Catalog · what is available to read ──────────────────── */
+    async loadCatalog() {
+      this.catalogState = 'loading';
+      const base = window.location.origin + '/v1/policy';
+
+      try {
+        const [aResp, gResp] = await Promise.all([
+          fetch(`${base}/analyses`),
+          fetch(`${base}/geographies?level=county&limit=100`).catch(() => null),
+        ]);
+
+        if (!aResp.ok) throw new Error(`HTTP ${aResp.status}`);
+        const aData = await aResp.json();
+
+        // County names are a nicety — a failure here degrades to GEOIDs.
+        if (gResp && gResp.ok) {
+          try {
+            const gData = await gResp.json();
+            const map = {};
+            (gData.items || []).forEach((g) => { map[g.geoid] = g.name; });
+            this.countyNames = map;
+          } catch (_) { /* keep GEOID fallback */ }
+        }
+
+        // Newest-first, as returned by the server.
+        this.rawAnalyses = (aData.analyses || []).filter((a) => a && a.id);
+        this.catalog = this.curate(this.rawAnalyses);
+        this.catalogState = 'ready';
+
+        if (this.geoid) this.openGeoid();
+      } catch (e) {
+        this.catalogState = 'error';
+      }
+    },
+
+    /* ── Curate the catalog for a reader ──────────────────────────
+       The raw feed can hold several near-identical runs of the same
+       analysis computed seconds apart, which reads as noise on a
+       landing page. Keep the newest run per scope+type (the server
+       returns most-recent first), then lead with named counties. */
+    curate(raw) {
+      const seen = new Set();
+      const list = [];
+      raw.forEach((a) => {
+        if (!a || !a.id) return;
+        const key = `${a.type}|${a.scope_level}|${a.scope_geoid}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        list.push(a);
+      });
+
+      const rank = (a) => (a.scope_level === 'county' ? 0 : 1);
+      return list.sort((x, y) => {
+        if (rank(x) !== rank(y)) return rank(x) - rank(y);
+        return this.placeLabel(x).localeCompare(this.placeLabel(y));
+      });
+    },
+
+    /* ── Resolve ?geoid= to that county's newest analysis ─────── */
+    openGeoid() {
+      const match = this.rawAnalyses.filter(
+        (a) => a.scope_geoid === this.geoid && a.scope_level === 'county'
+      );
+      if (match.length === 0) return;  // stay on cold open; the note explains
+      // Richest analysis wins; the feed is already newest-first, so a
+      // stable sort keeps the most recent among equals.
+      match.sort((x, y) => (y.score_count || 0) - (x.score_count || 0));
+      this.analysisId = match[0].id;
       this.loadNarrative();
+    },
+
+    /* ── Labels ──────────────────────────────────────────────── */
+    placeLabel(a) {
+      const gid = a.scope_geoid || '';
+      if (a.scope_level === 'county') {
+        return this.countyNames[gid] || this.t('County ', 'Condado ') + gid;
+      }
+      if (a.scope_level === 'state') {
+        return gid === '55'
+          ? this.t('Wisconsin — statewide', 'Wisconsin — estatal')
+          : this.t('Statewide ', 'Estatal ') + gid;
+      }
+      return gid || this.t('Unspecified scope', 'Alcance no especificado');
+    },
+
+    typeLabel(type) {
+      if (type === 'composite_index') return this.t('Composite index', 'Índice compuesto');
+      if (type === 'lisa') return this.t('Spatial clusters', 'Agrupaciones espaciales');
+      if (type === 'correlation_matrix') return this.t('Correlation matrix', 'Matriz de correlación');
+      return type || '';
+    },
+
+    metaLabel(a) {
+      const bits = [this.typeLabel(a.type)];
+      if (a.vintage) bits.push(a.vintage);
+      if (a.score_count > 0) {
+        bits.push(a.score_count + ' ' + this.t('indicators', 'indicadores'));
+      }
+      return bits.filter(Boolean).join(' · ');
+    },
+
+    /* Shown only when ?geoid= names a county with no analysis yet. */
+    noAnalysisNote() {
+      if (!this.geoid || this.catalogState !== 'ready') return '';
+      const has = this.rawAnalyses.some(
+        (a) => a.scope_geoid === this.geoid && a.scope_level === 'county'
+      );
+      if (has) return '';
+      const name = this.countyNames[this.geoid] || this.geoid;
+      return this.t(
+        `No narrative has been generated for ${name} yet — pick one of the analyses below to see what a finished brief looks like.`,
+        `Aún no se ha generado una narrativa para ${name}: elige uno de los análisis siguientes para ver cómo es un informe terminado.`
+      );
     },
 
     /* ── Load narrative HTML ──────────────────────────────────── */

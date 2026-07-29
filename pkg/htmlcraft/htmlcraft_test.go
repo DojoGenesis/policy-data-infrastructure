@@ -26,6 +26,9 @@ func (s *stubStore) GetGeography(_ context.Context, _ string) (*geo.Geography, e
 func (s *stubStore) QueryGeographies(_ context.Context, _ store.GeoQuery) ([]geo.Geography, error) {
 	return s.children, nil
 }
+func (s *stubStore) CountGeographies(_ context.Context, _ store.GeoQuery) (int, error) {
+	return len(s.children), nil
+}
 func (s *stubStore) PutIndicators(_ context.Context, _ []store.Indicator) error { return nil }
 func (s *stubStore) PutIndicatorsBatch(_ context.Context, _ []store.Indicator, _ int) error {
 	return nil

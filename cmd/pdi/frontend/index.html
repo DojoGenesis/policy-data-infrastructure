@@ -43,10 +43,18 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   /* ── Hero glow — atmospheric hero section ────────────────────────
      Full-width dark canvas with a soft radial gradient behind the
-     hero statement, built from Night Shift tokens. */
+     hero statement, built from Night Shift tokens.
+
+     Vertical rhythm: the hero is the page's one big moment, but it is
+     not the page. At 800x450 the old clamp(64px, 10vw, 120px) block
+     padding put the hero at 377px — 84% of the viewport — so the first
+     real content sat below the fold and the landing page read as a
+     title card. The hero now shares the first screen with the scale
+     strip beneath it: statement, then proof, then a look at what's
+     next. Compressed, not deleted. */
   .hero-glow {
     position: relative;
-    padding: clamp(64px, 10vw, 120px) clamp(16px, 3vw, 32px);
+    padding: clamp(28px, 4.2vw, 56px) clamp(16px, 3vw, 32px) clamp(16px, 2.4vw, 32px);
     text-align: center;
     overflow: hidden;
   }
@@ -68,13 +76,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 
   .hero-statement {
-    font-size: clamp(1.4rem, 4.8vw, 2.6rem);
+    font-size: clamp(1.15rem, 3.5vw, 2.25rem);
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.28;
     letter-spacing: -0.01em;
     color: var(--text);
-    max-width: 38ch;
+    max-width: 34ch;
     margin-inline: auto;
+    margin-block: 0;
     text-wrap: balance;
   }
 
@@ -88,9 +97,29 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 700;
   }
 
-  /* ── Section band — alternating section tint ──────────────────── */
+  /* ── Section band — alternating section tint ────────────────────
+     Rhythm, not cavern. The old clamp(48px, 7vw, 80px) put 56px of
+     empty band above and below every section at 800px wide, which read
+     as drift rather than breathing room once the hero stopped
+     dominating. Tightened enough that sections feel adjacent and
+     related, loose enough that they stay distinct. */
   .section-band {
-    padding: clamp(48px, 7vw, 80px) clamp(16px, 3vw, 32px);
+    padding: clamp(36px, 5.5vw, 68px) clamp(16px, 3vw, 32px);
+  }
+
+  /* First band after the hero: pulled up so the hero, the scale strip
+     and the first real card share one screen. */
+  .section-band--tight {
+    padding-top: clamp(22px, 3.4vw, 40px);
+  }
+
+  /* The thread between the hero and the first card band carries less
+     air than the ones deeper in the page — at the top of the document
+     its job is to join, not to separate. styles.css sets the base
+     margin via the margin-block shorthand at equal specificity, so
+     source order alone wins here; no !important needed. */
+  .thread--tight {
+    margin-top: clamp(14px, 2.2vw, 26px);
   }
 
   .section-band--alt {
@@ -121,7 +150,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: clamp(16px, 2.5vw, 24px);
-    margin-top: clamp(24px, 3vw, 32px);
+    /* No heading sits above this grid, so the band's own padding is the
+       only spacing it needs — the old margin-top was 24px of duplicate
+       gap that pushed the first card off the first screen. */
+    margin-top: 0;
   }
 
   .nav-card {
@@ -240,13 +272,42 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     margin-top: clamp(12px, 2vw, 16px);
   }
 
-  /* ── Stats bar ────────────────────────────────────────────────── */
+  /* ── Featured county — deliberate empty state ───────────────────
+     If featuredCounty is ever falsy the card must still be a designed
+     object, not a blank box or a field of "undefined". Same footprint
+     and same spectral edge as the real card, but the accent top rule
+     goes quiet (--border-strong, not --accent) because there is no
+     primary action here — Visual Principle 2: the accent marks the
+     action, so no action means no accent. */
+  .featured-card--empty {
+    border-top: 2px solid var(--border-strong);
+    border-left: 1px solid var(--border-strong);
+  }
+
+  .featured-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .featured-empty-note {
+    font-size: 0.875rem;
+    color: var(--quiet);
+    line-height: 1.6;
+    margin: clamp(6px, 1vw, 10px) 0 clamp(12px, 2vw, 16px);
+    max-width: 52ch;
+  }
+
+  /* ── Stats bar ──────────────────────────────────────────────────
+     Moved directly beneath the hero: the statement makes a claim, the
+     numbers are the receipt. Keeping them on the same screen is what
+     lets the fold carry both a voice and a fact. */
   .stats-bar {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: clamp(16px, 3vw, 48px);
-    padding: clamp(24px, 4vw, 36px) clamp(16px, 3vw, 32px);
+    gap: clamp(14px, 2.6vw, 44px);
+    padding: 0 clamp(16px, 3vw, 32px) clamp(18px, 2.8vw, 34px);
     max-width: var(--wrap);
     margin-inline: auto;
   }
@@ -260,6 +321,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 700;
     color: var(--text);
     font-variant-numeric: tabular-nums;
+    /* tabular-nums + a min width stops the count-up from reflowing the
+       row as digits are added — the motion must not shove its
+       neighbours around while it runs. */
+    min-width: 3ch;
   }
 
   .stats-bar-label {
@@ -460,10 +525,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     }
   }
 
-  /* ── Reduced motion ─────────────────────────────────────────── */
+  /* ── Reduced motion ───────────────────────────────────────────
+     motion.css already lands every .reveal on opacity:1/transform:none
+     under both html.no-motion and this media query, so a staggered --d
+     has nothing left to delay. Zeroing --d here anyway makes that
+     explicit rather than emergent: a reduced-motion visitor gets the
+     finished page with no per-item offset, in one hop.
+
+     The count-up numbers are governed inside motion.js itself —
+     counters() checks motionOn() (and document.hidden) and calls
+     finishCounter(), writing the real value straight from data-count.
+     Nothing here bypasses the OS preference. */
   @media (prefers-reduced-motion: reduce) {
     .hero-glow::before {
       animation: none;
+    }
+
+    html:not(.force-motion) .reveal {
+      --d: 0 !important;
     }
   }
 </style>
@@ -497,7 +576,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </header>
 
 <!-- ═══════════════════════════ MAIN ══════════════════════════════ -->
-<main id="main" x-data="countyExplorer()" x-init="init()">
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init()
+     during component setup, so pairing it with x-init runs the whole component
+     twice — a double /v1/policy/geographies fetch and checkReturnVisit()
+     called twice. Same defect fixed in map.html / county.html. Do not re-add
+     it. -->
+<main id="main" x-data="countyExplorer()">
 
   <!-- ── Return-visit banner (ADR-012 I6) ─────────────────────── -->
   <div x-show="showReturnBanner" x-cloak class="return-banner">
@@ -514,16 +598,48 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </p>
   </section>
 
+  <!-- ── Scale strip ────────────────────────────────────────────
+       Sits inside the hero's bloom, above the first thread: the
+       statement's receipt. data-count carries the target for
+       TPMotion.counters(); the literal text is what a JS-off or
+       reduced-motion visitor reads, so the two must always agree. -->
+  <div class="stats-bar reveal" style="--d:120">
+    <div class="stats-bar-item">
+      <div class="stats-bar-val" data-count="72" data-duration="900" data-locale="en-US">72</div>
+      <div class="stats-bar-label" data-en="Counties" data-es="Condados">Counties</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val" data-count="1542" data-duration="900" data-locale="en-US">1,542</div>
+      <div class="stats-bar-label" data-en="Tracts" data-es="Secciones">Tracts</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val" data-count="42" data-duration="900" data-locale="en-US">42</div>
+      <div class="stats-bar-label" data-en="Variables" data-es="Variables">Variables</div>
+    </div>
+    <div class="stats-bar-sep"></div>
+    <div class="stats-bar-item">
+      <div class="stats-bar-val" data-count="13" data-duration="900" data-locale="en-US">13</div>
+      <div class="stats-bar-label" data-en="Sources" data-es="Fuentes">Sources</div>
+    </div>
+  </div>
+
   <!-- ── Thread ─────────────────────────────────────────────────── -->
-  <div class="thread" style="margin-bottom:0">
+  <div class="thread thread--tight" style="margin-bottom:0">
     <div class="thread-dot"></div>
   </div>
 
-  <!-- ── Nav Cards ──────────────────────────────────────────────── -->
-  <section class="section-band section-band--alt reveal">
+  <!-- ── Nav Cards ──────────────────────────────────────────────
+       .reveal moved off the band and onto each card, staggered with
+       the stack's own --d step (motion.css: --motion-reveal-delay-step).
+       The band itself never fades — only the three actionable objects
+       inside it arrive, left to right, which is also the reading
+       order. Motion that clarifies, per ADR-013 Principle 4. -->
+  <section class="section-band section-band--alt section-band--tight">
     <div class="section-band-inner">
       <div class="nav-cards">
-        <a href="#counties" class="card card-hover card-spectral nav-card" @click.prevent="scrollToCounties()">
+        <a href="#counties" class="card card-hover card-spectral nav-card reveal" style="--d:0" @click.prevent="scrollToCounties()">
           <div class="nav-card-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
@@ -534,7 +650,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <span class="nav-card-link" data-en="Browse counties →" data-es="Explorar condados →">Browse counties →</span>
         </a>
 
-        <a href="/compare" class="card card-hover card-spectral nav-card">
+        <a href="/compare" class="card card-hover card-spectral nav-card reveal" style="--d:80">
           <div class="nav-card-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
@@ -545,7 +661,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <span class="nav-card-link" data-en="Compare counties →" data-es="Comparar condados →">Compare counties →</span>
         </a>
 
-        <a href="/map" class="card card-hover card-spectral nav-card">
+        <a href="/map" class="card card-hover card-spectral nav-card reveal" style="--d:160">
           <div class="nav-card-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
@@ -564,37 +680,58 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="thread-dot"></div>
   </div>
 
-  <!-- ── Featured County ────────────────────────────────────────── -->
-  <section class="section-band reveal" x-show="featuredCounty" x-cloak>
+  <!-- ── Featured County ──────────────────────────────────────────
+       ADR-011 §2A: the page's emotional centrepiece.
+
+       The section itself is never gated — only the card inside it is.
+       Two mutually exclusive states, both guarded, so the section can
+       never be an empty band and never a broken box:
+
+         featuredCounty  -> the real card
+         !featuredCounty -> a deliberate, styled empty state
+
+       Every binding also uses optional chaining with an explicit
+       fallback. x-show does NOT stop Alpine evaluating a subtree (only
+       x-if does), so the guard has to live on the expressions too —
+       that is precisely the bug this replaces. -->
+  <section class="section-band">
     <div class="section-band-inner">
       <span class="section-tag" data-en="FEATURED COUNTY" data-es="CONDADO DESTACADO">FEATURED COUNTY</span>
-      <div class="card card-raised featured-card">
+
+      <div class="card card-raised featured-card reveal" style="--d:0" x-show="featuredCounty" x-cloak>
         <div class="featured-card-inner">
           <div class="featured-card-left">
-            <div class="featured-name" x-text="featuredCounty.name"></div>
-            <div class="featured-geoid" x-text="featuredCounty.geoid"></div>
-            <p class="featured-story" x-text="featuredCounty.story"></p>
+            <div class="featured-name" x-text="featuredCounty?.name || ''"></div>
+            <div class="featured-geoid" x-text="featuredCounty?.geoid || ''"></div>
+            <p class="featured-story" x-text="featuredCounty?.story || ''"></p>
             <div class="featured-stats">
               <div>
-                <div class="featured-stat-val" x-text="fmtPop(featuredCounty.population)"></div>
+                <div class="featured-stat-val" x-text="fmtPop(featuredCounty?.population)"></div>
                 <div class="featured-stat-label" data-en="Population" data-es="Población">Population</div>
               </div>
               <div>
-                <div class="featured-stat-val" x-text="featuredCounty.tract_count || '—'"></div>
+                <div class="featured-stat-val" x-text="featuredCounty?.tract_count || '—'"></div>
                 <div class="featured-stat-label" data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</div>
               </div>
               <div>
-                <div class="featured-stat-val" x-text="featuredCounty.indicator_count || '—'"></div>
+                <div class="featured-stat-val" x-text="featuredCounty?.indicator_count || '—'"></div>
                 <div class="featured-stat-label" data-en="Indicators" data-es="Indicadores">Indicators</div>
               </div>
             </div>
           </div>
           <div class="featured-card-right">
             <div class="featured-cta">
-              <a :href="'/county?geoid=' + featuredCounty.geoid" class="btn btn-primary"><span data-en="Explore " data-es="Explorar ">Explore </span><span x-text="featuredCounty.name"></span> →</a>
+              <a :href="featuredCounty ? '/county?geoid=' + featuredCounty.geoid : '#counties'" class="btn btn-primary"><span data-en="Explore " data-es="Explorar ">Explore </span><span x-text="featuredCounty?.name || ''"></span> →</a>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Empty state — designed, never blank -->
+      <div class="card featured-card featured-card--empty" x-show="!featuredCounty" x-cloak>
+        <div class="featured-empty-title" data-en="No county is featured right now" data-es="Ningún condado destacado por ahora">No county is featured right now</div>
+        <p class="featured-empty-note" data-en="The rotating spotlight is unavailable, but all 72 counties are still open below — every indicator, every tract, every source." data-es="El destacado rotativo no está disponible, pero los 72 condados siguen abiertos abajo — cada indicador, cada sección censal, cada fuente.">The rotating spotlight is unavailable, but all 72 counties are still open below — every indicator, every tract, every source.</p>
+        <a href="#counties" class="btn btn-ghost" @click.prevent="scrollToCounties()" data-en="Browse all 72 counties →" data-es="Explorar los 72 condados →">Browse all 72 counties →</a>
       </div>
     </div>
   </section>
@@ -602,29 +739,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Thread ─────────────────────────────────────────────────── -->
   <div class="thread">
     <div class="thread-dot"></div>
-  </div>
-
-  <!-- ── Stats Bar ──────────────────────────────────────────────── -->
-  <div class="stats-bar reveal">
-    <div class="stats-bar-item">
-      <div class="stats-bar-val">72</div>
-      <div class="stats-bar-label" data-en="Counties" data-es="Condados">Counties</div>
-    </div>
-    <div class="stats-bar-sep"></div>
-    <div class="stats-bar-item">
-      <div class="stats-bar-val">1,542</div>
-      <div class="stats-bar-label" data-en="Tracts" data-es="Secciones">Tracts</div>
-    </div>
-    <div class="stats-bar-sep"></div>
-    <div class="stats-bar-item">
-      <div class="stats-bar-val">42</div>
-      <div class="stats-bar-label" data-en="Variables" data-es="Variables">Variables</div>
-    </div>
-    <div class="stats-bar-sep"></div>
-    <div class="stats-bar-item">
-      <div class="stats-bar-val">13</div>
-      <div class="stats-bar-label" data-en="Sources" data-es="Fuentes">Sources</div>
-    </div>
   </div>
 
   <!-- ── County Grid Section ────────────────────────────────────── -->
@@ -716,19 +830,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <!-- ═══════════════════════════ APP LOGIC ════════════════════════ -->
 <script>
 function countyExplorer() {
-  return {
-    allCounties: [],
-    countiesLoading: false,
-    countiesError: '',
-    countySearch: '',
-    featuredCounty: null,
-
-    /* ── Return-visit tracking (ADR-012 I6) ──────────────────── */
-    showReturnBanner: false,
-    returnCounty: { name: '', geoid: '' },
-
-    /* ── Featured county rotation pool ─────────────────────────── */
-    featuredPool: [
+  /* ── Featured county rotation pool ───────────────────────────────
+     ADR-011 §2A. This data is LOCAL and complete — it is not, and never
+     was, fetched from the API. That matters, because the old code
+     assigned featuredCounty inside loadCounties() after `await fetch`,
+     which meant the card's eight bindings evaluated against null on
+     every single page load, online and offline alike, and threw. The
+     pool is hoisted out of the state object so the day's pick can be
+     resolved synchronously, before Alpine ever walks the template. */
+  var FEATURED_POOL = [
       {
         geoid: '55079',
         name: 'Milwaukee County',
@@ -753,8 +863,30 @@ function countyExplorer() {
         indicator_count: 28,
         story: 'The smallest and most rural county in Wisconsin, coextensive with the Menominee Indian Reservation. With just 4,255 residents across two census tracts, Menominee is where data sparsity meets deep need — fewer than 30 of 42 indicators are populated here, and the poverty rate runs 2.6× the state average. This is why open data matters: without it, a county of 4,000 people is invisible to policy.'
       }
-    ],
-    featuredIndex: 0,
+  ];
+
+  /* Day-of-month rotation, resolved here and now. Nothing about the
+     featured card depends on the network, so nothing about it should
+     wait on the network. */
+  var todayIndex = (new Date().getDate() - 1) % FEATURED_POOL.length;
+
+  return {
+    allCounties: [],
+    countiesLoading: false,
+    countiesError: '',
+    countySearch: '',
+
+    /* ── Return-visit tracking (ADR-012 I6) ──────────────────── */
+    showReturnBanner: false,
+    returnCounty: { name: '', geoid: '' },
+
+    featuredPool: FEATURED_POOL,
+    featuredIndex: todayIndex,
+    /* Populated at construction — never null on first paint. The
+       template still guards for falsy (x-show + optional chaining), so
+       a future code path that clears this degrades to the styled empty
+       state instead of throwing eight expression errors. */
+    featuredCounty: FEATURED_POOL[todayIndex] || null,
 
     get filteredCounties() {
       if (!this.countySearch.trim()) return this.allCounties;
@@ -806,26 +938,27 @@ function countyExplorer() {
     },
 
     async loadCounties() {
+      /* Resolved before the try block on purpose. It used to be declared
+         inside it, so `var` hoisting left it undefined in the catch and
+         the Spanish "Failed to load counties" string could never be
+         reached — the one path where a translated error matters most. */
+      var L = window.LangToggle;
       this.countiesLoading = true;
       this.countiesError = '';
       try {
-        var L = window.LangToggle;
         var resp = await fetch('/v1/policy/geographies?level=county&state_fips=55&limit=72');
         if (!resp.ok) throw new Error((L ? L.t('api.error') : 'API error') + ': ' + resp.status + ' ' + resp.statusText);
         var data = await resp.json();
         this.allCounties = data.items || [];
-
-        /* Pick a featured county — cycled by date so it rotates daily */
-        var today = new Date();
-        this.featuredIndex = (today.getDate() - 1) % this.featuredPool.length;
-        this.featuredCounty = this.featuredPool[this.featuredIndex];
       } catch (e) {
         this.countiesError = (L ? L.t('load.failed') : 'Failed to load counties') + ': ' + e.message;
-        /* Fallback featured — still show even if API fails */
-        this.featuredCounty = this.featuredPool[0];
       } finally {
         this.countiesLoading = false;
       }
+      /* Note: featuredCounty is deliberately NOT set here. It is local
+         data resolved at construction, so an API outage must not be able
+         to blank the page's centrepiece — and an API success must not be
+         the thing that finally fills it in. */
     },
 
     fmtPop(n) {
@@ -887,8 +1020,28 @@ function countyExplorer() {
 </script>
 
 <script>
+  /* ── Motion wiring ───────────────────────────────────────────────
+     Count-up runs through reveals()' onReveal rather than on load, so
+     a figure animates at the moment it becomes readable and never
+     while it is off screen.
+
+     Reduced motion is handled inside TPMotion, not worked around here:
+     - reveals() with motion off still calls onReveal for every element
+       (its degraded branch is explicit about this), so counters are
+       reached on that path too;
+     - counters() then checks motionOn() and document.hidden and calls
+       finishCounter(), writing the exact data-count value in one hop.
+     A reduced-motion visitor therefore sees 72 / 1,542 / 42 / 13
+     immediately — same numbers, no tween, nothing to wait for. */
   document.addEventListener('DOMContentLoaded', function () {
-    if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+    if (!window.TPMotion) { return; }
+    window.TPMotion.reveals('.reveal', {
+      onReveal: function (el) {
+        if (el.querySelector('[data-count]')) {
+          window.TPMotion.counters(el, { selector: '[data-count]' });
+        }
+      }
+    });
   });
 </script>
 

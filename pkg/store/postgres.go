@@ -228,6 +228,13 @@ ON CONFLICT (geoid) DO UPDATE SET
 // GetGeography retrieves a single Geography by GEOID, returning the boundary
 // as a GeoJSON string in the BoundaryGeoJSON field of the returned record.
 // The Lat/Lon fields are populated from the stored centroid.
+//
+// Retired geographies (migration 013) are NOT filtered out here. Supplying an
+// exact GEOID is already an explicit request for that specific row, and hiding
+// it would both 404 existing deep links and make the historical profiles that
+// ADR-012 §Integration 5 depends on unreachable. Lifecycle filtering belongs
+// to the listing paths (QueryGeographies / CountGeographies), where the caller
+// asks an open question and expects an answer about the present.
 func (s *PostgresStore) GetGeography(ctx context.Context, geoid string) (*geo.Geography, error) {
 	var q string
 	if s.hasPostGIS {
@@ -271,9 +278,15 @@ WHERE geoid = $1`
 	return &g, nil
 }
 
-// QueryGeographies returns geographies matching the given filter. All filter
-// fields are optional; an empty GeoQuery returns everything up to Limit rows.
-func (s *PostgresStore) QueryGeographies(ctx context.Context, q GeoQuery) ([]geo.Geography, error) {
+// geoWhereClause builds the WHERE fragment and positional arguments shared by
+// QueryGeographies and CountGeographies, so that a listing and its total can
+// never disagree about which rows match. The returned clause is either empty
+// or begins with "WHERE ".
+//
+// The lifecycle predicate is always present: retired geographies (migration
+// 013) are filtered out unless the caller opts in, which keeps every default
+// read describing the current census vintage.
+func geoWhereClause(q GeoQuery) (string, []interface{}) {
 	args := []interface{}{}
 	idx := 1
 
@@ -305,10 +318,26 @@ func (s *PostgresStore) QueryGeographies(ctx context.Context, q GeoQuery) ([]geo
 		idx++
 	}
 
-	whereClause := ""
-	if len(where) > 0 {
-		whereClause = "WHERE " + strings.Join(where, " AND ")
+	switch {
+	case q.RetiredOnly:
+		where = append(where, "retired_at IS NOT NULL")
+	case q.IncludeRetired:
+		// No lifecycle predicate — current and retired rows both match.
+	default:
+		where = append(where, "retired_at IS NULL")
 	}
+
+	if len(where) == 0 {
+		return "", args
+	}
+	return "WHERE " + strings.Join(where, " AND "), args
+}
+
+// QueryGeographies returns geographies matching the given filter. All filter
+// fields are optional; an empty GeoQuery returns every CURRENT geography up to
+// Limit rows — retired geographies require q.IncludeRetired or q.RetiredOnly.
+func (s *PostgresStore) QueryGeographies(ctx context.Context, q GeoQuery) ([]geo.Geography, error) {
+	whereClause, args := geoWhereClause(q)
 
 	limit := q.Limit
 	if limit <= 0 {
@@ -356,6 +385,22 @@ LIMIT %d OFFSET %d`, latLonExpr, whereClause, limit, offset)
 		return nil, fmt.Errorf("store: QueryGeographies rows: %w", err)
 	}
 	return result, nil
+}
+
+// CountGeographies returns how many geographies match q's filters, ignoring
+// q.Limit and q.Offset. It shares geoWhereClause with QueryGeographies so the
+// count always describes the same row set the listing pages through — a client
+// paginating on this number will not stop early.
+func (s *PostgresStore) CountGeographies(ctx context.Context, q GeoQuery) (int, error) {
+	whereClause, args := geoWhereClause(q)
+
+	sql := "SELECT COUNT(*) FROM geographies " + whereClause
+
+	var n int
+	if err := s.pool.QueryRow(ctx, sql, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("store: CountGeographies: %w", err)
+	}
+	return n, nil
 }
 
 // --- Indicator operations ---
@@ -541,6 +586,14 @@ ORDER BY geoid, variable_id, vintage`, cvExpr, reliabilityExpr, rawValueExpr, ta
 // Aggregate runs a statistical aggregation over a variable across all
 // geographies at the given level. Supported functions: avg, sum, min, max,
 // stddev, count. The query targets the indicators_latest materialized view.
+//
+// Retired geographies are excluded. indicators_latest resolves to the newest
+// vintage each geography has, so a retired geography contributes its final
+// pre-retirement value — leaving them in would silently dilute a current-vintage
+// statistic with rows for places that no longer exist, and would put the
+// aggregate's denominator out of step with the geography counts the API
+// reports. Temporal aggregates, when needed, should opt in via a new
+// AggregateQuery field rather than by removing this predicate.
 func (s *PostgresStore) Aggregate(ctx context.Context, q AggregateQuery) (*AggregateResult, error) {
 	allowed := map[string]bool{
 		"avg": true, "sum": true, "min": true,
@@ -575,6 +628,7 @@ FROM indicators_latest il
 JOIN geographies g ON g.geoid = il.geoid
 WHERE il.variable_id = $1
   AND g.level = $2::geo_level
+  AND g.retired_at IS NULL
   %s`, aggExpr, stateFIPSClause)
 
 	row := s.pool.QueryRow(ctx, sql, args...)

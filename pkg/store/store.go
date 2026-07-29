@@ -77,14 +77,30 @@ type AnalysisScore struct {
 }
 
 // GeoQuery filters geographies.
+//
+// Retirement filtering (migration 013): geographies carry an explicit
+// retired_at marker. A retired geography is one that no longer exists in the
+// current census vintage (e.g. a 2010-vintage tract superseded by 2020
+// redistricting) but whose historical indicator data is still needed for
+// temporal analysis (ADR-012 §Integration 5). The zero value of GeoQuery
+// therefore describes the CURRENT world: retired rows are excluded unless a
+// caller opts in.
 type GeoQuery struct {
 	Level       geo.Level
 	ParentGEOID string
 	StateFIPS   string
 	CountyFIPS  string
 	NameSearch  string // fuzzy search via pg_trgm
-	Limit       int
-	Offset      int
+
+	// IncludeRetired returns retired geographies alongside current ones.
+	// Default (false) returns current geographies only.
+	IncludeRetired bool
+	// RetiredOnly restricts the result to retired geographies. It implies
+	// IncludeRetired and takes precedence over it when both are set.
+	RetiredOnly bool
+
+	Limit  int
+	Offset int
 }
 
 // AggregateQuery specifies an aggregation.
@@ -199,8 +215,18 @@ type EvidenceCardFilter struct {
 type Store interface {
 	// Geography operations
 	PutGeographies(ctx context.Context, geos []geo.Geography) error
+	// GetGeography looks up one geography by exact GEOID. Naming a GEOID is
+	// itself an explicit request for that row, so retired geographies are
+	// returned here — this is what keeps historical profiles and deep links
+	// resolvable. Use QueryGeographies for lifecycle-filtered listings.
 	GetGeography(ctx context.Context, geoid string) (*geo.Geography, error)
+	// QueryGeographies lists geographies matching q. Retired geographies are
+	// excluded unless q.IncludeRetired or q.RetiredOnly is set.
 	QueryGeographies(ctx context.Context, q GeoQuery) ([]geo.Geography, error)
+	// CountGeographies returns the number of geographies matching q's filters,
+	// ignoring q.Limit and q.Offset. Callers use it to report an accurate
+	// pagination total rather than the size of the current page.
+	CountGeographies(ctx context.Context, q GeoQuery) (int, error)
 
 	// Indicator operations
 	PutIndicators(ctx context.Context, indicators []Indicator) error

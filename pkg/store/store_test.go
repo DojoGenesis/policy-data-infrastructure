@@ -195,6 +195,125 @@ func TestQueryGeographies_ByNameSearch(t *testing.T) {
 	}
 }
 
+// markRetired stamps retired_at on a geography the way the reviewed backfill
+// statement does (deploy/backfill_013_retired_tracts.sql), so tests exercise
+// the real column rather than a simulation of it.
+func markRetired(t *testing.T, s *PostgresStore, geoid string) {
+	t.Helper()
+	ctx := context.Background()
+	_, err := s.pool.Exec(ctx, `
+		UPDATE geographies
+		   SET retired_at = TIMESTAMPTZ '2020-01-01 00:00:00+00',
+		       retired_reason = 'test: 2020 census redistricting'
+		 WHERE geoid = $1`, geoid)
+	if err != nil {
+		t.Fatalf("markRetired %s: %v", geoid, err)
+	}
+}
+
+// A retired tract must vanish from default listings but stay in the table —
+// deleting it would destroy the historical indicator data that ADR-012 §I5
+// (Temporal Analysis) depends on.
+func TestQueryGeographies_ExcludesRetiredByDefault(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+
+	geos := []geo.Geography{
+		sampleTract("55025000100"),
+		sampleTract("55025000200"),
+		sampleTract("55025000300"),
+	}
+	if err := s.PutGeographies(ctx, geos); err != nil {
+		t.Fatalf("PutGeographies: %v", err)
+	}
+	markRetired(t, s, "55025000300")
+
+	current, err := s.QueryGeographies(ctx, GeoQuery{Level: geo.Tract})
+	if err != nil {
+		t.Fatalf("QueryGeographies: %v", err)
+	}
+	if len(current) != 2 {
+		t.Errorf("expected 2 current tracts, got %d", len(current))
+	}
+	for _, g := range current {
+		if g.GEOID == "55025000300" {
+			t.Errorf("retired tract 55025000300 leaked into the default listing")
+		}
+	}
+
+	all, err := s.QueryGeographies(ctx, GeoQuery{Level: geo.Tract, IncludeRetired: true})
+	if err != nil {
+		t.Fatalf("QueryGeographies(IncludeRetired): %v", err)
+	}
+	if len(all) != 3 {
+		t.Errorf("IncludeRetired should return all 3 rows, got %d", len(all))
+	}
+
+	only, err := s.QueryGeographies(ctx, GeoQuery{Level: geo.Tract, RetiredOnly: true})
+	if err != nil {
+		t.Fatalf("QueryGeographies(RetiredOnly): %v", err)
+	}
+	if len(only) != 1 || (len(only) == 1 && only[0].GEOID != "55025000300") {
+		t.Errorf("RetiredOnly should return exactly the retired tract, got %v", only)
+	}
+
+	// The row itself must survive: an exact-GEOID lookup is an explicit request
+	// and still resolves, which is what keeps historical profiles reachable.
+	got, err := s.GetGeography(ctx, "55025000300")
+	if err != nil {
+		t.Fatalf("GetGeography on a retired tract must still resolve: %v", err)
+	}
+	if got.GEOID != "55025000300" {
+		t.Errorf("GetGeography returned %q", got.GEOID)
+	}
+}
+
+// CountGeographies must count every matching row, not the page — this is the
+// bug that made `total` equal the page size and stopped paginating clients at
+// the first page.
+func TestCountGeographies_IgnoresLimitAndOffset(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+
+	geos := []geo.Geography{
+		sampleTract("55025000100"),
+		sampleTract("55025000200"),
+		sampleTract("55025000300"),
+		sampleTract("55025000400"),
+		sampleTract("55025000500"),
+	}
+	if err := s.PutGeographies(ctx, geos); err != nil {
+		t.Fatalf("PutGeographies: %v", err)
+	}
+	markRetired(t, s, "55025000500")
+
+	q := GeoQuery{Level: geo.Tract, Limit: 2, Offset: 0}
+
+	page, err := s.QueryGeographies(ctx, q)
+	if err != nil {
+		t.Fatalf("QueryGeographies: %v", err)
+	}
+	if len(page) != 2 {
+		t.Fatalf("expected a page of 2, got %d", len(page))
+	}
+
+	total, err := s.CountGeographies(ctx, q)
+	if err != nil {
+		t.Fatalf("CountGeographies: %v", err)
+	}
+	if total != 4 {
+		t.Errorf("expected total=4 current tracts regardless of limit, got %d", total)
+	}
+
+	withRetired, err := s.CountGeographies(ctx, GeoQuery{Level: geo.Tract, Limit: 2, IncludeRetired: true})
+	if err != nil {
+		t.Fatalf("CountGeographies(IncludeRetired): %v", err)
+	}
+	if withRetired != 5 {
+		t.Errorf("expected total=5 with retired included, got %d", withRetired)
+	}
+}
+
 // ── Indicator tests ───────────────────────────────────────────────────────────
 
 func TestPutGetIndicators(t *testing.T) {

@@ -613,7 +613,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 
-<main id="main" class="wrap" x-data="compositeBuilder()" x-init="init()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init()
+     during component setup, so pairing it with x-init runs the whole component
+     twice — double URL-param parsing and a duplicate
+     PDIDeepLink.autoInjectCopyButton() call. Same defect fixed in map.html /
+     county.html. Do not re-add it. -->
+<main id="main" class="wrap" x-data="compositeBuilder()" style="padding-top:clamp(24px,4vw,40px);padding-bottom:var(--section-gap);">
 
   <!-- ── Back link ─────────────────────────────────────────────── -->
   <a href="/" class="back-link">

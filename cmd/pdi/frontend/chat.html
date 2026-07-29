@@ -199,12 +199,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 (function(){
   var msgs=document.getElementById('messages'), input=document.getElementById('input'), sendBtn=document.getElementById('send'), sug=document.getElementById('suggestions');
 
+  // lib/chat.js declares `const ChatAdapter` at the top level of a CLASSIC script.
+  // A top-level `const` creates a script-scoped lexical binding — it is NOT a
+  // property of the global object, so probing for it through `window` yields
+  // undefined forever, while the bare identifier resolves fine across classic
+  // scripts. Same for `PDI` (lib/api.js) and `Domain` (lib/domain.js).
+  // Probe these with `typeof`, never as a property of the global object.
+  function hasAdapter() { return typeof ChatAdapter !== 'undefined' && ChatAdapter !== null; }
+
   function refreshSuggestions() {
     sug.innerHTML = '';
     var questions = [];
-    if (window.ChatAdapter && typeof ChatAdapter._getSuggestedQuestions === 'function') {
+    if (hasAdapter() && typeof ChatAdapter._getSuggestedQuestions === 'function') {
       questions = ChatAdapter._getSuggestedQuestions();
-    } else if (window.ChatAdapter && ChatAdapter._placeholders) {
+    } else if (hasAdapter() && ChatAdapter._placeholders) {
       questions = ChatAdapter._placeholders;
     }
     questions.forEach(function(q) {
@@ -218,7 +226,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   // Parse URL params to set page context — allows cross-page linking like
   // /chat?page=county&geoid=55079&name=Milwaukee%20County
   (function initPageContext() {
-    if (!window.ChatAdapter) return;
+    if (!hasAdapter()) return;
     var params = new URLSearchParams(window.location.search);
     var page = params.get('page');
     if (!page) return;
@@ -238,7 +246,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     d.className = 'msg ' + role;
     if (role === 'asst') {
       // Parse rich response tokens into styled HTML components
-      var parsed = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
+      var parsed = (hasAdapter() && typeof ChatAdapter._parseRichResponse === 'function')
         ? ChatAdapter._parseRichResponse(txt)
         : txt;
       d.innerHTML = parsed.replace(/\n/g, '<br>');
@@ -265,7 +273,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   async function send() {
     var text = input.value.trim();
-    if (!text || !window.ChatAdapter) return;
+    if (!text || !hasAdapter()) return;
     input.value = '';
     sendBtn.disabled = true;
     add('user', text);
@@ -280,7 +288,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           full += chunk;
           if (asstEl) {
             // Parse rich response tokens for inline streaming updates too
-            var parsed = (window.ChatAdapter && typeof ChatAdapter._parseRichResponse === 'function')
+            var parsed = (hasAdapter() && typeof ChatAdapter._parseRichResponse === 'function')
               ? ChatAdapter._parseRichResponse(full)
               : full;
             asstEl.innerHTML = parsed.replace(/\n/g, '<br>');
@@ -318,7 +326,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       // Wait for ChatAdapter to be ready, then send
       var attempts = 0;
       var trySend = function () {
-        if (window.ChatAdapter && typeof ChatAdapter.send === 'function') {
+        if (hasAdapter() && typeof ChatAdapter.send === 'function') {
           send();
         } else if (attempts < 30) {
           attempts++;

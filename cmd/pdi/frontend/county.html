@@ -29,13 +29,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      ACT 1 · THE PORTRAIT — above-fold hero
      ═══════════════════════════════════════════════════════════ */
 
+  /* The portrait used to be `min-height: 60vh` + `justify-content: center`.
+     Measured at 1280x800 that reserved ~250px of empty canvas under the last
+     action row before the first thread, and ~150px at 375px — dead air, not
+     rhythm. The hero now ends where its content ends; the band/thread system
+     supplies the breathing room. */
   .portrait {
     position: relative;
-    padding: clamp(32px, 5vw, 56px) 0 clamp(28px, 4vw, 44px);
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    padding: clamp(28px, 4vw, 44px) 0 clamp(24px, 3.5vw, 36px);
   }
 
   .portrait-name {
@@ -82,19 +83,25 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     font-weight: 600;
   }
 
-  /* Quick stat chips (horizontal scroll on mobile) */
+  /* Quick stat chips. Was `display:flex` with `min-width:100px` per chip and
+     no overflow affordance: at 375px the fourth stat (% People of Color) was
+     simply clipped off the right edge — a number the reader could never reach.
+     A 2-up grid below 560px shows all four; 4-up above. */
   .portrait-stats {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1px;
     background: var(--border);
     border-radius: var(--r-card);
     overflow: hidden;
-    margin-bottom: clamp(20px, 3vw, 28px);
+    margin-bottom: clamp(18px, 2.5vw, 24px);
     max-width: 640px;
   }
+  @media (min-width: 560px) {
+    .portrait-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
   .portrait-stat {
-    flex: 1 1 0;
-    min-width: 100px;
+    min-width: 0;
     background: color-mix(in srgb, var(--surface) 60%, var(--bg));
     padding: 14px 18px;
     text-align: center;
@@ -139,7 +146,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
   .last-viewed strong { color: var(--text); font-weight: 600; }
 
-  /* .thread — now owned by /static/styles.css (ADR-013 §1D spectral ribbon); markup unchanged */
+  /* .thread — owned by /static/styles.css (ADR-013 §1D spectral ribbon); markup
+     unchanged. Page-scoped margin only: the shared rule is
+     `margin-block: var(--section-gap)`, which at 1280px resolves to 72px above
+     AND below. On this page both act-break threads sit between a block that
+     already has bottom padding and a .section-band that already has a top lip
+     plus .layer-inner's top padding — so the divider contributed a measured
+     144px of empty canvas on desktop (97px at 375px) on top of rhythm that was
+     already there, and pushed Layer 1 entirely off the first screen.
+     Scaled, not redefined: --section-gap remains the single source of truth. */
+  main .thread { margin-block: calc(var(--section-gap) * 0.5); }
 
   /* ═══════════════════════════════════════════════════════════════
      ACT 2 · THE LAYERS — scroll-driven sections
@@ -395,6 +411,50 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .composite-inner {
     padding: clamp(16px, 2.5vw, 24px) 0;
   }
+
+  /* ── Disclosure strip — the composite-toggle pattern, generalized ─────
+     Same accessible contract as .composite-toggle-btn above (a real
+     <button>, :aria-expanded, aria-controls, rotating chevron) so the page
+     carries ONE disclosure idiom rather than two. Deliberately not
+     <details>: that was removed on purpose and is not coming back.
+
+     Why it exists: five statistical layers all shouting at full volume is
+     the "wall" complaint. Each layer now leads with its headline finding
+     and holds its supporting depth one click away. Nothing is removed —
+     every chart, table and video below is still reachable. */
+  .detail-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 640px;
+    padding: 11px 14px;
+    margin-top: clamp(10px, 1.6vw, 14px);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .detail-strip:hover { border-color: var(--border-strong); color: var(--text); }
+  .detail-strip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .detail-strip .ds-label { flex: 1; min-width: 0; }
+  .detail-strip .video-label { margin: 0; font-size: 0.72rem; }
+  .detail-strip .ds-hint {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--quiet);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+  }
+  .detail-strip .composite-toggle-chevron { color: var(--accent); }
+  .detail-panel { padding-top: clamp(12px, 2vw, 18px); }
   .composite-var-row {
     display: flex;
     align-items: center;
@@ -829,6 +889,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .pdi-chart {
     margin-top: 12px;
     overflow-x: auto;
+    /* charts.js emits a 640x320 viewBox — a fixed 2:1 box. With width:100% the
+       SVG grew to the full ~1120px measure on desktop and therefore ~560px TALL,
+       so a five-bar cluster chart and a four-bar reliability chart each claimed
+       most of a viewport. Capping the measure keeps the bars legible (still well
+       above the 560px min-width floor below) and returns ~200px per chart. */
+    max-width: 760px;
   }
   .pdi-chart svg {
     display: block;
@@ -887,7 +953,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 
-<main id="main" x-data="countyProfile()" x-init="init()" @category-change="syncCountyURL()">
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init().
+     Having both ran the entire component twice — measured 44 API requests where
+     22 were needed (every endpoint fetched twice), two visit-tracking writes,
+     two $watch registrations, and two "Copy Link" buttons injected into
+     .portrait-actions. Same for the five videoPlayer() components below. -->
+<main id="main" x-data="countyProfile()" @category-change="syncCountyURL()">
 
   <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:0.85rem;margin:24px 0 0;padding:0 clamp(16px,3vw,32px);" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''" data-en="← Back to counties" data-es="← Volver a los condados">← Back to counties</a>
 
@@ -914,12 +985,16 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <section class="portrait hero-glow">
       <div class="wrap">
-        <h1 class="portrait-name" x-text="geo.name"></h1>
+        <!-- Optional chaining throughout: x-show only toggles `display`, it does
+             not stop Alpine evaluating descendants, so every `geo.*` here threw
+             on first paint while `geo` was still null. That was 6 of the 12
+             uncaught TypeErrors this page logged on a normal load. -->
+        <h1 class="portrait-name" x-text="geo?.name"></h1>
         <div class="portrait-geoid">
           <span class="geoid-dot"></span>
-          <span x-text="geo.geoid"></span>
-          <span style="color:var(--quiet);" x-text="'· Pop. ' + (geo.population ? geo.population.toLocaleString() : '—')"></span>
-          <span x-show="geo.level" style="color:var(--quiet);" x-text="'· ' + geo.level"></span>
+          <span x-text="geo?.geoid"></span>
+          <span style="color:var(--quiet);" x-text="'· Pop. ' + (geo?.population ? geo.population.toLocaleString() : '—')"></span>
+          <span x-show="geo?.level" style="color:var(--quiet);" x-text="'· ' + (geo?.level || '')"></span>
         </div>
 
         <p class="portrait-sentence" x-html="definingSentence"></p>
@@ -1020,10 +1095,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       </div>
     </section>
 
-    <!-- Video: Z-Score (Layer 1 Indicator Distribution) -->
+    <!-- Video: Z-Score (Layer 1 Indicator Distribution).
+         Five 60-second explainers stacked inline accounted for roughly 2,400px
+         of the old 9,214px page — weight the reader never asked for. Each is now
+         a one-line strip that opens the player in place, at the exact point its
+         concept is introduced (ADR-011 §3B). The player markup, its captions,
+         overlay stats and geoid personalization are untouched. -->
     <div class="wrap" style="padding-bottom:0;">
-      <div x-data="videoPlayer('zscore')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label" data-en="📹 How to Read the Distribution" data-es="📹 Cómo Leer la Distribución">📹 How to Read the Distribution</div>
+      <div x-data="videoPlayer('zscore')" x-show="geoid" x-cloak>
+        <button type="button" class="detail-strip" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="video-zscore">
+          <span class="video-label ds-label" data-en="📹 How to Read the Distribution" data-es="📹 Cómo Leer la Distribución">📹 How to Read the Distribution</span>
+          <span class="ds-hint" data-en="Watch" data-es="Ver">Watch</span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': open}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="detail-panel" id="video-zscore" x-show="open" x-cloak>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1046,14 +1131,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
     <!-- Video: Quantile Classification (Layer 1 — how the category breaks above are cut).
          ADR-011 §3B: "Quantile Classification → appears when category breaks are shown (Layer 1)". -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
-      <div x-data="videoPlayer('quantile_classification')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label" data-en="📹 How the Category Breaks Are Cut" data-es="📹 Cómo se Cortan los Rangos de Categoría">📹 How the Category Breaks Are Cut</div>
+      <div x-data="videoPlayer('quantile_classification')" x-show="geoid" x-cloak>
+        <button type="button" class="detail-strip" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="video-quantile">
+          <span class="video-label ds-label" data-en="📹 How the Category Breaks Are Cut" data-es="📹 Cómo se Cortan los Rangos de Categoría">📹 How the Category Breaks Are Cut</span>
+          <span class="ds-hint" data-en="Watch" data-es="Ver">Watch</span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': open}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="detail-panel" id="video-quantile" x-show="open" x-cloak>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1075,6 +1166,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </div>
             <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -1108,6 +1200,19 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="feature-interp" x-show="icePercentile != null" x-html="iceInterpretation()"></div>
           </div>
         </div>
+
+        <!-- Layer 2 leads with ICE — the one number that defines the layer — and
+             holds its two supporting panels (Dissimilarity, Reliability
+             distribution) behind this strip. The reliability chart alone rendered
+             ~780px tall to communicate a single non-zero bar, which is what made
+             this layer read as a wall. Both are one click away, unchanged. -->
+        <button type="button" class="detail-strip" @click="l2Detail = !l2Detail" :aria-expanded="l2Detail ? 'true' : 'false'" aria-controls="layer2-detail">
+          <span class="ds-label" data-en="Segregation index and estimate reliability" data-es="Índice de segregación y confiabilidad de las estimaciones">Segregation index and estimate reliability</span>
+          <span class="ds-hint" x-text="l2Detail ? (lang === 'es' ? 'Ocultar' : 'Hide') : (lang === 'es' ? 'Ver' : 'Show')"></span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': l2Detail}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <div class="detail-panel" id="layer2-detail" x-show="l2Detail" x-cloak>
 
         <!-- Dissimilarity -->
         <div class="feature-card" x-show="dissimBW !== null || dissimHW !== null">
@@ -1155,13 +1260,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </table>
           </div>
         </div>
+
+        </div><!-- /#layer2-detail -->
       </div>
     </section>
 
     <!-- Video: ICE (Layer 2 Validated Features) -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
-      <div x-data="videoPlayer('ice')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label" data-en="📹 Understanding the ICE Score" data-es="📹 Entendiendo el Puntaje ICE">📹 Understanding the ICE Score</div>
+      <div x-data="videoPlayer('ice')" x-show="geoid" x-cloak>
+        <button type="button" class="detail-strip" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="video-ice">
+          <span class="video-label ds-label" data-en="📹 Understanding the ICE Score" data-es="📹 Entendiendo el Puntaje ICE">📹 Understanding the ICE Score</span>
+          <span class="ds-hint" data-en="Watch" data-es="Ver">Watch</span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': open}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="detail-panel" id="video-ice" x-show="open" x-cloak>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1184,6 +1296,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -1191,8 +1304,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
          distribution chart above). ADR-011 §3B: "Bootstrap CI → appears when
          reliability is discussed (Layer 2)". -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
-      <div x-data="videoPlayer('bootstrap_ci')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label" data-en="📹 How Reliable Is a Single Estimate?" data-es="📹 ¿Qué Tan Confiable Es una Sola Estimación?">📹 How Reliable Is a Single Estimate?</div>
+      <div x-data="videoPlayer('bootstrap_ci')" x-show="geoid" x-cloak>
+        <button type="button" class="detail-strip" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="video-bootstrap">
+          <span class="video-label ds-label" data-en="📹 How Reliable Is a Single Estimate?" data-es="📹 ¿Qué Tan Confiable Es una Sola Estimación?">📹 How Reliable Is a Single Estimate?</span>
+          <span class="ds-hint" data-en="Watch" data-es="Ver">Watch</span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': open}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="detail-panel" id="video-bootstrap" x-show="open" x-cloak>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1214,6 +1332,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </div>
             <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -1318,6 +1437,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <p class="chart-note" x-show="lisaProfileError" x-cloak data-en="The tract cluster breakdown could not be loaded for this county. The spatial cluster list below is unaffected." data-es="No se pudo cargar el desglose de clústeres por sección censal para este condado. La lista de clústeres espaciales de abajo no se ve afectada.">The tract cluster breakdown could not be loaded for this county. The spatial cluster list below is unaffected.</p>
 
+        <!-- Layer 4 leads with the tract cluster chart. The per-indicator badge
+             list below it depends on /children, which returns an empty set for
+             many counties — so a full-width "Run spatial analysis to see
+             clusters →" empty state used to sit directly under a chart that had
+             just reported 738 analysed tracts. Two panels contradicting each
+             other at the same volume. The per-indicator breakdown now lives
+             behind this strip, where an empty result reads as "no per-indicator
+             detail" rather than "no analysis". -->
+        <button type="button" class="detail-strip" @click="l4Detail = !l4Detail" :aria-expanded="l4Detail ? 'true' : 'false'" aria-controls="layer4-detail">
+          <span class="ds-label" data-en="Per-indicator cluster breakdown" data-es="Desglose de clústeres por indicador">Per-indicator cluster breakdown</span>
+          <span class="ds-hint" x-text="l4Detail ? (lang === 'es' ? 'Ocultar' : 'Hide') : (lang === 'es' ? 'Ver' : 'Show')"></span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': l4Detail}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <div class="detail-panel" id="layer4-detail" x-show="l4Detail" x-cloak>
+
         <div x-show="lisaLoading" style="display:none">
           <div class="loader"><div class="loader-spinner"></div></div>
         </div>
@@ -1346,13 +1481,20 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <span x-text="lisaClusters.length + ' indicator(s) with significant spatial clustering across ' + children.length + ' tracts.'"></span>
           </div>
         </div>
+
+        </div><!-- /#layer4-detail -->
       </div>
     </section>
 
     <!-- Video: LISA Cluster Map (Layer 4 Spatial Clusters) -->
     <div class="wrap" style="padding:0 0 clamp(16px,2vw,24px);">
-      <div x-data="videoPlayer('lisa_cluster_map')" x-init="init()" x-show="geoid" x-cloak>
-        <div class="video-label" data-en="📹 Reading Spatial Patterns" data-es="📹 Leyendo Patrones Espaciales">📹 Reading Spatial Patterns</div>
+      <div x-data="videoPlayer('lisa_cluster_map')" x-show="geoid" x-cloak>
+        <button type="button" class="detail-strip" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="video-lisa">
+          <span class="video-label ds-label" data-en="📹 Reading Spatial Patterns" data-es="📹 Leyendo Patrones Espaciales">📹 Reading Spatial Patterns</span>
+          <span class="ds-hint" data-en="Watch" data-es="Ver">Watch</span>
+          <svg class="composite-toggle-chevron" :class="{'is-open': open}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="detail-panel" id="video-lisa" x-show="open" x-cloak>
         <div class="video-player">
           <div class="video-wrapper">
             <div class="loader" x-show="loading"><div class="loader-spinner"></div></div>
@@ -1375,6 +1517,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="video-caption-bar" x-show="currentCaptionText" x-html="currentCaptionText"></div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -1385,7 +1528,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="layer-heading">
           <h2 data-en="Custom Composite Index" data-es="Índice Compuesto Personalizado">Custom Composite Index</h2>
           <button type="button" class="btn btn-ghost composite-toggle-btn" @click="compositeOpen = !compositeOpen" :aria-expanded="compositeOpen ? 'true' : 'false'" aria-controls="composite-panel-body">
-            <span x-text="compositeOpen ? 'Collapse builder' : 'Build Custom Index'"></span>
+            <span x-text="compositeOpen ? (lang === 'es' ? 'Contraer constructor' : 'Collapse builder') : (lang === 'es' ? 'Construir Índice Personalizado' : 'Build Custom Index')"></span>
             <svg class="composite-toggle-chevron" :class="{'is-open': compositeOpen}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>
         </div>
@@ -1418,15 +1561,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div x-show="compositeResult && !compositeComputing" style="display:none" class="composite-result-card">
               <div class="composite-score-row">
                 <div>
-                  <div class="cr-score-num" x-text="compositeResult.score != null ? compositeResult.score.toFixed(3) : '—'"></div>
+                  <div class="cr-score-num" x-text="compositeResult?.score != null ? compositeResult.score.toFixed(3) : '—'"></div>
                   <div class="cr-score-lbl" data-en="Composite Score" data-es="Puntaje Compuesto">Composite Score</div>
                 </div>
                 <div>
-                  <span style="font-weight:700;font-size:1.1rem;color:var(--text);" x-text="compositeResult.contributing_variables ? compositeResult.contributing_variables.length : 0"></span>
+                  <span style="font-weight:700;font-size:1.1rem;color:var(--text);" x-text="compositeResult?.contributing_variables ? compositeResult.contributing_variables.length : 0"></span>
                   <div class="cr-score-lbl" data-en="Variables Used" data-es="Variables Utilizadas">Variables Used</div>
                 </div>
-                <div x-show="compositeResult.missing_variables && compositeResult.missing_variables.length > 0">
-                  <span style="font-weight:700;font-size:1.1rem;color:var(--gated);" x-text="compositeResult.missing_variables.length"></span>
+                <div x-show="compositeResult?.missing_variables && compositeResult.missing_variables.length > 0">
+                  <span style="font-weight:700;font-size:1.1rem;color:var(--gated);" x-text="compositeResult?.missing_variables?.length || 0"></span>
                   <div class="cr-score-lbl" data-en="Missing" data-es="Faltantes">Missing</div>
                 </div>
               </div>
@@ -1436,15 +1579,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 <span x-show="sensitivityStability !== null"><span data-en="ranking is " data-es="la clasificación es ">ranking is </span><strong style="color:var(--accent);" x-text="(sensitivityStability*100).toFixed(0)+'%'"></strong><span data-en=" stable under ±20% weight perturbation" data-es=" estable ante una perturbación de peso del ±20%"> stable under ±20% weight perturbation</span></span>
               </div>
 
-              <div x-show="compositeResult.contributing_variables && compositeResult.contributing_variables.length > 0">
+              <div x-show="compositeContribRows.length > 0">
                 <table class="composite-contrib-table">
                   <thead><tr><th data-en="Variable" data-es="Variable">Variable</th><th style="text-align:right;" data-en="Value" data-es="Valor">Value</th><th style="text-align:right;" data-en="Weight" data-es="Peso">Weight</th></tr></thead>
                   <tbody>
-                    <template x-for="cv in compositeResult.contributing_variables" :key="cv.variable_id">
+                    <template x-for="cv in compositeContribRows" :key="cv.id">
                       <tr>
-                        <td x-text="cv.variable_id"></td>
-                        <td style="text-align:right;" x-text="cv.value != null ? cv.value.toFixed(4) : '—'"></td>
-                        <td style="text-align:right;" x-text="cv.weight != null ? cv.weight.toFixed(2) : '—'"></td>
+                        <td x-text="cv.name"></td>
+                        <td style="text-align:right;" x-text="cv.value"></td>
+                        <td style="text-align:right;" x-text="cv.weight"></td>
                       </tr>
                     </template>
                   </tbody>
@@ -1533,7 +1676,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="layer-inner">
         <span class="layer-indicator li-4" data-en="Geography Hierarchy" data-es="Jerarquía Geográfica">Geography Hierarchy</span>
         <h2 data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</h2>
-        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + ' census tracts within ' + geo.name"></p>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + ' census tracts within ' + (geo?.name || '')"></p>
         <div class="tract-grid">
           <template x-for="c in children.slice(0,48)" :key="c.geoid">
             <div class="tract-chip">
@@ -1564,6 +1707,12 @@ function countyProfile() {
     geo: null,
     loading: true,
     error: '',
+
+    // Per-layer progressive disclosure. Each layer shows its headline finding
+    // and holds its supporting depth here — same toggle contract as
+    // compositeOpen (button + aria-expanded + aria-controls).
+    l2Detail: false,
+    l4Detail: false,
 
     // Indicators
     indicators: [],
@@ -1614,7 +1763,11 @@ function countyProfile() {
     compositeComputing: false,
     compositeError: '',
     sensitivityStability: null,
-    compositeOpen: true,
+    // Closed by default. The builder is a ~600px tool for a reader who has
+    // decided to build something; opening it for everyone put a form in the
+    // path of everyone who hadn't. `?composite=open` still opens it on load
+    // (see init()), so every shared deep link behaves exactly as before.
+    compositeOpen: false,
 
     // Evidence cards (Act 3)
     evidenceCards: [],
@@ -2057,7 +2210,13 @@ function countyProfile() {
         this.trackVisit();
         this.deriveDataVintage();
       } catch (e) {
-        this.error = 'Failed to load county data: ' + e.message;
+        // This is the whole page for anyone who arrives while the API is down,
+        // so it says what happened and what to do, in the reader's language,
+        // and keeps the raw status in parentheses for anyone diagnosing it.
+        this.error = (this.lang === 'es'
+          ? 'Los datos de este condado no están disponibles en este momento. Vuelve a intentarlo en un momento.'
+          : "This county's data is unavailable right now. Try again in a moment.")
+          + ' (' + e.message + ')';
       }
       this.loading = false;
       this.activeCategory = '';
@@ -2394,10 +2553,44 @@ function countyProfile() {
     sensitivityLabel() {
       if (this.sensitivityStability == null) return '';
       const pct = (this.sensitivityStability * 100).toFixed(0);
-      if (pct >= 90) return 'Highly robust:';
-      if (pct >= 70) return 'Stable:';
-      if (pct >= 50) return 'Moderately stable:';
-      return 'Sensitive:';
+      const es = this.lang === 'es';
+      if (pct >= 90) return es ? 'Muy robusto:' : 'Highly robust:';
+      if (pct >= 70) return es ? 'Estable:' : 'Stable:';
+      if (pct >= 50) return es ? 'Moderadamente estable:' : 'Moderately stable:';
+      return es ? 'Sensible:' : 'Sensitive:';
+    },
+
+    /* POST /composite returns `contributing_variables` as an array of plain
+       variable-id STRINGS. The contribution table was written against an array
+       of {variable_id, value, weight} objects that this endpoint has never
+       returned, so every `:key="cv.variable_id"` resolved to undefined: Alpine
+       logged "Duplicate key on x-for" and then threw "Cannot read properties of
+       undefined (reading 'after')" out of its own keyed-list diff, and the rows
+       rendered blank. Normalise both shapes here, once.
+
+       Value and weight are client-side facts, not inventions: the value is the
+       indicator this page already loaded, and the weight is the equal 1/n that
+       this page's own request implies (it sends no explicit weights, and the
+       builder states "Weights normalize to sum 1.0 automatically"). If the API
+       ever does send per-variable objects, those win. */
+    get compositeContribRows() {
+      const raw = this.compositeResult && this.compositeResult.contributing_variables;
+      if (!Array.isArray(raw) || raw.length === 0) return [];
+      const equalWeight = 1 / raw.length;
+      return raw.map((cv) => {
+        const obj = (cv && typeof cv === 'object') ? cv : null;
+        const id = obj ? (obj.variable_id || obj.id || '') : String(cv);
+        const ind = this.indicators.find(i => i.variable_id === id);
+        const value = (obj && obj.value != null) ? obj.value
+                    : (ind && ind.value != null) ? ind.value : null;
+        const weight = (obj && obj.weight != null) ? obj.weight : equalWeight;
+        return {
+          id: id,
+          name: (ind && ind.name) || id,
+          value: value != null ? this.fmtValue(value) : '—',
+          weight: weight != null ? weight.toFixed(2) : '—',
+        };
+      });
     },
 
     // ── Sparklines ──────────────────────────────────────────
@@ -2522,7 +2715,12 @@ function countyProfile() {
       for (var i = 0; i < this.indicators.length; i++) {
         var v = this.indicators[i].vintage || this.indicators[i].year;
         if (v) {
-          var y = String(v).substring(0, 4);
+          // vintage arrives as "ACS-2023-5yr", so substring(0,4) produced the
+          // literal string "ACS-" and the hero chip rendered "Data vintage:
+          // ACS-." on every county. Take the first 4-digit run instead.
+          var m = String(v).match(/(19|20)\d{2}/);
+          if (!m) continue;
+          var y = m[0];
           counts[y] = (counts[y] || 0) + 1;
         }
       }
@@ -2560,6 +2758,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function videoPlayer(videoName) {
   return {
     videoName: videoName,
+    open: false,      // disclosure state for the strip that wraps the player
     loading: true,
     loaded: false,
     playing: false,

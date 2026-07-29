@@ -897,7 +897,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 </header>
 
 <!-- ══════════════════ MAIN ════════════════════ -->
-<main id="main" class="wrap" x-data="compareTool()" x-init="init()">
+<!-- No `x-init="init()"`: Alpine already auto-calls a data object's own init()
+     during component setup, so pairing it with x-init runs the whole component
+     twice — a double county-list fetch and a duplicate
+     PDIDeepLink.autoInjectCopyButton() call. Same defect fixed in map.html /
+     county.html. Do not re-add it. -->
+<main id="main" class="wrap" x-data="compareTool()">
 
   <!-- ── Toolbar: heading + back link ──────────────── -->
   <div class="compare-toolbar">
