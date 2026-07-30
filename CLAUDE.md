@@ -230,6 +230,39 @@ go build ./...
 go test ./... -short
 ```
 
+### After a frontend change — verify in the LOADED state, not the empty one
+```bash
+node scripts/layout-check.mjs http://localhost:8340
+```
+
+**Measure interactive pages after the interaction, never before it.** The same
+horizontal-overflow defect shipped three times — county.html (118px over at
+375px), composites.html (193px), compare.html (1,216px) — and compare.html was
+missed by every sweep for one reason: the audits loaded `/compare` in its
+default empty state, two blank search boxes and "Select two counties above to
+compare.", and never selected counties. With no content there is no overflow,
+so the page passed while being unusable the moment anyone used it. Checking the
+empty state is checking the one state nobody stays in. `scripts/layout-check.mjs`
+encodes this: it drives `/compare` to results, `/composite` through Compute, and
+`/map` through a tract click before measuring.
+
+Two more things that cost real time here, both worth reusing:
+
+- **Report the element that LEAKS, not every element past the edge.** Anything
+  inside an `overflow-x:auto` scroller is contained by design. The first two
+  investigations chased nav links inside the deliberate `.site-nav` scroll rail
+  and concluded the nav was at fault; it never was. A leak is an element
+  extending past the viewport with *no clipping ancestor*.
+- **Test in Spanish too.** Spanish runs ~15-20% longer and breaks layouts English
+  survives — it is what exposed the composites.html case.
+
+Beyond layout, frontend claims in this repo must be measured per page in a real
+browser, never inferred from the shared CSS/JS layer — every page carries its own
+`<style>` block that loads after `styles.css` at equal specificity. And when
+measuring colour, handle both `rgb()` and `color(srgb ...)`: `color-mix()`
+computes to the latter, and a probe that parses only the former silently skips
+those elements and scores them as passing.
+
 ### Wave ordering for pipeline tasks
 - Wave 1: fetch data in parallel (CSV output only, no DB writes)
 - Wave 2: seed geographies, then indicator_sources + indicator_meta (FK deps)

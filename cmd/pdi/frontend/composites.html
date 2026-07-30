@@ -101,53 +101,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
   [x-cloak] { display: none !important; }
 
-  /* DEFECT (mobile horizontal overflow) — .visually-hidden (styles.css) gives
-     an element position:absolute + width:1px + height:1px + overflow:hidden +
-     clip:rect(0,0,0,0), which clips a normal block to nothing. A <table>
-     ignores that: under the default table-layout:auto a table's used width is
-     at least the sum of its columns' min-content widths, so the 1px is
-     ignored. The sensitivity-comparison <table class="visually-hidden"> in
-     the results section (.sens-scenario) is exactly this shape, and its
-     Spanish caption ("Comparación de sensibilidad: puntuación compuesta base
-     frente a perturbada") is long enough to push document.documentElement.
-     scrollWidth past 375px — measured 568px (193px of sideways scroll) before
-     this rule. table-layout:fixed makes the table honor the specified width
-     instead of deriving it from content, without changing `display`, so the
-     table keeps its implicit table/row/cell roles for screen readers (the
-     whole point of this element). Same defect and same fix as county.html's
-     Layer 1/3/4 tables (documented there as DEFECT 1) — that page's copy of
-     this rule lives in ITS OWN <style> block, not shared styles.css, so nei-
-     ther page inherits the other's fix; each page's visually-hidden tables
-     need this rule locally.
-
-     table-layout:fixed ALONE was not sufficient here, and an earlier version
-     of this comment wrongly claimed it was verified — it wasn't yet, and
-     re-testing caught it. .visually-hidden also sets `white-space: nowrap`,
-     which inherits into the <caption> (captions aren't part of the class
-     themselves, but white-space inherits through the DOM regardless of
-     which element the class sits on). This page's caption is a full
-     sentence ("Comparación de sensibilidad: puntuación compuesta base
-     frente a perturbada") — forced onto one unbreakable line, its
-     min-content width exceeds 375px, and a table cannot compress below the
-     min-content size of its widest unbreakable content even under
-     table-layout:fixed. county.html's fix didn't need this second rule
-     because its own visually-hidden captions/cells ("Factor scores", "LISA
-     cluster breakdown by census tract", single numbers) stay under 375px
-     even forced onto one line — same defect class, this page's
-     sentence-length Spanish caption is what exposes the gap. Restoring
-     wrapping inside the table costs nothing visually: the table is still
-     fully clipped by .visually-hidden's own 1px/overflow:hidden/
-     clip:rect(0,0,0,0), so how its content wraps internally never renders —
-     only the min-content WIDTH calculation that happens before clipping is
-     at stake. Verified rendered (Playwright, isolated from the shared
-     interactive browser other agents were also driving concurrently, which
-     gave unreliable viewport readings): scrollWidth 375 == clientWidth 375
-     at a 375px viewport, in Spanish, with a computed result card and its
-     sensitivity/scenario sub-tables open. */
-  table.visually-hidden { table-layout: fixed; }
-  table.visually-hidden caption,
-  table.visually-hidden th,
-  table.visually-hidden td { white-space: normal; }
+  /* The `table.visually-hidden { table-layout: fixed }` rule that lived here
+     moved to styles.css (beside the .visually-hidden definition itself) on
+     2026-07-29. It had been duplicated privately on this page and on
+     composites.html, which is exactly why compare.html reproduced the same
+     mobile-overflow bug a third time without inheriting either fix. See the
+     comment there for the full mechanism. */
 
   /* ── Page layout ─────────────────────────────────────────────── */
   :root {

@@ -87,25 +87,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 <style>
   [x-cloak] { display: none !important; }
 
-  /* DEFECT 1 (mobile horizontal overflow) — .visually-hidden (styles.css)
-     gives an element position:absolute + width:1px + height:1px +
-     overflow:hidden + clip:rect(0,0,0,0), which clips a normal block to
-     nothing. A <table> ignores that: under the default table-layout:auto
-     a table's used width is at least the sum of its columns' min-content
-     widths, so the 1px is ignored. The 3-column "Factor scores" table in
-     Layer 3 rendered at 477px (absolutely positioned inside
-     #layer-3, position:relative) and pushed
-     document.documentElement.scrollWidth to 493px at a 375px viewport —
-     118px of sideways scroll, measured. table-layout:fixed makes the
-     table honor the specified width instead of deriving it from content,
-     without changing `display`, so the table keeps its implicit
-     table/row/cell roles for screen readers (the whole point of this
-     element per DATAVIZ-RULES rule 4). Verified rendered: scrollWidth
-     375 == clientWidth 375 after this rule, in both themes. Scoped to
-     all three .visually-hidden tables on the page (Layer 1, 3, 4) since
-     they share the same latent defect even though only Layer 3's is wide
-     enough to overflow at 375px today. */
-  table.visually-hidden { table-layout: fixed; }
+  /* The `table.visually-hidden { table-layout: fixed }` rule that lived here
+     moved to styles.css (beside the .visually-hidden definition itself) on
+     2026-07-29. It had been duplicated privately on this page and on
+     composites.html, which is exactly why compare.html reproduced the same
+     mobile-overflow bug a third time without inheriting either fix. See the
+     comment there for the full mechanism. */
 
   /* ═══════════════════════════════════════════════════════════════
      ACT 1 · THE PORTRAIT — above-fold hero

@@ -209,6 +209,46 @@ img, svg, video, canvas {
   border: 0;
 }
 
+/* ── .visually-hidden on a <table> needs two more rules ─────────────
+   The block above clips a normal element to nothing. A <table> ignores
+   it: under the default table-layout:auto a table's used width is at
+   least the sum of its columns' min-content widths, so `width: 1px` is
+   discarded and the table renders at full content width — absolutely
+   positioned, invisible, and still pushing documentElement.scrollWidth.
+   The result is a page that scrolls sideways with nothing to see.
+
+   This defect has now been found three times, on three pages, each time
+   presenting as an unexplained mobile overflow:
+     county.html      118px over at 375px   (Layer 1/3/4 accessible tables)
+     composites.html  193px over at 375px   (sensitivity comparison)
+     compare.html   1,216px over at 375px   (statewide distribution)
+   county and composites were each fixed with a private copy of these
+   rules in their own <style> block, so neither page inherited the
+   other's fix and compare.html — written later — silently reproduced the
+   bug a third time. Hence this central rule: styles.css is PDI-owned
+   (it diverged from casa-datos long ago), so the fix belongs here where
+   every page and every future page gets it.
+
+   Both rules are required, and the second is easy to miss.
+   table-layout:fixed makes the table honour its specified width instead
+   of deriving it from content. But `white-space: nowrap` above INHERITS
+   into the caption and cells, and a table cannot compress below the
+   min-content width of its widest unbreakable run — so a caption that
+   is a full sentence still blows past the viewport even with fixed
+   layout. That is exactly what compare.html and composites.html hit and
+   county.html did not: county's captions are short labels.
+
+   Neither rule changes `display`, so these tables keep their implicit
+   table/row/cell roles for screen readers — the entire reason they
+   exist. Restoring wrapping inside them costs nothing visually: the
+   table is still fully clipped by the 1px/overflow/clip rules above, so
+   how its content wraps never renders. Only the min-content WIDTH
+   calculation, which happens before clipping, is at stake. */
+table.visually-hidden { table-layout: fixed; }
+table.visually-hidden caption,
+table.visually-hidden th,
+table.visually-hidden td { white-space: normal; }
+
 /* ═══════════════════════════════════════════════════════════════════
    SKIP-TO-CONTENT LINK
    ──────────────────────────────────────────────────────────────────
