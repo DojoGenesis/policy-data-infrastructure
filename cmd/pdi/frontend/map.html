@@ -233,29 +233,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     min-width: 220px;
   }
   .leaflet-popup-content strong { color: var(--text); font-weight: 700; }
-  .leaflet-popup-content .popup-geoid {
-    color: var(--muted); font-size: 0.68rem; margin-bottom: 6px;
-  }
-  .leaflet-popup-content .popup-section {
-    margin-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 4px;
-  }
-  .leaflet-popup-content .popup-section:last-child {
-    border-bottom: none; margin-bottom: 0; padding-bottom: 0;
-  }
-  .leaflet-popup-content .popup-row {
-    display: flex; justify-content: space-between; gap: 12px;
-    color: var(--muted); font-size: 0.72rem; line-height: 1.6;
-  }
-  .leaflet-popup-content .popup-row span:last-child {
-    font-weight: 600; color: var(--text);
-  }
-  .leaflet-popup-content .popup-link {
-    display: block; margin-top: 6px; font-size: 0.7rem; color: var(--accent);
-    text-decoration: none; font-weight: 600;
-  }
-  .leaflet-popup-content .popup-link:hover { text-decoration: underline; }
+  /* The .popup-geoid / .popup-section / .popup-row / .popup-link rules that
+     lived here were removed 2026-07-29 alongside the tract popup itself —
+     nothing on this page calls bindPopup any more, so Leaflet never creates
+     a .leaflet-popup-content to match them. Left in place they would be the
+     same trap as index.html's orphaned .hero block: a plausible-looking
+     selector that silently does nothing until someone reuses the class name
+     and inherits styling they never asked for. */
   .leaflet-popup-close-button {
     color: var(--muted) !important; font-size: 1.1rem !important;
     padding: 4px 8px !important;
@@ -477,8 +461,30 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      MINI PROFILE PANEL — positioned over map on tract click
      ═══════════════════════════════════════════════════════════ */
 
+  /* No `display: none` here, and no `.visible` companion rule — both were
+     removed 2026-07-29 because together they made this panel unreachable.
+
+     The panel is shown by Alpine's x-show="mpVisible" (map.html:724).
+     x-show works by writing and clearing an INLINE display style: false
+     sets style="display:none", true REMOVES it. Removing an inline style
+     hands control back to the cascade — which is where the old base rule
+     `display: none` was waiting, so the panel stayed hidden at exactly the
+     moment it was supposed to appear. The `.mini-profile-panel.visible`
+     rule that would have overridden it was never applied, because nothing
+     in the page adds that class: the markup uses x-show, not
+     :class="{ visible: mpVisible }". Two halves of a contract, neither
+     talking to the other.
+
+     Verified on/off: setting mpVisible=true cleared the inline style but
+     left computed display "none"; adding .visible by hand flipped it to
+     "block". Net effect for a user — clicking any census tract did
+     nothing at all, which also severed the map's only route into a county
+     profile (ADR-011 §3A).
+
+     Pre-boot flash is already handled: the element carries x-cloak and
+     line 110 declares [x-cloak] { display: none !important }, so it stays
+     hidden until Alpine initialises and x-show takes over. */
   .mini-profile-panel {
-    display: none;
     position: absolute;
     z-index: 1010;
     background: var(--raised);
@@ -491,7 +497,6 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     pointer-events: auto;
     animation: mp-enter 180ms ease;
   }
-  .mini-profile-panel.visible { display: block; }
   @keyframes mp-enter {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -555,6 +560,31 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     letter-spacing: 0.05em;
     color: var(--quiet);
     margin-top: 1px;
+  }
+
+  /* Spatial-statistics detail migrated from the removed Leaflet popup.
+     Quieter than .mp-stats on purpose: the four ACS figures above are the
+     headline, these are the supporting evidence for the LISA tier. --quiet
+     rather than --subtle, which fails AA as text (3.96:1 on --bg). */
+  .mp-detail {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: var(--r-badge);
+    background: var(--plane-1);
+  }
+  .mp-detail-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.7rem;
+    color: var(--quiet);
+    line-height: 1.7;
+  }
+  .mp-detail-row span:last-child {
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-weight: 600;
   }
 
   .mp-lisa {
@@ -662,8 +692,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <h1 data-en="Wisconsin Census Tracts" data-es="Secciones Censales de Wisconsin">Wisconsin Census Tracts</h1>
     <p class="map-hero-subtitle">
       <span x-text="tractCount > 0 ? tractCount + $store.i18n.t('map.tracts_bare') + (analysisVintage || 'ACS 2020–2024') : ''"></span>
-      <span x-show="variablesLoaded > 0" class="badge badge-info" style="margin-left:10px;">
-        <span x-text="variablesLoaded"></span> <span data-en="LISA analyses loaded" data-es="análisis LISA cargados">LISA analyses loaded</span>
+      <!-- gap, not a literal space: .badge is display:inline-flex, and a flex
+           container discards whitespace-only text nodes between its children.
+           The space that is right there in the source never rendered, so this
+           badge read "5LISA analyses loaded". Setting gap here rather than
+           editing .badge keeps the fix page-scoped — styles.css is shared. -->
+      <span x-show="variablesLoaded > 0" class="badge badge-info" style="margin-left:10px;gap:0.35em;">
+        <span x-text="variablesLoaded"></span><span data-en="LISA analyses loaded" data-es="análisis LISA cargados">LISA analyses loaded</span>
       </span>
     </p>
   </div>
@@ -729,7 +764,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <span class="mp-name" x-text="mpTract.name"></span>
             </div>
             <div class="mp-geoid" x-text="'GEOID: ' + mpTract.geoid"></div>
-            <a x-show="mpTract.countyName" :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-county-link" x-text="$store.i18n.is('es') ? ('Condado de ' + mpTract.countyName + ' →') : (mpTract.countyName + ' County →')"></a>
+            <!-- county_name from tracts.geojson ALREADY ends in " County"
+                 ("Brown County", "Adams County"), so appending another one
+                 rendered "Brown County County →". Nobody had reported it
+                 because this panel never opened — the bug was only visible
+                 once the display fix above made the panel reachable.
+                 English uses the name as-is; Spanish strips the English
+                 suffix before its own prefix, so "Condado de Brown →"
+                 rather than "Condado de Brown County →". -->
+            <a x-show="mpTract.countyName" :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-county-link" x-text="$store.i18n.is('es') ? ('Condado de ' + mpTract.countyName.replace(/ County$/, '') + ' →') : (mpTract.countyName + ' →')"></a>
 
             <div class="mp-stats">
               <div class="mp-stat" x-show="mpTract.poverty != null">
@@ -748,11 +791,33 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 <div class="mp-stat-val" x-text="mpTract.uninsured"></div>
                 <div class="mp-stat-lbl" data-en="Uninsured" data-es="Sin Seguro Médico">Uninsured</div>
               </div>
+              <div class="mp-stat" x-show="mpTract.costBurdened != null">
+                <div class="mp-stat-val" x-text="mpTract.costBurdened"></div>
+                <div class="mp-stat-lbl" data-en="Cost Burdened" data-es="Carga de Vivienda">Cost Burdened</div>
+              </div>
             </div>
 
             <div class="mp-lisa" x-show="mpTract.lisaTier">
               <span class="mp-lisa-dot" :style="'background:' + _resolveColor(clusterColors[mpTract.lisaTier] || clusterColors['NS'])"></span>
               <span x-text="(clusterLabels[mpTract.lisaTier] || mpTract.lisaTier) + ' — ' + varLabel"></span>
+            </div>
+
+            <!-- The selected indicator's own value, plus the spatial-statistics
+                 detail. All three came from the Leaflet popup that used to open
+                 on top of this panel; the popup is gone, so they live here now.
+                 Moran's I and the p-value are the evidence behind the LISA tier
+                 shown above — a tier without them is an assertion, so they are
+                 not optional decoration. -->
+            <div class="mp-detail" x-show="mpTract.varValue">
+              <div class="mp-detail-row">
+                <span x-text="varLabel"></span><span x-text="mpTract.varValue"></span>
+              </div>
+              <div class="mp-detail-row" x-show="mpTract.moranI">
+                <span>Moran's I</span><span x-text="mpTract.moranI"></span>
+              </div>
+              <div class="mp-detail-row" x-show="mpTract.pValue">
+                <span data-en="p-value" data-es="valor p">p-value</span><span x-text="mpTract.pValue"></span>
+              </div>
             </div>
             <div class="mp-lisa" x-show="!mpTract.lisaTier" style="color:var(--muted);">
               <span data-en="No LISA data for current indicator" data-es="No hay datos LISA para el indicador actual">No LISA data for current indicator</span>
@@ -1505,6 +1570,17 @@ function lisaMap() {
           poc: pocVal != null ? (parseFloat(pocVal).toFixed(1) + '%') : null,
           uninsured: uninsuredVal != null ? (parseFloat(uninsuredVal).toFixed(1) + '%') : null,
           lisaTier: scoreInfo ? (scoreInfo.cluster || 'NS') : null,
+
+          /* Migrated from the Leaflet popup, which used to open alongside
+             this panel and has now been removed (operator decision
+             2026-07-29: one panel owns the tract click). These four were
+             the only things the popup showed that the panel did not, so
+             they move here rather than being lost with it. */
+          varValue: valStr,
+          moranI: (scoreInfo && scoreInfo.moran_i != null) ? scoreInfo.moran_i.toFixed(4) : null,
+          pValue: (scoreInfo && scoreInfo.p_value != null) ? scoreInfo.p_value.toFixed(4) : null,
+          costBurdened: props.pct_cost_burdened != null
+            ? (parseFloat(props.pct_cost_burdened).toFixed(1) + '%') : null,
         };
         self.mpVisible = true;
 
@@ -1525,52 +1601,22 @@ function lisaMap() {
           }
         }, 50);
 
-        // Also show the leaflet popup
-        let html = '';
+        /* The Leaflet popup that used to open here was REMOVED 2026-07-29.
 
-        // ── Header ──
-        html += '<strong>' + self._esc(name) + '</strong>';
-        html += '<div class="popup-geoid">GEOID: ' + self._esc(geoid) + '</div>';
+           It predated the mini-profile panel (popup: 442d764; panel: 27dd758,
+           Wave 3, implementing ADR-011 §3A). The panel shipped with a display
+           bug that made it permanently invisible, so the older popup kept
+           serving and nobody noticed the overlap. Fixing that bug meant one
+           tract click opened two panels stacked on top of each other with
+           near-identical headers.
 
-        // ── LISA classification ──
-        if (scoreInfo) {
-          const tier = scoreInfo.cluster || 'NS';
-          const tierColor = self._resolveColor(self.clusterColors[tier] || self.clusterColors['NS']);
-          const tierLabel = self.clusterLabels[tier] || tier;
-
-          html += '<div class="popup-section">';
-          html += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
-          html += '<div class="popup-row"><span>' + self._esc(self.t('map.lisa_tier')) + '</span><span style="color:' + tierColor + ';font-weight:700;">' + self._esc(tierLabel) + '</span></div>';
-
-          if (scoreInfo.moran_i != null && scoreInfo.p_value != null) {
-            html += '<div class="popup-row"><span>Moran\'s I</span><span>' + scoreInfo.moran_i.toFixed(4) + '</span></div>';
-            html += '<div class="popup-row"><span>' + self._esc(self.t('map.p_value')) + '</span><span>' + scoreInfo.p_value.toFixed(4) + '</span></div>';
-          }
-          html += '</div>';
-        } else {
-          html += '<div class="popup-section">';
-          html += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
-          html += '<div class="popup-detail">' + self._esc(self.t('map.no_lisa_score_data')) + '</div>';
-          html += '</div>';
-        }
-
-        // ── ACS indicators ──
-        html += '<div class="popup-section">';
-        html += '<div style="font-size:0.65rem;color:var(--quiet);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">' + self._esc(self.t('map.acs_indicators')) + '</div>';
-        html += self._indicatorRow(self.t('map.popup_poverty_rate'), props.poverty_rate, '%');
-        html += self._indicatorRow(self.t('map.popup_median_hh_income'), props.median_hh_income, '$');
-        html += self._indicatorRow(self.t('map.popup_pct_poc'), props.pct_poc, '%');
-        html += self._indicatorRow(self.t('map.popup_uninsured_rate'), props.uninsured_rate, '%');
-        html += self._indicatorRow(self.t('map.popup_cost_burdened'), props.pct_cost_burdened, '%');
-        html += '</div>';
-
-        // ── County link ──
-        if (countyName) {
-          const countyGeoid = geoid.substring(0, 5); // 5-digit county FIPS
-          html += '<a href="/county?geoid=' + self._esc(countyGeoid) + '" class="popup-link">' + self._esc(self.t('map.view_profile_prefix')) + self._esc(countyName) + self._esc(self.t('map.view_profile_suffix')) + '</a>';
-        }
-
-        layer.bindPopup(html, { maxWidth: 300, className: 'lisa-popup' }).openPopup();
+           Operator decision: the panel owns the tract click. It is the
+           ADR-specified surface and the only one carrying "View full profile"
+           and "Ask about this tract" — the map's routes into the county page
+           and the chat, both unreachable until now. Everything the popup
+           showed and the panel did not (the selected indicator's value,
+           Moran's I, the p-value, cost-burdened) was migrated into mpTract
+           above, so no data was lost with it. */
       });
 
       // ── Hover highlight ──
@@ -1760,19 +1806,6 @@ function lisaMap() {
       params.set('geoid', this.mpTract.countyGeoid);
       params.set('name', this.mpTract.countyName || '');
       window.open('/chat?' + params.toString(), '_blank');
-    },
-
-    _indicatorRow(label, value, unit) {
-      if (value == null || value === '') return '';
-      let valStr;
-      if (unit === '$') {
-        valStr = '$' + Number(value).toLocaleString();
-      } else if (unit === '%') {
-        valStr = Number(value).toFixed(1) + '%';
-      } else {
-        valStr = Number(value).toFixed(1);
-      }
-      return '<div class="popup-row"><span>' + this._esc(label) + '</span><span>' + this._esc(valStr) + '</span></div>';
     },
 
     fmtVal(v) {
