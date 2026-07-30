@@ -98,25 +98,79 @@
      entry in this list now rather than a special case. */
   var TRANSLATABLE_ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
 
-  function swapDOM(lang) {
+  /* `root` scopes the walk. Defaults to the whole document; the mutation
+     observer below passes just-added subtrees so a page that renders 70
+     cards does not re-walk the entire document 70 times. querySelectorAll
+     only returns DESCENDANTS, so the root itself is checked separately —
+     without that, an added node that IS the translatable element (rather
+     than containing one) would be skipped. */
+  function swapDOM(lang, root) {
+    var scope = root || d;
     var attr = 'data-' + lang;
-    var els = d.querySelectorAll('[' + attr + ']');
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
+
+    function applyText(el) {
       var text = el.getAttribute(attr);
-      if (text !== null && text !== '') {
-        el.textContent = text;
+      if (text !== null && text !== '') { el.textContent = text; }
+    }
+    function applyAttrs(el) {
+      for (var a = 0; a < TRANSLATABLE_ATTRS.length; a++) {
+        var name = TRANSLATABLE_ATTRS[a];
+        var val = el.getAttribute(attr + '-' + name);
+        if (val !== null) { el.setAttribute(name, val); }
       }
     }
-    for (var a = 0; a < TRANSLATABLE_ATTRS.length; a++) {
-      var name = TRANSLATABLE_ATTRS[a];
-      var src = attr + '-' + name;
-      var nodes = d.querySelectorAll('[' + src + ']');
-      for (var j = 0; j < nodes.length; j++) {
-        var val = nodes[j].getAttribute(src);
-        if (val !== null) { nodes[j].setAttribute(name, val); }
-      }
+
+    if (scope.nodeType === 1) {
+      if (scope.hasAttribute(attr)) { applyText(scope); }
+      applyAttrs(scope);
     }
+    var els = scope.querySelectorAll('[' + attr + ']');
+    for (var i = 0; i < els.length; i++) { applyText(els[i]); }
+    for (var b = 0; b < TRANSLATABLE_ATTRS.length; b++) {
+      var sel = '[' + attr + '-' + TRANSLATABLE_ATTRS[b] + ']';
+      var nodes = scope.querySelectorAll(sel);
+      for (var j = 0; j < nodes.length; j++) { applyAttrs(nodes[j]); }
+    }
+  }
+
+  /* ── Late-arriving content ─────────────────────────────────────
+     swapDOM used to run exactly once per language change, which meant
+     any data-en/data-es pair that entered the DOM AFTERWARDS was never
+     translated. That is most of the interesting content on this site:
+     anything inside <template x-if="!loading"> renders when a fetch
+     resolves, long after the swap. The symptom was specific and easy
+     to miss — a cold load with tp-lang=es already stored would render
+     the chrome in Spanish and the freshly-fetched tables in English.
+
+     A MutationObserver closes the whole class instead of requiring
+     every async completion point to remember to call back in. The
+     observer is disconnected while swapping: setting textContent is
+     itself a mutation, so leaving it connected would re-enter on our
+     own writes. */
+  var observer = null;
+  function observe() {
+    if (!observer || !d.body) { return; }
+    observer.observe(d.body, { childList: true, subtree: true });
+  }
+  function startObserver() {
+    if (observer || typeof w.MutationObserver !== 'function' || !d.body) { return; }
+    observer = new w.MutationObserver(function (muts) {
+      var roots = [];
+      for (var i = 0; i < muts.length; i++) {
+        var added = muts[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          if (added[j].nodeType === 1) { roots.push(added[j]); }
+        }
+      }
+      if (!roots.length) { return; }
+      observer.disconnect();
+      try {
+        for (var k = 0; k < roots.length; k++) { swapDOM(currentLang, roots[k]); }
+      } finally {
+        observe();
+      }
+    });
+    observe();
   }
 
   function setLang(lang) {
@@ -146,6 +200,7 @@
     d.documentElement.setAttribute('lang', currentLang);
     swapDOM(currentLang);
     inited = true;
+    startObserver();
 
     /* ── Build toggle button ────────────────────────────────── */
     var header = d.querySelector('.site-header-inner');
@@ -229,10 +284,26 @@
      for the correct order, the immediate call for a page that ever
      regresses to loading Alpine first (late registration still works;
      it just cannot rescue the first render). */
+  /* Presence, not truthiness. This used to read
+       entry[currentLang] || entry.en || key
+     which treats an INTENTIONALLY EMPTY translation as missing and falls
+     through — ultimately leaking the raw key name into the page.
+
+     An empty string is a legitimate translation. It is how word-order
+     differences get handled: English "County A value" takes a suffix,
+     Spanish "Valor de Condado A" takes a prefix, so one side of the pair
+     is deliberately ''. Under the old test those keys rendered as
+     `compare.value_prefix_esCounty A value` — and the breakage was
+     invisible to an identical-EN/ES-string check, because the two
+     languages fail differently rather than matching each other. */
   function translate(key) {
     var entry = T[key];
     if (!entry) { return key; }
-    return entry[currentLang] || entry.en || key;
+    if (Object.prototype.hasOwnProperty.call(entry, currentLang)) {
+      return entry[currentLang];
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, 'en')) { return entry.en; }
+    return key;
   }
 
   var storeReady = false;
@@ -289,7 +360,15 @@
         if (Object.prototype.hasOwnProperty.call(map, k)) { T[k] = map[k]; }
       }
       if (inited) { swapDOM(currentLang); }
-    }
+    },
+
+    /* Re-walk and re-apply. Rarely needed now that a MutationObserver
+       catches late-arriving nodes automatically, but kept as an explicit
+       escape hatch for anything that mutates in a way the observer
+       cannot see — and because calling addStrings({}) purely for its
+       re-swap side effect (which is what pages had to do before the
+       observer existed) reads as a bug rather than an intention. */
+    refresh: function (root) { swapDOM(currentLang, root); }
   };
 
   /* Keep the store in step with the toggle. setLang fires this event

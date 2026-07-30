@@ -32,8 +32,42 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page-scoped i18n strings for $store.i18n.t(). Registered on the
+     'alpine:init' event rather than run as a plain inline call: lang-toggle.js
+     and alpine.min.js are both `defer`, but `defer` has no effect on a
+     <script> without `src` (spec behavior; confirmed empirically 2026-07-29 —
+     window.LangToggle reads as `undefined` at parse time in this head).
+     'alpine:init' fires once alpine.min.js's own deferred script starts
+     (readyState "interactive"), which is after lang-toggle.js has already
+     finished running (both deferred, document order), so LangToggle is
+     guaranteed to exist — and it fires before Alpine's DOM scan evaluates
+     any $store.i18n.t() expression on this page. -->
+<script>
+  document.addEventListener('alpine:init', function () {
+    window.LangToggle.addStrings({
+      'candidates.policy_singular': { en: 'policy', es: 'política' },
+      'candidates.policy_plural': { en: 'policies', es: 'políticas' },
+      'candidates.indicator_available': { en: 'Data available in PDI', es: 'Datos disponibles en PDI' },
+      'candidates.indicator_unavailable': { en: 'Not yet available in PDI', es: 'Aún no disponible en PDI' },
+      'candidates.more_coming': { en: 'More candidates coming soon…', es: 'Más candidatos próximamente…' },
+      'candidates.unknown_candidate': { en: 'Unknown', es: 'Desconocido' },
+      'candidates.uncategorized': { en: 'uncategorized', es: 'sin categorizar' },
+      'candidates.failed_init': { en: 'Failed to initialize', es: 'Error al inicializar' },
+      'candidates.failed_load_policies': { en: 'Failed to load candidate policies', es: 'No se pudieron cargar las políticas de los candidatos' }
+    });
+  });
+</script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
@@ -416,7 +450,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" aria-current="page" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -513,7 +547,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           :disabled="c.placeholder"
           @click="!c.placeholder && selectCandidate(c.key)"
         >
-          <span x-text="c.name"></span>
+          <span x-text="c.placeholder ? $store.i18n.t('candidates.more_coming') : c.name"></span>
           <span x-show="!c.placeholder" class="candidate-tab-count" x-text="c.policyCount"></span>
         </button>
       </template>
@@ -545,7 +579,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="dimension-header">
           <span class="dimension-label" x-text="dim.label"></span>
           <span class="dimension-priority" :class="'priority-'+dim.priority" x-text="dim.priority"></span>
-          <span class="dimension-policy-count" x-text="dim.policies.length + (dim.policies.length === 1 ? ' policy' : ' policies')"></span>
+          <span class="dimension-policy-count" x-text="dim.policies.length + ' ' + (dim.policies.length === 1 ? $store.i18n.t('candidates.policy_singular') : $store.i18n.t('candidates.policy_plural'))"></span>
         </div>
 
         <!-- Indicator match bar (.chart-bar-track / .chart-bar-fill from styles.css) -->
@@ -571,7 +605,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 class="match-indicator-chip"
                 :class="{ 'match-indicator-chip--matched': ind.available }"
                 x-text="ind.id"
-                :title="ind.available ? 'Data available in PDI' : 'Not yet available in PDI'"
+                :title="ind.available ? $store.i18n.t('candidates.indicator_available') : $store.i18n.t('candidates.indicator_unavailable')"
               ></span>
             </template>
           </div>
@@ -650,7 +684,7 @@ function candidateTracker() {
       // Group policies by equity_dimension
       const grouped = {};
       for (const p of policies) {
-        const dimKey = p.equity_dimension || 'uncategorized';
+        const dimKey = p.equity_dimension || window.LangToggle.t('candidates.uncategorized');
         if (!grouped[dimKey]) grouped[dimKey] = [];
         grouped[dimKey].push(p);
       }
@@ -742,7 +776,7 @@ function candidateTracker() {
         // Individual loaders set their own errors; if we get here
         // it's an unexpected failure
         if (!this.error) {
-          this.error = `Failed to initialize: ${e.message}`;
+          this.error = window.LangToggle.t('candidates.failed_init') + `: ${e.message}`;
         }
       } finally {
         this.loading = false;
@@ -753,8 +787,18 @@ function candidateTracker() {
         // of this file ran long before that. reveals() skips nodes it
         // already revealed, so re-calling it here is safe (same pattern as
         // compare.html / county.html).
+        //
+        // Same reasoning applies to window.LangToggle.refresh(): every
+        // data-en/data-es pair inside this x-for (Policies/Equity Dimensions/
+        // Categories labels, "est. evidence cards", etc.) only exists in the
+        // DOM after this point, which is after lang-toggle.js's one-time
+        // DOMContentLoaded swapDOM() pass already ran — confirmed empirically
+        // 2026-07-29 on about.html's equivalent async section. addStrings()
+        // re-swaps the whole document as a side effect even with an empty
+        // map, which is the only public hook for this.
         this.$nextTick(() => {
           if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+          if (window.LangToggle) { window.LangToggle.refresh(); }
         });
       }
     },
@@ -821,7 +865,7 @@ function candidateTracker() {
           }
         }
       } catch (e) {
-        this.error = `Failed to load candidate policies: ${e.message}`;
+        this.error = window.LangToggle.t('candidates.failed_load_policies') + `: ${e.message}`;
       }
     },
 
@@ -831,7 +875,7 @@ function candidateTracker() {
 
       // Count policies per candidate from API data
       for (const p of this.allPolicies) {
-        const name = p.candidate || 'Unknown';
+        const name = p.candidate || window.LangToggle.t('candidates.unknown_candidate');
         if (!candidateMap[name]) {
           candidateMap[name] = { name, key: name, placeholder: false, policyCount: 0 };
         }
@@ -866,9 +910,13 @@ function candidateTracker() {
       // candidates tears down the old policy-card .reveal nodes and mounts
       // a brand new set that the existing IntersectionObserver never saw.
       // Same gap as the initial load, same fix — reveals() skips nodes it
-      // already revealed, so this is safe to call on every switch.
+      // already revealed, so this is safe to call on every switch. The new
+      // cards also carry fresh data-en/data-es pairs (e.g. "est. evidence
+      // cards") that swapDOM's one-time pass never saw either — refresh()
+      // re-swaps the whole document as a side effect, same fix as loadAll().
       this.$nextTick(() => {
         if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+        if (window.LangToggle) { window.LangToggle.refresh(); }
       });
 
       // Sync URL with candidate param

@@ -43,8 +43,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
@@ -588,7 +597,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" aria-current="page" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -614,12 +623,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <div x-show="showReturnBanner" x-cloak class="return-banner">
     <span>👋 <span data-en="Welcome back. Since your last visit, " data-es="Bienvenido de nuevo. Desde tu última visita, ">Welcome back. Since your last visit, </span><strong x-text="returnCounty.name"></strong>'s <span data-en="data was updated." data-es="los datos fueron actualizados.">data was updated.</span></span>
     <a :href="'/county?geoid=' + returnCounty.geoid" class="btn btn-ghost" style="font-size:0.8rem;" data-en="View changes →" data-es="Ver cambios →">View changes →</a>
-    <button class="banner-dismiss" @click="showReturnBanner = false" aria-label="Dismiss" title="Dismiss">&times;</button>
+    <button class="banner-dismiss" @click="showReturnBanner = false" aria-label="Dismiss" data-en-aria-label="Dismiss" data-es-aria-label="Descartar" title="Dismiss" data-en-title="Dismiss" data-es-title="Descartar">&times;</button>
   </div>
 
   <!-- ── Hero Glow ─────────────────────────────────────────────── -->
   <section class="hero-glow reveal">
-    <span class="section-tag">OPEN SOURCE &middot; APACHE-2.0</span>
+    <span class="section-tag" data-en="OPEN SOURCE · APACHE-2.0" data-es="CÓDIGO ABIERTO · APACHE-2.0">OPEN SOURCE &middot; APACHE-2.0</span>
     <h1 class="hero-statement">
       <span data-en="Public data, privately held, " data-es="Los datos públicos, en manos privadas, ">Public data, privately held, </span><em data-en="is the quietest form of exclusion." data-es="son la forma más silenciosa de exclusión.">is the quietest form of exclusion.</em><span data-en=" We've made it public again." data-es=" Los hemos hecho públicos de nuevo."> We've made it public again.</span>
     </h1>
@@ -746,8 +755,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <div class="featured-card-left">
             <div class="featured-name" x-text="featuredCounty?.name || ''"></div>
             <div class="featured-geoid" x-text="featuredCounty?.geoid || ''"></div>
-            <p class="featured-story" x-text="featuredCounty?.story || ''"></p>
-            <p class="featured-sources" x-show="featuredCounty?.sources" x-text="featuredCounty?.sources || ''"></p>
+            <p class="featured-story" x-text="featuredText('story')"></p>
+            <p class="featured-sources" x-show="featuredCounty?.sources" x-text="featuredText('sources')"></p>
             <div class="featured-stats">
               <div>
                 <div class="featured-stat-val" x-text="fmtPop(featuredCounty?.population)"></div>
@@ -808,6 +817,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           data-en-placeholder="Search counties by name…"
           data-es-placeholder="Buscar condados por nombre…"
           aria-label="Search counties by name"
+          data-en-aria-label="Search counties by name"
+          data-es-aria-label="Buscar condados por nombre"
         >
       </div>
 
@@ -929,7 +940,14 @@ function countyExplorer() {
            the card so staleness is visible to a reader rather than silent.
            Re-check when the vintage shown is more than ~2 years old. */
         story: 'Home to Wisconsin\'s largest city, Milwaukee County anchors the state\'s economy with a $78.8B county GDP — yet roughly a quarter of its census tracts are flagged for persistent poverty. The county carries the heaviest equity load in the state, with health-insurance gaps and food-access deserts concentrated in historically redlined neighborhoods.',
-        sources: 'GDP: U.S. Bureau of Economic Analysis, GDP by County (CAGDP2), 2024 · Persistent poverty: USDA ERS Poverty Area Measures, Sept 2025 (78 of 302 tracts)'
+        sources: 'GDP: U.S. Bureau of Economic Analysis, GDP by County (CAGDP2), 2024 · Persistent poverty: USDA ERS Poverty Area Measures, Sept 2025 (78 of 302 tracts)',
+        /* Spanish siblings — translated prose only, same figures as the English
+           original above (fact-checked 2026-07-29, see the block comment
+           above this pool). No number here is new: everything present was
+           already in the English story/sources; nothing from the live-derived
+           stat row (population / poverty_rate / indicator_count) is restated. */
+        storyEs: 'Hogar de la ciudad más grande de Wisconsin, el condado de Milwaukee sostiene la economía del estado con un PIB de $78.8 mil millones — y, aun así, aproximadamente una cuarta parte de sus secciones censales están señaladas por pobreza persistente. El condado carga con la mayor brecha de equidad del estado, con vacíos en la cobertura de salud y desiertos de acceso alimentario concentrados en vecindarios históricamente marcados por el redlining.',
+        sourcesEs: 'PIB: Oficina de Análisis Económico de EE. UU. (BEA), PIB por Condado (CAGDP2), 2024 · Pobreza persistente: USDA ERS, Medidas de Áreas de Pobreza, sept. 2025 (78 de 302 secciones censales)'
       },
       {
         geoid: '55025',
@@ -951,7 +969,9 @@ function countyExplorer() {
            supported; "fastest" is a RATE claim nobody verified, so it is gone
            rather than hedged. Same vintage-visibility tradeoff as Milwaukee. */
         story: 'Driven by Madison\'s tech and university sectors, Dane County added more than 73,000 residents between the 2010 and 2020 censuses — while cost burden climbed for renter households even as it eased for owners. The prosperity gap between the isthmus and the rural townships is among the widest in the state.',
-        sources: 'Population: U.S. Census Bureau, 2010 & 2020 Decennial Census · Renter cost burden: HUD CHAS / ACS 2011-15 (UW–Madison IRP) and ACS 2022 (Wisconsin Policy Forum)'
+        sources: 'Population: U.S. Census Bureau, 2010 & 2020 Decennial Census · Renter cost burden: HUD CHAS / ACS 2011-15 (UW–Madison IRP) and ACS 2022 (Wisconsin Policy Forum)',
+        storyEs: 'Impulsado por los sectores de tecnología y universidad de Madison, el condado de Dane sumó más de 73,000 residentes entre los censos de 2010 y 2020, mientras la carga del costo de vivienda aumentaba para los hogares inquilinos incluso cuando disminuía para los propietarios. La brecha de prosperidad entre el istmo y los municipios rurales es una de las más amplias del estado.',
+        sourcesEs: 'Población: Oficina del Censo de EE. UU., Censo Decenal 2010 y 2020 · Carga de costo para inquilinos: HUD CHAS / ACS 2011-15 (IRP de UW–Madison) y ACS 2022 (Wisconsin Policy Forum)'
       },
       {
         geoid: '55078',
@@ -967,7 +987,9 @@ function countyExplorer() {
         story: 'The smallest and most rural county in Wisconsin, coextensive with the Menominee Indian Reservation. Fewer than five thousand residents live here — and they carry the highest poverty rate of any county in the state. This is why open data matters: without it, a county this small is invisible to policy.',
         /* No external citation needed: every claim here is checkable against
            PDI's own API, which is the point worth making on this card. */
-        sources: 'Poverty rank and population: PDI, ACS via /v1/policy — highest of all 72 Wisconsin counties'
+        sources: 'Poverty rank and population: PDI, ACS via /v1/policy — highest of all 72 Wisconsin counties',
+        storyEs: 'El condado más pequeño y más rural de Wisconsin, con los mismos límites que la Reserva India Menominee. Aquí viven menos de cinco mil residentes — y cargan con la tasa de pobreza más alta de cualquier condado del estado. Por eso importan los datos abiertos: sin ellos, un condado tan pequeño es invisible para la política pública.',
+        sourcesEs: 'Clasificación de pobreza y población: PDI, ACS vía /v1/policy — la más alta de los 72 condados de Wisconsin'
       }
   ];
 
@@ -1113,6 +1135,27 @@ function countyExplorer() {
            a red error box where a spotlight should be is worse than a quiet
            gap. The county grid below carries its own error state. */
       }
+    },
+
+    /* ── Featured card: bilingual prose, chosen reactively ─────────
+       featuredCounty.story/.sources are English; storyEs/sourcesEs are
+       their Spanish siblings on the same FEATURED_POOL entry (see the
+       pool above). x-text overwrites textContent wholesale, so a
+       data-es pair on <p class="featured-story"> would be dead code —
+       this reads through Alpine's $store.i18n instead, which IS
+       tracked reactively, so the card flips language immediately on
+       toggle rather than waiting for a reload. this.$store is an
+       Alpine magic property, available inside any x-data method (not
+       just inline template expressions), and $store.i18n is
+       registered by lang-toggle.js before Alpine's first render pass
+       (see lang-toggle.js's own ordering comment), so it is always
+       present here. */
+    featuredText(field) {
+      var f = this.featuredCounty;
+      if (!f) { return ''; }
+      var es = !!(this.$store && this.$store.i18n && this.$store.i18n.is('es'));
+      var esVal = f[field + 'Es'];
+      return (es && esVal) ? esVal : (f[field] || '');
     },
 
     fmtPop(n) {

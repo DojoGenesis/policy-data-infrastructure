@@ -26,8 +26,34 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page-scoped i18n strings for $store.i18n.t(). Registered on the
+     'alpine:init' event rather than run as a plain inline call: lang-toggle.js
+     and alpine.min.js are both `defer`, but `defer` has no effect on a
+     <script> without `src` (spec behavior; confirmed empirically 2026-07-29 —
+     window.LangToggle reads as `undefined` at parse time in this head).
+     'alpine:init' fires once alpine.min.js's own deferred script starts
+     (readyState "interactive"), which is after lang-toggle.js has already
+     finished running (both deferred, document order), so LangToggle is
+     guaranteed to exist — and it fires before Alpine's DOM scan evaluates
+     any $store.i18n.t() expression on this page. -->
+<script>
+  document.addEventListener('alpine:init', function () {
+    window.LangToggle.addStrings({
+      'evidence.failed_load_cards': { en: 'Failed to load evidence cards', es: 'No se pudieron cargar las tarjetas de evidencia' }
+    });
+  });
+</script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
@@ -493,7 +519,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" aria-current="page" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -547,10 +573,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         data-en-placeholder="Search by policy title, finding, or indicator…"
         data-es-placeholder="Buscar por título de política, hallazgo o indicador…"
         aria-label="Search evidence cards"
+        data-en-aria-label="Search evidence cards"
+        data-es-aria-label="Buscar tarjetas de evidencia"
       >
     </div>
     <div class="filter-select">
-      <select x-model="equityFilter" aria-label="Filter by equity dimension">
+      <select x-model="equityFilter" aria-label="Filter by equity dimension" data-en-aria-label="Filter by equity dimension" data-es-aria-label="Filtrar por dimensión de equidad">
         <option value="" data-en="All equity dimensions" data-es="Todas las dimensiones de equidad">All equity dimensions</option>
         <template x-for="dim in equityDimensions" :key="dim">
           <option :value="dim" x-text="fmtLabel(dim)"></option>
@@ -761,22 +789,22 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="detail-section">
               <div class="detail-heading" data-en="Methodology &amp; Citations" data-es="Metodología y Citas">Methodology &amp; Citations</div>
               <div class="methodology-note">
-                <strong>Data source:</strong> PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.<br>
-                <strong>Methodology:</strong> County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).<br>
-                <strong>Data quality:</strong>
+                <strong data-en="Data source:" data-es="Fuente de datos:">Data source:</strong> <span data-en="PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas." data-es="Plataforma PDI — indicadores obtenidos de las estimaciones quinquenales del Census ACS (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen y USDA Food Access Research Atlas.">PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.</span><br>
+                <strong data-en="Methodology:" data-es="Metodología:">Methodology:</strong> <span data-en="County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate)." data-es="La variación a nivel de condado se analiza en los 72 condados de Wisconsin. Los indicadores clave están vinculados a cada posición de política a través de la tabla de correspondencia de dimensiones de equidad. Las clasificaciones de necesidad usan valores brutos de indicadores, ordenados según la relevancia de la política (ascendente para métricas positivas como el ingreso, descendente para métricas de carga como la tasa de pobreza).">County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).</span><br>
+                <strong data-en="Data quality:" data-es="Calidad de los datos:">Data quality:</strong>
                 <span x-text="card.data_quality"></span> —
                 <template x-if="card.data_quality === 'strong'">
-                  <span>High-confidence indicators with CV &lt; 15% and full county coverage.</span>
+                  <span data-en="High-confidence indicators with CV &lt; 15% and full county coverage." data-es="Indicadores de alta confianza con CV &lt; 15% y cobertura completa de condados.">High-confidence indicators with CV &lt; 15% and full county coverage.</span>
                 </template>
                 <template x-if="card.data_quality === 'moderate'">
-                  <span>Moderate confidence; some indicators have CV 15–30% or partial county coverage.</span>
+                  <span data-en="Moderate confidence; some indicators have CV 15–30% or partial county coverage." data-es="Confianza moderada; algunos indicadores tienen CV de 15–30% o cobertura parcial de condados.">Moderate confidence; some indicators have CV 15–30% or partial county coverage.</span>
                 </template>
                 <template x-if="card.data_quality === 'low'">
-                  <span>Limited data availability; use as suggestive evidence only.</span>
+                  <span data-en="Limited data availability; use as suggestive evidence only." data-es="Disponibilidad de datos limitada; úsese solo como evidencia sugestiva.">Limited data availability; use as suggestive evidence only.</span>
                 </template>
                 <br>
-                <strong>Policy ID:</strong> <span x-text="card.policy_id"></span> ·
-                <strong>Equity dimension:</strong> <span x-text="fmtLabel(card.equity_dimension)"></span>
+                <strong data-en="Policy ID:" data-es="ID de política:">Policy ID:</strong> <span x-text="card.policy_id"></span> ·
+                <strong data-en="Equity dimension:" data-es="Dimensión de equidad:">Equity dimension:</strong> <span x-text="fmtLabel(card.equity_dimension)"></span>
               </div>
             </div>
 
@@ -904,7 +932,7 @@ function evidenceGallery() {
         const data = await resp.json();
         this.allCards = data.cards || [];
       } catch (e) {
-        this.cardsError = `Failed to load evidence cards: ${e.message}`;
+        this.cardsError = window.LangToggle.t('evidence.failed_load_cards') + `: ${e.message}`;
       } finally {
         this.cardsLoading = false;
 
@@ -914,8 +942,19 @@ function evidenceGallery() {
         // ran long before that. reveals() skips nodes it already
         // revealed, so re-calling it here is safe (same pattern as
         // compare.html / county.html).
+        //
+        // Same reasoning applies to window.LangToggle.refresh(): every
+        // data-en/data-es pair inside this x-for (Statewide Indicator Values,
+        // County-Level Variation, Data source/Methodology labels, etc.) only
+        // exists in the DOM after this point, which is after lang-toggle.js's
+        // one-time DOMContentLoaded swapDOM() pass already ran — confirmed
+        // empirically 2026-07-29 (fresh load with tp-lang=es still showed
+        // English table headers on about.html's equivalent async section).
+        // addStrings() re-swaps the whole document as a side effect even
+        // with an empty map, which is the only public hook for this.
         this.$nextTick(() => {
           if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+          if (window.LangToggle) { window.LangToggle.refresh(); }
         });
       }
     },

@@ -75,13 +75,47 @@
     }
   };
 
+  /* ── i18n ────────────────────────────────────────────────────────
+     This file injects a button into every page, and its five strings
+     were hardcoded English — so "Copy Link" stayed English in Spanish
+     mode on every page that renders it. The MutationObserver in
+     lang-toggle.js cannot rescue this on its own: it applies
+     data-en/data-es pairs to added nodes, and it can only translate an
+     attribute that exists. It cannot invent one. So the pairs have to
+     be authored here, at the point of injection.
+
+     Both halves matter. t() gives the correct string at inject time;
+     the data-* pairs let a LATER language toggle re-swap a button that
+     is already in the DOM. Doing only the first leaves the button
+     frozen in whatever language it was injected with. */
+  function t(key, fallback) {
+    if (window.LangToggle && typeof window.LangToggle.t === 'function') {
+      var v = window.LangToggle.t(key);
+      if (v && v !== key) { return v; }
+    }
+    return fallback;
+  }
+
+  if (window.LangToggle && typeof window.LangToggle.addStrings === 'function') {
+    window.LangToggle.addStrings({
+      'deeplink.copy':        { en: 'Copy Link',   es: 'Copiar enlace' },
+      'deeplink.copied':      { en: 'Copied!',     es: '¡Copiado!' },
+      'deeplink.failed':      { en: 'Copy failed', es: 'Error al copiar' },
+      'deeplink.title':       { en: 'Copy shareable link to clipboard',
+                                es: 'Copiar enlace para compartir al portapapeles' },
+      'deeplink.title_done':  { en: 'Link copied to clipboard',
+                                es: 'Enlace copiado al portapapeles' }
+    });
+  }
+
   // ── Flash "Copied!" on the button ──────────────────────────────
   PDIDeepLink._flashCopied = function (el) {
     if (!el) return;
     var origHTML = el.innerHTML;
     var origTitle = el.getAttribute('title') || '';
-    el.innerHTML = CHECK_ICON + ' <span>Copied!</span>';
-    el.setAttribute('title', 'Link copied to clipboard');
+    el.innerHTML = CHECK_ICON + ' <span data-en="Copied!" data-es="¡Copiado!">' +
+                   t('deeplink.copied', 'Copied!') + '</span>';
+    el.setAttribute('title', t('deeplink.title_done', 'Link copied to clipboard'));
     el.classList.add('copy-link--copied');
     el.style.pointerEvents = 'none';
     setTimeout(function () {

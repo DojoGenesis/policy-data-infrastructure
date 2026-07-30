@@ -26,8 +26,17 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
@@ -682,7 +691,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -817,7 +826,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <!-- Chapter Navigation Sidebar -->
     <aside class="chapter-sidebar" x-show="chapters.length > 1">
       <span class="section-tag" data-en="Chapters" data-es="Capítulos">Chapters</span>
-      <nav aria-label="Chapter navigation">
+      <nav aria-label="Chapter navigation" data-en-aria-label="Chapter navigation" data-es-aria-label="Navegación de capítulos">
         <template x-for="ch in chapters" :key="ch.id">
           <a :href="'#' + ch.id"
              class="chapter-link"
@@ -1044,7 +1053,10 @@ function narrativeReader() {
         this.buildChapterNav();
 
       } catch (e) {
-        this.error = `Failed to load narrative: ${e.message}`;
+        this.error = this.t(
+          `Failed to load narrative: ${e.message}`,
+          `No se pudo cargar la narrativa: ${e.message}`
+        );
         this.loading = false;
       }
     },

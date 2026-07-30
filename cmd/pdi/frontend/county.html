@@ -28,8 +28,61 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page-scoped i18n strings for $store.i18n.t(). Registration MUST NOT run
+     until AFTER lang-toggle.js's deferred body has executed (window.LangToggle
+     must exist) and MUST complete BEFORE Alpine's first reactive pass reads
+     the store (or every $store.i18n.t() call in the initial render falls back
+     to returning its raw key — verified: this is not a hypothetical, it is
+     what happens with a naive `<script defer>addStrings(...)</script>` here).
+     `defer` on an inline script with no `src` is a no-op per the HTML spec
+     (MDN: "This attribute must not be used if the src attribute is absent...
+     it would have no effect") — confirmed empirically too: such a script
+     still runs synchronously during the initial parse, before lang-toggle.js
+     (which DOES have `src` and so genuinely defers) has executed, so
+     window.LangToggle is undefined at call time and addStrings() is silently
+     skipped. The fix mirrors lang-toggle.js's own dual-path pattern for
+     registerStore(): try immediately for the (here, always-false-until-Alpine
+     case), and otherwise wait for `alpine:init`, which fires synchronously
+     inside alpine.min.js's OWN deferred execution — guaranteed to run after
+     lang-toggle.js (document-order defer) and before Alpine's first DOM pass
+     (alpine:init fires before any component is initialized). -->
+<script>
+  (function registerCountyStrings() {
+    var strings = {
+      'county.pop_prefix': { en: '· Pop. ', es: '· Pob. ' },
+      'county.pct_prefix': { en: ' (', es: ' (percentil ' },
+      'county.pct_suffix': { en: 'th percentile). That means ', es: '). Eso significa que ' },
+      'county.this_county': { en: 'this county', es: 'este condado' },
+      'county.of': { en: 'of', es: 'de' },
+      'county.tracts': { en: 'tracts', es: 'secciones censales' },
+      'county.indicators_clustering_mid': { en: ' indicator(s) with significant spatial clustering across ', es: ' indicador(es) con agrupamiento espacial significativo en ' },
+      'county.tracts_period': { en: ' tracts.', es: ' secciones censales.' },
+      'county.direction_prefix': { en: 'Direction: ', es: 'Dirección: ' },
+      'county.unknown': { en: 'unknown', es: 'desconocida' },
+      'county.policy': { en: 'Policy', es: 'Política' },
+      'county.vs': { en: 'vs ', es: 'vs ' },
+      'county.census_tracts_within': { en: ' census tracts within ', es: ' secciones censales dentro de ' },
+    };
+    if (window.LangToggle) {
+      window.LangToggle.addStrings(strings);
+    } else {
+      document.addEventListener('alpine:init', function () {
+        window.LangToggle.addStrings(strings);
+      });
+    }
+  })();
+</script>
 <script defer src="/static/alpine.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
@@ -1082,7 +1135,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="portrait-geoid">
           <span class="geoid-dot"></span>
           <span x-text="geo?.geoid"></span>
-          <span style="color:var(--quiet);" x-text="'· Pop. ' + (geo?.population ? geo.population.toLocaleString() : '—')"></span>
+          <span style="color:var(--quiet);" x-text="$store.i18n.t('county.pop_prefix') + (geo?.population ? geo.population.toLocaleString() : '—')"></span>
           <span x-show="geo?.level" style="color:var(--quiet);" x-text="'· ' + (geo?.level || '')"></span>
         </div>
 
@@ -1139,21 +1192,21 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div x-show="!indicatorsLoading && !indicatorsError" x-cloak>
           <div class="filter-row">
             <template x-for="(inds, cat) in groupedIndicators" :key="cat">
-              <button class="filter-chip" :class="{active: activeCategory===cat}" @click="activeCategory=cat; indSortCol=''; indSortDir=1; syncCountyURL()" x-text="cat"></button>
+              <button class="filter-chip" :class="{active: activeCategory===cat}" @click="activeCategory=cat; indSortCol=''; indSortDir=1; syncCountyURL()" x-text="categoryLabel(cat)"></button>
             </template>
           </div>
 
           <div x-show="visibleIndicators.length === 0" class="state-empty" data-en="No indicators found for this category." data-es="No se encontraron indicadores para esta categoría.">No indicators found for this category.</div>
 
           <div x-show="visibleIndicators.length > 0" style="overflow-x:auto;">
-            <table class="data-table" role="grid" aria-label="Indicator dashboard">
+            <table class="data-table" role="grid" aria-label="Indicator dashboard" data-en-aria-label="Indicator dashboard" data-es-aria-label="Panel de indicadores">
               <thead>
                 <tr>
                   <th @click="indSortCol='name'; indSortDir*=-1" :class="{sorted: indSortCol==='name'}" style="cursor:pointer;user-select:none;"><span data-en="Indicator" data-es="Indicador">Indicator</span> <span class="sort-arrow" x-text="indSortCol==='name' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
                   <th @click="indSortCol='value'; indSortDir*=-1" :class="{sorted: indSortCol==='value'}" class="num" style="cursor:pointer;user-select:none;"><span data-en="Value" data-es="Valor">Value</span> <span class="sort-arrow" x-text="indSortCol==='value' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
                   <th style="text-align:center;" data-en="State Rank" data-es="Rango Estatal">State Rank</th>
                   <th @click="indSortCol='reliability'; indSortDir*=-1" :class="{sorted: indSortCol==='reliability'}" style="text-align:center;cursor:pointer;user-select:none;"><span data-en="Reliability" data-es="Confiabilidad">Reliability</span> <span class="sort-arrow" x-text="indSortCol==='reliability' ? (indSortDir===1 ? '▲' : '▼') : '↕'"></span></th>
-                  <th class="num">MOE</th>
+                  <th class="num" data-en="MOE" data-es="M.E.">MOE</th>
                   <th style="text-align:center;" data-en="Map" data-es="Mapa">Map</th>
                 </tr>
               </thead>
@@ -1173,7 +1226,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                     </td>
                     <td class="num" style="color:var(--quiet);font-style:italic;" x-text="fmtMOE(ind.margin_of_error)"></td>
                     <td style="text-align:center;">
-                      <a :href="'/map?indicator=' + encodeURIComponent(ind.variable_id)" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-weight:600;" title="View on Map">🗺️</a>
+                      <a :href="'/map?indicator=' + encodeURIComponent(ind.variable_id)" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-weight:600;" title="View on Map" data-en-title="View on Map" data-es-title="Ver en el Mapa">🗺️</a>
                     </td>
                   </tr>
                 </template>
@@ -1205,7 +1258,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
               @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="video-stats-bar" x-show="overlayStats.length > 0">
@@ -1241,7 +1294,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
               @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="video-stats-bar" x-show="overlayStats.length > 0">
@@ -1267,11 +1320,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <h2 data-en="Validated Features" data-es="Características Validadas">Validated Features</h2>
         <p class="layer-context" x-show="!iceError && iceScore != null">
           <span data-en="ICE score: " data-es="Puntaje ICE: ">ICE score: </span><strong x-text="iceScore ? iceScore.toFixed(3) : '—'"></strong>
-          <span x-text="' (' + (icePercentile != null ? icePercentile.toFixed(0) : '?') + 'th percentile). That means '"></span>
-          <strong x-text="geo?.name || 'this county'"></strong>
-          <span> is </span><em x-text="layer2ContextRel"></em><span>. The ICE index measures the gap between concentrated privilege and concentrated deprivation — the wider the gap, the more polarized the community (Krieger et al. 2016).</span>
+          <span x-text="$store.i18n.t('county.pct_prefix') + (icePercentile != null ? icePercentile.toFixed(0) : '?') + $store.i18n.t('county.pct_suffix')"></span>
+          <strong x-text="geo?.name || $store.i18n.t('county.this_county')"></strong>
+          <span data-en=" is " data-es=" está "> is </span><em x-text="layer2ContextRel"></em><span data-en=". The ICE index measures the gap between concentrated privilege and concentrated deprivation — the wider the gap, the more polarized the community (Krieger et al. 2016)." data-es=". El índice ICE mide la brecha entre la concentración de privilegio y la concentración de privación — cuanto más amplia la brecha, más polarizada la comunidad (Krieger et al. 2016).">. The ICE index measures the gap between concentrated privilege and concentrated deprivation — the wider the gap, the more polarized the community (Krieger et al. 2016).</span>
         </p>
-        <p x-show="iceScore == null && !iceError" class="layer-context"><span data-en="Computing the Index of Concentration at the Extremes for " data-es="Calculando el Índice de Concentración en los Extremos para ">Computing the Index of Concentration at the Extremes for </span><strong x-text="geo?.name || 'this county'"></strong>…</p>
+        <p x-show="iceScore == null && !iceError" class="layer-context"><span data-en="Computing the Index of Concentration at the Extremes for " data-es="Calculando el Índice de Concentración en los Extremos para ">Computing the Index of Concentration at the Extremes for </span><strong x-text="geo?.name || $store.i18n.t('county.this_county')"></strong>…</p>
 
         <!-- ICE Score -->
         <div class="feature-card">
@@ -1282,7 +1335,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <div x-show="!iceError">
             <div class="feature-grid">
               <div class="feature-stat"><div class="fs-val" x-text="fmtICE(iceScore)"></div><div class="fs-lbl" data-en="ICE Score" data-es="Puntaje ICE">ICE Score</div></div>
-              <div class="feature-stat"><div class="fs-val" x-text="icePercentile != null ? icePercentile.toFixed(1)+'th' : '—'"></div><div class="fs-lbl" data-en="State Percentile" data-es="Percentil Estatal">State Percentile</div></div>
+              <div class="feature-stat"><div class="fs-val" x-text="icePercentile != null ? icePercentile.toFixed(1)+(lang==='es'?'':'th') : '—'"></div><div class="fs-lbl" data-en="State Percentile" data-es="Percentil Estatal">State Percentile</div></div>
               <div class="feature-stat"><div class="fs-val" x-text="popPOC != null ? popPOC.toFixed(1)+'%' : '—'"></div><div class="fs-lbl" data-en="% People of Color" data-es="% Personas de Color">% People of Color</div></div>
               <div class="feature-stat"><div class="fs-val" x-text="povertyRate != null ? povertyRate.toFixed(1)+'%' : '—'"></div><div class="fs-lbl" data-en="Poverty Rate" data-es="Tasa de Pobreza">Poverty Rate</div></div>
             </div>
@@ -1370,7 +1423,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
               @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="video-stats-bar" x-show="overlayStats.length > 0">
@@ -1407,7 +1460,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
               @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="video-stats-bar" x-show="overlayStats.length > 0">
@@ -1562,12 +1615,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <template x-for="c in lisaClusters" :key="c.key">
               <a :href="'/map?indicator='+c.variable" class="lisa-badge" :class="c.cluster">
                 <span x-text="c.variable"></span>
-                <span style="font-weight:400;opacity:0.8;" x-text="c.cluster + ' (' + c.count + ' of ' + c.total + ' tracts)'"></span>
+                <span style="font-weight:400;opacity:0.8;" x-text="c.cluster + ' (' + c.count + ' ' + $store.i18n.t('county.of') + ' ' + c.total + ' ' + $store.i18n.t('county.tracts') + ')'"></span>
               </a>
             </template>
           </div>
           <div class="lisa-summary" x-show="lisaClusters.length > 0">
-            <span x-text="lisaClusters.length + ' indicator(s) with significant spatial clustering across ' + children.length + ' tracts.'"></span>
+            <span x-text="lisaClusters.length + $store.i18n.t('county.indicators_clustering_mid') + children.length + $store.i18n.t('county.tracts_period')"></span>
           </div>
         </div>
 
@@ -1591,7 +1644,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               @timeupdate="updateCaption()" @loadedmetadata="onLoaded()"
               @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="video-stats-bar" x-show="overlayStats.length > 0">
@@ -1637,7 +1690,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div x-show="compositeVars.length === 0" style="font-size:0.8rem;color:var(--muted);" data-en="No variables with values available. Indicator data must be loaded first." data-es="No hay variables con valores disponibles. Los datos de indicadores deben cargarse primero.">No variables with values available. Indicator data must be loaded first.</div>
 
             <template x-for="v in compositeVars" :key="v.id">
-              <label class="composite-var-row" :title="'Direction: ' + (v.direction||'unknown')">
+              <label class="composite-var-row" :title="$store.i18n.t('county.direction_prefix') + (v.direction||$store.i18n.t('county.unknown'))">
                 <input type="checkbox" :value="v.id" x-model="compositeSelected">
                 <span class="composite-var-name" x-text="v.name || v.id"></span>
                 <span class="composite-var-dir" x-text="v.direction==='higher_is_better' || v.direction==='higher_better' ? '↑' : '↓'"></span>
@@ -1717,7 +1770,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="levers-grid" x-show="!evidenceLoading && !evidenceError && evidenceCards.length > 0" x-cloak>
           <template x-for="card in evidenceCards.slice(0,6)" :key="card.policy_id + '-' + card.title">
             <a :href="'/evidence?dimension=' + encodeURIComponent(card.equity_dimension || '')" class="evidence-card" style="text-decoration:none;color:inherit;">
-              <div class="ev-category" x-text="card.category || 'Policy'"></div>
+              <div class="ev-category" x-text="card.category || $store.i18n.t('county.policy')"></div>
               <div class="ev-title" x-text="card.title"></div>
               <div class="ev-finding" x-text="card.key_finding || ''"></div>
               <div class="ev-meta">
@@ -1750,7 +1803,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <a :href="'/compare?geoid1='+geoid" class="btn btn-secondary" data-en="Open Compare" data-es="Abrir Comparación">Open Compare</a>
             <div style="margin-top:10px;font-size:0.72rem;color:var(--quiet);">
               <template x-for="n in neighborSuggestions" :key="n.geoid">
-                <a :href="'/compare?geoid1='+geoid+'&geoid2='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="'vs ' + n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
+                <a :href="'/compare?geoid1='+geoid+'&geoid2='+n.geoid" style="color:var(--muted);text-decoration:none;margin-right:10px;" x-text="$store.i18n.t('county.vs') + n.name" @mouseover="$el.style.color='var(--accent)'" @mouseout="$el.style.color=''"></a>
               </template>
             </div>
           </div>
@@ -1764,7 +1817,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="layer-inner">
         <span class="layer-indicator li-4" data-en="Geography Hierarchy" data-es="Jerarquía Geográfica">Geography Hierarchy</span>
         <h2 data-en="Census Tracts" data-es="Secciones Censales">Census Tracts</h2>
-        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + ' census tracts within ' + (geo?.name || '')"></p>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;" x-text="children.length + $store.i18n.t('county.census_tracts_within') + (geo?.name || '')"></p>
         <div class="tract-grid">
           <template x-for="c in children.slice(0,48)" :key="c.geoid">
             <div class="tract-chip">
@@ -1875,7 +1928,7 @@ function countyProfile() {
 
     // State FIPS → name lookup
     get stateName() {
-      if (!this.geoid || this.geoid.length < 2) return 'the state';
+      if (!this.geoid || this.geoid.length < 2) return this.lang === 'es' ? 'el estado' : 'the state';
       const stFips = this.geoid.substring(0, 2);
       const map = {
         '01':'Alabama','02':'Alaska','04':'Arizona','05':'Arkansas','06':'California',
@@ -1893,48 +1946,71 @@ function countyProfile() {
         '60':'American Samoa','66':'Guam','69':'Northern Mariana Islands',
         '72':'Puerto Rico','78':'Virgin Islands',
       };
-      return map[stFips] || 'the state';
+      return map[stFips] || (this.lang === 'es' ? 'el estado' : 'the state');
     },
 
     get definingSentence() {
       if (!this.geo || !this.geo.name) return '';
       const name = this.geo.name;
       const state = this.stateName;
+      const es = this.lang === 'es';
 
       // Build a data-driven sentence
       if (this.iceScore != null && this.iceScore > 0.2) {
-        return '<strong>' + name + '</strong> is among ' + state + '\'s <em>most privileged</em> counties — but not everyone is along for the ride.';
+        return es
+          ? '<strong>' + name + '</strong> está entre los condados <em>más privilegiados</em> de ' + state + ' — pero no todos se benefician por igual.'
+          : '<strong>' + name + '</strong> is among ' + state + '\'s <em>most privileged</em> counties — but not everyone is along for the ride.';
       }
       if (this.iceScore != null && this.iceScore < -0.2) {
-        return '<strong>' + name + '</strong> carries some of ' + state + '\'s <em>deepest structural challenges</em>. Understanding them is the first step toward change.';
+        return es
+          ? '<strong>' + name + '</strong> enfrenta algunos de los <em>desafíos estructurales más profundos</em> de ' + state + '. Entenderlos es el primer paso hacia el cambio.'
+          : '<strong>' + name + '</strong> carries some of ' + state + '\'s <em>deepest structural challenges</em>. Understanding them is the first step toward change.';
       }
       if (this.icePercentile != null && this.icePercentile > 70) {
-        return '<strong>' + name + '</strong> sits near the <em>top of ' + state + '</em> in economic and racial advantage. Data tells the story of who benefits — and who doesn\'t.';
+        return es
+          ? '<strong>' + name + '</strong> se ubica cerca de la <em>cima de ' + state + '</em> en ventaja económica y racial. Los datos cuentan la historia de quién se beneficia — y quién no.'
+          : '<strong>' + name + '</strong> sits near the <em>top of ' + state + '</em> in economic and racial advantage. Data tells the story of who benefits — and who doesn\'t.';
       }
       if (this.icePercentile != null && this.icePercentile < 30) {
-        return '<strong>' + name + '</strong> ranks among ' + state + '\'s <em>most structurally strained</em> counties. Every indicator below is a lever for change.';
+        return es
+          ? '<strong>' + name + '</strong> está entre los condados <em>con mayor tensión estructural</em> de ' + state + '. Cada indicador a continuación es una palanca para el cambio.'
+          : '<strong>' + name + '</strong> ranks among ' + state + '\'s <em>most structurally strained</em> counties. Every indicator below is a lever for change.';
       }
-      return '<strong>' + name + '</strong> — a ' + state + ' county where <em>data reveals the shape of opportunity and constraint</em>, block by block.';
+      return es
+        ? '<strong>' + name + '</strong> — un condado de ' + state + ' donde <em>los datos revelan la forma de la oportunidad y la limitación</em>, cuadra por cuadra.'
+        : '<strong>' + name + '</strong> — a ' + state + ' county where <em>data reveals the shape of opportunity and constraint</em>, block by block.';
     },
 
     get portraitStats() {
       const stats = [];
+      const es = this.lang === 'es';
       const find = id => this.indicators.find(i => i.variable_id === id);
       const pov = find('poverty_rate');
-      if (pov && pov.value != null) stats.push({label: 'Poverty Rate', value: pov.value.toFixed(1)+'%', indicator: 'poverty_rate', rawValue: pov.value});
+      if (pov && pov.value != null) stats.push({label: es ? 'Tasa de Pobreza' : 'Poverty Rate', value: pov.value.toFixed(1)+'%', indicator: 'poverty_rate', rawValue: pov.value});
       const inc = find('median_household_income');
-      if (inc && inc.value != null) stats.push({label: 'Median Income', value: '$'+Math.round(inc.value).toLocaleString(), indicator: 'median_household_income', rawValue: inc.value});
+      if (inc && inc.value != null) stats.push({label: es ? 'Ingreso Medio' : 'Median Income', value: '$'+Math.round(inc.value).toLocaleString(), indicator: 'median_household_income', rawValue: inc.value});
       const uns = find('uninsured_rate');
-      if (uns && uns.value != null) stats.push({label: 'Uninsured', value: uns.value.toFixed(1)+'%', indicator: 'uninsured_rate', rawValue: uns.value});
-      if (this.popPOC != null) stats.push({label: 'People of Color', value: this.popPOC.toFixed(1)+'%'});
+      if (uns && uns.value != null) stats.push({label: es ? 'Sin Seguro' : 'Uninsured', value: uns.value.toFixed(1)+'%', indicator: 'uninsured_rate', rawValue: uns.value});
+      if (this.popPOC != null) stats.push({label: es ? 'Personas de Color' : 'People of Color', value: this.popPOC.toFixed(1)+'%'});
       return stats;
     },
 
     get layer1Context() {
-      const name = this.geo ? this.geo.name : 'this county';
+      const es = this.lang === 'es';
+      const name = this.geo ? this.geo.name : (es ? 'este condado' : 'this county');
       const catCount = Object.keys(this.groupedIndicators).length;
       const indCount = this.indicators.length;
-      if (indCount === 0) return 'Indicator data is loading for <strong>' + name + '</strong>…';
+      if (indCount === 0) {
+        return es
+          ? 'Los datos de indicadores se están cargando para <strong>' + name + '</strong>…'
+          : 'Indicator data is loading for <strong>' + name + '</strong>…';
+      }
+      if (es) {
+        return 'Esto es lo que el Censo nos dice sobre <strong>' + name + '</strong>. ' +
+          indCount + ' indicadores en ' + catCount + ' categorías — ' +
+          'estimaciones de 5 años de la ACS más fuentes complementarias de CDC PLACES, EPA EJScreen y USDA Food Access. ' +
+          'Cada valor lleva una insignia de confiabilidad.';
+      }
       return 'Here\'s what the Census tells us about <strong>' + name + '</strong>. ' +
         indCount + ' indicators across ' + catCount + ' categories — ' +
         'ACS 5-year estimates plus supplementary sources from CDC PLACES, EPA EJScreen, and USDA Food Access. ' +
@@ -1943,10 +2019,16 @@ function countyProfile() {
 
     get layer2ContextRel() {
       if (this.iceScore == null) return '';
-      let rel = this.iceScore > 0.3 ? 'among ' + this.stateName + '\u2019s most privileged' :
-        this.iceScore < -0.3 ? 'among ' + this.stateName + '\u2019s most deprived' :
-        this.iceScore > 0 ? 'moderately privileged relative to ' + this.stateName :
-        'moderately deprived relative to ' + this.stateName;
+      const es = this.lang === 'es';
+      let rel = es
+        ? (this.iceScore > 0.3 ? 'entre los m\u00e1s privilegiados de ' + this.stateName :
+           this.iceScore < -0.3 ? 'entre los m\u00e1s desfavorecidos de ' + this.stateName :
+           this.iceScore > 0 ? 'moderadamente privilegiado en relaci\u00f3n con ' + this.stateName :
+           'moderadamente desfavorecido en relaci\u00f3n con ' + this.stateName)
+        : (this.iceScore > 0.3 ? 'among ' + this.stateName + '\u2019s most privileged' :
+           this.iceScore < -0.3 ? 'among ' + this.stateName + '\u2019s most deprived' :
+           this.iceScore > 0 ? 'moderately privileged relative to ' + this.stateName :
+           'moderately deprived relative to ' + this.stateName);
       return rel;
     },
 
@@ -1966,8 +2048,19 @@ function countyProfile() {
     },
 
     get layer3Context() {
-      const name = this.geo?.name || 'this county';
-      if (this.factors.length === 0) return 'Factor analysis has not yet been computed for <strong>' + name + '</strong>. Scores are generated by exploratory factor analysis with oblimin rotation across all Wisconsin counties.';
+      const es = this.lang === 'es';
+      const name = this.geo?.name || (es ? 'este condado' : 'this county');
+      if (this.factors.length === 0) {
+        return es
+          ? 'El análisis factorial aún no se ha calculado para <strong>' + name + '</strong>. Los puntajes se generan mediante análisis factorial exploratorio con rotación oblimin en todos los condados de Wisconsin.'
+          : 'Factor analysis has not yet been computed for <strong>' + name + '</strong>. Scores are generated by exploratory factor analysis with oblimin rotation across all Wisconsin counties.';
+      }
+      if (es) {
+        return 'El análisis factorial revela <strong>' + this.factors.length + ' patrones subyacentes</strong> en ' +
+          '<strong>' + name + '</strong>. Cada factor es una dimensión latente descubierta por el AFE — ' +
+          'los datos determinan qué pertenece junto, no nuestras suposiciones. ' +
+          'Los puntajes están normalizados según el puntaje z en todos los condados de ' + this.stateName + '.';
+      }
       return 'Factor analysis reveals <strong>' + this.factors.length + ' underlying patterns</strong> in ' +
         '<strong>' + name + '</strong>. Each factor is a latent dimension uncovered by EFA — ' +
         'the data determines what belongs together, not our assumptions. ' +
@@ -1975,31 +2068,53 @@ function countyProfile() {
     },
 
     get layer4Context() {
-      const name = this.geo?.name || 'this county';
+      const es = this.lang === 'es';
+      const name = this.geo?.name || (es ? 'este condado' : 'this county');
       // ADR-011 §2B Layer 4 specifies this sentence verbatim: "LISA clusters show
       // where these patterns concentrate spatially. The map reveals High-High
       // clusters in [X] tracts." — [X] is clusters[cluster=="HH"].count from
-      // GET /geographies/:geoid/lisa-profile. Stays English to match the rest of
-      // this paragraph; the bilingual copy of the same number is in lisaProfileNote.
+      // GET /geographies/:geoid/lisa-profile. Both languages now generated here
+      // (2026-07-29 i18n pass); the bilingual copy of the same number is also in
+      // lisaProfileNote, which must never drift from this one.
       const hasProfile = this.lisaProfileRows.length > 0;
       const hh = hasProfile ? this.lisaClusterCount('HH') : null;
-      const hhSentence = hh != null
-        ? ' The map reveals <strong>High-High clusters in ' + hh + ' tract' + (hh === 1 ? '' : 's') + '</strong>.'
-        : '';
-      if (this.lisaClusters.length === 0 && !hasProfile) return 'LISA clusters haven\'t been computed for <strong>' + name + '</strong> yet. Run spatial analysis from the map page to see where patterns concentrate geographically.';
+      const hhSentence = hh == null ? '' : es
+        ? ' El mapa revela <strong>clústeres Alto-Alto en ' + hh + (hh === 1 ? ' sección censal' : ' secciones censales') + '</strong>.'
+        : ' The map reveals <strong>High-High clusters in ' + hh + ' tract' + (hh === 1 ? '' : 's') + '</strong>.';
+      if (this.lisaClusters.length === 0 && !hasProfile) {
+        return es
+          ? 'Los clústeres LISA aún no se han calculado para <strong>' + name + '</strong>. Ejecuta el análisis espacial desde la página del mapa para ver dónde se concentran los patrones geográficamente.'
+          : 'LISA clusters haven\'t been computed for <strong>' + name + '</strong> yet. Run spatial analysis from the map page to see where patterns concentrate geographically.';
+      }
+      if (es) {
+        return 'Los clústeres LISA muestran <em>dónde se concentran estos patrones</em> espacialmente en <strong>' + name + '</strong>.' + hhSentence + ' ' +
+          'Los Indicadores Locales de Asociación Espacial (Anselin 1995) clasifican cada sección censal según su relación con sus vecinas: ' +
+          'los clústeres Alto-Alto señalan ventaja o desventaja concentrada, Alto-Bajo señala un valor atípico.';
+      }
       return 'LISA clusters show <em>where these patterns concentrate</em> spatially in <strong>' + name + '</strong>.' + hhSentence + ' ' +
         'Local Indicators of Spatial Association (Anselin 1995) classify each census tract by its relationship to neighbors: ' +
         'High-High clusters signal concentrated advantage or disadvantage, High-Low signals an outlier.';
     },
 
     get layer5Context() {
+      if (this.lang === 'es') {
+        return '<strong>Construye tu propio índice</strong> para ponderar lo que más importa. ' +
+          'Selecciona cualquier combinación de indicadores, asigna direcciones y obtén un puntaje compuesto calculado en el momento de la consulta — ' +
+          'nunca almacenado como verdad absoluta. Cada resultado incluye un análisis de estabilidad bajo una perturbación de peso de ±20% para que sepas qué tan frágil es la clasificación.';
+      }
       return '<strong>Build your own index</strong> to weigh what matters most. ' +
         'Select any combination of indicators, assign directions, and get a composite score computed at query time — ' +
         'never stored as truth. Every result includes stability analysis under ±20% weight perturbation so you know how fragile the ranking is.';
     },
 
     get leversContext() {
-      const name = this.geo?.name || 'this county';
+      const es = this.lang === 'es';
+      const name = this.geo?.name || (es ? 'este condado' : 'this county');
+      if (es) {
+        return '¿Qué <em>hacemos</em> con lo que vemos en <strong>' + name + '</strong>? ' +
+          'A continuación hay fichas de evidencia de la literatura de políticas públicas — cada una vinculada a al menos un estudio revisado por pares — ' +
+          'más dos caminos hacia la acción: una narrativa Five Mornings y una comparación con condados vecinos.';
+      }
       return 'What do we <em>do</em> with what we see in <strong>' + name + '</strong>? ' +
         'Below are evidence cards from the policy literature — each linked to at least one peer-reviewed study — ' +
         'plus two pathways to action: a Five Mornings narrative and a neighbor comparison.';
@@ -2170,7 +2285,20 @@ function countyProfile() {
     },
 
     get factorList() {
-      const labelMap = {
+      const labelMap = this.lang === 'es' ? {
+        'economic_distress': 'Dificultad Económica',
+        'housing_stress': 'Tensión de Vivienda',
+        'affluence': 'Prosperidad',
+        'educational_attainment': 'Nivel Educativo',
+        'health_vulnerability': 'Vulnerabilidad de Salud',
+        'racial_segregation': 'Segregación Racial',
+        'urban_density': 'Densidad Urbana',
+        'rural_character': 'Carácter Rural',
+        'environmental_burden': 'Carga Ambiental',
+        'labor_market': 'Fortaleza del Mercado Laboral',
+        'cardiovascular_metabolic': 'Cardiovascular y Metabólico',
+        'mental_health_economic_deprivation': 'Salud Mental y Privación Económica',
+      } : {
         'economic_distress': 'Economic Distress',
         'housing_stress': 'Housing Stress',
         'affluence': 'Affluence',
@@ -2227,7 +2355,9 @@ function countyProfile() {
       this.geoid = PDIDeepLink.getParam('geoid', '');
       if (!this.geoid) {
         this.loading = false;
-        this.error = 'No GEOID provided. Go back to the <a href="/" style="color:var(--accent);">County Explorer</a> to select a county.';
+        this.error = this.lang === 'es'
+          ? 'No se proporcionó un GEOID. Vuelve al <a href="/" style="color:var(--accent);">Explorador de Condados</a> para seleccionar un condado.'
+          : 'No GEOID provided. Go back to the <a href="/" style="color:var(--accent);">County Explorer</a> to select a county.';
         return;
       }
 
@@ -2400,6 +2530,24 @@ function countyProfile() {
       return 'Other';
     },
 
+    // Display-only translation of the inferCategory() keys above. Those keys
+    // stay English and stable — they are used as groupedIndicators' object
+    // keys, activeCategory, and the ?tab= deep-link param (syncCountyURL /
+    // init's tabParam handling), so translating inferCategory itself would
+    // silently break tab selection and shared links on every language
+    // switch. Only the filter-chip label (x-text="categoryLabel(cat)") reads
+    // this; the category MATCHING logic elsewhere still compares raw cat.
+    categoryLabel(cat) {
+      if (this.lang !== 'es') return cat;
+      const M = {
+        'Economic': 'Económico', 'Health': 'Salud', 'Housing': 'Vivienda',
+        'Education': 'Educación', 'Demographic': 'Demográfico',
+        'Environment': 'Medio Ambiente', 'Infrastructure': 'Infraestructura',
+        'Food Access': 'Acceso a Alimentos', 'Other': 'Otra',
+      };
+      return M[cat] || cat;
+    },
+
     // ── Formatting ───────────────────────────────────────────
 
     fmtValue(v) {
@@ -2455,15 +2603,29 @@ function countyProfile() {
         }
         this.povertyRate = poverty;
       } else {
-        this.iceError = !popTotal ? 'Population data unavailable' :
-          this.popPOC == null ? 'Racial composition data unavailable' :
-          poverty == null ? 'Poverty rate unavailable' : '';
+        this.iceError = this.lang === 'es'
+          ? (!popTotal ? 'Datos de población no disponibles' :
+             this.popPOC == null ? 'Datos de composición racial no disponibles' :
+             poverty == null ? 'Tasa de pobreza no disponible' : '')
+          : (!popTotal ? 'Population data unavailable' :
+             this.popPOC == null ? 'Racial composition data unavailable' :
+             poverty == null ? 'Poverty rate unavailable' : '');
       }
     },
 
     iceInterpretation() {
       if (this.iceScore == null) return '';
       const pct = this.icePercentile;
+      const es = this.lang === 'es';
+      if (es) {
+        const rel = this.iceScore > 0.3 ? 'altamente privilegiado — mayor concentración de ventaja económica y racial' :
+          this.iceScore < -0.3 ? 'altamente desfavorecido — desventaja económica y racial concentrada' :
+          this.iceScore > 0 ? 'moderadamente privilegiado' : 'moderadamente desfavorecido';
+        const stateRel = pct > 75 ? 'más polarizado que la mediana estatal' :
+          pct < 25 ? 'menos polarizado que la mediana estatal' :
+          'cerca de la mediana estatal en polarización';
+        return '<strong>' + this.iceScore.toFixed(3) + '</strong> — Este condado está en el <strong>percentil ' + pct.toFixed(0) + '</strong> de ' + this.stateName + ', lo que indica un perfil <strong>' + rel + '</strong>. Está ' + stateRel + '.';
+      }
       const rel = this.iceScore > 0.3 ? 'highly privileged — more concentrated economic and racial advantage' :
         this.iceScore < -0.3 ? 'highly deprived — concentrated economic and racial disadvantage' :
         this.iceScore > 0 ? 'moderately privileged' : 'moderately deprived';
@@ -2499,13 +2661,20 @@ function countyProfile() {
 
     dissimInterpretation() {
       const parts = [];
+      const es = this.lang === 'es';
       if (this.dissimBW != null) {
-        parts.push(this.dissimBW < 0.3 ? 'Black-White: low segregation' :
-          this.dissimBW < 0.6 ? 'Black-White: moderate segregation' : 'Black-White: high segregation');
+        parts.push(es
+          ? (this.dissimBW < 0.3 ? 'Negro-Blanco: segregación baja' :
+             this.dissimBW < 0.6 ? 'Negro-Blanco: segregación moderada' : 'Negro-Blanco: segregación alta')
+          : (this.dissimBW < 0.3 ? 'Black-White: low segregation' :
+             this.dissimBW < 0.6 ? 'Black-White: moderate segregation' : 'Black-White: high segregation'));
       }
       if (this.dissimHW != null) {
-        parts.push(this.dissimHW < 0.3 ? 'Hispanic-White: low segregation' :
-          this.dissimHW < 0.6 ? 'Hispanic-White: moderate segregation' : 'Hispanic-White: high segregation');
+        parts.push(es
+          ? (this.dissimHW < 0.3 ? 'Hispano-Blanco: segregación baja' :
+             this.dissimHW < 0.6 ? 'Hispano-Blanco: segregación moderada' : 'Hispano-Blanco: segregación alta')
+          : (this.dissimHW < 0.3 ? 'Hispanic-White: low segregation' :
+             this.dissimHW < 0.6 ? 'Hispanic-White: moderate segregation' : 'Hispanic-White: high segregation'));
       }
       return parts.join(' · ') || '';
     },
@@ -2583,7 +2752,7 @@ function countyProfile() {
         }
 
         this.lisaClusters = clusters;
-      } catch (e) { this.lisaError = 'Failed to load LISA data: ' + e.message; }
+      } catch (e) { this.lisaError = (this.lang === 'es' ? 'Error al cargar datos LISA: ' : 'Failed to load LISA data: ') + e.message; }
       this.lisaLoading = false;
     },
 
@@ -2600,7 +2769,7 @@ function countyProfile() {
         this.lisaProfile = (data && Array.isArray(data.clusters)) ? data : null;
       } catch (e) {
         this.lisaProfile = null;
-        this.lisaProfileError = e.message || 'unavailable';
+        this.lisaProfileError = e.message || (this.lang === 'es' ? 'no disponible' : 'unavailable');
       }
     },
 
@@ -2718,7 +2887,8 @@ function countyProfile() {
       const lastX = pad + (values.length - 1) * xStep;
       const lastY = h - pad - ((lastVal - min) / range) * (h - 2*pad);
 
-      return `<span class="sparkline-wrap"><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-label="Trend sparkline"><polyline points="${pts.trim()}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg><span class="sparkline-label">${sorted[0].vintage}–${sorted[sorted.length-1].vintage}</span></span>`;
+      const sparkLabel = this.lang === 'es' ? 'Minigráfico de tendencia' : 'Trend sparkline';
+      return `<span class="sparkline-wrap"><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-label="${sparkLabel}"><polyline points="${pts.trim()}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg><span class="sparkline-label">${sorted[0].vintage}–${sorted[sorted.length-1].vintage}</span></span>`;
     },
 
     // Fetch multi-vintage data for sparkline indicators.
@@ -2755,7 +2925,7 @@ function countyProfile() {
         const data = await this.api('/evidence-cards?limit=12');
         this.evidenceCards = data.cards || [];
       } catch (e) {
-        this.evidenceError = 'Evidence cards unavailable: ' + e.message;
+        this.evidenceError = (this.lang === 'es' ? 'Fichas de evidencia no disponibles: ' : 'Evidence cards unavailable: ') + e.message;
       }
       this.evidenceLoading = false;
     },

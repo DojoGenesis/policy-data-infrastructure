@@ -34,12 +34,120 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page-scoped i18n strings for $store.i18n.t(). Registration must run after
+     window.LangToggle exists and before Alpine's first reactive pass reads
+     the store. lang-toggle.js above is now loaded synchronously (see its own
+     comment), so `if (window.LangToggle)` below is the path actually taken —
+     but this still keeps the `alpine:init` fallback rather than assuming
+     that: a naive `<script defer>` around JUST this block would NOT be
+     equivalent, since `defer` has no effect on an inline script with no
+     `src` attribute (MDN: "This attribute must not be used if the src
+     attribute is absent... it would have no effect") — confirmed
+     empirically on county.html, where exactly that mistake left every
+     $store.i18n.t() call in the initial render returning its raw key. The
+     fallback mirrors lang-toggle.js's own dual-path pattern for
+     registerStore(), and makes this block correct regardless of whether a
+     future change re-defers lang-toggle.js's tag. -->
+<script>
+  (function registerCompositesStrings() {
+    var strings = {
+      'composites.index_unit': { en: 'index', es: 'índice' },
+      'composites.selected': { en: ' selected', es: ' seleccionadas' },
+      /* The following 9 keys replace data-en/data-es pairs that used to sit
+         inside <template x-for="(r, idx) in results">. That template's
+         content is cloned into new DOM nodes by Alpine only once `results`
+         first becomes non-empty — which, for an async compute result, happens
+         well after lang-toggle.js's one-time page-load swapDOM() pass. A
+         data-en/data-es pair on a node that did not exist yet at that pass
+         never gets swapped: verified live, a fresh Spanish-mode compute
+         rendered "Composite Score" / "Contributing Variables" in English
+         even though the surrounding static chrome was correctly in Spanish.
+         $store.i18n.t() has no such gap — Alpine's own reactivity re-renders
+         it on every evaluation, including the FIRST one for a freshly cloned
+         x-for node, regardless of when that node was created relative to any
+         swapDOM() pass. */
+      'composites.composite_score': { en: 'Composite Score', es: 'Puntuación Compuesta' },
+      'composites.contributing_variables': { en: 'Contributing Variables', es: 'Variables Contribuyentes' },
+      'composites.missing_variables': { en: 'Missing Variables', es: 'Variables Faltantes' },
+      'composites.sensitivity_analysis_prefix': { en: '🔍 Sensitivity Analysis (', es: '🔍 Análisis de Sensibilidad (' },
+      'composites.weight': { en: 'weight', es: 'ponderación' },
+      'composites.sensitivity_caption': { en: 'Sensitivity comparison: base vs perturbed composite score', es: 'Comparación de sensibilidad: puntuación compuesta base frente a perturbada' },
+      'composites.scenario': { en: 'Scenario', es: 'Escenario' },
+      'composites.composite_score_lower': { en: 'Composite score', es: 'Puntuación compuesta' },
+      'composites.ranking_stability': { en: 'Ranking stability:', es: 'Estabilidad del ranking:' },
+    };
+    if (window.LangToggle) {
+      window.LangToggle.addStrings(strings);
+    } else {
+      document.addEventListener('alpine:init', function () {
+        window.LangToggle.addStrings(strings);
+      });
+    }
+  })();
+</script>
 <script defer src="/static/alpine.min.js"></script>
 
 <style>
   [x-cloak] { display: none !important; }
+
+  /* DEFECT (mobile horizontal overflow) — .visually-hidden (styles.css) gives
+     an element position:absolute + width:1px + height:1px + overflow:hidden +
+     clip:rect(0,0,0,0), which clips a normal block to nothing. A <table>
+     ignores that: under the default table-layout:auto a table's used width is
+     at least the sum of its columns' min-content widths, so the 1px is
+     ignored. The sensitivity-comparison <table class="visually-hidden"> in
+     the results section (.sens-scenario) is exactly this shape, and its
+     Spanish caption ("Comparación de sensibilidad: puntuación compuesta base
+     frente a perturbada") is long enough to push document.documentElement.
+     scrollWidth past 375px — measured 568px (193px of sideways scroll) before
+     this rule. table-layout:fixed makes the table honor the specified width
+     instead of deriving it from content, without changing `display`, so the
+     table keeps its implicit table/row/cell roles for screen readers (the
+     whole point of this element). Same defect and same fix as county.html's
+     Layer 1/3/4 tables (documented there as DEFECT 1) — that page's copy of
+     this rule lives in ITS OWN <style> block, not shared styles.css, so nei-
+     ther page inherits the other's fix; each page's visually-hidden tables
+     need this rule locally.
+
+     table-layout:fixed ALONE was not sufficient here, and an earlier version
+     of this comment wrongly claimed it was verified — it wasn't yet, and
+     re-testing caught it. .visually-hidden also sets `white-space: nowrap`,
+     which inherits into the <caption> (captions aren't part of the class
+     themselves, but white-space inherits through the DOM regardless of
+     which element the class sits on). This page's caption is a full
+     sentence ("Comparación de sensibilidad: puntuación compuesta base
+     frente a perturbada") — forced onto one unbreakable line, its
+     min-content width exceeds 375px, and a table cannot compress below the
+     min-content size of its widest unbreakable content even under
+     table-layout:fixed. county.html's fix didn't need this second rule
+     because its own visually-hidden captions/cells ("Factor scores", "LISA
+     cluster breakdown by census tract", single numbers) stay under 375px
+     even forced onto one line — same defect class, this page's
+     sentence-length Spanish caption is what exposes the gap. Restoring
+     wrapping inside the table costs nothing visually: the table is still
+     fully clipped by .visually-hidden's own 1px/overflow:hidden/
+     clip:rect(0,0,0,0), so how its content wraps internally never renders —
+     only the min-content WIDTH calculation that happens before clipping is
+     at stake. Verified rendered (Playwright, isolated from the shared
+     interactive browser other agents were also driving concurrently, which
+     gave unreliable viewport readings): scrollWidth 375 == clientWidth 375
+     at a 375px viewport, in Spanish, with a computed result card and its
+     sensitivity/scenario sub-tables open. */
+  table.visually-hidden { table-layout: fixed; }
+  table.visually-hidden caption,
+  table.visually-hidden th,
+  table.visually-hidden td { white-space: normal; }
 
   /* ── Page layout ─────────────────────────────────────────────── */
   :root {
@@ -606,7 +714,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -657,7 +765,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📍 Geographies" data-es="📍 Geografías">📍 Geographies</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="geoids.length + ' selected'"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="geoids.length + $store.i18n.t('composites.selected')"></span>
         </div>
 
         <div class="geo-search-wrap">
@@ -668,6 +776,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             data-en-placeholder="Search counties by name…"
             data-es-placeholder="Buscar condados por nombre…"
             aria-label="Search geography"
+            data-en-aria-label="Search geography"
+            data-es-aria-label="Buscar geografía"
             @focus="geoDropdownOpen = true"
             @keydown.escape="geoDropdownOpen = false"
           >
@@ -693,7 +803,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <template x-for="geoid in geoids" :key="geoid">
             <span class="filter-chip active" style="cursor:default">
               <span x-text="geoLabel(geoid)"></span>
-              <button class="geoid-chip-remove" @click="removeGeoid(geoid)" aria-label="Remove">&times;</button>
+              <button class="geoid-chip-remove" @click="removeGeoid(geoid)" aria-label="Remove" data-en-aria-label="Remove" data-es-aria-label="Quitar">&times;</button>
             </span>
           </template>
         </div>
@@ -707,7 +817,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📊 Variables" data-es="📊 Variables">📊 Variables</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="variables.length + ' selected'"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="variables.length + $store.i18n.t('composites.selected')"></span>
         </div>
 
         <!-- Filter -->
@@ -719,8 +829,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             data-en-placeholder="Filter variables…"
             data-es-placeholder="Filtrar variables…"
             aria-label="Filter variables"
+            data-en-aria-label="Filter variables"
+            data-es-aria-label="Filtrar variables"
           >
-          <select x-model="varDirectionFilter" aria-label="Filter by direction">
+          <select x-model="varDirectionFilter" aria-label="Filter by direction" data-en-aria-label="Filter by direction" data-es-aria-label="Filtrar por dirección">
             <option value="" data-en="All" data-es="Todas">All</option>
             <option value="adversity" data-en="Adversity" data-es="Adversidad">Adversity</option>
             <option value="resilience" data-en="Resilience" data-es="Resiliencia">Resilience</option>
@@ -739,7 +851,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               >
               <div class="var-item-info">
                 <div class="var-item-name" x-text="v.name"></div>
-                <div class="var-item-meta" x-text="v.source_name + ' · ' + (v.unit || 'index')"></div>
+                <div class="var-item-meta" x-text="v.source_name + ' · ' + (v.unit || $store.i18n.t('composites.index_unit'))"></div>
               </div>
               <span
                 class="filter-chip"
@@ -938,14 +1050,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:clamp(8px,1.2vw,12px)">
           <div>
             <div class="result-score" x-text="r.score != null ? r.score.toFixed(3) : 'N/A'"></div>
-            <div class="result-score-label" data-en="Composite Score" data-es="Puntuación Compuesta">Composite Score</div>
+            <div class="result-score-label" x-text="$store.i18n.t('composites.composite_score')"></div>
           </div>
           <span class="badge badge-info" x-text="methodLabel"></span>
         </div>
 
         <!-- Contributing variables -->
         <div x-show="r.contributing_variables && r.contributing_variables.length > 0">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px" data-en="Contributing Variables" data-es="Variables Contribuyentes">Contributing Variables</div>
+          <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px" x-text="$store.i18n.t('composites.contributing_variables')"></div>
           <div class="contrib-list">
             <template x-for="cv in r.contributing_variables" :key="cv">
               <span class="contrib-chip">
@@ -958,7 +1070,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Missing variables -->
         <div x-show="r.missing_variables && r.missing_variables.length > 0">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--gated);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px" data-en="Missing Variables" data-es="Variables Faltantes">Missing Variables</div>
+          <div style="font-size:0.68rem;font-weight:600;color:var(--gated);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px" x-text="$store.i18n.t('composites.missing_variables')"></div>
           <div class="contrib-list">
             <template x-for="mv in r.missing_variables" :key="mv">
               <span class="missing-chip" x-text="varName(mv)"></span>
@@ -968,13 +1080,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
         <!-- Sensitivity analysis -->
         <div class="sens-section" x-show="sensitivity && sensitivity.scenarios && sensitivity.scenarios.length > 0">
-          <div class="sens-heading"><span data-en="🔍 Sensitivity Analysis (" data-es="🔍 Análisis de Sensibilidad (">🔍 Sensitivity Analysis (</span><span x-text="perturbationPct"></span>)</div>
+          <div class="sens-heading"><span x-text="$store.i18n.t('composites.sensitivity_analysis_prefix')"></span><span x-text="perturbationPct"></span>)</div>
 
           <template x-for="sc in relevantScenarios(idx)" :key="sc.perturbed_variable + '_' + sc.direction">
             <div class="sens-scenario">
               <div class="sens-scenario-label">
                 <strong x-text="varName(sc.perturbed_variable)"></strong>
-                <span data-en="weight" data-es="ponderación">weight</span>
+                <span x-text="$store.i18n.t('composites.weight')"></span>
                 <span :style="'color:' + (sc.direction === 'increase' ? 'var(--gated)' : 'var(--info)')" x-text="sc.direction === 'increase' ? '+' + perturbationPct : '-' + perturbationPct"></span>
               </div>
 
@@ -983,11 +1095,11 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                    --quiet axis text) — replaces the old height-only divs with no value label. -->
               <div class="sens-chart" x-html="sensChartSVG(idx, sc)"></div>
               <table class="visually-hidden">
-                <caption data-en="Sensitivity comparison: base vs perturbed composite score" data-es="Comparación de sensibilidad: puntuación compuesta base frente a perturbada">Sensitivity comparison: base vs perturbed composite score</caption>
+                <caption x-text="$store.i18n.t('composites.sensitivity_caption')"></caption>
                 <thead>
                   <tr>
-                    <th data-en="Scenario" data-es="Escenario">Scenario</th>
-                    <th data-en="Composite score" data-es="Puntuación compuesta">Composite score</th>
+                    <th x-text="$store.i18n.t('composites.scenario')"></th>
+                    <th x-text="$store.i18n.t('composites.composite_score_lower')"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1004,9 +1116,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               <div
                 class="sens-stability"
                 x-show="sensitivity.stability && sensitivity.stability[sc.perturbed_variable] != null"
-                :class="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"
+                :class="stabilityClass(sensitivity.stability[sc.perturbed_variable])"
               >
-                <span data-en="Ranking stability:" data-es="Estabilidad del ranking:">Ranking stability:</span>
+                <span x-text="$store.i18n.t('composites.ranking_stability')"></span>
                 <span x-text="(sensitivity.stability[sc.perturbed_variable] * 100).toFixed(1) + '%'"></span>
                 <span style="font-size:0.62rem;font-weight:400;color:var(--muted);margin-left:4px" x-text="stabilityLabel(sensitivity.stability[sc.perturbed_variable])"></span>
               </div>
@@ -1064,6 +1176,13 @@ function compositeBuilder() {
     results: [],
     sensitivity: null,
 
+    // Reactive mirror of the current language. lang-toggle.js swaps
+    // data-en/data-es attributes in the DOM, but methodLabel/stabilityLabel/
+    // sensChartSVG generate strings in JS and have no attributes to swap —
+    // they re-render off this instead (same pattern as countyProfile() in
+    // county.html).
+    lang: 'en',
+
     // ── Derived ─────────────────────────────────────────────────
     get perturbationPct() {
       return '±' + (this.perturbation * 100).toFixed(0) + '%';
@@ -1079,6 +1198,9 @@ function compositeBuilder() {
     },
 
     get methodLabel() {
+      if (this.lang === 'es') {
+        return this.method === 'geometric_mean' ? 'Media Geométrica' : 'Z-Score Ponderado';
+      }
       return this.method === 'geometric_mean' ? 'Geometric Mean' : 'Weighted Z-Score';
     },
 
@@ -1112,6 +1234,14 @@ function compositeBuilder() {
 
     // ── Init ────────────────────────────────────────────────────
     async init() {
+      // Keep `lang` in step with lang-toggle.js so the generated chart SVGs
+      // re-render on a language switch, the way the data-en/data-es markup does.
+      this.lang = (window.LangToggle && window.LangToggle.getLang()) ||
+                  document.documentElement.getAttribute('lang') || 'en';
+      document.addEventListener('tp:langchange', (e) => {
+        this.lang = (e && e.detail && e.detail.lang) || 'en';
+      });
+
       // Inject Copy Link button
       PDIDeepLink.autoInjectCopyButton();
 
@@ -1168,11 +1298,11 @@ function compositeBuilder() {
       this.varsError = '';
       try {
         const resp = await fetch('/v1/policy/variables');
-        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        if (!resp.ok) throw new Error(`${this.lang === 'es' ? 'Error de API' : 'API error'}: ${resp.status}`);
         const data = await resp.json();
         this.allVariables = data.variables || [];
       } catch (e) {
-        this.varsError = `Failed to load variables: ${e.message}`;
+        this.varsError = `${this.lang === 'es' ? 'Error al cargar variables' : 'Failed to load variables'}: ${e.message}`;
       } finally {
         this.varsLoading = false;
       }
@@ -1271,8 +1401,28 @@ function compositeBuilder() {
     },
 
     // ── Stability label ─────────────────────────────────────────
+    // Split in two: stabilityClass() keeps the ORIGINAL English words for the
+    // :class binding in the markup (styles.css selectors like
+    // .sens-stability.robust key off these), stabilityLabel() is the
+    // translated string for display (x-text). Before this split, one
+    // function fed both — translating its return value would have silently
+    // changed which CSS class name got applied along with the visible text.
+    stabilityClass(val) {
+      if (val == null) return '';
+      if (val >= 0.90) return 'Highly robust';
+      if (val >= 0.70) return 'Stable';
+      if (val >= 0.50) return 'Moderately stable';
+      return 'Low stability';
+    },
+
     stabilityLabel(val) {
       if (val == null) return '';
+      if (this.lang === 'es') {
+        if (val >= 0.90) return 'Muy robusto';
+        if (val >= 0.70) return 'Estable';
+        if (val >= 0.50) return 'Moderadamente estable';
+        return 'Baja estabilidad';
+      }
       if (val >= 0.90) return 'Highly robust';
       if (val >= 0.70) return 'Stable';
       if (val >= 0.50) return 'Moderately stable';
@@ -1308,7 +1458,7 @@ function compositeBuilder() {
         this.results = [];
         this.sensitivity = null;
       } catch (e) {
-        this.presetError = `Failed to load NARI v2 preset: ${e.message}`;
+        this.presetError = `${this.lang === 'es' ? 'Error al cargar el preajuste NARI v2' : 'Failed to load NARI v2 preset'}: ${e.message}`;
       } finally {
         this.presetLoading = false;
       }
@@ -1341,14 +1491,14 @@ function compositeBuilder() {
 
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
-          throw new Error(errData.error || `API error: ${resp.status}`);
+          throw new Error(errData.error || `${this.lang === 'es' ? 'Error de API' : 'API error'}: ${resp.status}`);
         }
 
         const data = await resp.json();
         this.results = data.scores || [];
         this.sensitivity = data.sensitivity || null;
       } catch (e) {
-        this.computeError = `Computation failed: ${e.message}`;
+        this.computeError = `${this.lang === 'es' ? 'Error en el cálculo' : 'Computation failed'}: ${e.message}`;
       } finally {
         this.computing = false;
       }
@@ -1391,6 +1541,7 @@ function compositeBuilder() {
       const r = this.results[resultIdx];
       const base = r && r.score != null ? r.score : 0;
       const dirSign = sc.direction === 'increase' ? '+' : '−';
+      // 'Base' is identical in Spanish and English (true cognate) — no ternary needed.
       const data = [{ label: 'Base', value: base }];
       this.relevantPerturbed(resultIdx, sc.perturbed_variable).forEach((ps) => {
         data.push({ label: dirSign + this.perturbationPct.replace('±', ''), value: ps.score != null ? ps.score : 0 });
@@ -1402,12 +1553,15 @@ function compositeBuilder() {
       if (!window.CasaDatosCharts) return '';
       const data = this.sensChartData(resultIdx, sc);
       const ariaId = 'sens-' + resultIdx + '-' + sc.perturbed_variable + '-' + sc.direction;
+      const title = this.lang === 'es'
+        ? 'Sensibilidad del puntaje compuesto: base frente a perturbado ' + sc.perturbed_variable
+        : 'Composite score sensitivity: base vs perturbed ' + sc.perturbed_variable;
       return window.CasaDatosCharts.buildBarChart(data, {
         width: 220,
         height: 150,
         decimals: 3,
         ariaId: ariaId,
-        title: 'Composite score sensitivity: base vs perturbed ' + sc.perturbed_variable
+        title: title
       });
     },
 

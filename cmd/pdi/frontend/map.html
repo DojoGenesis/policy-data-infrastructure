@@ -32,8 +32,75 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page string registration. lang-toggle.js above is now BLOCKING (see its
+     comment), so window.LangToggle already exists by the time the parser
+     reaches this tag — a plain non-defer script here would work fine too.
+     Kept as `defer` anyway (harmless either way): it still runs before
+     alpine.min.js's own deferred script, since defer scripts execute in
+     document order, so map.* strings are registered before Alpine's first
+     DOM pass regardless of which valid ordering pattern a given page uses. -->
+<script defer>
+  window.LangToggle.addStrings({
+    'map.tracts_bare': { en: ' tracts · ', es: ' secciones censales · ' },
+    'map.no_data_suffix': { en: ' (no data)', es: ' (sin datos)' },
+    'map.five_year_suffix': { en: ' 5-Year', es: ' · 5 años' },
+    'map.significant_of': { en: ' of ', es: ' de ' },
+    'map.significant_suffix': { en: ' tracts significant (p &lt; 0.05)', es: ' secciones censales significativas (p &lt; 0.05)' },
+    'map.missing_tracts_suffix': { en: ' tracts with no score data', es: ' secciones censales sin datos de puntuación' },
+    'map.loading_lisa': { en: 'Loading LISA analyses…', es: 'Cargando análisis LISA…' },
+    'map.loading_lib': { en: 'Loading map library…', es: 'Cargando la biblioteca del mapa…' },
+    'map.loading_tracts': { en: 'Loading tract boundaries…', es: 'Cargando los límites de las secciones censales…' },
+    'map.no_lisa_found': { en: 'No LISA analyses found — rendering tracts without cluster colors', es: 'No se encontraron análisis LISA — mostrando las secciones sin colores de clúster' },
+    'map.mapping_analyses': { en: ' LISA analyses to variables…', es: ' análisis LISA a variables…' },
+    'map.mapping_prefix': { en: 'Mapping ', es: 'Vinculando ' },
+    'map.fetching_scores_prefix': { en: 'Fetching scores for ', es: 'Obteniendo puntuaciones de ' },
+    'map.fetching_scores_suffix': { en: ' variables…', es: ' variables…' },
+    'map.status_loading': { en: 'loading…', es: 'cargando…' },
+    'map.status_failed': { en: 'failed', es: 'falló' },
+    'map.status_tracts_prefix': { en: ' tracts (', es: ' secciones censales (' },
+    'map.status_sig_suffix': { en: ' sig)', es: ' sig.)' },
+    'map.leaflet_not_loaded': { en: 'Map library (Leaflet) did not load. Check that /static/leaflet/leaflet.js is reachable, then retry.', es: 'La biblioteca del mapa (Leaflet) no se cargó. Verifica que /static/leaflet/leaflet.js sea accesible y vuelve a intentarlo.' },
+    'map.leaflet_unavailable': { en: 'Map library (Leaflet) is not available.', es: 'La biblioteca del mapa (Leaflet) no está disponible.' },
+    'map.tract_boundaries_failed_prefix': { en: 'Failed to load tract boundaries: ', es: 'Error al cargar los límites de las secciones censales: ' },
+    'map.load_failed_generic': { en: 'Failed to load map data.', es: 'Error al cargar los datos del mapa.' },
+    'map.no_lisa_score_data': { en: 'No LISA score data for this tract', es: 'No hay datos de puntuación LISA para esta sección censal' },
+    'map.lisa_tier': { en: 'LISA Tier', es: 'Nivel LISA' },
+    'map.p_value': { en: 'p-value', es: 'valor p' },
+    'map.acs_indicators': { en: 'ACS Indicators', es: 'Indicadores del ACS' },
+    'map.popup_poverty_rate': { en: 'Poverty Rate', es: 'Tasa de Pobreza' },
+    'map.popup_median_hh_income': { en: 'Median HH Income', es: 'Ingreso Medio del Hogar' },
+    'map.popup_pct_poc': { en: '% People of Color', es: '% Personas de Color' },
+    'map.popup_uninsured_rate': { en: 'Uninsured Rate', es: 'Tasa de Personas sin Seguro' },
+    'map.popup_cost_burdened': { en: 'Cost Burdened', es: 'Carga de Costos' },
+    'map.view_profile_prefix': { en: 'View ', es: 'Ver perfil de ' },
+    'map.view_profile_suffix': { en: ' profile →', es: ' →' },
+    'map.rendering': { en: 'Rendering…', es: 'Generando…' },
+    'map.alert_not_loaded': { en: 'Map is not loaded yet — nothing to download.', es: 'El mapa todavía no se ha cargado — no hay nada para descargar.' },
+    'map.alert_must_be_visible': { en: 'Map must be visible to download. Try scrolling to the map area.', es: 'El mapa debe estar visible para descargarlo. Intenta desplazarte hasta el área del mapa.' },
+    'map.alert_download_failed': { en: 'Download failed. The map SVG may contain external resources that cannot be rasterized. Try a screenshot instead.', es: 'La descarga falló. El SVG del mapa puede contener recursos externos que no se pueden rasterizar. Prueba con una captura de pantalla en su lugar.' },
+    'map.legend_concentrated_disadvantage': { en: 'concentrated disadvantage', es: 'desventaja concentrada' },
+    'map.legend_outlier_worse': { en: 'outlier: worse than neighbors', es: 'atípico: peor que los vecinos' },
+    'map.legend_concentrated_advantage': { en: 'concentrated advantage', es: 'ventaja concentrada' },
+    'map.legend_outlier_better': { en: 'outlier: better than neighbors', es: 'atípico: mejor que los vecinos' },
+    'map.legend_not_significant': { en: 'not significant', es: 'no significativo' },
+    'map.var_poverty_rate': { en: 'Poverty Rate', es: 'Tasa de Pobreza' },
+    'map.var_median_hh_income': { en: 'Median Household Income', es: 'Ingreso Medio del Hogar' },
+    'map.var_pct_cost_burdened': { en: 'Housing Cost Burden', es: 'Carga de Costos de Vivienda' },
+    'map.var_uninsured_rate': { en: 'Uninsured Rate', es: 'Tasa de Personas sin Seguro' },
+    'map.var_pct_poc': { en: 'Percent People of Color', es: 'Porcentaje de Personas de Color' },
+  });
+</script>
 <script defer src="/static/alpine.min.js"></script>
 <!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
      and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
@@ -558,7 +625,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -594,7 +661,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <span class="section-tag" data-en="LISA Cluster Map" data-es="Mapa de Clústeres LISA">LISA Cluster Map</span>
     <h1 data-en="Wisconsin Census Tracts" data-es="Secciones Censales de Wisconsin">Wisconsin Census Tracts</h1>
     <p class="map-hero-subtitle">
-      <span x-text="tractCount > 0 ? tractCount + ' tracts · ' + (analysisVintage || 'ACS 2020–2024') : ''"></span>
+      <span x-text="tractCount > 0 ? tractCount + $store.i18n.t('map.tracts_bare') + (analysisVintage || 'ACS 2020–2024') : ''"></span>
       <span x-show="variablesLoaded > 0" class="badge badge-info" style="margin-left:10px;">
         <span x-text="variablesLoaded"></span> <span data-en="LISA analyses loaded" data-es="análisis LISA cargados">LISA analyses loaded</span>
       </span>
@@ -609,7 +676,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <label for="var-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);" data-en="Indicator" data-es="Indicador">Indicator</label>
       <select id="var-select" x-model="selectedVariable" @change="onVariableChange()">
         <template x-for="v in availableVariables" :key="v.id">
-          <option :value="v.id" x-text="v.label + (analysisMap[v.id] ? '' : ' (no data)')"></option>
+          <option :value="v.id" x-text="varLabelFor(v) + (analysisMap[v.id] ? '' : $store.i18n.t('map.no_data_suffix'))"></option>
         </template>
       </select>
       <span x-show="analysisStatus[selectedVariable]" x-text="analysisStatus[selectedVariable]" style="font-size:0.7rem;color:var(--quiet);margin-left:4px;"></span>
@@ -619,7 +686,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <label for="vintage-select" style="font-size:0.75rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);" data-en="Vintage" data-es="Año de referencia">Vintage</label>
       <select id="vintage-select" x-model="selectedVintage" @change="onVintageChange()">
         <template x-for="v in availableVintages" :key="v">
-          <option :value="v" x-text="'ACS ' + v + ' 5-Year'"></option>
+          <option :value="v" x-text="'ACS ' + v + $store.i18n.t('map.five_year_suffix')"></option>
         </template>
       </select>
     </div>
@@ -630,7 +697,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <span class="toggle-label" data-en="County borders" data-es="Límites de condado">County borders</span>
     </label>
 
-    <button class="download-btn" @click="downloadPNG()" title="Download map as PNG">
+    <button class="download-btn" @click="downloadPNG()" title="Download map as PNG" data-en-title="Download map as PNG" data-es-title="Descargar mapa como PNG">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -655,14 +722,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
       <!-- Mini Profile Panel (shown on tract click) -->
       <div class="mini-profile-panel" id="mini-profile" x-show="mpVisible" x-cloak>
-        <button class="mp-close" @click="mpVisible = false" aria-label="Close">&times;</button>
+        <button class="mp-close" @click="mpVisible = false" aria-label="Close" data-en-aria-label="Close" data-es-aria-label="Cerrar">&times;</button>
         <template x-if="mpTract">
           <div>
             <div class="mp-header">
               <span class="mp-name" x-text="mpTract.name"></span>
             </div>
             <div class="mp-geoid" x-text="'GEOID: ' + mpTract.geoid"></div>
-            <a x-show="mpTract.countyName" :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-county-link" x-text="mpTract.countyName + ' County →'"></a>
+            <a x-show="mpTract.countyName" :href="'/county?geoid=' + mpTract.countyGeoid" class="mp-county-link" x-text="$store.i18n.is('es') ? ('Condado de ' + mpTract.countyName + ' →') : (mpTract.countyName + ' County →')"></a>
 
             <div class="mp-stats">
               <div class="mp-stat" x-show="mpTract.poverty != null">
@@ -712,7 +779,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <div class="lisa-legend-item">
           <span class="lisa-swatch" :style="'background:' + _resolveColor(item.colorRef)"></span>
           <span x-text="item.tier" style="font-weight:600;"></span>
-          <span style="font-size:0.65rem;color:var(--quiet);" x-text="item.desc"></span>
+          <span style="font-size:0.65rem;color:var(--quiet);" x-text="legendDescFor(item.tier)"></span>
           <span class="lisa-legend-count"
                 x-text="tierRow(item.tier).count + ' · ' + tierRow(item.tier).share.toFixed(0) + '%'"></span>
         </div>
@@ -749,10 +816,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="stats-panel reveal">
       <h3 data-en="Cluster Distribution" data-es="Distribución de Clústeres">Cluster Distribution</h3>
       <div class="stats-summary">
-        <span x-text="stats.significant + ' of ' + stats.total + ' tracts significant (p &lt; 0.05)'"></span>
+        <span x-text="stats.significant + $store.i18n.t('map.significant_of') + stats.total + $store.i18n.t('map.significant_suffix')"></span>
         <br>
         <span style="font-size:0.7rem;color:var(--quiet);" x-show="stats.missingTracts > 0"
-              x-text="stats.missingTracts + ' tracts with no score data'"></span>
+              x-text="stats.missingTracts + $store.i18n.t('map.missing_tracts_suffix')"></span>
       </div>
       <table class="stats-table">
         <thead>
@@ -892,9 +959,51 @@ function lisaMap() {
       'uninsured_rate': '%', 'pct_poc': '%'
     },
 
+    // ═══════════════ I18N HELPERS ════════════════════════════
+    // Reads Alpine.store('i18n') — the SAME reactive store $store.i18n.t()
+    // reads in template expressions, so a method/getter that calls
+    // this.t(...) re-renders correctly on language toggle (reading .lang
+    // inside t() registers the reactive dependency). See compare.html for
+    // the fuller rationale.
+    t(key) {
+      var s = window.Alpine && window.Alpine.store('i18n');
+      return s ? s.t(key) : key;
+    },
+    // availableVariables[].label is hardcoded in this component (not
+    // API-fetched — the API only supplies analysisMap/scores keyed by the
+    // SAME variable ids), so it's page-owned content, not data passthrough.
+    // Falls back to the raw .label for any id this map doesn't know about.
+    varLabelFor(v) {
+      if (!v) return '';
+      var map = {
+        poverty_rate: 'map.var_poverty_rate',
+        median_hh_income: 'map.var_median_hh_income',
+        pct_cost_burdened: 'map.var_pct_cost_burdened',
+        uninsured_rate: 'map.var_uninsured_rate',
+        pct_poc: 'map.var_pct_poc',
+      };
+      var k = map[v.id];
+      return k ? this.t(k) : v.label;
+    },
+    // legendItems[].desc is this component's own plain-language gloss of
+    // each LISA tier (distinct from clusterLabels' technical HH/HL/LL/LH/NS
+    // names, which stay English per house rules — LISA cluster names are a
+    // term of art). Falls back to the raw tier code for safety.
+    legendDescFor(tier) {
+      var map = {
+        HH: 'map.legend_concentrated_disadvantage',
+        HL: 'map.legend_outlier_worse',
+        LL: 'map.legend_concentrated_advantage',
+        LH: 'map.legend_outlier_better',
+        NS: 'map.legend_not_significant',
+      };
+      var k = map[tier];
+      return k ? this.t(k) : tier;
+    },
+
     get varLabel() {
       const v = this.availableVariables.find(x => x.id === this.selectedVariable);
-      return v ? v.label : this.selectedVariable;
+      return v ? this.varLabelFor(v) : this.selectedVariable;
     },
 
     // ═══════════════ LOAD-ORDER GUARDS ══
@@ -930,7 +1039,7 @@ function lisaMap() {
     // ═══════════════ INIT ═══════════════
     async init() {
       this.mapLoading = true; this.mapError = '';
-      this.loadingMessage = 'Loading LISA analyses…';
+      this.loadingMessage = this.t('map.loading_lisa');
 
       // Inject Copy Link button
       if (window.PDIDeepLink) window.PDIDeepLink.autoInjectCopyButton();
@@ -951,11 +1060,11 @@ function lisaMap() {
         // Wait for Leaflet rather than assuming it. Surfaces the existing
         // error state with an actionable message on timeout instead of
         // throwing a bare "L is not defined" at the user.
-        this.loadingMessage = 'Loading map library…';
+        this.loadingMessage = this.t('map.loading_lib');
         if (!(await this._leafletReady())) {
-          throw new Error('Map library (Leaflet) did not load. Check that /static/leaflet/leaflet.js is reachable, then retry.');
+          throw new Error(this.t('map.leaflet_not_loaded'));
         }
-        this.loadingMessage = 'Loading LISA analyses…';
+        this.loadingMessage = this.t('map.loading_lisa');
 
         this.initLeafletMap();
 
@@ -1008,7 +1117,7 @@ function lisaMap() {
           this._urlSyncBound = true;
         }
       } catch (e) {
-        this.mapError = e.message || 'Failed to load map data.';
+        this.mapError = e.message || this.t('map.load_failed_generic');
         console.error('Map init failed:', e);
       } finally {
         this.mapLoading = false;
@@ -1038,7 +1147,7 @@ function lisaMap() {
       // Second line of defence: init() already awaited _leafletReady(), but
       // this method is a plausible thing for future code to call directly.
       if (typeof L === 'undefined') {
-        throw new Error('Map library (Leaflet) is not available.');
+        throw new Error(this.t('map.leaflet_unavailable'));
       }
 
       // Fix Leaflet's default icon path — use vendored markers
@@ -1078,14 +1187,14 @@ function lisaMap() {
 
     // ═══════════════ GEOJSON FETCH ═════
     async fetchGeoJSON() {
-      this.loadingMessage = 'Loading tract boundaries…';
+      this.loadingMessage = this.t('map.loading_tracts');
       try {
         const resp = await fetch('/static/tracts.geojson');
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         this.tractGeoJSON = await resp.json();
         this.tractCount = (this.tractGeoJSON.features || []).length;
       } catch (e) {
-        throw new Error(`Failed to load tract boundaries: ${e.message}`);
+        throw new Error(this.t('map.tract_boundaries_failed_prefix') + e.message);
       }
 
       // Pre-load county boundaries (don't add to map yet — toggled on)
@@ -1114,11 +1223,11 @@ function lisaMap() {
 
         if (lisaAnalyses.length === 0) {
           console.warn('No LISA analyses found');
-          this.loadingMessage = 'No LISA analyses found — rendering tracts without cluster colors';
+          this.loadingMessage = this.t('map.no_lisa_found');
           return;
         }
 
-        this.loadingMessage = `Mapping ${lisaAnalyses.length} LISA analyses to variables…`;
+        this.loadingMessage = this.t('map.mapping_prefix') + lisaAnalyses.length + this.t('map.mapping_analyses');
 
         const detailPromises = lisaAnalyses.map(async a => {
           try {
@@ -1193,11 +1302,11 @@ function lisaMap() {
         return;
       }
 
-      this.loadingMessage = `Fetching scores for ${vars.length} variables…`;
+      this.loadingMessage = this.t('map.fetching_scores_prefix') + vars.length + this.t('map.fetching_scores_suffix');
 
       const scorePromises = vars.map(async variableId => {
         const info = this.analysisMap[variableId];
-        this.analysisStatus[variableId] = 'loading…';
+        this.analysisStatus[variableId] = this.t('map.status_loading');
         try {
           const resp = await fetch(`/v1/policy/analyses/${encodeURIComponent(info.analysisId)}/scores`);
           if (!resp.ok) throw new Error(`Scores API: ${resp.status}`);
@@ -1222,13 +1331,13 @@ function lisaMap() {
 
           this.scoresByVariable[variableId] = geoidMap;
           const sigCount = Object.values(geoidMap).filter(s => s.cluster !== 'NS').length;
-          this.analysisStatus[variableId] = `${scores.length} tracts (${sigCount} sig)`;
+          this.analysisStatus[variableId] = scores.length + this.t('map.status_tracts_prefix') + sigCount + this.t('map.status_sig_suffix');
           console.log(`Loaded ${scores.length} scores for ${variableId} (${sigCount} significant)`);
           return { variableId, count: scores.length };
         } catch (e) {
           console.warn(`Score fetch failed for ${variableId}:`, e.message);
           this.scoresByVariable[variableId] = {};
-          this.analysisStatus[variableId] = 'failed';
+          this.analysisStatus[variableId] = this.t('map.status_failed');
           return null;
         }
       });
@@ -1431,34 +1540,34 @@ function lisaMap() {
 
           html += '<div class="popup-section">';
           html += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
-          html += '<div class="popup-row"><span>LISA Tier</span><span style="color:' + tierColor + ';font-weight:700;">' + self._esc(tierLabel) + '</span></div>';
+          html += '<div class="popup-row"><span>' + self._esc(self.t('map.lisa_tier')) + '</span><span style="color:' + tierColor + ';font-weight:700;">' + self._esc(tierLabel) + '</span></div>';
 
           if (scoreInfo.moran_i != null && scoreInfo.p_value != null) {
             html += '<div class="popup-row"><span>Moran\'s I</span><span>' + scoreInfo.moran_i.toFixed(4) + '</span></div>';
-            html += '<div class="popup-row"><span>p-value</span><span>' + scoreInfo.p_value.toFixed(4) + '</span></div>';
+            html += '<div class="popup-row"><span>' + self._esc(self.t('map.p_value')) + '</span><span>' + scoreInfo.p_value.toFixed(4) + '</span></div>';
           }
           html += '</div>';
         } else {
           html += '<div class="popup-section">';
           html += '<div class="popup-row"><span>' + self._esc(self.varLabel) + '</span><span>' + self._esc(valStr) + '</span></div>';
-          html += '<div class="popup-detail">No LISA score data for this tract</div>';
+          html += '<div class="popup-detail">' + self._esc(self.t('map.no_lisa_score_data')) + '</div>';
           html += '</div>';
         }
 
         // ── ACS indicators ──
         html += '<div class="popup-section">';
-        html += '<div style="font-size:0.65rem;color:var(--quiet);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">ACS Indicators</div>';
-        html += self._indicatorRow('Poverty Rate', props.poverty_rate, '%');
-        html += self._indicatorRow('Median HH Income', props.median_hh_income, '$');
-        html += self._indicatorRow('% People of Color', props.pct_poc, '%');
-        html += self._indicatorRow('Uninsured Rate', props.uninsured_rate, '%');
-        html += self._indicatorRow('Cost Burdened', props.pct_cost_burdened, '%');
+        html += '<div style="font-size:0.65rem;color:var(--quiet);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">' + self._esc(self.t('map.acs_indicators')) + '</div>';
+        html += self._indicatorRow(self.t('map.popup_poverty_rate'), props.poverty_rate, '%');
+        html += self._indicatorRow(self.t('map.popup_median_hh_income'), props.median_hh_income, '$');
+        html += self._indicatorRow(self.t('map.popup_pct_poc'), props.pct_poc, '%');
+        html += self._indicatorRow(self.t('map.popup_uninsured_rate'), props.uninsured_rate, '%');
+        html += self._indicatorRow(self.t('map.popup_cost_burdened'), props.pct_cost_burdened, '%');
         html += '</div>';
 
         // ── County link ──
         if (countyName) {
           const countyGeoid = geoid.substring(0, 5); // 5-digit county FIPS
-          html += '<a href="/county?geoid=' + self._esc(countyGeoid) + '" class="popup-link">View ' + self._esc(countyName) + ' profile →</a>';
+          html += '<a href="/county?geoid=' + self._esc(countyGeoid) + '" class="popup-link">' + self._esc(self.t('map.view_profile_prefix')) + self._esc(countyName) + self._esc(self.t('map.view_profile_suffix')) + '</a>';
         }
 
         layer.bindPopup(html, { maxWidth: 300, className: 'lisa-popup' }).openPopup();
@@ -1495,20 +1604,20 @@ function lisaMap() {
       // button is still clickable next to the error card, so guard rather than
       // throw an uncaught TypeError.
       if (!this._map) {
-        alert('Map is not loaded yet — nothing to download.');
+        alert(this.t('map.alert_not_loaded'));
         return;
       }
       const mapContainer = this._map.getContainer();
       const svgEl = mapContainer.querySelector('svg');
       if (!svgEl) {
-        alert('Map must be visible to download. Try scrolling to the map area.');
+        alert(this.t('map.alert_must_be_visible'));
         return;
       }
 
       const button = document.querySelector('.download-btn');
       const originalText = button ? button.textContent : 'PNG';
       if (button) {
-        button.textContent = 'Rendering…';
+        button.textContent = this.t('map.rendering');
         button.style.pointerEvents = 'none';
         button.style.opacity = '0.6';
       }
@@ -1570,7 +1679,7 @@ function lisaMap() {
         }, 'image/png');
       } catch (e) {
         console.error('PNG download failed:', e);
-        alert('Download failed. The map SVG may contain external resources that cannot be rasterized. Try a screenshot instead.');
+        alert(this.t('map.alert_download_failed'));
       } finally {
         if (button) {
           button.textContent = originalText;

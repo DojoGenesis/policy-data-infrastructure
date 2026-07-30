@@ -147,7 +147,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   .offline-banner.visible { display: block; }
 </style>
   <!-- Language toggle — replaces ES twin files per ADR-011 -->
-  <script defer src="/static/lang-toggle.js"></script>
+  <script src="/static/lang-toggle.js"></script>
   <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
   <script defer src="/static/motion.js"></script>
 </head>
@@ -160,7 +160,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -199,6 +199,60 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 (function(){
   var msgs=document.getElementById('messages'), input=document.getElementById('input'), sendBtn=document.getElementById('send'), sug=document.getElementById('suggestions');
 
+  // ── Chat page string registration ───────────────────────────────────────
+  // This page has no Alpine (chat.html deliberately does not load it — see
+  // the head comment), so the six suggested-prompt strings and this file's
+  // own dynamic status text (Thinking…, error messages) are localized via
+  // window.LangToggle.t() rather than $store.i18n.
+  //
+  // The six suggested prompts themselves are returned by
+  // ChatAdapter._getSuggestedQuestions() in lib/chat.js — a file this page
+  // does not own — as plain English strings, not translation keys. They are
+  // matched here by exact text and swapped for a registered Spanish string;
+  // lib/chat.js itself is untouched.
+  //
+  // Registration timing: this whole IIFE runs synchronously while the parser
+  // is still mid-document (it is a plain inline <script>, not deferred), and
+  // lang-toggle.js is loaded with `defer`, so window.LangToggle does not
+  // exist yet at this point — calling addStrings() here directly would throw.
+  // Every LangToggle access below is therefore either guarded or deferred to
+  // DOMContentLoaded, which always runs after lang-toggle.js's own deferred
+  // init() (verified: a plain inline script positioned anywhere in this
+  // document executes before any deferred script, regardless of textual
+  // position — so registration has to be hooked to an event, not placed
+  // inline after the <script defer> tag the way a page with Alpine can hook
+  // `alpine:init`, which fires after Alpine — also deferred — has itself
+  // started).
+  var CHAT_STRINGS = {
+    'chat.suggest.top_poverty': { en: 'Which county has the highest poverty rate?', es: '¿Qué condado tiene la tasa de pobreza más alta?' },
+    'chat.suggest.top5_uninsured': { en: 'What are the top 5 counties by uninsured rate?', es: '¿Cuáles son los 5 condados con la mayor tasa de personas sin seguro médico?' },
+    'chat.suggest.poverty_cost_corr': { en: 'Is poverty correlated with cost burden across Wisconsin?', es: '¿Está correlacionada la pobreza con la carga de costos de vivienda en todo Wisconsin?' },
+    'chat.suggest.compare_menominee_dane': { en: 'Compare Menominee County with Dane County', es: 'Compara el condado de Menominee con el condado de Dane' },
+    'chat.suggest.income_distribution': { en: 'Show me the distribution of median incomes across WI counties', es: 'Muéstrame la distribución de los ingresos medios en los condados de Wisconsin' },
+    'chat.suggest.policies_highest_burden': { en: 'Which policies target the highest-burden counties?', es: '¿Qué políticas se enfocan en los condados con mayor carga?' },
+    'chat.thinking': { en: 'Thinking…', es: 'Pensando…' },
+    'chat.no_response': { en: 'No response received. The chat service may be busy.', es: 'No se recibió respuesta. Es posible que el servicio de chat esté ocupado.' },
+    'chat.error_prefix': { en: 'Error: ', es: 'Error: ' }
+  };
+  var SUGGEST_KEY_BY_TEXT = {
+    'Which county has the highest poverty rate?': 'chat.suggest.top_poverty',
+    'What are the top 5 counties by uninsured rate?': 'chat.suggest.top5_uninsured',
+    'Is poverty correlated with cost burden across Wisconsin?': 'chat.suggest.poverty_cost_corr',
+    'Compare Menominee County with Dane County': 'chat.suggest.compare_menominee_dane',
+    'Show me the distribution of median incomes across WI counties': 'chat.suggest.income_distribution',
+    'Which policies target the highest-burden counties?': 'chat.suggest.policies_highest_burden'
+  };
+  function registerChatStrings() {
+    if (window.LangToggle && window.LangToggle.addStrings) { window.LangToggle.addStrings(CHAT_STRINGS); }
+  }
+  function tr(key, fallback) {
+    return (window.LangToggle && window.LangToggle.t) ? window.LangToggle.t(key) : fallback;
+  }
+  function localizeSuggestion(q) {
+    var key = SUGGEST_KEY_BY_TEXT[q];
+    return key ? tr(key, q) : q;
+  }
+
   // lib/chat.js declares `const ChatAdapter` at the top level of a CLASSIC script.
   // A top-level `const` creates a script-scoped lexical binding — it is NOT a
   // property of the global object, so probing for it through `window` yields
@@ -215,7 +269,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     } else if (hasAdapter() && ChatAdapter._placeholders) {
       questions = ChatAdapter._placeholders;
     }
-    questions.forEach(function(q) {
+    questions.forEach(function(rawQ) {
+      var q = localizeSuggestion(rawQ);
       var b = document.createElement('button');
       b.textContent = q.length > 85 ? q.slice(0, 82) + '\u2026' : q;
       b.onclick = function() { input.value = q; send(); };
@@ -264,7 +319,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       el = document.createElement('div');
       el.id = 'thinking';
       el.className = 'thinking';
-      el.innerHTML = '<span class=dot></span><span class=dot></span><span class=dot></span> Thinking\u2026';
+      el.innerHTML = '<span class=dot></span><span class=dot></span><span class=dot></span> ' + tr('chat.thinking', 'Thinking\u2026');
       msgs.appendChild(el);
       msgs.scrollTop = msgs.scrollHeight;
     }
@@ -302,8 +357,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           refreshSuggestions();
         }
       );
-      if (first) { thinking(false); add('system', 'No response received. The chat service may be busy.'); sendBtn.disabled = false; }
-    } catch(e) { thinking(false); add('system', 'Error: ' + e.message); sendBtn.disabled = false; }
+      if (first) { thinking(false); add('system', tr('chat.no_response', 'No response received. The chat service may be busy.')); sendBtn.disabled = false; }
+    } catch(e) { thinking(false); add('system', tr('chat.error_prefix', 'Error: ') + e.message); sendBtn.disabled = false; }
   }
 
   document.getElementById('send').onclick = send;
@@ -356,6 +411,24 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     // Initial check
     if (!navigator.onLine) updateOfflineState();
   })();
+
+  // ── Language wiring for the suggestion chips ──────────────────────────
+  // refreshSuggestions() already ran once above (synchronously, during
+  // parsing) — at that point window.LangToggle did not exist yet, so those
+  // first chips render in English regardless of a stored Spanish
+  // preference. Re-run once lang-toggle.js has definitely finished
+  // (DOMContentLoaded always fires after every deferred script) to correct
+  // that, and register the chat.* strings at the same time. Also re-run on
+  // every subsequent toggle, since these buttons are plain DOM nodes with
+  // no data-en/data-es attributes — lang-toggle.js's own swapDOM() has
+  // nothing to walk here.
+  document.addEventListener('DOMContentLoaded', function () {
+    registerChatStrings();
+    refreshSuggestions();
+  });
+  document.addEventListener('tp:langchange', function () {
+    refreshSuggestions();
+  });
 })();
 </script>
 <script>

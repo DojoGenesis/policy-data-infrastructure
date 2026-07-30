@@ -20,8 +20,44 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
      Alpine store BEFORE Alpine's first pass. Registering later still works as
      an API, but every $store.i18n expression in the initial render would have
      already evaluated against an undefined store and stayed dead. Deferred
-     scripts run in document order, so this tag's position is the guarantee. -->
-<script defer src="/static/lang-toggle.js"></script>
+     scripts run in document order, so this tag's position is the guarantee.
+
+     NOT deferred, deliberately. A deferred script does not execute until the
+     whole document has parsed, so window.LangToggle would not exist for any
+     inline <script> on the page — and registering page-scoped strings via
+     LangToggle.addStrings() at parse time is exactly what pages need to do,
+     before Alpine evaluates the expressions that read them. Blocking here
+     costs ~8KB parsed in <head> and buys two guarantees: the API exists for
+     inline scripts, and the $store.i18n store is registered before deferred
+     alpine.min.js can boot. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Page-scoped i18n strings for $store.i18n.t(). Registered on the
+     'alpine:init' event rather than run as a plain inline call: lang-toggle.js
+     and alpine.min.js are both `defer`, but `defer` has no effect on a
+     <script> without `src` (spec behavior, confirmed empirically in this
+     exact head on 2026-07-29 — window.LangToggle reads as `undefined` at
+     parse time here). 'alpine:init' fires once alpine.min.js's own deferred
+     script starts (readyState "interactive"), which is after lang-toggle.js
+     has already finished running (both deferred, document order), so
+     LangToggle is guaranteed to exist — and it fires before Alpine's DOM
+     scan evaluates any $store.i18n.t() expression on this page. -->
+<script>
+  document.addEventListener('alpine:init', function () {
+    window.LangToggle.addStrings({
+      'about.sources_suffix': { en: 'sources', es: 'fuentes' },
+      'about.validated_variables_suffix': { en: 'validated variables', es: 'variables validadas' },
+      'about.no_sources_match': { en: 'No sources match ', es: 'Ninguna fuente coincide con ' },
+      'about.no_sources_available': { en: 'No sources available.', es: 'No hay fuentes disponibles.' },
+      'about.no_variables_match': { en: 'No variables match ', es: 'Ninguna variable coincide con ' },
+      'about.no_variables_available': { en: 'No variables available.', es: 'No hay variables disponibles.' },
+      'about.references_from': { en: 'references from', es: 'referencias de' },
+      'about.unable_load_sources': { en: 'Unable to load data sources', es: 'No se pudieron cargar las fuentes de datos' },
+      'about.unable_load_variables': { en: 'Unable to load variable catalog', es: 'No se pudo cargar el catálogo de variables' },
+      'about.unable_load_references': { en: 'Unable to load references', es: 'No se pudieron cargar las referencias' },
+      'about.other_source_group': { en: 'Other', es: 'Otra' }
+    });
+  });
+</script>
 <script defer src="/static/alpine.min.js"></script>
 <style>
 [x-cloak] { display: none !important; }
@@ -462,7 +498,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <a href="/" class="site-logo">
       <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
       <a href="/" data-en="Explorer" data-es="Explorador">Explorer</a>
       <a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a>
       <a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a>
@@ -491,17 +527,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <h1 class="about-section-title" data-en="Platform Overview" data-es="Resumen de la Plataforma">Platform Overview</h1>
     <p class="about-section-subtitle" data-en="An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts." data-es="Una plataforma nacional de datos de políticas de código abierto que integra datos de censo, salud, vivienda, medio ambiente y educación a nivel de sección censal para más de 85,000 secciones censales de EE. UU.">An open-source national policy data platform ingesting census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts.</p>
 
-    <p>PDI ingests public data from
-      <strong x-show="!overviewLoading && sourceCount != null" x-text="sourceCount + ' sources'"></strong>
-      <strong x-show="overviewLoading || sourceCount == null">multiple sources</strong>,
-      produces
-      <strong x-show="!overviewLoading && variableCount != null" x-text="variableCount + ' validated variables'"></strong>
-      <strong x-show="overviewLoading || variableCount == null">validated variables</strong>,
-      and runs a <strong>5-layer statistical engine</strong> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</p>
+    <p><span data-en="PDI ingests public data from " data-es="PDI recopila datos públicos de ">PDI ingests public data from </span>
+      <strong x-show="!overviewLoading && sourceCount != null" x-text="sourceCount + ' ' + $store.i18n.t('about.sources_suffix')"></strong>
+      <strong x-show="overviewLoading || sourceCount == null" data-en="multiple sources" data-es="varias fuentes">multiple sources</strong><span data-en=", produces " data-es=", produce ">, produces </span>
+      <strong x-show="!overviewLoading && variableCount != null" x-text="variableCount + ' ' + $store.i18n.t('about.validated_variables_suffix')"></strong>
+      <strong x-show="overviewLoading || variableCount == null" data-en="validated variables" data-es="variables validadas">validated variables</strong><span data-en=", and runs a " data-es=", y ejecuta un ">, and runs a </span><strong data-en="5-layer statistical engine" data-es="motor estadístico de 5 capas">5-layer statistical engine</strong><span data-en=" grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open." data-es=" fundamentado en metodología revisada por pares. Desde indicadores en bruto hasta compuestos en tiempo de consulta, cada cálculo está documentado, es reproducible y es abierto."> grounded in peer-reviewed methodology. From raw indicators to query-time composites, every computation is documented, reproducible, and open.</span></p>
 
-    <p>The platform runs on a six-stage DAG pipeline — <em>fetch &rarr; process &rarr; enrich &rarr; analyze &rarr; synthesize &rarr; deliver</em> — with stages executing in concurrent waves via topological sort. Raw indicators are stored in PostGIS, validated features are derived mathematically, and composites exist only at query time with mandatory sensitivity analysis.</p>
+    <p><span data-en="The platform runs on a six-stage DAG pipeline — " data-es="La plataforma se ejecuta sobre un pipeline DAG de seis etapas — ">The platform runs on a six-stage DAG pipeline — </span><em data-en="fetch → process → enrich → analyze → synthesize → deliver" data-es="obtener → procesar → enriquecer → analizar → sintetizar → entregar">fetch &rarr; process &rarr; enrich &rarr; analyze &rarr; synthesize &rarr; deliver</em><span data-en=" — with stages executing in concurrent waves via topological sort. Raw indicators are stored in PostGIS, validated features are derived mathematically, and composites exist only at query time with mandatory sensitivity analysis." data-es=" — con etapas que se ejecutan en oleadas concurrentes mediante ordenamiento topológico. Los indicadores en bruto se almacenan en PostGIS, las características validadas se derivan matemáticamente, y los compuestos existen solo en el momento de la consulta con análisis de sensibilidad obligatorio."> — with stages executing in concurrent waves via topological sort. Raw indicators are stored in PostGIS, validated features are derived mathematically, and composites exist only at query time with mandatory sensitivity analysis.</span></p>
 
-    <p><strong>Stack:</strong> Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. All code is open source under Apache-2.0.</p>
+    <p><strong data-en="Stack:" data-es="Stack:">Stack:</strong><span data-en=" Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. All code is open source under Apache-2.0." data-es=" Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. Todo el código es de código abierto bajo Apache-2.0."> Go 1.24+, PostgreSQL 16 + PostGIS 3.4, Python 3.11+. All code is open source under Apache-2.0.</span></p>
   </section>
 
   <hr class="thread" aria-hidden="true">
@@ -514,29 +548,29 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <div class="arch-diagram">
       <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
-        <div class="arch-layer-num">Layer 5</div>
-        <div class="arch-layer-name">Composite Views</div>
-        <div class="arch-layer-desc">Query-time only. Geometric mean aggregation with automated sensitivity analysis (&plusmn;20% weight perturbation). Never persisted. Multiple composite specifications can coexist for different policy questions.</div>
+        <div class="arch-layer-num" data-en="Layer 5" data-es="Capa 5">Layer 5</div>
+        <div class="arch-layer-name" data-en="Composite Views" data-es="Vistas Compuestas">Composite Views</div>
+        <div class="arch-layer-desc" data-en="Query-time only. Geometric mean aggregation with automated sensitivity analysis (±20% weight perturbation). Never persisted. Multiple composite specifications can coexist for different policy questions." data-es="Solo en tiempo de consulta. Agregación por media geométrica con análisis de sensibilidad automatizado (perturbación de peso ±20%). Nunca se almacena de forma persistente. Pueden coexistir múltiples especificaciones de compuestos para distintas preguntas de política.">Query-time only. Geometric mean aggregation with automated sensitivity analysis (&plusmn;20% weight perturbation). Never persisted. Multiple composite specifications can coexist for different policy questions.</div>
       </div>
       <div class="arch-layer">
-        <div class="arch-layer-num">Layer 4</div>
-        <div class="arch-layer-name">Spatial Analysis</div>
-        <div class="arch-layer-desc">LISA local Moran's I clusters (HH/LL/HL/LH), Geographically Weighted Regression coefficients, multilevel variance decomposition across geographic scales, SKATER regionalization.</div>
+        <div class="arch-layer-num" data-en="Layer 4" data-es="Capa 4">Layer 4</div>
+        <div class="arch-layer-name" data-en="Spatial Analysis" data-es="Análisis Espacial">Spatial Analysis</div>
+        <div class="arch-layer-desc" data-en="LISA local Moran's I clusters (HH/LL/HL/LH), Geographically Weighted Regression coefficients, multilevel variance decomposition across geographic scales, SKATER regionalization." data-es="Clústeres LISA de I de Moran local (HH/LL/HL/LH), coeficientes de Regresión Ponderada Geográficamente, descomposición de varianza multinivel entre escalas geográficas, regionalización SKATER.">LISA local Moran's I clusters (HH/LL/HL/LH), Geographically Weighted Regression coefficients, multilevel variance decomposition across geographic scales, SKATER regionalization.</div>
       </div>
       <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
-        <div class="arch-layer-num">Layer 3</div>
-        <div class="arch-layer-name">Factor Scores</div>
-        <div class="arch-layer-desc">Exploratory Factor Analysis with oblimin rotation. Dimensions named by loading profile; variable loadings documented. Per-tract factor scores + national percentiles.</div>
+        <div class="arch-layer-num" data-en="Layer 3" data-es="Capa 3">Layer 3</div>
+        <div class="arch-layer-name" data-en="Factor Scores" data-es="Puntuaciones Factoriales">Factor Scores</div>
+        <div class="arch-layer-desc" data-en="Exploratory Factor Analysis with oblimin rotation. Dimensions named by loading profile; variable loadings documented. Per-tract factor scores + national percentiles." data-es="Análisis Factorial Exploratorio con rotación oblimin. Las dimensiones se nombran según su perfil de cargas; las cargas de las variables están documentadas. Puntuaciones factoriales por sección censal + percentiles nacionales.">Exploratory Factor Analysis with oblimin rotation. Dimensions named by loading profile; variable loadings documented. Per-tract factor scores + national percentiles.</div>
       </div>
       <div class="arch-layer">
-        <div class="arch-layer-num">Layer 2</div>
-        <div class="arch-layer-name">Validated Features</div>
-        <div class="arch-layer-desc">ICE (Index of Concentration at the Extremes), Dissimilarity Index, z-scores, percentile ranks, and coefficient of variation (CV) reliability flags. Bootstrap confidence intervals for every derived statistic.</div>
+        <div class="arch-layer-num" data-en="Layer 2" data-es="Capa 2">Layer 2</div>
+        <div class="arch-layer-name" data-en="Validated Features" data-es="Características Validadas">Validated Features</div>
+        <div class="arch-layer-desc" data-en="ICE (Index of Concentration at the Extremes), Dissimilarity Index, z-scores, percentile ranks, and coefficient of variation (CV) reliability flags. Bootstrap confidence intervals for every derived statistic." data-es="ICE (Índice de Concentración en los Extremos), Índice de Disimilitud, z-scores, rangos percentiles y marcadores de confiabilidad por coeficiente de variación (CV). Intervalos de confianza bootstrap para cada estadística derivada.">ICE (Index of Concentration at the Extremes), Dissimilarity Index, z-scores, percentile ranks, and coefficient of variation (CV) reliability flags. Bootstrap confidence intervals for every derived statistic.</div>
       </div>
       <div class="arch-layer" style="background:var(--plane-1, var(--raised));">
-        <div class="arch-layer-num">Layer 1</div>
-        <div class="arch-layer-name">Raw Indicators</div>
-        <div class="arch-layer-desc">Stored in PostGIS with vintage tracking. Every value carries margin of error, coefficient of variation flag, and reliability tier (high / moderate / low). Geo-enabled for spatial queries at all levels.</div>
+        <div class="arch-layer-num" data-en="Layer 1" data-es="Capa 1">Layer 1</div>
+        <div class="arch-layer-name" data-en="Raw Indicators" data-es="Indicadores en Bruto">Raw Indicators</div>
+        <div class="arch-layer-desc" data-en="Stored in PostGIS with vintage tracking. Every value carries margin of error, coefficient of variation flag, and reliability tier (high / moderate / low). Geo-enabled for spatial queries at all levels." data-es="Almacenados en PostGIS con seguimiento de vintage (año de referencia de los datos). Cada valor incluye margen de error, marcador de coeficiente de variación y nivel de confiabilidad (alto / moderado / bajo). Habilitados geoespacialmente para consultas espaciales en todos los niveles.">Stored in PostGIS with vintage tracking. Every value carries margin of error, coefficient of variation flag, and reliability tier (high / moderate / low). Geo-enabled for spatial queries at all levels.</div>
       </div>
     </div>
 
@@ -548,7 +582,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         <video x-ref="video" src="/static/videos/pipeline_dag.mp4" preload="metadata"
           @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
           playsinline muted></video>
-        <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video">
+        <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play video" data-en-aria-label="Play video" data-es-aria-label="Reproducir video">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div class="video-caption-bar" data-en="The same dependency graph runs every source adapter through fetch, normalize, upsert, and validate — in topological order." data-es="El mismo grafo de dependencias ejecuta cada adaptador de fuente a través de obtener, normalizar, cargar y validar — en orden topológico.">The same dependency graph runs every source adapter through fetch, normalize, upsert, and validate — in topological order.</div>
@@ -565,7 +599,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <section class="about-section section-band reveal" id="sources" x-data="sourcesData()">
     <span class="section-tag" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</span>
     <h2 class="about-section-title" data-en="Data Sources" data-es="Fuentes de Datos">Data Sources</h2>
-    <p class="about-section-subtitle" data-en="Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level." data-es="Datos en vivo obtenidos de la API de PDI al cargar la p\u00e1gina. Se puede buscar por nombre, tipo, descripci\u00f3n o nivel geogr\u00e1fico.">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
+    <p class="about-section-subtitle" data-en="Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level." data-es="Datos en vivo obtenidos de la API de PDI al cargar la página. Se puede buscar por nombre, tipo, descripción o nivel geográfico.">Live data fetched from the PDI API at page load. Searchable by name, type, description, or geographic level.</p>
 
     <div x-show="loading" x-cloak class="loading-row" data-en="Loading sources&hellip;" data-es="Cargando fuentes&hellip;">Loading sources&hellip;</div>
     <div x-show="error" x-cloak class="error-inline" x-text="error"></div>
@@ -573,9 +607,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
-          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" data-en-placeholder="Search sources by name, type, or geographic level&hellip;" data-es-placeholder="Buscar fuentes por nombre, tipo o nivel geogr\u00e1fico&hellip;" aria-label="Search sources" x-model="search">
+          <input type="text" placeholder="Search sources by name, type, or geographic level&hellip;" data-en-placeholder="Search sources by name, type, or geographic level&hellip;" data-es-placeholder="Buscar fuentes por nombre, tipo o nivel geográfico&hellip;" aria-label="Search sources" data-en-aria-label="Search sources" data-es-aria-label="Buscar fuentes" x-model="search">
         </div>
-        <div x-show="filteredSources.length === 0" class="state-empty" x-text="search ? 'No sources match \u201c' + search + '\u201d.' : 'No sources available.'"></div>
+        <div x-show="filteredSources.length === 0" class="state-empty" x-text="search ? $store.i18n.t('about.no_sources_match') + '\u201c' + search + '\u201d.' : $store.i18n.t('about.no_sources_available')"></div>
         <template x-if="filteredSources.length > 0">
           <div class="table-wrapper">
             <table class="data-table">
@@ -583,8 +617,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                 <tr>
                   <th data-en="Source" data-es="Fuente">Source</th>
                   <th data-en="Type" data-es="Tipo">Type</th>
-                  <th data-en="Geographic Levels" data-es="Niveles Geogr\u00e1ficos">Geographic Levels</th>
-                  <th data-en="Description" data-es="Descripci\u00f3n">Description</th>
+                  <th data-en="Geographic Levels" data-es="Niveles Geográficos">Geographic Levels</th>
+                  <th data-en="Description" data-es="Descripción">Description</th>
                 </tr>
               </thead>
               <tbody>
@@ -604,7 +638,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </table>
           </div>
         </template>
-        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="filteredSources.length + ' of ' + sources.length + ' sources'"></p>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="filteredSources.length + ' ' + $store.i18n.t('of') + ' ' + sources.length + ' ' + $store.i18n.t('about.sources_suffix')"></p>
       </div>
     </template>
   </section>
@@ -619,38 +653,38 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <div class="method-grid">
       <div class="method-card">
-        <div class="method-card-name">ICE — Index of Concentration at the Extremes</div>
+        <div class="method-card-name" data-en="ICE — Index of Concentration at the Extremes" data-es="ICE — Índice de Concentración en los Extremos">ICE — Index of Concentration at the Extremes</div>
         <div class="method-card-cite">Krieger et al., Health &amp; Place, 2016</div>
-        <div class="method-card-desc">Measures spatial polarization without collapsing race and income. Formula: (privileged &minus; deprived) &divide; total. Captures both ends of the distribution simultaneously.</div>
+        <div class="method-card-desc" data-en="Measures spatial polarization without collapsing race and income. Formula: (privileged − deprived) ÷ total. Captures both ends of the distribution simultaneously." data-es="Mide la polarización espacial sin combinar raza e ingreso en una sola medida. Fórmula: (privilegiados − desfavorecidos) ÷ total. Captura ambos extremos de la distribución simultáneamente.">Measures spatial polarization without collapsing race and income. Formula: (privileged &minus; deprived) &divide; total. Captures both ends of the distribution simultaneously.</div>
       </div>
       <div class="method-card">
-        <div class="method-card-name">Dissimilarity Index</div>
+        <div class="method-card-name" data-en="Dissimilarity Index" data-es="Índice de Disimilitud">Dissimilarity Index</div>
         <div class="method-card-cite">Massey &amp; Denton, 1988</div>
-        <div class="method-card-desc">D = 0.5 &times; &sum; |b<sub>i</sub>/B &minus; w<sub>i</sub>/W|. Canonical measure of residential segregation between two groups.</div>
+        <div class="method-card-desc" data-en="D = 0.5 × Σ |bi/B − wi/W|. Canonical measure of residential segregation between two groups." data-es="D = 0.5 × Σ |bi/B − wi/W|. Medida canónica de la segregación residencial entre dos grupos.">D = 0.5 &times; &sum; |b<sub>i</sub>/B &minus; w<sub>i</sub>/W|. Canonical measure of residential segregation between two groups.</div>
       </div>
       <div class="method-card">
-        <div class="method-card-name">LISA — Local Indicators of Spatial Association</div>
+        <div class="method-card-name" data-en="LISA — Local Indicators of Spatial Association" data-es="LISA — Indicadores Locales de Asociación Espacial">LISA — Local Indicators of Spatial Association</div>
         <div class="method-card-cite">Anselin, Geographical Analysis, 1995</div>
-        <div class="method-card-desc">Identifies statistically significant spatial clusters (HH, LL, HL, LH) from local Moran's I decomposition.</div>
+        <div class="method-card-desc" data-en="Identifies statistically significant spatial clusters (HH, LL, HL, LH) from local Moran's I decomposition." data-es="Identifica clústeres espaciales estadísticamente significativos (HH, LL, HL, LH) a partir de la descomposición local de la I de Moran.">Identifies statistically significant spatial clusters (HH, LL, HL, LH) from local Moran's I decomposition.</div>
       </div>
       <div class="method-card">
-        <div class="method-card-name">Factor Analysis</div>
+        <div class="method-card-name" data-en="Factor Analysis" data-es="Análisis Factorial">Factor Analysis</div>
         <div class="method-card-cite">Kolak et al., JAMA Network Open, 2020</div>
-        <div class="method-card-desc">Exploratory Factor Analysis with oblimin rotation. 71% variance explained across 71,901 US tracts. Factors named by loading profile.</div>
+        <div class="method-card-desc" data-en="Exploratory Factor Analysis with oblimin rotation. 71% variance explained across 71,901 US tracts. Factors named by loading profile." data-es="Análisis Factorial Exploratorio con rotación oblimin. 71% de varianza explicada en 71,901 secciones censales de EE. UU. Los factores se nombran según su perfil de cargas.">Exploratory Factor Analysis with oblimin rotation. 71% variance explained across 71,901 US tracts. Factors named by loading profile.</div>
       </div>
       <div class="method-card">
-        <div class="method-card-name">Bootstrap Confidence Intervals</div>
+        <div class="method-card-name" data-en="Bootstrap Confidence Intervals" data-es="Intervalos de Confianza Bootstrap">Bootstrap Confidence Intervals</div>
         <div class="method-card-cite">Efron &amp; Tibshirani, 1993</div>
-        <div class="method-card-desc">Non-parametric resampling for any statistic. Parallelized via Go goroutines for tract-level computation at national scale.</div>
+        <div class="method-card-desc" data-en="Non-parametric resampling for any statistic. Parallelized via Go goroutines for tract-level computation at national scale." data-es="Remuestreo no paramétrico para cualquier estadística. Paralelizado mediante goroutines de Go para cálculos a nivel de sección censal en escala nacional.">Non-parametric resampling for any statistic. Parallelized via Go goroutines for tract-level computation at national scale.</div>
       </div>
       <div class="method-card">
-        <div class="method-card-name">Query-Time Composites</div>
+        <div class="method-card-name" data-en="Query-Time Composites" data-es="Compuestos en Tiempo de Consulta">Query-Time Composites</div>
         <div class="method-card-cite">Stiglitz-Sen-Fitoussi, 2009; PMC, 2022&ndash;2025</div>
-        <div class="method-card-desc">Geometric mean aggregation with mandatory sensitivity analysis. Weight perturbation (&plusmn;20%) and alternative normalization documented per query.</div>
+        <div class="method-card-desc" data-en="Geometric mean aggregation with mandatory sensitivity analysis. Weight perturbation (±20%) and alternative normalization documented per query." data-es="Agregación por media geométrica con análisis de sensibilidad obligatorio. La perturbación de peso (±20%) y la normalización alternativa se documentan por consulta.">Geometric mean aggregation with mandatory sensitivity analysis. Weight perturbation (&plusmn;20%) and alternative normalization documented per query.</div>
       </div>
     </div>
 
-    <p style="margin-top:1.25em;">Additional methods include <strong>OLS regression</strong>, <strong>Blinder-Oaxaca decomposition</strong> for equity gaps, <strong>segmented regression</strong> for threshold detection, and <strong>interaction effects</strong> via automated term construction. The full methodology is documented in the project repository.</p>
+    <p style="margin-top:1.25em;"><span data-en="Additional methods include " data-es="Los métodos adicionales incluyen ">Additional methods include </span><strong data-en="OLS regression" data-es="regresión OLS">OLS regression</strong>, <strong data-en="Blinder-Oaxaca decomposition" data-es="descomposición de Blinder-Oaxaca">Blinder-Oaxaca decomposition</strong><span data-en=" for equity gaps, " data-es=" para brechas de equidad, "> for equity gaps, </span><strong data-en="segmented regression" data-es="regresión segmentada">segmented regression</strong><span data-en=" for threshold detection, and " data-es=" para detección de umbrales, y "> for threshold detection, and </span><strong data-en="interaction effects" data-es="efectos de interacción">interaction effects</strong><span data-en=" via automated term construction. The full methodology is documented in the project repository." data-es=" mediante construcción automatizada de términos. La metodología completa está documentada en el repositorio del proyecto."> via automated term construction. The full methodology is documented in the project repository.</span></p>
   </section>
 
   <hr class="thread" aria-hidden="true">
@@ -670,9 +704,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <template x-if="!loading && !error">
       <div>
         <div class="catalog-search">
-          <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" data-en-placeholder="Search variables by name, ID, description, or source&hellip;" data-es-placeholder="Buscar variables por nombre, ID, descripción o fuente&hellip;" aria-label="Search variables" x-model="search">
+          <input type="text" placeholder="Search variables by name, ID, description, or source&hellip;" data-en-placeholder="Search variables by name, ID, description, or source&hellip;" data-es-placeholder="Buscar variables por nombre, ID, descripción o fuente&hellip;" aria-label="Search variables" data-en-aria-label="Search variables" data-es-aria-label="Buscar variables" x-model="search">
         </div>
-        <div x-show="groupedVariables.length === 0" class="state-empty" x-text="search ? 'No variables match \u201c' + search + '\u201d.' : 'No variables available.'"></div>
+        <div x-show="groupedVariables.length === 0" class="state-empty" x-text="search ? $store.i18n.t('about.no_variables_match') + '\u201c' + search + '\u201d.' : $store.i18n.t('about.no_variables_available')"></div>
         <template x-for="[name, vars] in groupedVariables" :key="name">
           <div class="var-group">
             <div class="var-group-title" x-text="name + ' (' + vars.length + ')'"></div>
@@ -707,7 +741,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/zscore.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play z-score video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play z-score video" data-en-aria-label="Play z-score video" data-es-aria-label="Reproducir video de z-score">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -721,7 +755,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/ice.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play ICE video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play ICE video" data-en-aria-label="Play ICE video" data-es-aria-label="Reproducir video de ICE">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -735,7 +769,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/bootstrap_ci.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play bootstrap video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play bootstrap video" data-en-aria-label="Play bootstrap video" data-es-aria-label="Reproducir video de bootstrap">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -749,7 +783,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/quantile_classification.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play quantile video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play quantile video" data-en-aria-label="Play quantile video" data-es-aria-label="Reproducir video de cuantiles">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -763,7 +797,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/lisa_cluster_map.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play LISA video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play LISA video" data-en-aria-label="Play LISA video" data-es-aria-label="Reproducir video de LISA">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -777,7 +811,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <video x-ref="video" src="/static/videos/pipeline_dag.mp4" preload="metadata"
               @loadedmetadata="onLoaded()" @play="playing=true" @pause="playing=false" @ended="playing=false"
               playsinline muted></video>
-            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play pipeline DAG video">
+            <button class="video-play-btn" x-show="!playing && loaded" @click="play()" aria-label="Play pipeline DAG video" data-en-aria-label="Play pipeline DAG video" data-es-aria-label="Reproducir video del pipeline DAG">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -822,7 +856,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </tbody>
           </table>
         </div>
-        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="refs.length + ' references from research/references.csv'"></p>
+        <p style="margin-top:0.5em;font-size:0.7rem;color:var(--quiet);" x-text="refs.length + ' ' + $store.i18n.t('about.references_from') + ' research/references.csv'"></p>
       </div>
     </template>
   </section>
@@ -837,7 +871,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
     <div class="acks-section">
       <div class="acks-blurb">
-        <strong>Cruz Romero Morales</strong> is a systems thinker, design engineer, and community data advocate. His work bridges the gap between lived experience and technical infrastructure — building open-source tools that make policy data accessible, legible, and actionable for the communities that everyone else overlooks.
+        <strong>Cruz Romero Morales</strong><span data-en=" is a systems thinker, design engineer, and community data advocate. His work bridges the gap between lived experience and technical infrastructure — building open-source tools that make policy data accessible, legible, and actionable for the communities that everyone else overlooks." data-es=" es un pensador de sistemas, ingeniero de diseño y defensor de los datos comunitarios. Su trabajo tiende puentes entre la experiencia vivida y la infraestructura técnica — construyendo herramientas de código abierto que hacen que los datos de políticas públicas sean accesibles, legibles y accionables para las comunidades que todos los demás pasan por alto."> is a systems thinker, design engineer, and community data advocate. His work bridges the gap between lived experience and technical infrastructure — building open-source tools that make policy data accessible, legible, and actionable for the communities that everyone else overlooks.</span>
       </div>
       <div class="acks-links">
         <a href="https://trespiesdesign.com" class="acks-link" target="_blank" rel="noopener">TresPiesDesign.com</a>
@@ -920,7 +954,7 @@ function sourcesData() {
         const data = await resp.json();
         this.sources = data.sources || [];
         if (this.sources.length === 0) {
-          this.error = 'No sources available.';
+          this.error = window.LangToggle.t('about.no_sources_available');
         }
         // Push count up to the parent scope
         const aboutEl = document.querySelector('[x-data="aboutPage()"]');
@@ -928,9 +962,20 @@ function sourcesData() {
           aboutEl.__x.updateSourceCount(this.sources.length);
         }
       } catch (e) {
-        this.error = 'Unable to load data sources: ' + e.message;
+        this.error = window.LangToggle.t('about.unable_load_sources') + ': ' + e.message;
       } finally {
         this.loading = false;
+
+        // The sources table renders via `x-if="!loading"`, materializing its
+        // data-en/data-es th's AFTER lang-toggle.js's one-time DOMContentLoaded
+        // swapDOM() pass already ran — confirmed empirically 2026-07-29 (fresh
+        // load with tp-lang=es still showed English "Source"/"Type" headers).
+        // addStrings() re-swaps the whole document as a side effect even with
+        // an empty map, which is the only public hook for this; same fix is
+        // applied at every async render point in this file's other sections.
+        this.$nextTick(() => {
+          if (window.LangToggle) { window.LangToggle.refresh(); }
+        });
       }
     },
 
@@ -962,7 +1007,7 @@ function variablesData() {
         const data = await resp.json();
         this.variables = data.variables || [];
         if (this.variables.length === 0) {
-          this.error = 'No variables available.';
+          this.error = window.LangToggle.t('about.no_variables_available');
         }
         // Push count up to the parent scope
         const aboutEl = document.querySelector('[x-data="aboutPage()"]');
@@ -970,9 +1015,14 @@ function variablesData() {
           aboutEl.__x.updateVariableCount(this.variables.length);
         }
       } catch (e) {
-        this.error = 'Unable to load variable catalog: ' + e.message;
+        this.error = window.LangToggle.t('about.unable_load_variables') + ': ' + e.message;
       } finally {
         this.loading = false;
+
+        // Same async-render-outruns-swapDOM gap as sourcesData() above.
+        this.$nextTick(() => {
+          if (window.LangToggle) { window.LangToggle.refresh(); }
+        });
       }
     },
 
@@ -991,7 +1041,7 @@ function variablesData() {
     get groupedVariables() {
       const bySource = {};
       for (const v of this.filteredVariables) {
-        const src = v.source_name || v.source_id || 'Other';
+        const src = v.source_name || v.source_id || window.LangToggle.t('about.other_source_group');
         if (!bySource[src]) bySource[src] = [];
         bySource[src].push(v);
       }
@@ -1028,9 +1078,15 @@ function referencesData() {
           });
         }
       } catch (e) {
-        this.error = 'Unable to load references: ' + e.message;
+        this.error = window.LangToggle.t('about.unable_load_references') + ': ' + e.message;
       } finally {
         this.loading = false;
+
+        // Same async-render-outruns-swapDOM gap as sourcesData() above —
+        // the references table's th's only exist once `!loading` renders.
+        this.$nextTick(() => {
+          if (window.LangToggle) { window.LangToggle.refresh(); }
+        });
       }
     }
   };
