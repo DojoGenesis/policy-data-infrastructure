@@ -101,6 +101,12 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
         es: 'Un índice compuesto combina varias variables en una sola puntuación comparable por geografía. Elige variables, ajusta sus ponderaciones relativas, selecciona un método de combinación a continuación, y cada geografía obtiene una puntuación única que puedes clasificar y comparar.'
       },
       'composites.example_label': { en: 'For example:', es: 'Por ejemplo:' },
+
+      /* Human labels for the API's direction enum. The badge used to render
+         the raw value ("lower_is_better") straight to the reader. */
+      'composites.dir_adversity':  { en: 'adversity',  es: 'adversidad' },
+      'composites.dir_resilience': { en: 'resilience', es: 'resiliencia' },
+      'composites.dir_neutral':    { en: 'neutral',    es: 'neutral' },
     };
     if (window.LangToggle) {
       window.LangToggle.addStrings(strings);
@@ -323,6 +329,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--tp-cat-4);
     border-color: color-mix(in srgb, var(--tp-cat-4) 30%, transparent);
     background: color-mix(in srgb, var(--tp-cat-4) 10%, transparent);
+  }
+
+  /* Neutral had no rule, so those 12 variables fell back to the bare
+     .filter-chip look and read as a third unnamed state. --quiet, not
+     --subtle: --subtle measures 3.96:1 on --bg and fails AA as text. */
+  .filter-chip.direction-neutral {
+    color: var(--quiet);
+    border-color: var(--border-strong);
+    background: transparent;
   }
 
   /* Variable filter bar */
@@ -924,6 +939,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <option value="" data-en="All" data-es="Todas">All</option>
             <option value="adversity" data-en="Adversity" data-es="Adversidad">Adversity</option>
             <option value="resilience" data-en="Resilience" data-es="Resiliencia">Resilience</option>
+            <!-- Neutral was missing, so 12 of the 51 catalog variables — the
+                 denominators and component counts — had no filter that could
+                 reach them. Only "All" showed them, and only by not filtering. -->
+            <option value="neutral" data-en="Neutral" data-es="Neutral">Neutral</option>
           </select>
         </div>
 
@@ -943,9 +962,9 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
               </div>
               <span
                 class="filter-chip"
-                :class="'direction-' + v.direction"
-                x-text="v.direction || ''"
-                x-show="v.direction"
+                :class="'direction-' + directionKind(v.direction)"
+                x-text="directionLabel(v.direction)"
+                x-show="directionKind(v.direction)"
                 style="font-size:0.6rem;padding:0.15em 0.5em;cursor:default"
               ></span>
             </label>
@@ -1419,9 +1438,44 @@ function compositeBuilder() {
         );
       }
       if (this.varDirectionFilter) {
-        vars = vars.filter(v => v.direction === this.varDirectionFilter);
+        vars = vars.filter(v => this.directionKind(v.direction) === this.varDirectionFilter);
       }
       return vars;
+    },
+
+    /* Map the API's direction enum onto this page's vocabulary.
+
+       The filter compared v.direction directly against 'adversity' /
+       'resilience', but the API has never used those words — it returns
+       lower_is_better (33 variables), higher_is_better (4), neutral (12),
+       and absent (2). So both filter options matched nothing and always
+       returned an empty list, the badge rendered the raw enum text
+       ("lower_is_better") to the reader, and its :class produced
+       .direction-lower_is_better, which matches no rule — so the colour
+       coding never applied either. One missing translation, three visible
+       symptoms.
+
+       Same shape as the /candidates bug that reported 0% coverage: a
+       frontend reading a field vocabulary the API does not use. Worth
+       checking any other place we compare against a string literal the
+       backend never promised.
+
+       The mapping is by outcome polarity, which is what the two words mean
+       here: lower_is_better indicators (lack of insurance, high blood
+       pressure, asthma) measure ADVERSITY — a higher value is a worse
+       outcome. higher_is_better indicators (broadband access, median
+       income) measure RESILIENCE. neutral ones (degree counts, raw
+       populations) are denominators and components, not outcomes. */
+    directionKind(direction) {
+      if (direction === 'lower_is_better') { return 'adversity'; }
+      if (direction === 'higher_is_better') { return 'resilience'; }
+      if (direction === 'neutral') { return 'neutral'; }
+      return '';
+    },
+
+    directionLabel(direction) {
+      const kind = this.directionKind(direction);
+      return kind ? this.$store.i18n.t('composites.dir_' + kind) : '';
     },
 
     // ── Geo search results ──────────────────────────────────────
