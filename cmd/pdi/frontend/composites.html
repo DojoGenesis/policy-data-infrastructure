@@ -86,6 +86,21 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       'composites.scenario': { en: 'Scenario', es: 'Escenario' },
       'composites.composite_score_lower': { en: 'Composite score', es: 'Puntuación compuesta' },
       'composites.ranking_stability': { en: 'Ranking stability:', es: 'Estabilidad del ranking:' },
+
+      /* Aggregate-first empty state (PIP brief 2026-07-29). Every number
+         these strings sit next to comes from allVariables/geoNames via
+         Alpine bindings in the markup — never typed into these strings
+         themselves, so the strings stay pure prose and can't drift the
+         way a hardcoded count could. */
+      'composites.catalog_tag': { en: '📚 The Catalog', es: '📚 El Catálogo' },
+      'composites.stat_variables': { en: 'Variables in the catalog', es: 'Variables en el catálogo' },
+      'composites.stat_sources': { en: 'Data sources', es: 'Fuentes de datos' },
+      'composites.stat_counties': { en: 'Counties available', es: 'Condados disponibles' },
+      'composites.methodology_blurb': {
+        en: 'A composite blends several variables into one comparable score per geography. Pick variables, set their relative weights, choose a combination method below, and each geography gets a single score you can rank and compare.',
+        es: 'Un índice compuesto combina varias variables en una sola puntuación comparable por geografía. Elige variables, ajusta sus ponderaciones relativas, selecciona un método de combinación a continuación, y cada geografía obtiene una puntuación única que puedes clasificar y comparar.'
+      },
+      'composites.example_label': { en: 'For example:', es: 'Por ejemplo:' },
     };
     if (window.LangToggle) {
       window.LangToggle.addStrings(strings);
@@ -660,6 +675,120 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   :root[data-theme="light"] .filter-chip.direction-resilience { color: var(--tp-emerald-deep); }
   :root[data-theme="light"] .sens-stability.robust { color: var(--tp-emerald-deep); }
   :root[data-theme="light"] .sens-stability.stable { color: var(--tp-sun-deep); }
+
+  /* ── Catalog overview (aggregate-first empty state) ──────────────
+     "The unselected state should show what the tool knows, not
+     instructions for using it — selecting then narrows that view."
+     Every value inside .catalog-stat-value / .catalog-example-weight
+     is an Alpine x-text binding to allVariables/geoNames/examplePct —
+     never a literal in this file. --accent is used for text here
+     exactly like .result-score/.contrib-chip-weight elsewhere on this
+     page: it already remaps to --tp-red-deep under light theme (see
+     tokens.css), so no extra light-theme override is needed here the
+     way the raw-hue direction/stability classes above required one. */
+  .catalog-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(10px, 2vw, 18px);
+    margin-bottom: 4px;
+  }
+
+  .catalog-stat {
+    flex: 1 1 130px;
+    text-align: center;
+    padding: 0.85em 0.5em;
+    border-radius: var(--r-badge);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+
+  .catalog-stat-value {
+    font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .catalog-stat-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+
+  .catalog-methodology {
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 64ch;
+  }
+
+  .catalog-example {
+    margin-top: clamp(10px, 1.5vw, 16px);
+  }
+
+  .catalog-example-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--quiet);
+    margin-bottom: 8px;
+  }
+
+  .catalog-example-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .catalog-example-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0.4em 0.75em;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-badge);
+    max-width: 100%;
+  }
+
+  .catalog-example-weight {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .catalog-example-op,
+  .catalog-example-arrow {
+    font-size: 0.9rem;
+    color: var(--quiet);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .catalog-example-result {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .catalog-instruction {
+    font-size: 0.75rem;
+    color: var(--quiet);
+    margin-top: clamp(14px, 2vw, 20px);
+    padding-top: clamp(10px, 1.5vw, 14px);
+    border-top: 1px solid var(--border);
+  }
 </style>
   <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
   <script defer src="/static/motion.js"></script>
@@ -724,7 +853,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📍 Geographies" data-es="📍 Geografías">📍 Geographies</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="geoids.length + $store.i18n.t('composites.selected')"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="geoids.length + (countyCount > 0 ? '/' + countyCount : '') + $store.i18n.t('composites.selected')"></span>
         </div>
 
         <div class="geo-search-wrap">
@@ -776,7 +905,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <div class="card reveal">
         <div class="card-heading">
           <span class="section-tag" style="margin-bottom:0" data-en="📊 Variables" data-es="📊 Variables">📊 Variables</span>
-          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="variables.length + $store.i18n.t('composites.selected')"></span>
+          <span style="font-size:0.65rem;font-weight:400;color:var(--quiet)" x-text="variables.length + (allVariables.length > 0 ? '/' + allVariables.length : '') + $store.i18n.t('composites.selected')"></span>
         </div>
 
         <!-- Filter -->
@@ -983,8 +1112,93 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <p><span data-en="Ready to compute. Adjust weights and click " data-es="Listo para calcular. Ajusta las ponderaciones y haz clic en ">Ready to compute. Adjust weights and click </span><strong data-en="Compute Composite" data-es="Calcular Índice Compuesto">Compute Composite</strong><span data-en="." data-es=".">.</span></p>
   </div>
 
-  <div x-show="!computing && !computeError && results.length === 0 && !canCompute" class="state-empty" x-cloak>
-    <p><span data-en="Select at least " data-es="Selecciona al menos ">Select at least </span><strong data-en="2 variables" data-es="2 variables">2 variables</strong><span data-en=" and " data-es=" y ">and</span> <strong data-en="1 geography" data-es="1 geografía">1 geography</strong><span data-en=" to get started." data-es=" para comenzar."> to get started.</span></p>
+  <!-- Aggregate-first empty state: the catalog and its methodology ARE the
+       content here — not a placeholder for it. Before this, a first-time
+       visitor with zero selections saw only "Select at least 2 variables
+       and 1 geography to get started." as the entire result of scrolling
+       this far (PIP brief 2026-07-29: "Zero value is visible until the
+       user does all the work"). Every number below reads off
+       allVariables/geoNames, both already fetched by loadVariables()/
+       loadGeographies() in init() for the picker itself — this panel adds
+       no new network calls, and reuses their existing varsLoading/
+       varsError state for a graceful fallback: the loading and error/empty
+       siblings below both degrade to the ORIGINAL plain instruction,
+       verbatim, never a broken widget. -->
+  <div x-show="!computing && !computeError && results.length === 0 && !canCompute" x-cloak>
+
+    <div x-show="varsLoading" class="loader" style="padding:32px 0">
+      <div class="loader-spinner"></div>
+    </div>
+
+    <div x-show="!varsLoading && (varsError || allVariables.length === 0)" class="state-empty catalog-fallback">
+      <p><span data-en="Select at least " data-es="Selecciona al menos ">Select at least </span><strong data-en="2 variables" data-es="2 variables">2 variables</strong><span data-en=" and " data-es=" y ">and</span> <strong data-en="1 geography" data-es="1 geografía">1 geography</strong><span data-en=" to get started." data-es=" para comenzar."> to get started.</span></p>
+    </div>
+
+    <div class="card catalog-overview reveal" x-show="!varsLoading && !varsError && allVariables.length > 0">
+      <div class="card-heading">
+        <span class="section-tag" style="margin-bottom:0" x-text="$store.i18n.t('composites.catalog_tag')"></span>
+      </div>
+
+      <!-- Catalog stat strip -->
+      <div class="catalog-stats">
+        <div class="catalog-stat">
+          <div class="catalog-stat-value" x-text="allVariables.length"></div>
+          <div class="catalog-stat-label" x-text="$store.i18n.t('composites.stat_variables')"></div>
+        </div>
+        <div class="catalog-stat">
+          <div class="catalog-stat-value" x-text="catalogSourceCount"></div>
+          <div class="catalog-stat-label" x-text="$store.i18n.t('composites.stat_sources')"></div>
+        </div>
+        <div class="catalog-stat" x-show="countyCount > 0">
+          <div class="catalog-stat-value" x-text="countyCount"></div>
+          <div class="catalog-stat-label" x-text="$store.i18n.t('composites.stat_counties')"></div>
+        </div>
+      </div>
+
+      <hr class="thread" aria-hidden="true" style="margin:clamp(14px,2vw,20px) 0">
+
+      <!-- What a composite IS -->
+      <p class="catalog-methodology" x-text="$store.i18n.t('composites.methodology_blurb')"></p>
+
+      <!-- Worked micro-example using two REAL catalog variables. The
+           weight shown is computed from exampleVariables.length (Alpine
+           getter below), not typed — it can't drift from what the example
+           actually displays.
+
+           `?.` is load-bearing, not defensive style: x-show only toggles
+           CSS display on THIS div — it does not stop Alpine from
+           evaluating the x-text bindings inside it on every reactive
+           tick, including ticks where allVariables is transiently `[]`
+           (the instant before loadVariables() resolves, and — verified
+           live via Playwright — every tick while varsError is set, e.g.
+           the API-blocked fallback path). exampleVariables[0].name with
+           no guard threw "Cannot read properties of undefined" on EVERY
+           page load, cold, in both languages, api-blocked or not, well
+           before a visitor ever saw the flash — the div's own x-cloak/
+           x-show hid the crash's symptom but not the console error. -->
+      <div class="catalog-example" x-show="exampleVariables.length >= 2">
+        <span class="catalog-example-label" x-text="$store.i18n.t('composites.example_label')"></span>
+        <div class="catalog-example-flow">
+          <span class="catalog-example-chip">
+            <span x-text="exampleVariables[0]?.name"></span>
+            <span class="catalog-example-weight" x-text="examplePct"></span>
+          </span>
+          <span class="catalog-example-op" aria-hidden="true">+</span>
+          <span class="catalog-example-chip">
+            <span x-text="exampleVariables[1]?.name"></span>
+            <span class="catalog-example-weight" x-text="examplePct"></span>
+          </span>
+          <span class="catalog-example-arrow" aria-hidden="true">&rarr;</span>
+          <span class="catalog-example-chip catalog-example-result" x-text="$store.i18n.t('composites.composite_score')"></span>
+        </div>
+      </div>
+
+      <!-- Original instruction, kept verbatim — now secondary guidance
+           under real content, not the entire screen. -->
+      <p class="catalog-instruction">
+        <span data-en="Select at least " data-es="Selecciona al menos ">Select at least </span><strong data-en="2 variables" data-es="2 variables">2 variables</strong><span data-en=" and " data-es=" y ">and</span> <strong data-en="1 geography" data-es="1 geografía">1 geography</strong><span data-en=" to get started." data-es=" para comenzar."> to get started.</span>
+      </p>
+    </div>
   </div>
 
   <!-- ═══ RESULTS CARDS ═══ -->
@@ -1163,6 +1377,36 @@ function compositeBuilder() {
       return this.method === 'geometric_mean' ? 'Geometric Mean' : 'Weighted Z-Score';
     },
 
+    // ── Catalog overview (aggregate-first empty state) ─────────────
+    // Every getter here reads off allVariables/geoNames — both already
+    // fetched by loadVariables()/loadGeographies() for the picker itself,
+    // so the catalog-overview panel adds no new network calls and no new
+    // failure modes beyond what those two already handle.
+    get catalogSourceCount() {
+      const s = new Set(this.allVariables.map(v => v.source_name).filter(Boolean));
+      return s.size;
+    },
+
+    get countyCount() {
+      return Object.keys(this.geoNames).length;
+    },
+
+    // First two catalog entries, in whatever order the API returns —
+    // deterministic given the same response, and real data rather than
+    // an invented pair.
+    get exampleVariables() {
+      return this.allVariables.slice(0, 2);
+    },
+
+    // Computed from exampleVariables.length, never typed — so the
+    // percentage the worked example shows can never drift from what the
+    // example actually illustrates (equal weights across however many
+    // example variables are shown).
+    get examplePct() {
+      const n = this.exampleVariables.length;
+      return n > 0 ? Math.round(100 / n) + '%' : '';
+    },
+
     // ── Filtered variables ──────────────────────────────────────
     get filteredVariables() {
       let vars = this.allVariables;
@@ -1264,6 +1508,19 @@ function compositeBuilder() {
         this.varsError = `${this.lang === 'es' ? 'Error al cargar variables' : 'Failed to load variables'}: ${e.message}`;
       } finally {
         this.varsLoading = false;
+        // The catalog-overview card (.catalog-overview.reveal) is present
+        // in the DOM from initial parse (x-show, not x-if/x-for — see its
+        // markup comment), so the page-load TPMotion.reveals() call at the
+        // bottom of this file already observes it. This second call is a
+        // defensive no-op in that case (reveals() skips anything already
+        // revealed/observed) and a real fix in any path that ever changes
+        // that card to x-if — cheap insurance against the exact "content
+        // renders but stays invisible" bug documented on county.html/
+        // compare.html/map.html/evidence.html for late-arriving .reveal
+        // nodes that were never (re-)observed.
+        this.$nextTick(() => {
+          if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+        });
       }
     },
 
@@ -1460,6 +1717,22 @@ function compositeBuilder() {
         this.computeError = `${this.lang === 'es' ? 'Error en el cálculo' : 'Computation failed'}: ${e.message}`;
       } finally {
         this.computing = false;
+        // .result-card.reveal nodes are cloned fresh by the x-for template
+        // the moment `results` first goes non-empty (same mechanism the
+        // lang-toggle.js addStrings() comment above describes for
+        // composite_score/etc.) — they do not exist yet at page-load
+        // time, so the one-shot TPMotion.reveals('.reveal') call at the
+        // bottom of this file never observes them. Without this, every
+        // computed result card sits at opacity:0 forever (motion.css's
+        // default .reveal state) with no error and nothing on screen to
+        // debug against — verified live: before this call was added,
+        // computed cards had class="card result-card reveal" but never
+        // gained the .in class motion.js adds on intersection. $nextTick
+        // waits for the x-for's DOM nodes to actually exist before
+        // re-scanning.
+        this.$nextTick(() => {
+          if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+        });
       }
     },
 

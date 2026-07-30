@@ -125,6 +125,15 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     'compare.cat_food': { en: 'food', es: 'alimentación' },
     'compare.cat_transportation': { en: 'transportation', es: 'transporte' },
     'compare.cat_other': { en: 'other', es: 'otro' },
+
+    // ── Aggregate (no-selection) empty state ──────────────────────────
+    // Distribution strips over all 72 counties + derived entry-point
+    // links, shown before any two counties are picked. See compareTool()
+    // aggPanels / aggEntryPoints / loadAggregateContext().
+    'compare.entry_vs': { en: ' vs ', es: ' vs ' },
+    'compare.entry_widest_gap_in': { en: ' — widest gap in ', es: ' — brecha más amplia en ' },
+    'compare.agg_a11y_prefix': { en: ': distribution across ', es: ': distribución entre ' },
+    'compare.agg_a11y_suffix': { en: ' Wisconsin counties, standardized to the state mean, oriented so better is to the right.', es: ' condados de Wisconsin, estandarizada respecto a la media estatal y orientada para que lo mejor quede a la derecha.' },
   });
 </script>
 <script defer src="/static/alpine.min.js"></script>
@@ -824,6 +833,55 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--muted);
     line-height: 1.5;
     margin: 10px 0 0;
+  }
+
+  /* ══ Aggregate (no-selection) derived entry points ══════════════════
+     Below the statewide strips, before any two counties are picked: one
+     deep link per default indicator, to the two counties sitting at its
+     extremes. Every name and figure comes from aggStateDist/aggGeoNames,
+     both built from the live query response in loadAggregateContext() —
+     nothing here is hand-typed. Same tokens as the rest of the page;
+     no new palette. */
+  .agg-entries {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .agg-entries-head {
+    margin: 0 0 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .agg-entry-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 10px;
+  }
+  .agg-entry-link {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    background: var(--plane-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    text-decoration: none;
+    transition: border-color 140ms ease, background-color 140ms ease;
+  }
+  .agg-entry-link:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .agg-entry-names {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .agg-entry-vs { font-weight: 400; color: var(--quiet); }
+  .agg-entry-meta {
+    font-size: 0.7rem;
+    color: var(--muted);
   }
 
   /* Materiality chips */
@@ -1534,8 +1592,65 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     </div>
   </div>
 
-  <!-- ── Prompt (no counties selected yet) ──────────── -->
-  <div x-show="!compared && !initialSkeleton && !compareLoading" x-cloak class="state-no-results" style="padding:clamp(48px,6vw,72px) 0;">
+  <!-- ── Aggregate (no-selection) statewide distribution ─────────────
+       Shown before any two counties are picked. Same distStripSvg/
+       dist-strip rendering as the comparison view above — run over a
+       fixed 3-indicator set with no comparison in play — so the very
+       first thing a visitor sees is the full 72-county picture instead
+       of two blank search boxes. Picking two counties narrows this
+       exact picture into the comparison above (same axis, same ticks,
+       gains two marks) rather than swapping to a different chart.
+       Graceful on failure: aggPanels stays empty and the plain prompt
+       below shows instead — never a broken chart or a stuck spinner. -->
+  <div class="dist-card agg-dist-card reveal" x-show="!compared && !initialSkeleton && !compareLoading && aggPanels.length > 0" x-cloak>
+    <div class="dist-head">
+      <h2 data-en="How Wisconsin's 72 counties compare" data-es="Cómo se comparan los 72 condados de Wisconsin">How Wisconsin's 72 counties compare</h2>
+      <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--quiet);"
+            x-text="'n = ' + aggN + ' · ' + aggStateName"></span>
+    </div>
+    <p class="dist-caption"
+       data-en="Each strip is one indicator. Every county in the state is a tick on a standardized axis, oriented so better is always to the right. Select two counties above to see exactly where they land on this same picture."
+       data-es="Cada franja es un indicador. Cada condado del estado es una marca en un eje estandarizado, orientado para que lo mejor quede siempre a la derecha. Selecciona dos condados arriba para ver exactamente dónde caen en esta misma imagen.">Each strip is one indicator. Every county in the state is a tick on a standardized axis, oriented so better is always to the right. Select two counties above to see exactly where they land on this same picture.</p>
+    <div class="dist-key">
+      <span><i class="k-mark k-tick"></i><span data-en="one county" data-es="un condado">one county</span></span>
+    </div>
+
+    <div class="dist-panels">
+      <template x-for="p in aggPanels" :key="p.id">
+        <div class="dist-panel">
+          <div class="dist-panel-head">
+            <span class="dist-panel-name" x-text="p.name"></span>
+          </div>
+          <div class="dist-strip" x-html="distStripSvg(p, themeTick)"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── Derived entry points: the accelerant ───────────────────────
+         For each indicator above, the two counties sitting at its
+         statewide extremes — a one-click deep link straight into the
+         full comparison. Every county name and the indicator name are
+         read off the same payload the strips above are drawn from;
+         nothing here is hand-typed, and no threshold excludes any
+         county — the comparison page itself is where reliability and
+         materiality get surfaced. -->
+    <div class="agg-entries" x-show="aggEntryPoints.length > 0" x-cloak>
+      <h3 class="agg-entries-head" data-en="Jump straight to the widest gaps" data-es="Ve directo a las brechas más amplias">Jump straight to the widest gaps</h3>
+      <div class="agg-entry-list">
+        <template x-for="e in aggEntryPoints" :key="e.variableId">
+          <a class="agg-entry-link" :href="'/compare?geoid1=' + e.geoid1 + '&geoid2=' + e.geoid2">
+            <span class="agg-entry-names">
+              <span x-text="e.name1"></span><span class="agg-entry-vs" x-text="$store.i18n.t('compare.entry_vs')"></span><span x-text="e.name2"></span>
+            </span>
+            <span class="agg-entry-meta" x-text="$store.i18n.t('compare.entry_widest_gap_in') + e.indicatorName"></span>
+          </a>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prompt (no counties selected yet, or aggregate view unavailable) ── -->
+  <div x-show="!compared && !initialSkeleton && !compareLoading && aggPanels.length === 0" x-cloak class="state-no-results" style="padding:clamp(48px,6vw,72px) 0;">
     <p style="color:var(--muted);font-size:1rem;margin:0;" data-en="Select two counties above to compare." data-es="Selecciona dos condados arriba para comparar.">Select two counties above to compare.</p>
   </div>
 
@@ -1611,6 +1726,22 @@ function compareTool() {
     // "Generated art after a theme switch" trap is exactly one sampled
     // color away, and this keeps the escape hatch wired.
     themeTick: 0,
+
+    // ── Aggregate (no-selection) statewide context ────────────────────
+    // Powers the empty-state distribution strips and derived entry-point
+    // links BEFORE any comparison exists. Deliberately kept separate from
+    // stateDist/loadStateContext above — those reset and refill on every
+    // compare(), and clearing back to the unselected state must not lose
+    // this view. Same buildDistributions() output shape, over a fixed
+    // small indicator set, from ONE POST /v1/policy/query.
+    aggVarIds: ['poverty_rate', 'median_household_income', 'uninsured_rate'],
+    aggLoading: true,
+    aggError: '',
+    aggN: 0,
+    aggStateFips: '',
+    aggStateDist: {},
+    aggGeoNames: {},
+    aggFetchStarted: false,
 
     // ═══════════════ I18N HELPERS ════════════════════════════
     // Reads Alpine.store('i18n') — the SAME reactive store $store.i18n.t()
@@ -1924,10 +2055,14 @@ function compareTool() {
       return this.mergedDiffs.filter(d => d.moe1 != null && d.moe2 != null).length;
     },
 
-    get ctxStateName() {
+    get ctxStateName() { return this.stateName(this.ctxStateFips); },
+    // Shared by ctxStateName (loaded comparison) and aggStateName
+    // (aggregate empty-state) so the fips→name map exists in one place.
+    stateName(fips) {
       const names = { '55': 'Wisconsin' };
-      return names[this.ctxStateFips] || 'statewide';
+      return names[fips] || 'statewide';
     },
+    get aggStateName() { return this.stateName(this.aggStateFips); },
 
     // Head-to-head record, expressed as a share of directional indicators.
     get recordPctA() {
@@ -2114,6 +2249,91 @@ function compareTool() {
       return panels;
     },
 
+    // ═══════ Aggregate (no-selection) distribution strips ═══════════
+    // Same shape as distPanels, over aggVarIds instead of the gap-ranked
+    // comparison set, and with NO geoid1/geoid2 to mark — every county
+    // is a plain tick, none excluded. zA/zB are left null on purpose:
+    // distStripSvg only draws an A/B mark when one is present, so this
+    // renders the bare grid + all-72-county ticks, and picking two
+    // counties turns it into distPanels' picture by adding marks to the
+    // SAME axis, not by swapping to a different chart.
+    get aggPanels() {
+      if (this.aggLoading || this.aggError) return [];
+      const panels = [];
+      for (const vid of this.aggVarIds) {
+        const dist = this.aggStateDist[vid];
+        if (!dist || dist.degenerate || !(dist.sd > 0)) continue;
+        const meta = this.variablesMap[vid] || {};
+        const pol = this.polarity({ direction: meta.direction });
+        if (pol === 0) continue;  // no defensible axis orientation without a direction
+        const z = (val) => ((val - dist.mean) / dist.sd) * pol;
+
+        const ticks = [];
+        for (const gid in dist.values) ticks.push(z(dist.values[gid]));
+
+        const name = meta.name || this.displayName(vid);
+        panels.push({
+          id: vid,
+          name,
+          ticks,
+          zA: null, zB: null, labelA: '', labelB: '',
+          a11y: name + this.t('compare.agg_a11y_prefix') + dist.n + this.t('compare.agg_a11y_suffix'),
+        });
+      }
+
+      // Same one-shared-axis rule as distPanels (DATAVIZ-RULES.md rule 5),
+      // computed independently here since this set of panels/ticks never
+      // shares a render with distPanels' set.
+      let maxAbs = 0;
+      for (const p of panels) {
+        for (let i = 0; i < p.ticks.length; i++) {
+          const m = Math.abs(p.ticks[i]);
+          if (m > maxAbs) maxAbs = m;
+        }
+      }
+      const raw = Math.max(2, maxAbs * 1.08);
+      const STEPS = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10, 25, 50, 100];
+      let step = STEPS[STEPS.length - 1];
+      for (let s = 0; s < STEPS.length; s++) {
+        if (STEPS[s] >= raw / 2) { step = STEPS[s]; break; }
+      }
+      const axis = { step, half: step * 2 };
+      for (const p of panels) { p.axis = axis; }
+      return panels;
+    },
+
+    // Up to one entry per default indicator: the two counties sitting at
+    // its statewide extremes (lowest value, highest value). This is the
+    // ONLY ranking rule for these links — not an aggregate cross-indicator
+    // score, which would hide its own weighting behind a number nobody
+    // can audit. No population/reliability floor either: that is itself
+    // an undeclared editorial choice, and the comparison page these links
+    // lead to already surfaces reliability and materiality downstream.
+    get aggEntryPoints() {
+      if (this.aggLoading || this.aggError) return [];
+      const out = [];
+      for (const vid of this.aggVarIds) {
+        const dist = this.aggStateDist[vid];
+        if (!dist || dist.degenerate || !(dist.sd > 0)) continue;
+        const geoids = Object.keys(dist.values);
+        if (geoids.length < 2) continue;
+        geoids.sort((a, b) => dist.values[a] - dist.values[b]);
+        const gLo = geoids[0], gHi = geoids[geoids.length - 1];
+        const nameLo = this.aggGeoNames[gLo], nameHi = this.aggGeoNames[gHi];
+        if (!nameLo || !nameHi) continue;
+        const meta = this.variablesMap[vid] || {};
+        out.push({
+          variableId: vid,
+          geoid1: gLo,
+          geoid2: gHi,
+          name1: nameLo,
+          name2: nameHi,
+          indicatorName: meta.name || this.displayName(vid),
+        });
+      }
+      return out;
+    },
+
     // Keep a marker's printed label inside the viewBox. SVG clips at the
     // viewBox edge, so a label that overflows is a label that vanishes.
     distTextPos(x, txt, W) {
@@ -2176,32 +2396,43 @@ function compareTool() {
       const axisLine = '<line class="ds-axis" x1="' + plotL + '" y1="' + axisY + '" x2="' + plotR
         + '" y2="' + axisY + '"/>';
 
-      const xA = xAt(p.zA), xB = xAt(p.zB);
       const stem = (x, y, cls) => '<line class="' + cls + '" x1="' + x.toFixed(1) + '" y1="' + (y + 6)
         + '" x2="' + x.toFixed(1) + '" y2="' + axisY + '"/>';
+      const txt = (pos, y, s) => '<text class="ds-lab" x="' + pos.x.toFixed(1) + '" y="' + (y + 4)
+        + '" text-anchor="' + pos.anchor + '">' + esc(s) + '</text>';
+      const r = 5.9;
+
+      // A/B marks only exist once two counties are actually selected — the
+      // aggregate (no-selection) empty-state panels (aggPanels) pass zA/zB
+      // as null, so this draws the bare grid + all-county ticks with
+      // nothing singled out. This null-check is the ONLY branch added for
+      // the empty state. Every piece is built into the SAME slots the
+      // original code concatenated in (stems, then marks, then labels —
+      // labels last so they always paint over both marks) and left '' when
+      // absent, so when both are present the output — including paint
+      // order — is byte-identical to before.
+      const hasA = p.zA != null, hasB = p.zB != null;
+      const xA = hasA ? xAt(p.zA) : 0, xB = hasB ? xAt(p.zB) : 0;
+      const la = hasA ? this.distTextPos(xA, p.labelA, W) : null;
+      const lb = hasB ? this.distTextPos(xB, p.labelB, W) : null;
 
       // Two color-independent encoders per mark (rule 2): a distinct SHAPE
       // — circle for A, diamond for B — and the rank printed directly
       // beside it in the page's normal text color, never inside the fill.
       const markA = '<circle class="ds-mark ds-a" cx="' + xA.toFixed(1) + '" cy="' + yA + '" r="5.2"/>';
-      const r = 5.9;
       const markB = '<polygon class="ds-mark ds-b" points="'
         + xB.toFixed(1) + ',' + (yB - r).toFixed(1) + ' '
         + (xB + r).toFixed(1) + ',' + yB + ' '
         + xB.toFixed(1) + ',' + (yB + r).toFixed(1) + ' '
         + (xB - r).toFixed(1) + ',' + yB + '"/>';
 
-      const la = this.distTextPos(xA, p.labelA, W);
-      const lb = this.distTextPos(xB, p.labelB, W);
-      const txt = (pos, y, s) => '<text class="ds-lab" x="' + pos.x.toFixed(1) + '" y="' + (y + 4)
-        + '" text-anchor="' + pos.anchor + '">' + esc(s) + '</text>';
-
       const id = 'dist-' + String(p.id).replace(/[^A-Za-z0-9_-]/g, '');
       return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img"'
         + ' aria-labelledby="' + id + '-t"><title id="' + id + '-t">' + esc(p.a11y) + '</title>'
         + grid + ticks + axisLine
-        + stem(xA, yA, 'ds-stem-a') + stem(xB, yB, 'ds-stem-b')
-        + markA + markB + txt(la, yA, p.labelA) + txt(lb, yB, p.labelB)
+        + (hasA ? stem(xA, yA, 'ds-stem-a') : '') + (hasB ? stem(xB, yB, 'ds-stem-b') : '')
+        + (hasA ? markA : '') + (hasB ? markB : '')
+        + (hasA ? txt(la, yA, p.labelA) : '') + (hasB ? txt(lb, yB, p.labelB) : '')
         + '</svg>';
     },
 
@@ -2262,6 +2493,11 @@ function compareTool() {
         }
       } else {
         this.initialSkeleton = false;
+        // No valid comparison to load — this is the empty state, so kick
+        // off the aggregate statewide view that replaces it. Not awaited:
+        // the page must not block on this fetch, same as loadVariables()
+        // below.
+        this.ensureAggregateContext();
       }
 
       this.loadVariables();  // fire-and-forget background load
@@ -2362,6 +2598,84 @@ function compareTool() {
         this.ctxN = 0;
       } finally {
         this.ctxLoading = false;
+      }
+    },
+
+    // Fires loadAggregateContext() at most once. Called from init() (the
+    // cold empty-state load) AND from clearCounty() (clearing back to the
+    // empty state after a comparison) — the guard means whichever fires
+    // first does the fetch and the other is a no-op.
+    ensureAggregateContext() {
+      if (this.aggFetchStarted) return;
+      this.aggFetchStarted = true;
+      this.loadAggregateContext();
+    },
+
+    // ── Aggregate (no-selection) statewide distribution ──────────────
+    // Same idea as loadStateContext() above, but runs with no comparison
+    // in play: ONE request, over a fixed small indicator set, so the
+    // empty state has something to show instead of two blank search
+    // boxes. Writes to aggStateDist/aggGeoNames — NOT stateDist — so a
+    // comparison's own context can never clobber this, or vice versa.
+    // Failure here is non-fatal and silent: aggPanels stays empty and the
+    // page falls back to the plain "select two counties" prompt, exactly
+    // as it did before this existed.
+    async loadAggregateContext() {
+      this.aggLoading = true;
+      this.aggError = '';
+      try {
+        const resp = await fetch('/v1/policy/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level: 'county',
+            state_fips: '55',
+            variable_ids: this.aggVarIds,
+            limit: 100,
+          }),
+        });
+        if (!resp.ok) throw new Error(this.t('compare.api_error') + `: ${resp.status}`);
+        const data = await resp.json();
+        const items = data.items || [];
+        if (items.length === 0) throw new Error(this.t('compare.no_counties_returned'));
+
+        // Borrow name/unit/direction straight off this response so ranking
+        // and axis orientation are correct immediately — not dependent on
+        // the separate, slower /v1/policy/variables catalog load
+        // (loadVariables(), fired in parallel from init()).
+        const names = {};
+        for (const g of items) {
+          names[g.geoid] = g.name;
+          for (const ind of (g.indicators || [])) {
+            if (!this.variablesMap[ind.variable_id]) {
+              this.variablesMap[ind.variable_id] = {
+                name: ind.name || null, unit: ind.unit || null,
+                direction: ind.direction || null, category: ind.category || null,
+              };
+            }
+          }
+        }
+
+        this.aggGeoNames = names;
+        this.aggN = items.length;
+        this.aggStateFips = '55';
+        this.aggStateDist = this.buildDistributions(items, this.aggVarIds);
+
+        // New .reveal content just became eligible to render (aggPanels
+        // flips from empty once aggStateDist lands) — reveals() skips
+        // nodes it already revealed, so re-calling it is how the motion
+        // kit finds out about this newly-shown node. Same precedent as
+        // compare()'s own call below.
+        this.$nextTick(() => {
+          if (window.TPMotion) window.TPMotion.reveals('.reveal');
+        });
+      } catch (e) {
+        this.aggError = this.t('compare.ctx_unavailable_prefix') + e.message + '.';
+        this.aggStateDist = {};
+        this.aggGeoNames = {};
+        this.aggN = 0;
+      } finally {
+        this.aggLoading = false;
       }
     },
 
@@ -2587,6 +2901,10 @@ function compareTool() {
       this.compared = false;
       this.compareError = '';
       this.syncURL();
+      // Back to the empty state: make sure the aggregate view is showing
+      // (a no-op if it already loaded on page entry — see the guard in
+      // ensureAggregateContext()).
+      this.ensureAggregateContext();
     },
 
     syncURL() {

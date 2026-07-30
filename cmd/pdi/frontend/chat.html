@@ -24,12 +24,37 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   [x-cloak] { display:none!important; }
   .chat-wrap { max-width:720px; margin:0 auto; height:calc(100vh - 56px); display:flex; flex-direction:column; }
   .chat-msgs { flex:1; overflow-y:auto; padding:clamp(16px,3vw,24px); display:flex; flex-direction:column; gap:12px; }
+  /* Vertically center the greeting while the conversation is still empty,
+     so the cold screen reads as one composed layout instead of a header
+     stranded above the input by a wide blank scroll track (measured
+     ~542px at 1440x1024 before this change — see PIP brief 2026-07-29).
+     add() below strips this class the instant any real message lands, so
+     a growing transcript scrolls the ordinary top-anchored way. `safe
+     center` is a progressive-enhancement fallback line, not the primary
+     rule: unsupported browsers simply fail to parse it and keep the
+     plain `center` above, whereas plain `center` alone risks making the
+     top of an overflowing greeting unreachable by scroll on a short
+     viewport (a real risk once 4 stat tiles + bilingual text stack up on
+     a small phone in landscape) — `safe center` degrades to start-aligned
+     only in that overflow case. */
+  .chat-msgs.is-empty { justify-content: center; justify-content: safe center; }
   .msg { max-width:82%; padding:12px 16px; border-radius:var(--r-card); line-height:1.5; font-size:0.9rem; }
   .msg.user { align-self:flex-end; background:var(--accent); color:var(--bg); border-bottom-right-radius:6px; }
   .msg.asst { align-self:flex-start; background:var(--plane-base); color:var(--text); border:1px solid var(--border); border-bottom-left-radius:6px; }
   .msg.asst p { margin:0 0 8px; } .msg.asst p:last-child { margin:0; }
   .msg.system { align-self:center; background:transparent; color:var(--muted); font-size:0.8rem; text-align:center; max-width:100%; }
   .msg.system h1 { font-size:1.4rem; font-weight:700; color:var(--text); margin-bottom:8px; }
+  /* Aggregate-first cold state: "what I can draw on" stat row. Reuses the
+     page's own .stat-callout/.stat-value/.stat-label (below) — the exact
+     markup ChatAdapter._parseRichResponse() in lib/chat.js already emits
+     for a real {{stat:value:label}} chat response — so this reads as
+     native content, not a bolted-on banner. Starts `hidden`: every number
+     here comes from a live fetch (see loadChatStats() at the bottom of
+     this file), and a failed/partial fetch must fall back to nothing
+     shown here, never a broken or half-populated row. */
+  .chat-stats-eyebrow { display:block; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin:18px 0 2px; }
+  .chat-stats { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+  .chat-stats[hidden] { display:none; }
   .thinking { display:flex;align-items:center;gap:6px;padding:12px 16px;color:var(--muted);font-size:0.85rem; }
   .thinking .dot { width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce 1.4s infinite; }
   .thinking .dot:nth-child(2){animation-delay:0.2s;} .thinking .dot:nth-child(3){animation-delay:0.4s;}
@@ -174,8 +199,30 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   </div>
 </header>
 <main id="main" class="chat-wrap">
-  <div id="messages" class="chat-msgs">
-    <div class="msg system"><h1 data-en="Ask the Data" data-es="Pregúntale a los Datos">Ask the Data</h1><p data-en="I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data." data-es="Puedo responder preguntas sobre los 72 condados de Wisconsin — tasas de pobreza, ingresos, salud, vivienda, y cómo 85 posiciones de política pública se conectan con las condiciones locales. Cada cifra está verificada con datos en vivo.">I can answer questions about Wisconsin's 72 counties — poverty rates, income, health, housing, and how 85 policy positions connect to local conditions. Every number is verified against live data.</p></div>
+  <div id="messages" class="chat-msgs is-empty">
+    <div class="msg system">
+      <h1 data-en="Ask the Data" data-es="Pregúntale a los Datos">Ask the Data</h1>
+      <!-- The two counts in this sentence used to be typed directly into
+           the data-en/data-es strings (72, 85) — the same hardcoded-stat
+           failure class as commit dc84998 (a hardcoded "42" on
+           composites.html that drifted 6 points off the real catalog
+           size). Splitting the sentence around two bare <span>s with no
+           data-en/data-es of their own means lang-toggle.js's swapDOM()
+           (which only touches elements THAT CARRY a data-<lang>
+           attribute) never rewrites them on a language toggle, so
+           loadChatStats() below only ever has to set each span's
+           textContent once. Their static content ("72"/"85") is also the
+           graceful fallback if that fetch fails — not a placeholder, the
+           actual last-known-correct value already shipped. -->
+      <p id="chat-intro"><span data-en="I can answer questions about Wisconsin's " data-es="Puedo responder preguntas sobre los ">I can answer questions about Wisconsin's </span><span id="stat-counties-inline">72</span><span data-en=" counties — poverty rates, income, health, housing, and how " data-es=" condados de Wisconsin — tasas de pobreza, ingresos, salud, vivienda, y cómo "> counties — poverty rates, income, health, housing, and how </span><span id="stat-policies-inline">85</span><span data-en=" policy positions connect to local conditions. Every number is verified against live data." data-es=" posiciones de política pública se conectan con las condiciones locales. Cada cifra está verificada con datos en vivo."> policy positions connect to local conditions. Every number is verified against live data.</span></p>
+      <span class="chat-stats-eyebrow" data-en="Grounded in live data" data-es="Basado en datos en vivo">Grounded in live data</span>
+      <div id="chat-stats" class="chat-stats" hidden>
+        <div class="stat-callout"><span class="stat-value" id="stat-counties">—</span><span class="stat-label" data-en="Counties" data-es="Condados">Counties</span></div>
+        <div class="stat-callout"><span class="stat-value" id="stat-indicators">—</span><span class="stat-label" data-en="Indicators" data-es="Indicadores">Indicators</span></div>
+        <div class="stat-callout"><span class="stat-value" id="stat-sources">—</span><span class="stat-label" data-en="Data sources" data-es="Fuentes de datos">Data sources</span></div>
+        <div class="stat-callout"><span class="stat-value" id="stat-policies">—</span><span class="stat-label" data-en="Policy positions" data-es="Posiciones de política">Policy positions</span></div>
+      </div>
+    </div>
   </div>
   <div class="chat-input-wrap">
     <div class="row"><input id="input" type="text" placeholder="Ask about counties, indicators, or policies…" data-en-placeholder="Ask about counties, indicators, or policies…" data-es-placeholder="Pregunta sobre condados, indicadores o políticas…" autofocus><button id="send" class="btn btn-primary" data-en="Send" data-es="Enviar">Send</button></div>
@@ -296,6 +343,87 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   refreshSuggestions();
 
+  // ── Live-derived stats (aggregate-first empty state) ──────────────────
+  // The cold "Ask the Data" screen used to be a title + one intro line +
+  // six suggestion chips floating ~542px above the input on a 1440x1024
+  // screen (measured via getBoundingClientRect before this change — see
+  // PIP brief 2026-07-29). This fills that gap with real counts instead
+  // of decoration, and replaces the two numbers hand-typed into the intro
+  // sentence (72 counties, 85 policy positions — see #chat-intro's markup
+  // comment) with numbers read from the same API the chat itself queries,
+  // so they can't drift the way a hardcoded catalog count already has
+  // once on this site (commit dc84998).
+  //
+  // Graceful degradation is structural, not an afterthought: every
+  // element this touches already has a correct, reasonable fallback
+  // baked into the static HTML — the four stat tiles start `hidden`, and
+  // the two inline number spans keep their last-known-correct literal
+  // ("72"/"85"). A failed or partial fetch just leaves those alone: no
+  // broken widget, no NaN, no spinner that never resolves (there is no
+  // spinner here at all — nothing shows until the numbers are ready).
+  function loadChatStats() {
+    function getJSON(url) {
+      return fetch(url).then(function (r) {
+        if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        return r.json();
+      });
+    }
+    Promise.allSettled([
+      getJSON('/v1/policy/geographies?level=county&state_fips=55&limit=1'),
+      getJSON('/v1/policy/variables'),
+      getJSON('/v1/policy/sources'),
+      getJSON('/v1/policy/policies?limit=1000')
+    ]).then(function (results) {
+      var counties = results[0], variables = results[1], sources = results[2], policies = results[3];
+      // All-or-nothing: a 4-tile row with one tile stuck on the loading
+      // dash would read as broken, not degraded. Since all four requests
+      // share one origin and one proxy hop, they fail together in
+      // practice (see verification: page.route('**/v1/policy/**').abort()
+      // takes out all four at once) — this branch is the real fallback
+      // path for that case, not a hypothetical.
+      if (counties.status !== 'fulfilled' || variables.status !== 'fulfilled' ||
+          sources.status !== 'fulfilled' || policies.status !== 'fulfilled') {
+        return;
+      }
+      var countyCount = counties.value && counties.value.total != null
+        ? counties.value.total : ((counties.value && counties.value.items) || []).length;
+      var varCount = variables.value && variables.value.total != null
+        ? variables.value.total : ((variables.value && variables.value.variables) || []).length;
+      var sourceCount = sources.value && sources.value.total != null
+        ? sources.value.total : ((sources.value && sources.value.sources) || []).length;
+      var policyList = (policies.value && policies.value.policies) || [];
+      var policyCount = policyList.length || (policies.value && policies.value.total) || 0;
+
+      // Zero on any of these reads as "the API answered but the catalog
+      // is empty", which is never actually true for this dataset and
+      // more likely means a shape change upstream — safer to keep the
+      // static fallback than assert a zero.
+      if (!countyCount || !varCount || !sourceCount || !policyCount) { return; }
+
+      var countiesInline = document.getElementById('stat-counties-inline');
+      var policiesInline = document.getElementById('stat-policies-inline');
+      var elCounties = document.getElementById('stat-counties');
+      var elIndicators = document.getElementById('stat-indicators');
+      var elSources = document.getElementById('stat-sources');
+      var elPolicies = document.getElementById('stat-policies');
+      var statsRow = document.getElementById('chat-stats');
+      if (!countiesInline || !policiesInline || !elCounties || !elIndicators ||
+          !elSources || !elPolicies || !statsRow) { return; }
+
+      countiesInline.textContent = String(countyCount);
+      policiesInline.textContent = String(policyCount);
+      elCounties.textContent = String(countyCount);
+      elIndicators.textContent = String(varCount);
+      elSources.textContent = String(sourceCount);
+      elPolicies.textContent = String(policyCount);
+      statsRow.removeAttribute('hidden');
+    });
+    // Promise.allSettled never rejects its own promise, and the .then
+    // above never throws (every property access is guarded), so there is
+    // deliberately no .catch() here — nothing to swallow.
+  }
+  loadChatStats();
+
   function add(role, txt) {
     var d = document.createElement('div');
     d.className = 'msg ' + role;
@@ -309,6 +437,13 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       d.textContent = txt;
     }
     msgs.appendChild(d);
+    // Once a real message joins the original system greeting, this is no
+    // longer the cold empty state — drop the centering so a growing
+    // transcript scrolls top-anchored like an ordinary chat, not centered
+    // around a single bubble. Self-maintaining: keys off child count
+    // rather than role, so it also fires for the very first assistant
+    // reply if that somehow lands before any user bubble does.
+    if (msgs.children.length > 1) { msgs.classList.remove('is-empty'); }
     msgs.scrollTop = msgs.scrollHeight;
     return d;
   }

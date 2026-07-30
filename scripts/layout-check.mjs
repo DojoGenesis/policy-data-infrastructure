@@ -47,6 +47,13 @@ const LANGS = ['en', 'es'];   // Spanish runs ~15-20% longer and breaks layouts 
 const PAGES = [
   { path: '/', label: 'landing', setup: null },
   { path: '/county?geoid=55025', label: 'county profile', setup: null },
+  /* BOTH compare states. The loaded one is where the 1,216px overflow lived,
+     but bare /compare is no longer an empty prompt — it renders statewide
+     distribution strips and derived entry points on load. Same shape of page
+     this script was written for (real content behind zero interaction, just
+     fetch-triggered rather than click-triggered), so it needs its own row or
+     the checker recreates the exact blind spot it exists to close. */
+  { path: '/compare', label: 'compare (empty -> aggregate)', setup: null },
   { path: '/compare?geoid1=55025&geoid2=55079', label: 'compare (RESULTS)', setup: null },
   { path: '/evidence', label: 'evidence', setup: null },
   { path: '/candidates', label: 'candidates', setup: null },
