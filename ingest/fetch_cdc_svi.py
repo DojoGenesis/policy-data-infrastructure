@@ -26,20 +26,57 @@ import urllib.request
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "analysis", "output")
 
-# CDC SVI CSV download base URLs. The actual filenames are versioned by year.
-# These are the publicly documented download paths from:
-#   https://www.atsdr.cdc.gov/placeandhealth/svi/data_documentation_download.html
-SVI_BASE_URL = "https://svi.cdc.gov/Documents/Data"
-SVI_FILES = {
-    2022: {
-        "county": "SVI_2022_US_county.csv",
-        "tract":  "SVI_2022_US_tract.csv",
-    },
-    2020: {
-        "county": "SVI2020_US_county.csv",
-        "tract":  "SVI2020_US_tract.csv",
-    },
+# CDC SVI download endpoint.
+#
+# REPOINTED 2026-07-30. The previous base — https://svi.cdc.gov/Documents/Data
+# with static filenames like SVI_2022_US_county.csv — is dead. Every path under
+# it 404s, which is why this source had metadata registered in indicator_meta
+# and ZERO rows in indicators: the script had never successfully fetched.
+#
+# CDC moved the downloads to a React app on a NEW HOST (svi2.cdc.gov) that
+# serves files from a query-parameter webapi rather than static paths. The new
+# host is a single-page app, so it answers 200 with its HTML shell for ANY
+# path — probing it with a HEAD/GET status check reports success while
+# returning no data at all. Same shape as the Census keyless-redirect trap
+# CLAUDE.md documents: the failure presents as a parse error on HTML, not as
+# a 404. Verify a fetch by Content-Type and by parsing a row, never by status.
+#
+# Endpoint (extracted from the app bundle at
+# https://svi2.cdc.gov/data-downloads/assets/main-*.js):
+#
+#   https://svi2.cdc.gov/webapi/Documents/download
+#       ?year=<YYYY>&type=csv&category=<category>&name=<NAME>
+#
+#   category=states_counties  name=<STATE>_COUNTY   -> county rows
+#   category=states           name=<STATE>          -> tract rows
+#   category=zcta             name=<STATE>_ZCTA     -> ZCTA rows (2022 only)
+#   nationwide uses name=SVI_<year>_US
+#
+# NAME is uppercased and space-free ("NEWYORK", "DISTRICTOFCOLUMBIA").
+# Verified 2026-07-30: Wisconsin county -> 72 data rows, tract -> 1,528 rows,
+# both Content-Type: text/csv.
+#
+# Ranking scope matters and is why this is fetched per state rather than
+# sliced from the national file: within a state download, tracts/counties are
+# ranked against others IN THAT STATE. The national file ranks against the
+# whole country. Those are different numbers with the same column names.
+SVI_BASE_URL = "https://svi2.cdc.gov/webapi/Documents/download"
+
+# Category + name-suffix per geography level.
+SVI_CATEGORY = {
+    "county": ("states_counties", "_COUNTY"),
+    "tract":  ("states", ""),
 }
+
+# Years the endpoint serves. ZCTA exists only for 2022.
+SVI_YEARS = [2022, 2020, 2018, 2016, 2014, 2010, 2000]
+
+
+def svi_url(year: int, level: str, state_name: str = "WISCONSIN") -> str:
+    """Build the CDC SVI download URL for a state at a geography level."""
+    category, suffix = SVI_CATEGORY[level]
+    name = (state_name + suffix).upper().replace(" ", "")
+    return f"{SVI_BASE_URL}?year={year}&type=csv&category={category}&name={name}"
 
 # CDC SVI column names → PDI variable IDs and display labels.
 # E_TOTPOP is total population for denominator checks.
@@ -99,21 +136,21 @@ def print_plan(args: argparse.Namespace) -> None:
     year = args.year
     level = args.level
 
-    if year not in SVI_FILES:
+    if year not in SVI_YEARS:
         print(f"[dry-run] ERROR: Year {year} not in known SVI release years: "
-              f"{sorted(SVI_FILES.keys())}")
+              f"{sorted(SVI_YEARS)}")
         sys.exit(1)
 
-    if level not in SVI_FILES[year]:
-        print(f"[dry-run] ERROR: Level '{level}' not available for year {year}. "
-              f"Available: {sorted(SVI_FILES[year].keys())}")
+    if level not in SVI_CATEGORY:
+        print(f"[dry-run] ERROR: Level '{level}' not supported. "
+              f"Available: {sorted(SVI_CATEGORY.keys())}")
         sys.exit(1)
 
-    filename = SVI_FILES[year][level]
+    url = svi_url(year, level)
     output_file = os.path.join(OUTPUT_DIR, f"svi_{year}_{level}.csv")
 
     print("[dry-run] CDC SVI fetch plan")
-    print(f"  URL       : {SVI_BASE_URL}/{filename}")
+    print(f"  URL       : {url}")
     print(f"  Year      : {year}")
     print(f"  Geo level : {level}")
     print(f"  Variables : {', '.join(PDI_VARIABLES)}")
@@ -134,14 +171,13 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
     year = args.year
     level = args.level
 
-    if year not in SVI_FILES:
-        raise ValueError(f"Year {year} not in known SVI release years: {sorted(SVI_FILES.keys())}")
+    if year not in SVI_YEARS:
+        raise ValueError(f"Year {year} not in known SVI release years: {sorted(SVI_YEARS)}")
 
-    if level not in SVI_FILES[year]:
-        raise ValueError(f"Level '{level}' not available for year {year}")
+    if level not in SVI_CATEGORY:
+        raise ValueError(f"Level '{level}' not supported: {sorted(SVI_CATEGORY.keys())}")
 
-    filename = SVI_FILES[year][level]
-    url = f"{SVI_BASE_URL}/{filename}"
+    url = svi_url(year, level)
     stream = None
 
     print(f"Fetching CDC SVI {year} ({level}-level)...")
