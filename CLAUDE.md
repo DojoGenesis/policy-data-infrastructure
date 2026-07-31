@@ -82,7 +82,10 @@ The Makefile ldflags target `cmd/pdi.Version` is wrong — version vars live in 
 - First run of ANY new script MUST use `--dry-run`
 
 ### Environment variables
-- `PDI_DATABASE_URL` — PostgreSQL connection (default: postgres://pdi:pdi@localhost:5432/pdi)
+- `PDI_DATABASE_URL` — PostgreSQL connection. **Local PDI Postgres is on 5434**, set in `.env`
+  (`PDI_DB_PORT=5434`), which `ingest/lib/db.py` loads. Port 5432 is usually a different
+  project's container — a loader pointed there writes successfully into the wrong database.
+  `get_conn()` refuses a target with no `geographies` table for exactly this reason.
 - `CENSUS_API_KEY` — Census Bureau (500 req/min with key, 45 without)
 - `BLS_API_KEY` — BLS (500 series/req with key, 25 without)
 - `CDC_PLACES_APP_TOKEN` — CDC PLACES / Socrata app token
@@ -155,7 +158,8 @@ Before debugging null values:
 
 ## Database Connection
 - Connection string via `--db` flag or `PDI_DATABASE_URL` environment variable
-- Default: `postgres://pdi:pdi@localhost:5432/pdi?sslmode=disable`
+- Local: `postgres://pdi:pdi@localhost:5434/pdi?sslmode=disable` (the `5432` in the code default
+  is a fallback only — `.env` is authoritative and is loaded by `ingest/lib/db.py`)
 - All queries use `pgx/v5` pool; never open raw `database/sql` connections
 - VPS PostGIS: `psql -h 5.161.84.125 -U pdi -d pdi` (key: dojo_deploy_ed25519)
 

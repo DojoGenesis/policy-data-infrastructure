@@ -4,6 +4,7 @@ import os
 
 import psycopg
 
+# .env is applied by lib/__init__.py at package import — see the note there.
 # Default matches the convention in policy-data-infrastructure/CLAUDE.md
 DATABASE_URL = os.environ.get(
     "PDI_DATABASE_URL",
@@ -11,9 +12,39 @@ DATABASE_URL = os.environ.get(
 )
 
 
-def get_conn() -> psycopg.Connection:
-    """Open and return a psycopg connection using PDI_DATABASE_URL."""
-    return psycopg.connect(DATABASE_URL)
+def _describe(conn: psycopg.Connection) -> str:
+    """host:port/dbname for the open connection, for error messages."""
+    info = conn.info
+    return f"{info.host}:{info.port}/{info.dbname}"
+
+
+def get_conn(verify: bool = True) -> psycopg.Connection:
+    """Open a connection to PDI's database, refusing to hand back a stranger's.
+
+    ``verify`` checks that the target actually carries PDI's schema. It is on by
+    default because the failure it catches is silent: a loader pointed at the
+    wrong Postgres writes 1,542 Wisconsin tracts into an unrelated database and
+    reports success. Pass ``verify=False`` only for a connection opened before
+    migrations have run.
+    """
+    conn = psycopg.connect(DATABASE_URL)
+    if not verify:
+        return conn
+    with conn.cursor() as cur:
+        cur.execute("select to_regclass('public.geographies')")
+        found = cur.fetchone()[0]
+    if found is None:
+        target = _describe(conn)
+        conn.close()
+        raise RuntimeError(
+            f"{target} has no 'geographies' table, so it is not PDI's database "
+            f"(or migrations have not run).\n"
+            f"  Resolved from: PDI_DATABASE_URL\n"
+            f"  PDI's Postgres listens on 5434 — port 5432 is usually another "
+            f"project's container.\n"
+            f"  Fix: check .env, then run `go run ./cmd/pdi migrate up`."
+        )
+    return conn
 
 
 # ---------------------------------------------------------------------------

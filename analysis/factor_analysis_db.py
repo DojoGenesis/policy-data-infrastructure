@@ -39,10 +39,10 @@ if hasattr(_fa_utils, "check_array"):
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "output")
 
-DATABASE_URL = os.environ.get(
-    "PDI_DATABASE_URL",
-    "postgres://pdi:pdi@localhost:5432/pdi?sslmode=disable",
-)
+# Connection resolution lives in ingest/lib/db.py — see the note there on why
+# the port-5432 default is dangerous. This file used to carry its own copy of
+# that constant; two other files did too, and all three drifted from .env.
+sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "ingest"))
 
 # Feature definitions: (variable_id_in_db, feature_name_for_matrix)
 CDC_FEATURES = [
@@ -68,7 +68,8 @@ SCORES_CSV = os.path.join(OUTPUT_DIR, "factor_scores.csv")
 
 
 def get_conn():
-    return psycopg.connect(DATABASE_URL)
+    from lib.db import get_conn as _get_conn
+    return _get_conn()
 
 
 def fetch_cdc(conn) -> dict[str, dict[str, float]]:

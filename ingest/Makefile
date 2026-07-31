@@ -9,7 +9,9 @@
 # Optional env vars:
 #   GEO_LEVEL   — tract (default) | block_group | county | state
 #   TIGER_LEVELS — space-separated list: tract county (default: tract)
-#   PDI_DATABASE_URL — postgres://... (default: postgres://pdi:pdi@localhost:5432/pdi)
+#   PDI_DATABASE_URL — postgres://... Leave it unset: lib/db.py reads the repo's
+#                      .env, which is authoritative (PDI's Postgres is on 5434;
+#                      5432 is usually another project's container).
 #   CENSUS_API_KEY   — Census Bureau API key (optional; raises rate limit)
 #
 # Examples:

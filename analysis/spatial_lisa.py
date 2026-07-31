@@ -35,10 +35,10 @@ import pandas as pd
 import libpysal
 from esda.moran import Moran_Local
 
-DATABASE_URL = os.environ.get(
-    "PDI_DATABASE_URL",
-    "postgres://pdi:pdi@localhost:5432/pdi?sslmode=disable",
-)
+# Connection resolution lives in ingest/lib/db.py — see the note there on why
+# the port-5432 default is dangerous. This file used to carry its own copy of
+# that constant; two other files did too, and all three drifted from .env.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ingest"))
 
 # Default variables to run LISA on.
 DEFAULT_VARIABLES = [
@@ -53,9 +53,9 @@ CLUSTER_LABELS = {1: "HH", 2: "LL", 3: "HL", 4: "LH"}
 
 
 def get_conn():
-    """Lazy import to avoid psycopg dependency for dry-run."""
-    import psycopg
-    return psycopg.connect(DATABASE_URL)
+    """Lazy import to avoid a psycopg dependency for dry-run."""
+    from lib.db import get_conn as _get_conn
+    return _get_conn()
 
 
 def fetch_tract_data(state_fips: str, variable_ids: list[str], atlas_dir: str = None) -> gpd.GeoDataFrame:
