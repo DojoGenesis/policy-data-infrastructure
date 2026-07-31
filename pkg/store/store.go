@@ -277,6 +277,13 @@ type Store interface {
 	// Metadata operations
 	QueryVariables(ctx context.Context) ([]VariableMeta, error)
 
+	// CountSourcesWithData returns how many distinct sources have at least one
+	// stored indicator row. This is smaller than the number of registered
+	// sources, and much smaller than the number of shipped adapters: a source
+	// can be catalogued, and have every one of its variables described, while
+	// holding no data at all. Distinguishing the two is ADR-014's central point.
+	CountSourcesWithData(ctx context.Context) (int, error)
+
 	// RegisterSource upserts a source row and its variable definitions in one
 	// transaction, in FK order. Indicators reference indicator_meta, which
 	// references indicator_sources, so a fetch that writes indicators without

@@ -175,6 +175,10 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID string, ti
 	return out, nil
 }
 
+func (m *mockStore) CountSourcesWithData(_ context.Context) (int, error) {
+	return 0, nil
+}
+
 func (m *mockStore) RegisterSource(_ context.Context, _ store.SourceMeta, _ []store.VariableMeta) error {
 	return nil
 }

@@ -657,6 +657,22 @@ WHERE il.variable_id = $1
 
 // QueryVariables returns all indicator_meta rows joined with their source name.
 // Results are ordered by variable_id. An empty table returns an empty slice, not an error.
+// CountSourcesWithData counts distinct sources holding at least one indicator
+// row. It joins through indicator_meta because indicators carry a variable_id,
+// not a source_id.
+func (s *PostgresStore) CountSourcesWithData(ctx context.Context) (int, error) {
+	const q = `
+SELECT count(DISTINCT im.source_id)
+FROM indicators i
+JOIN indicator_meta im ON im.variable_id = i.variable_id`
+
+	var n int
+	if err := s.pool.QueryRow(ctx, q).Scan(&n); err != nil {
+		return 0, fmt.Errorf("store: CountSourcesWithData: %w", err)
+	}
+	return n, nil
+}
+
 // RegisterSource upserts one indicator_sources row and its indicator_meta rows
 // inside a single transaction, parent first.
 //

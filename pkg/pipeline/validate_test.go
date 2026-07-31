@@ -50,6 +50,10 @@ func (m *mockValidateStore) PutAnalysisScores(_ context.Context, _ []store.Analy
 func (m *mockValidateStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) CountSourcesWithData(_ context.Context) (int, error) {
+	return 0, nil
+}
+
 func (m *mockValidateStore) RegisterSource(_ context.Context, _ store.SourceMeta, _ []store.VariableMeta) error {
 	return nil
 }

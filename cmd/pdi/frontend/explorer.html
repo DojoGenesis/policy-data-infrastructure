@@ -173,11 +173,22 @@ window.__pdiMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed'
         var elVariables = document.getElementById('stat-variables');
         if (varCount && elVariables) { elVariables.textContent = String(varCount); }
       }
+      /* This badge reads "data sources" next to a map of real county data, so
+         it must be the count of sources actually serving rows — sources_with_data.
+         The obvious field, "total", is the number of source ADAPTERS this binary
+         ships (9), which stays 9 against a completely empty database. The next
+         most obvious, "sources_loaded", counts sources whose variables are
+         described in indicator_meta (6), and two of those hold zero rows.
+         Measured on the live API: total 9, sources_loaded 6, sources_with_data 3.
+         Only the last one is true of what a visitor can actually explore.
+         *_ok distinguishes a real 0 from a failed lookup; on failure, leave the
+         "—" placeholder rather than render a number we cannot stand behind. */
       if (sources.status === 'fulfilled') {
-        var sourceCount = sources.value && sources.value.total != null
-          ? sources.value.total : ((sources.value && sources.value.sources) || []).length;
+        var sv = sources.value || {};
+        var sourceCount = (sv.sources_with_data_ok && sv.sources_with_data != null)
+          ? sv.sources_with_data : null;
         var elSources = document.getElementById('stat-sources');
-        if (sourceCount && elSources) { elSources.textContent = String(sourceCount); }
+        if (sourceCount != null && elSources) { elSources.textContent = String(sourceCount); }
       }
     });
   })();

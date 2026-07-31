@@ -925,11 +925,27 @@ func (p *PolicyPlugin) handleListSources(c *gin.Context) {
 		sourcesLoaded = len(distinct)
 	}
 
+	// sources_with_data: the only one of these three counts that answers "how
+	// many sources is this platform actually serving?" A source can be shipped
+	// as an adapter (counted in "total"), have every variable it produces
+	// described in indicator_meta (counted in "sources_loaded"), and still hold
+	// zero rows — fbi-nibrs and fcc-broadband are both in exactly that state.
+	// Anything rendering a user-facing "data sources" figure wants this one.
+	sourcesWithData := 0
+	sourcesWithDataOK := true
+	if n, err := p.store.CountSourcesWithData(c.Request.Context()); err != nil {
+		sourcesWithDataOK = false
+	} else {
+		sourcesWithData = n
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"sources":           sources,
-		"total":             len(sources),
-		"sources_loaded":    sourcesLoaded,
-		"sources_loaded_ok": sourcesLoadedOK,
+		"sources":              sources,
+		"total":                len(sources),
+		"sources_loaded":       sourcesLoaded,
+		"sources_loaded_ok":    sourcesLoadedOK,
+		"sources_with_data":    sourcesWithData,
+		"sources_with_data_ok": sourcesWithDataOK,
 	})
 }
 
