@@ -1,6 +1,9 @@
 package datasource
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestFCCBroadbandNewSource validates the adapter's identity metadata.
 func TestFCCBroadbandNewSource(t *testing.T) {
@@ -80,24 +83,39 @@ func TestFCCBroadbandInterface(t *testing.T) {
 	var _ DataSource = NewFCCBroadbandSource(FCCBroadbandConfig{Year: 2024})
 }
 
-// TestFCCBroadbandFetch_Noop verifies FetchCounty and FetchState return nil, nil
-// (the Go adapter delegates to the Python ingest path).
-func TestFCCBroadbandFetch_Noop(t *testing.T) {
+// TestFCCBroadbandFetchCounty_NotImplemented verifies FetchCounty returns an
+// explicit HTTP 501 not-implemented error and a nil slice, rather than the
+// silent nil, nil success that let a source which cannot load look
+// identical to a source that legitimately found no rows.
+func TestFCCBroadbandFetchCounty_NotImplemented(t *testing.T) {
 	s := NewFCCBroadbandSource(FCCBroadbandConfig{Year: 2024})
 
 	indicators, err := s.FetchCounty(nil, "55", "025")
-	if err != nil {
-		t.Errorf("FetchCounty: unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("FetchCounty: want error (HTTP 501 not implemented), got nil")
+	}
+	if !strings.Contains(err.Error(), "not implemented") {
+		t.Errorf("FetchCounty: error should say %q, got: %v", "not implemented", err)
 	}
 	if indicators != nil {
-		t.Errorf("FetchCounty: want nil, got %d indicators", len(indicators))
+		t.Errorf("FetchCounty: want nil slice, got %d indicators", len(indicators))
 	}
+}
 
-	indicators, err = s.FetchState(nil, "55")
-	if err != nil {
-		t.Errorf("FetchState: unexpected error: %v", err)
+// TestFCCBroadbandFetchState_NotImplemented verifies FetchState returns an
+// explicit HTTP 501 not-implemented error and a nil slice. Same rationale as
+// TestFCCBroadbandFetchCounty_NotImplemented.
+func TestFCCBroadbandFetchState_NotImplemented(t *testing.T) {
+	s := NewFCCBroadbandSource(FCCBroadbandConfig{Year: 2024})
+
+	indicators, err := s.FetchState(nil, "55")
+	if err == nil {
+		t.Fatal("FetchState: want error (HTTP 501 not implemented), got nil")
+	}
+	if !strings.Contains(err.Error(), "not implemented") {
+		t.Errorf("FetchState: error should say %q, got: %v", "not implemented", err)
 	}
 	if indicators != nil {
-		t.Errorf("FetchState: want nil, got %d indicators", len(indicators))
+		t.Errorf("FetchState: want nil slice, got %d indicators", len(indicators))
 	}
 }

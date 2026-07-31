@@ -8,10 +8,17 @@ package datasource
 // Source: https://www.fcc.gov/form-477-county-data-internet-access-services
 //
 // The FCC publishes Form 477 data semi-annually (June and December releases)
-// as CSV downloads. No API key is required. The Go adapter currently delegates
-// bulk ingestion to the Python helper script at ingest/fetch_fcc_broadband.py
-// and returns a placeholder at the Go interface level to make the source
-// visible in the pipeline while the Go-native parser is built.
+// as bulk ZIP downloads (e.g. county_connections_200906_202506.zip). The
+// program is not retired — data runs through June 2025 — but www.fcc.gov
+// returns HTTP 403 to every programmatic request (it sits behind a WAF that
+// requires a real browser session), and the Python helper script at
+// ingest/fetch_fcc_broadband.py is not currently a working fallback either
+// (its configured source URL is stale). FetchCounty and FetchState return an
+// explicit "not implemented" error rather than a silent empty result, per
+// this repo's rule of making gaps visible, not silent. Bulk ingestion is
+// blocked on an operator decision (manual download, browser automation, or
+// an alternate source such as the BDC API at broadbandmap.fcc.gov) — see
+// TODO.md for the full writeup.
 //
 // Variables produced:
 //
@@ -70,8 +77,8 @@ func NewFCCBroadbandSource(cfg FCCBroadbandConfig) *fccBroadbandSource {
 }
 
 func (s *fccBroadbandSource) Name() string     { return "fcc-broadband" }
-func (s *fccBroadbandSource) Category() string  { return "infrastructure" }
-func (s *fccBroadbandSource) Vintage() string   { return s.vintage }
+func (s *fccBroadbandSource) Category() string { return "infrastructure" }
+func (s *fccBroadbandSource) Vintage() string  { return s.vintage }
 
 func (s *fccBroadbandSource) Schema() []VariableDef {
 	out := make([]VariableDef, len(fccBroadbandVariables))
@@ -79,30 +86,33 @@ func (s *fccBroadbandSource) Schema() []VariableDef {
 	return out
 }
 
-// FetchCounty returns a placeholder for Go-native fetch.
+// FetchCounty is not implemented for FCC Broadband via this Go adapter.
 //
-// The FCC Form 477 county-level CSV download is large (~50 MB for the full
-// national file) and is handled by the Python ingest script at
-// ingest/fetch_fcc_broadband.py. This method returns a nil slice with no error
-// so that the pipeline does not abort when this source is included in a fetch
-// command — the Python path is the recommended bulk ingestion method.
-//
-// TODO: Implement Go-native CSV parser for the FCC county-level download
-// when the Go adapter path is preferred over the Python ingestion pipeline.
+// FCC Form 477 county-level bulk data cannot be fetched automatically today:
+// www.fcc.gov returns HTTP 403 to every programmatic request (verified from
+// multiple IPs and browser User-Agents — it requires a real browser
+// session), and the Python helper script at ingest/fetch_fcc_broadband.py is
+// not a working fallback either (its configured source URL is stale). This
+// is an operator decision, not a Go-native parser to build — see TODO.md.
 func (s *fccBroadbandSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS string) ([]store.Indicator, error) {
-	// Python ingest path is the primary method for now.
-	// Return empty so the pipeline doesn't block but also doesn't silently
-	// load stale/nil data.
-	return nil, nil
+	return nil, fmt.Errorf(
+		"fcc-broadband: FetchCounty not implemented (HTTP 501): " +
+			"FCC Form 477 bulk data is blocked from automated fetch — www.fcc.gov 403s all " +
+			"programmatic requests behind its WAF, and ingest/fetch_fcc_broadband.py is not a " +
+			"working fallback (stale source URL). Ingestion needs an operator decision; see TODO.md",
+	)
 }
 
-// FetchState returns a placeholder for Go-native fetch.
+// FetchState is not implemented for FCC Broadband via this Go adapter.
 //
-// Same rationale as FetchCounty. The Python ingest script
-// (ingest/fetch_fcc_broadband.py) handles the full national CSV download and
-// bulk load.
-//
-// TODO: Implement Go-native CSV parser for state-level aggregation.
+// Same rationale as FetchCounty: FCC Form 477 bulk data is blocked from
+// automated fetch by www.fcc.gov's WAF, and the Python helper script is not
+// currently a working fallback. See TODO.md for the blocker and options.
 func (s *fccBroadbandSource) FetchState(ctx context.Context, stateFIPS string) ([]store.Indicator, error) {
-	return nil, nil
+	return nil, fmt.Errorf(
+		"fcc-broadband: FetchState not implemented (HTTP 501): " +
+			"FCC Form 477 bulk data is blocked from automated fetch — www.fcc.gov 403s all " +
+			"programmatic requests behind its WAF, and ingest/fetch_fcc_broadband.py is not a " +
+			"working fallback (stale source URL). Ingestion needs an operator decision; see TODO.md",
+	)
 }
