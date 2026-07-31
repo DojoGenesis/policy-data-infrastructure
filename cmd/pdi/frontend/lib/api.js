@@ -1,4 +1,20 @@
 // lib/api.js — API port adapter. ONLY file that calls fetch(). All calls are cached.
+//
+// EXPORT IDIOM: `PDI` is a top-level `const` in this classic (non-module)
+// script — a script-scoped lexical binding, reachable by the bare name `PDI`
+// from any other classic <script> on the same page (and via `typeof PDI !==
+// 'undefined'` as the existence probe), but NEVER present as `window.PDI` on
+// its own. This file ALSO assigns a window property below, for any consumer
+// that specifically needs one — deliberately named `window.PDIApi`, NOT
+// `window.PDI`, because `window.PDI` is already claimed by explorer-app.js's
+// unrelated /explorer test-surface object (selectCounty/filterCounties/
+// state/api). Both forms resolve to the SAME object; this is additive, not a
+// replacement. Same idiom in lib/domain.js (`Domain` / `window.Domain`) and
+// lib/chat.js (`ChatAdapter` / `window.ChatAdapter`) — those two bare names
+// have no existing window collision, so their window key matches the bare
+// name. A future lib/acs.js should follow this: bare top-level `const`, plus
+// a `window.<Name>` assignment confirmed not to collide with `window.PDI`
+// (explorer-app.js) or `window.PDIDeepLink` (lib/deeplink.js).
 const PDI = {
   _cache: {},
   _varMeta: null,
@@ -144,3 +160,7 @@ const PDI = {
     this._policies = null;
   }
 };
+
+// See the EXPORT IDIOM note at the top of this file. window.PDI is
+// deliberately NOT used here — it is already claimed by explorer-app.js.
+window.PDIApi = PDI;

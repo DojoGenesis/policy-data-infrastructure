@@ -1,4 +1,23 @@
 // lib/chat.js — Chat adapter with full data grounding for the Dojo Gateway.
+//
+// EXPORT IDIOM: `ChatAdapter` is a top-level `const` in this classic
+// (non-module) script — a script-scoped lexical binding, reachable by the
+// bare name `ChatAdapter` from any other classic <script> on the same page
+// (and via `typeof ChatAdapter !== 'undefined'` as the existence probe — see
+// chat.html's `hasAdapter()`), but NEVER present as `window.ChatAdapter` on
+// its own. This file ALSO assigns `window.ChatAdapter` below, for any
+// consumer that specifically needs a window property. Both forms resolve to
+// the SAME object; this is additive, not a replacement — every existing bare
+// `ChatAdapter.` call site and `typeof ChatAdapter` probe in chat.html keeps
+// working unchanged. Same idiom in lib/api.js (`PDI` / `window.PDIApi` —
+// renamed there to avoid colliding with explorer-app.js's unrelated
+// `window.PDI`) and lib/domain.js (`Domain` / `window.Domain`).
+//
+// NOTE: chat.html carries a comment (just above its hasAdapter() helper)
+// stating that probing window.ChatAdapter "yields undefined forever." That
+// was accurate before this change; it is now stale, since window.ChatAdapter
+// resolves as of this file. chat.html is a consumer page outside this file's
+// ownership, so the comment was left as-is rather than edited.
 const ChatAdapter = {
   _sessionId: 'pdi-web-' + Date.now().toString(36),
   _proxyAvailable: null,
@@ -805,3 +824,6 @@ ${this._buildPageContextBlock()}`;
     return h;
   }
 };
+
+// See the EXPORT IDIOM note at the top of this file.
+window.ChatAdapter = ChatAdapter;

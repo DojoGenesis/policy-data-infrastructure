@@ -1,4 +1,15 @@
 // lib/domain.js — Formatting, tier logic, wiki-link resolution. No fetch() calls.
+//
+// EXPORT IDIOM: `Domain` is a top-level `const` in this classic (non-module)
+// script — a script-scoped lexical binding, reachable by the bare name
+// `Domain` from any other classic <script> on the same page (and via
+// `typeof Domain !== 'undefined'` as the existence probe), but NEVER present
+// as `window.Domain` on its own. This file ALSO assigns `window.Domain`
+// below, for any consumer that specifically needs a window property. Both
+// forms resolve to the SAME object; this is additive, not a replacement.
+// Same idiom in lib/api.js (`PDI` / `window.PDIApi` — renamed there to avoid
+// colliding with explorer-app.js's unrelated `window.PDI`) and lib/chat.js
+// (`ChatAdapter` / `window.ChatAdapter`).
 const Domain = {
 
   // ── Value Formatting ───────────────────────────────────────────────────────
@@ -169,3 +180,6 @@ const Domain = {
     };
   }
 };
+
+// See the EXPORT IDIOM note at the top of this file.
+window.Domain = Domain;
