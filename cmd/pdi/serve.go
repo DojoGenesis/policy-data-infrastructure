@@ -213,7 +213,11 @@ func runServe(port int) error {
 		{"/compare", "compare.html"},
 		{"/evidence", "evidence.html"},
 		{"/candidates", "candidates.html"},
+		// /map serves the LISA cluster map (map.html); /explorer serves the
+		// county explorer (explorer.html). Two different pages — they must
+		// not be merged into aliases of one file again.
 		{"/map", "map.html"},
+		{"/explorer", "explorer.html"},
 		{"/narrative", "narrative.html"},
 		{"/about", "about.html"},
 		{"/composite", "composites.html"},

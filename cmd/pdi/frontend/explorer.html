@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+if(d.hidden){r.classList.add('motion-failed');}
+window.__pdiMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed');},2000);})(document);</script>
+<style>html.motion-failed .reveal,html.motion-failed .reveal.in{opacity:1!important;transform:none!important;transition:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDI — Policy Data Infrastructure Explorer</title>
+<meta name="description" content="Interactive map explorer for Wisconsin health, economic, and demographic indicators. Click a county to see its real per-county data, drawn from the platform's indicator catalog.">
+
+<link rel="canonical" href="https://policydatainfrastructure.com/explorer">
+<link rel="alternate" hreflang="en" href="https://policydatainfrastructure.com/explorer">
+<link rel="alternate" hreflang="es" href="https://policydatainfrastructure.com/es/explorer">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "DataCatalog",
+  "name": "Policy Data Infrastructure",
+  "description": "Wisconsin health, economic, and demographic indicators",
+  "url": "https://policydatainfrastructure.com/explorer",
+  "inLanguage": ["en", "es"]
+}
+</script>
+
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/motion.css">
+<link rel="stylesheet" href="/static/explorer-styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <nav class="nav wrap" aria-label="Primary">
+    <a class="nav-brand" href="/" title="Policy Data Infrastructure">PDI <span>· Wisconsin</span></a>
+    <ul class="nav-links">
+      <li><a href="/" data-en="Home" data-es="Inicio">Home</a></li>
+      <li><a href="#main" data-en="Map" data-es="Mapa">Map</a></li>
+      <li><a href="/evidence" data-en="Evidence" data-es="Evidencia">Evidence</a></li>
+      <li><a href="/candidates" data-en="Candidates" data-es="Candidatos">Candidates</a></li>
+      <li><a href="/compare" data-en="Compare" data-es="Comparar">Compare</a></li>
+      <li><a href="/composite" data-en="Composites" data-es="Compuestos">Composites</a></li>
+      <li><a href="/narrative" data-en="Narrative" data-es="Narrativa">Narrative</a></li>
+      <li><a href="/chat" data-en="Chat" data-es="Chat">Chat</a></li>
+      <li><a href="/about" data-en="About" data-es="Acerca de">About</a></li>
+      <li><button class="btn-theme" id="theme-toggle" aria-label="Toggle dark/light theme">🌙</button></li>
+      <li><a class="lang-link" href="/es/explorer" hreflang="es" lang="es" aria-label="Ver en Español">ES</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+  <section id="top" class="hero">
+    <div class="wrap">
+      <p class="eyebrow reveal" data-en="Wisconsin Policy Data" data-es="Datos de Políticas de Wisconsin">Wisconsin Policy Data</p>
+      <h1 class="reveal" data-en="County Explorer" data-es="Explorador de Condados">County Explorer</h1>
+      <p class="lede reveal" data-en="Click any Wisconsin county to explore its real indicator data — Economic, Health, Housing, Education, Demographic, and more — pulled live from the platform's full data catalog, drawn from multiple authoritative sources." data-es="Haz clic en cualquier condado de Wisconsin para explorar sus datos de indicadores reales — económicos, de salud, vivienda, educación, demográficos y más — extraídos en vivo del catálogo de datos completo de la plataforma, con información de múltiples fuentes autorizadas.">Click any Wisconsin county to explore its real indicator data — Economic, Health, Housing, Education, Demographic, and more — pulled live from the platform's full data catalog, drawn from multiple authoritative sources.</p>
+      <div class="hero-info reveal">
+        <span class="badge"><strong>72</strong> <span data-en="Wisconsin counties" data-es="condados de Wisconsin">Wisconsin counties</span></span>
+        <span class="badge"><strong id="stat-variables">—</strong> <span data-en="catalog variables" data-es="variables del catálogo">catalog variables</span></span>
+        <span class="badge"><strong id="stat-sources">—</strong> <span data-en="data sources" data-es="fuentes de datos">data sources</span></span>
+      </div>
+    </div>
+  </section>
+
+  <div id="explorer-container" class="explorer-layout">
+    <section id="map-section" class="map-panel">
+      <div class="map-header">
+        <h2 data-en="Select a County" data-es="Selecciona un condado">Select a County</h2>
+        <div class="map-controls">
+          <input type="text" id="county-search" class="county-search" placeholder="Search counties..." aria-label="Search counties" data-en-placeholder="Search counties..." data-es-placeholder="Buscar condados..." data-en-aria-label="Search counties" data-es-aria-label="Buscar condados">
+        </div>
+      </div>
+      <div id="map-host" class="map-host" role="region" aria-live="polite" aria-label="Interactive Wisconsin county map">
+        <svg id="county-map" viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="map-title">
+          <title id="map-title">Wisconsin counties choropleth. Click a county to view variables.</title>
+          <defs>
+            <clipPath id="map-clip"><rect x="0" y="0" width="960" height="600"/></clipPath>
+          </defs>
+          <g id="map-counties" clip-path="url(#map-clip)"></g>
+        </svg>
+      </div>
+      <div class="map-footer">
+        <p class="map-status" id="map-status" data-en="Select a county to begin" data-es="Selecciona un condado para comenzar">Select a county to begin</p>
+      </div>
+    </section>
+
+    <aside id="data-sidebar" class="data-sidebar">
+      <div class="sidebar-header">
+        <h2 id="county-title">Wisconsin</h2>
+        <p class="county-meta" id="county-meta"></p>
+        <p class="data-coverage-note" id="data-coverage-note"></p>
+        <button id="close-sidebar" class="btn-close" aria-label="Close sidebar" style="display:none">×</button>
+      </div>
+
+      <div class="sidebar-content">
+        <div id="sidebar-loader" class="loader" style="display:none;">Loading...</div>
+
+        <div id="sidebar-error" class="state-error" style="display:none;">
+          <span id="sidebar-error-message" data-en="Unable to load indicator data for this county right now." data-es="No se pudieron cargar los datos de indicadores para este condado en este momento.">Unable to load indicator data for this county right now.</span>
+          <button id="sidebar-retry" class="btn btn-ghost" type="button" data-en="Retry" data-es="Reintentar">Retry</button>
+        </div>
+
+        <!-- Category sections are built at runtime by explorer-app.js from
+             whatever variable_ids the live API (GET /v1/policy/geographies/
+             :geoid/indicators) actually returns for the selected county —
+             see renderIndicators(). There is no fixed set of categories
+             here anymore: a county's real data decides which of
+             Economic/Health/Housing/Education/Demographic/Environment/
+             Infrastructure/Food Access/Other actually appear. -->
+        <div id="variables-container" class="variables-grid" style="display:none;"></div>
+      </div>
+    </aside>
+  </div>
+
+  <section id="evidence" class="evidence-section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="kicker" data-en="Key Findings" data-es="Hallazgos Clave">Key Findings</p>
+        <h2 data-en="Evidence Cards" data-es="Tarjetas de Evidencia">Evidence Cards</h2>
+        <p data-en="Summary findings and patterns from the selected region." data-es="Resumen de hallazgos y patrones de la región seleccionada.">Summary findings and patterns from the selected region.</p>
+      </div>
+      <div id="evidence-cards" class="evidence-grid reveal">
+        <article class="evidence-card" id="evidence-placeholder">
+          <h3 data-en="Select a county" data-es="Selecciona un condado">Select a county</h3>
+          <p data-en="Click on a county to see key findings and evidence-based insights." data-es="Haz clic en un condado para ver los hallazgos clave y la evidencia disponible.">Click on a county to see key findings and evidence-based insights.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p data-en="Policy Data Infrastructure · Wisconsin health, economic, and demographic indicators" data-es="Policy Data Infrastructure · Indicadores de salud, economía y demografía de Wisconsin">Policy Data Infrastructure · Wisconsin health, economic, and demographic indicators</p>
+    <p class="footer-detail" data-en="Data sources: U.S. Census Bureau (ACS), CDC PLACES, EPA EJScreen, BLS, USDA, Wisconsin Department of Public Instruction" data-es="Fuentes de datos: Oficina del Censo de EE. UU. (ACS), CDC PLACES, EPA EJScreen, BLS, USDA, Departamento de Instrucción Pública de Wisconsin">Data sources: U.S. Census Bureau (ACS), CDC PLACES, EPA EJScreen, BLS, USDA, Wisconsin Department of Public Instruction</p>
+  </div>
+</footer>
+
+<script src="/static/lang-toggle.js"></script>
+<script src="/static/explorer-data.js"></script>
+<script src="/static/bilingual-data.js"></script>
+<script src="/static/theme-toggle.js"></script>
+<script src="/static/motion.js"></script>
+<script src="/static/explorer-app.js"></script>
+<script>
+  /* Runtime stat badges — see the "51 catalog variables" postmortem
+     (commit f0a01d9): a hardcoded hero number drifts from the live
+     catalog the moment either side changes, and nothing catches it.
+     These two badges start at "—" in the markup (see #stat-variables /
+     #stat-sources above) and are filled in here from the same
+     endpoints the rest of the page already trusts. A failed fetch, a
+     non-OK response, or an unexpected response shape just leaves the
+     placeholder in place — no wrong number is ever displayed. */
+  (function () {
+    function getJSON(url) {
+      return fetch(url).then(function (r) {
+        if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        return r.json();
+      });
+    }
+    Promise.allSettled([
+      getJSON('/v1/policy/variables'),
+      getJSON('/v1/policy/sources')
+    ]).then(function (results) {
+      var variables = results[0], sources = results[1];
+      if (variables.status === 'fulfilled') {
+        var varCount = variables.value && variables.value.total != null
+          ? variables.value.total : ((variables.value && variables.value.variables) || []).length;
+        var elVariables = document.getElementById('stat-variables');
+        if (varCount && elVariables) { elVariables.textContent = String(varCount); }
+      }
+      if (sources.status === 'fulfilled') {
+        var sourceCount = sources.value && sources.value.total != null
+          ? sources.value.total : ((sources.value && sources.value.sources) || []).length;
+        var elSources = document.getElementById('stat-sources');
+        if (sourceCount && elSources) { elSources.textContent = String(sourceCount); }
+      }
+    });
+  })();
+</script>
+</body>
+</html>
