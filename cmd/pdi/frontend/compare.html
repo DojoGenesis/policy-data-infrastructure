@@ -1035,6 +1035,103 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   :root[data-theme="light"] .ctx-rank.rank-bottom,
   :root[data-theme="light"] .compare-summary .lead-b { color: var(--tp-red-deep); }
   :root[data-theme="light"] .scoreboard-verdict .win-b { color: var(--tp-cyan-deep); }
+
+
+  /* ── Cross-page integration (Evidence → Compare flow) ───────────────── */
+  .comparison-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1.5em;
+    padding: 0.75em 1em;
+    background: var(--plane-1);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-badge);
+  }
+
+  .comparison-note strong {
+    color: var(--text);
+  }
+
+  .county-explore-link {
+    display: inline-block;
+    padding: 0.45em 0.85em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    background: var(--accent);
+    text-decoration: none;
+    border-radius: var(--r-badge);
+    margin-left: 0.5em;
+    transition: all 0.15s ease;
+  }
+
+  .county-explore-link:hover {
+    opacity: 0.9;
+  }
+
+
+
+  /* ── Mobile optimization (375px viewport) for compare ───────────────────── */
+  @media (max-width: 375px) {
+    .compare-container {
+      gap: 0.75em;
+    }
+
+    .county-selector {
+      flex-direction: column;
+    }
+
+    .county-input-group {
+      min-width: auto;
+      width: 100%;
+    }
+
+    .county-input-group input {
+      font-size: 16px; /* Prevent iOS zoom */
+      width: 100%;
+    }
+
+    .compare-btn {
+      width: 100%;
+    }
+
+    .compare-table {
+      font-size: 0.75rem;
+    }
+
+    .compare-table thead th {
+      padding: 0.4em 0.5em;
+      font-size: 0.65rem;
+    }
+
+    .compare-table tbody td {
+      padding: 0.35em 0.4em;
+    }
+
+    .var-name {
+      font-size: 0.75rem;
+      max-width: 80px;
+      word-wrap: break-word;
+    }
+
+    .val-a, .val-b {
+      font-size: 0.75rem;
+    }
+
+    .delta-cell {
+      font-size: 0.7rem;
+    }
+
+    .strip-mini {
+      height: 60px;
+    }
+
+    .comparison-note {
+      font-size: 0.7rem;
+      padding: 0.5em 0.75em;
+    }
+  }
+
 </style>
   <!-- Motion engine. P0 FIX: motion.css declares `html.js:not(.no-motion) .reveal { opacity: 0 }`
        and ONLY motion.js adds the `.in` class that reverses it. Without this tag the 2000ms
@@ -1077,6 +1174,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   <!-- ── Toolbar: heading + back link ──────────────── -->
   <div class="compare-toolbar">
     <h1 data-en="Compare Counties" data-es="Comparar Condados">Compare Counties</h1>
+    <p style="font-size:0.85rem;color:var(--muted);margin-top:0.5em;" data-en="Select two Wisconsin counties to compare their key indicators side-by-side and discover meaningful differences in policy outcomes." data-es="Selecciona dos condados de Wisconsin para comparar sus indicadores clave lado a lado y descubrir diferencias significativas en resultados de política.">Select two Wisconsin counties to compare their key indicators side-by-side and discover meaningful differences in policy outcomes.</p>
     <a href="/" class="back-link">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="15 18 9 12 15 6"/></svg>
       <span data-en="Back to Explorer" data-es="Volver al Explorador">Back to Explorer</span>

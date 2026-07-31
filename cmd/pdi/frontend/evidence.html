@@ -506,6 +506,173 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     color: var(--bg);
     text-decoration: none;
   }
+
+  /* ── View in Explorer link (enhanced inter-page UX) ────────────────────── */
+  .explore-county-link {
+    display: inline-block;
+    padding: 0.45em 0.85em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    background: var(--accent);
+    text-decoration: none;
+    border-radius: var(--r-badge);
+    margin: 4px 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .explore-county-link:hover {
+    background: var(--accent-hover, var(--accent));
+    opacity: 0.9;
+  }
+
+  /* ── Breadcrumb trail ──────────────────────────────────────────────────── */
+  .breadcrumb-trail {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: clamp(16px, 2.5vw, 24px);
+  }
+
+  .breadcrumb-trail a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+
+  .breadcrumb-trail a:hover {
+    color: var(--text);
+  }
+
+  .breadcrumb-sep {
+    color: var(--quiet);
+  }
+
+  /* ── Loading indicator ─────────────────────────────────────────────────── */
+  .loading-message {
+    text-align: center;
+    padding: clamp(20px, 3vw, 40px);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 0.5em;
+    vertical-align: middle;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Mobile optimization (375px viewport) ─────────────────────────────── */
+  @media (max-width: 375px) {
+    :root {
+      --evidence-gap: 12px;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.25rem, 3vw, 1.8rem);
+    }
+
+    .site-nav {
+      flex-wrap: wrap;
+      gap: 0.35em;
+    }
+
+    .site-nav a {
+      font-size: 0.75rem;
+      padding: 0.4em 0.6em;
+    }
+
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75em;
+    }
+
+    .search-wrap {
+      max-width: none;
+    }
+
+    .search-wrap input {
+      font-size: 16px; /* Prevents zoom on iOS */
+      width: 100%;
+    }
+
+    .filter-select select {
+      width: 100%;
+      font-size: 16px;
+    }
+
+    .chip-row {
+      gap: 4px;
+    }
+
+    .filter-chip {
+      font-size: 0.65rem;
+      padding: 0.2em 0.5em;
+    }
+
+    .card-grid {
+      grid-template-columns: 1fr;
+      gap: clamp(10px, 2vw, 12px);
+    }
+
+    .evidence-card {
+      gap: clamp(8px, 1.5vw, 10px);
+    }
+
+    .evidence-card-title {
+      font-size: 0.88rem;
+    }
+
+    .county-mini-table {
+      font-size: 0.68rem;
+    }
+
+    .county-mini-table th {
+      padding: 0.3em 0.4em;
+      font-size: 0.58rem;
+    }
+
+    .county-mini-table td {
+      padding: 0.25em 0.4em;
+    }
+
+    .detail-stats {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .detail-stat {
+      padding: 0.4em 0.5em;
+    }
+
+    .detail-stat-val {
+      font-size: 0.9rem;
+    }
+
+    .explore-county-link {
+      padding: 0.35em 0.65em;
+      font-size: 0.68rem;
+    }
+
+    .nav-pill {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+    }
+  }
+
 </style>
   <!-- Motion kit — scroll reveals, FLIP, counters (spine/kits/motion) -->
   <script defer src="/static/motion.js"></script>
@@ -554,10 +721,10 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <span class="section-tag" data-en="Evidence" data-es="Evidencia">Evidence</span>
     <h1 data-en="Evidence Card Gallery" data-es="Galería de Tarjetas de Evidencia">Evidence Card Gallery</h1>
     <p class="hero-subtitle">
-      <span data-en="70 policy evidence cards · " data-es="70 tarjetas de evidencia de política · ">70 policy evidence cards · </span><span x-text="allCards.length"></span> <span data-en="cards loaded" data-es="cargadas">cards loaded</span>
+      <span data-en="Data-backed policy positions · " data-es="Posiciones de política respaldadas por datos · ">Data-backed policy positions · </span><span x-text="allCards.length"></span> <span data-en="cards" data-es="tarjetas">cards</span>
     </p>
-    <p class="hero-count" data-en="Explore data-backed policy positions with linked indicators, county-level variation, and key findings." data-es="Explora posiciones de política respaldadas por datos, con indicadores vinculados, variación por condado y hallazgos clave.">
-      Explore data-backed policy positions with linked indicators, county-level variation, and key findings.
+    <p class="hero-count" data-en="Explore 70 evidence cards with county-level variation, key findings, and linked indicators. Click any county in a card to dive deeper into its full profile." data-es="Explora 70 tarjetas de evidencia con variación a nivel de condado, hallazgos clave e indicadores vinculados. Haz clic en cualquier condado en una tarjeta para profundizar en su perfil completo.">
+      Explore 70 evidence cards with county-level variation, key findings, and linked indicators. Click any county in a card to dive deeper into its full profile.
     </p>
   </div>
 
@@ -569,8 +736,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
       <input
         type="search"
         x-model="searchQuery"
-        placeholder="Search by policy title, finding, or indicator…"
-        data-en-placeholder="Search by policy title, finding, or indicator…"
+        placeholder="Search by policy title, county, or indicator…"
+        data-en-placeholder="Search by policy title, county, or indicator…"
         data-es-placeholder="Buscar por título de política, hallazgo o indicador…"
         aria-label="Search evidence cards"
         data-en-aria-label="Search evidence cards"
@@ -613,8 +780,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
 
   <hr class="thread" aria-hidden="true">
 
-  <!-- ── Skeleton loading ─────────────────────────────────────── -->
+  <!-- ── Loading state ───────────────────────────────────────── -->
   <div x-show="cardsLoading" x-cloak>
+    <!-- Loading message with spinner -->
+    <div class="loading-message">
+      <span class="spinner"></span>
+      <span data-en="Loading evidence cards…" data-es="Cargando tarjetas de evidencia…">Loading evidence cards…</span>
+    </div>
+    <!-- Skeleton grid for visual feedback -->
     <div class="card-grid" aria-hidden="true">
       <template x-for="i in 6" :key="i">
         <div class="card skeleton skeleton-card skeleton-evidence-card">
@@ -730,6 +903,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <!-- Top need counties -->
             <div class="detail-section" x-show="card.top_need_counties && card.top_need_counties.length">
               <div class="detail-heading" data-en="Counties With Highest Need" data-es="Condados con Mayor Necesidad">Counties With Highest Need</div>
+              <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1em;">Click any county to explore its full profile in the County Explorer.</p>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
@@ -741,8 +915,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   </thead>
                   <tbody>
                     <template x-for="c in card.top_need_counties" :key="c.geoid">
-                      <tr>
-                        <td><a :href="'/county?geoid=' + c.geoid" style="color:var(--accent);text-decoration:none;font-weight:500;" x-text="c.county_name" @mouseover="$el.style.textDecoration='underline'" @mouseout="$el.style.textDecoration='none'"></a></td>
+                      <tr style="cursor:pointer;transition:background-color 160ms ease;" @mouseover="$el.style.backgroundColor='var(--plane-1)'" @mouseout="$el.style.backgroundColor='transparent'" @click="window.location.href='/county?geoid=' + c.geoid">
+                        <td style="font-weight:500;color:var(--accent);" x-text="c.county_name"></td>
                         <td class="county-geoid" x-text="c.geoid"></td>
                         <td class="county-val" x-text="fmtNum(c.display_value)"></td>
                       </tr>
@@ -763,6 +937,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <!-- Bottom need counties -->
             <div class="detail-section" x-show="card.bottom_need_counties && card.bottom_need_counties.length">
               <div class="detail-heading" data-en="Counties With Lowest Need" data-es="Condados con Menor Necesidad">Counties With Lowest Need</div>
+              <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1em;">Click any county to explore its full profile in the County Explorer.</p>
               <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="county-mini-table">
                   <thead>
@@ -774,8 +949,8 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                   </thead>
                   <tbody>
                     <template x-for="c in card.bottom_need_counties" :key="c.geoid">
-                      <tr>
-                        <td><a :href="'/county?geoid=' + c.geoid" style="color:var(--accent);text-decoration:none;font-weight:500;" x-text="c.county_name" @mouseover="$el.style.textDecoration='underline'" @mouseout="$el.style.textDecoration='none'"></a></td>
+                      <tr style="cursor:pointer;transition:background-color 160ms ease;" @mouseover="$el.style.backgroundColor='var(--plane-1)'" @mouseout="$el.style.backgroundColor='transparent'" @click="window.location.href='/county?geoid=' + c.geoid">
+                        <td style="font-weight:500;color:var(--accent);" x-text="c.county_name"></td>
                         <td class="county-geoid" x-text="c.geoid"></td>
                         <td class="county-val" x-text="fmtNum(c.display_value)"></td>
                       </tr>
