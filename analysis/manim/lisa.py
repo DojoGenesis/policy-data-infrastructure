@@ -132,7 +132,7 @@ class LISAClusterMap(Scene):
             "Each dot = a census tract with an indicator value",
             font_size=16, color=DIM,
         )
-        value_note.shift(DOWN * 3.1)
+        value_note.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(value_note), run_time=1.0)
         self.wait(1.5)
 
@@ -212,7 +212,7 @@ class LISAClusterMap(Scene):
             "Each link = spatial weight → \"these two influence each other\"",
             font_size=16, color=AMBER,
         )
-        link_note.shift(DOWN * 3.0)
+        link_note.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(link_note), run_time=1.0)
         self.wait(1.5)
 
@@ -391,7 +391,7 @@ class LISAClusterMap(Scene):
             "Spatial thinking reveals patterns invisible in tables.",
             font_size=20, color=AMBER,
         )
-        final_note.shift(DOWN * 1.6)
+        final_note.next_to(takeaways, DOWN, buff=0.5)
         self.play(FadeIn(final_note), run_time=1.5)
         self.wait(2.0)
 

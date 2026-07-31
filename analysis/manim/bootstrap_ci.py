@@ -318,7 +318,7 @@ class BootstrapCI(Scene):
         ci_upper_label.next_to(ci_upper_line, UP, buff=0.15)
 
         ci_title = make_text("95% CI", font_size=18, color=CI_COLOR)
-        ci_title.shift(DOWN * 2.8 + LEFT * 2)
+        ci_title.next_to(hist_axes, DOWN, buff=0.5)
 
         self.play(
             Create(ci_lower_line), FadeIn(ci_lower_label),
@@ -393,7 +393,7 @@ class BootstrapCI(Scene):
             "No assumptions about the underlying distribution required.",
             font_size=20, color=AMBER,
         )
-        formula_final.shift(DOWN * 1.5)
+        formula_final.next_to(takeaways, DOWN, buff=0.5)
         self.play(FadeIn(formula_final), run_time=1.5)
         self.wait(2.0)
 

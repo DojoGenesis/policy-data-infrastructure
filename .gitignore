@@ -83,3 +83,7 @@ scratch/
 /pdi
 /pdi-linux
 .envrc
+
+# Manim intermediate render cache — hash-named, fully regenerated on every render.
+# The final scene MP4s (media/videos/<scene>/<quality>/<Scene>.mp4) stay tracked.
+media/videos/**/partial_movie_files/

@@ -188,7 +188,7 @@ class ICE(Scene):
             "Scale: -1 (extreme deprivation)  to  +1 (extreme privilege)",
             font_size=16, color=DIM,
         )
-        scale.shift(DOWN * 2.5)
+        scale.next_to(result, DOWN, buff=0.4)
         self.play(FadeIn(scale), run_time=1.0)
         self.wait(1.0)
 
@@ -396,7 +396,7 @@ class ICE(Scene):
             r"\text{ICE} = \frac{\text{Privileged} - \text{Deprived}}{\text{Total}}",
             font_size=30, color=AMBER,
         )
-        formula_final.shift(DOWN * 1.8)
+        formula_final.next_to(takeaways, DOWN, buff=0.5)
         self.play(Write(formula_final), run_time=1.5)
         self.wait(2.0)
 

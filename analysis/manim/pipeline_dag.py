@@ -334,7 +334,7 @@ class PipelineDAG(Scene):
             )
 
             desc_label = make_text(desc, font_size=16, color=color)
-            desc_label.shift(DOWN * 3.1)
+            desc_label.to_edge(DOWN, buff=0.6)
             self.play(FadeIn(desc_label), run_time=0.5)
             self.wait(0.5)
 
@@ -349,7 +349,7 @@ class PipelineDAG(Scene):
             "Sources run in parallel waves for throughput",
             font_size=18, color=WAVE1_COLOR,
         )
-        parallel_note.shift(DOWN * 3.1)
+        parallel_note.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(parallel_note), run_time=1.0)
 
         # Flash each wave in parallel
@@ -417,7 +417,7 @@ class PipelineDAG(Scene):
             "From raw data to policy insights — one pipeline.",
             font_size=20, color=AMBER,
         )
-        final_note.shift(DOWN * 1.5)
+        final_note.next_to(takeaways, DOWN, buff=0.5)
         self.play(FadeIn(final_note), run_time=1.5)
         self.wait(2.0)
 

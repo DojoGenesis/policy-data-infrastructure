@@ -139,7 +139,7 @@ class QuantileClassification(Scene):
             "Arbitrary: 17 dots in \"low\", 48 in \"high\" — misleading!",
             font_size=18, color=DIM,
         )
-        problem.shift(DOWN * 3.1)
+        problem.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(problem), run_time=1.0)
         self.wait(1.5)
 
@@ -376,7 +376,7 @@ class QuantileClassification(Scene):
             "From arbitrary to data-driven classification.",
             font_size=20, color=AMBER,
         )
-        final_note.shift(DOWN * 1.6)
+        final_note.next_to(takeaways, DOWN, buff=0.5)
         self.play(FadeIn(final_note), run_time=1.5)
         self.wait(2.0)
 

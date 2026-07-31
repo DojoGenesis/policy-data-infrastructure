@@ -213,7 +213,7 @@ class ZScore(Scene):
             "Can't compare % to $ — different scales, different meanings",
             font_size=18, color=DIM
         )
-        not_comp.shift(DOWN * 3.1)
+        not_comp.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(not_comp), run_time=1.0)
         self.wait(1.5)
 
@@ -387,7 +387,7 @@ class ZScore(Scene):
             "Now on the same scale — directly comparable",
             font_size=18, color=AMBER
         )
-        now_comp.shift(DOWN * 3.1)
+        now_comp.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(now_comp), run_time=1.0)
         self.wait(1.5)
 
@@ -593,7 +593,7 @@ class ZScore(Scene):
             ),
         )
         takeaways.arrange(DOWN, buff=0.25, aligned_edge=LEFT)
-        takeaways.shift(DOWN * 2.7)
+        takeaways.next_to(everything, DOWN, buff=0.8)
 
         self.play(
             LaggedStart(
@@ -610,7 +610,7 @@ class ZScore(Scene):
             font_size=36,
             color=AMBER,
         )
-        formula_final.shift(DOWN * 1.6)
+        formula_final.next_to(takeaways, DOWN, buff=0.5)
         self.play(Write(formula_final), run_time=1.5)
         self.wait(2.0)
 
