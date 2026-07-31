@@ -29,6 +29,35 @@
 - [ ] **Tract geometry/data vintage mismatch — the real "map quality" root cause.** Three counts are live at once: `tracts.geojson` (what the map draws) = **1,542**; live PostGIS (what LISA is computed on) = **1,669**; LISA analyses = **1,524/1,525** scores. So ~18 rendered tracts have no LISA score and ~127 DB tracts have no geometry. Presents as "the map looks patchy." Fix = reload tract geographies at ACS 2024, then recompute LISA. **Corrects the number recorded below**: the DB is at 1,669, not 1,652 [source: orchestrator, measured via offset paging on the live API]
 - [x] ~~**`total` field breaks pagination.**~~ — **NOT REPRODUCIBLE as of 2026-07-29.** Re-measured against live at limit 1 / 5 / 100 / 1000: `total` returns **1542 every time** for tracts and **72** for counties — the unfiltered count, never the page size. `count` correctly reports the page size separately. Either this was fixed, or the original reading conflated `count` with `total`. The scale strip's live hydration now depends on `total` being authoritative, so this is exercised on every landing-page load [source: orchestrator, measured 2026-07-29]
 
+## P0 — Found 2026-07-30 (UI/UX spike salvage)
+
+- [x] ~~**The homepage was rewritten to publish fabricated county statistics.**~~ — REVERTED 2026-07-30. An uncommitted `index.html` rewrite (21:02) imported the content model *and the numbers* from `~/pdi-spike-direction-b`, a spike that self-certified "✓ COMPLETE / Real PDI Data Included" and was fabricated end to end. Every checked figure was wrong against the platform's own 72-county dataset: Ashland poverty 18.2% (actual **13.4**), Ozaukee 6.1% (**5.0**), Menominee uninsured 9.8% (**20.5**), Burnett 4.2% (**6.0**), Sheboygan rent burden 37.2% (**31.0**), Milwaukee 35.5% (**52.8**). The narratives were inverted, not merely imprecise — it named Ashland the state's poverty leader (real leader: Menominee 21.7%) and Menominee the uninsured leader (real leader: Clark 22.5%). Six of its ten advertised variables — Transit Access, Life Expectancy, Unemployment Rate, High School Graduation, Broadband Access, Food Insecurity — **exist in no PDI data source at all**, so "Clark improved 28% → 41.2% transit access" describes a measurement never collected. The page also had zero `fetch`/`/v1/policy` calls (every number hardcoded) and dropped all 49/50 `data-en`/`data-es` pairs, leaving the homepage English-only on a site with `/es/` routes. Reverted to HEAD; both versions preserved off-repo. Spike B is quarantined with `00-DO-NOT-USE-FABRICATED.md` [source: orchestrator, verified against `explorer-data.js` 72-county dataset]
+
+- [ ] **Rebuild the card-led homepage direction against real data (the salvageable half).** The reverted rewrite's *structure* — 4 narrative insight cards + "Explore All Variables" — is a legitimate UX direction and is worth redoing properly; only its content was fabricated. Constraints for the rebuild: (a) every figure must come from the API or the embedded ACS snapshot, never a literal; (b) only the 10 fields that actually exist may be shown — `median_hh_income`, `poverty_rate`, `pct_cost_burdened`, `pct_severely_cost_burdened`, `uninsured_rate`, `pct_bachelors_or_higher`, `pct_poc`, `pct_hispanic`, `pct_non_hispanic_black`, `total_population`; (c) EN/ES parity is non-negotiable (49/50 pairs today); (d) superlatives ("highest in Wisconsin") must be *derived* at runtime, since that is exactly the claim class the spike got backwards. Prior art preserved at `index.html.afternoon-rewrite-2026-07-30` [source: orchestrator, 2026-07-30]
+
+- [ ] **The local database was reset mid-session and never re-seeded — this is the root cause of the empty explorer.** `policy-data-infra-postgres-1` was **created 2026-07-30 18:34:24 local**, inside the same window as the UI spike work (spikes 18:15–18:20, repo edits from 18:26). The volume came up with schema but almost no data. Measured against the CLAUDE.md benchmarks:
+
+  | Table | Expected | Actual |
+  |---|---|---|
+  | `geographies` (county) | 72 | **0** |
+  | `geographies` (tract) | 1,542 | **0** |
+  | `indicators` | ~1,368 ACS + ~12,200 CDC + ~8,009 USDA | **0** |
+  | `indicator_sources` | ≥4 | 3 (`cdc-svi`, `fbi-nibrs`, `fcc-broadband`) |
+  | `indicator_meta` | ≥20 | 9 |
+
+  Note the 8,000 CDC SVI rows loaded on 2026-07-30 (item above) are **gone** — same reset. Only steps 2–3 of the FK chain (`geographies → indicator_sources → indicator_meta → indicators`) survived, and because `indicators` is FK-dependent on `geographies`, **no indicator load can succeed until geographies is seeded first** — a bare re-run of the fetchers will fail on FK violation, not on the network. Diagnosis only; nothing was re-fetched. Remediation order:
+
+  ```
+  go run ./cmd/pdi migrate up                  # confirm schema current
+  # 1. seed geographies FIRST (county then tract) — everything else FKs to this
+  # 2. re-register indicator_sources + indicator_meta for census/tiger/cdc-places/usda
+  # 3. reload indicators (CDC PLACES + USDA can run concurrently)
+  REFRESH MATERIALIZED VIEW CONCURRENTLY indicators_latest;
+  ```
+  Overlaps the queued `2026-07-31_pdi-data-layer-buildout` handoff — fold this in rather than duplicating it. Until it runs, `/explorer` correctly shows the embedded ACS snapshot only [source: orchestrator, measured 2026-07-30]
+
+- [ ] **`/v1/policy/sources` returns a hardcoded list of 9, not the 3 rows actually in `indicator_sources`.** `handleListSources` (`pkg/gateway/handlers.go:816`) returns a static Go slice of supported *adapters*; the DB holds `cdc-svi`, `fbi-nibrs`, `fcc-broadband` only. Any UI that hydrates a "data sources" figure from this endpoint reports 9 while 3 have loaded data. The explorer hero now derives from it (better than a hand-typed literal, which is what it replaced) but inherits the overcount. Either serve the DB count or rename the field to "sources supported" [source: orchestrator, verified 2026-07-30]
+
 ## P1 — High (found 2026-07-29, frontend usability pass)
 
 - [x] ~~**Landing-page scale strip hardcoded its four headline figures.**~~ — DONE 2026-07-29. `data-count="42"` variables against a live **51**, and `13` sources against a live **9**; counties (72) and tracts (1,542) were correct. The meta description repeated both wrong numbers, so they were in search snippets too. All four now hydrate from the API (`hydrateScaleStrip`, bottom of index.html), with the literal demoted to a ship-time fallback for JS-off visitors and API outages. The meta description — the one figure that genuinely cannot hydrate, since crawlers read it pre-script — was reworded to rounded, hedged counts ("1,500+ tracts", "50+ indicators") so a routine data load can't silently falsify it. Verified by serving deliberately-wrong literals and confirming hydration corrects both text and `data-count` [source: orchestrator]
