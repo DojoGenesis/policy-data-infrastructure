@@ -3,6 +3,85 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-07-31 — the reseed, and the four defects that made it impossible
+
+The local Postgres was recreated empty on 2026-07-30 (schema, no data). Reseeding it
+was supposed to be a chore; it turned out that `pdi fetch` **could not populate a
+freshly-migrated database at all**, and had not been able to for some time. Four
+independent defects, each committed separately.
+
+### Vintage pinned: ACS 2020-2024 5-Year
+The empty database made ADR-014's open question 2 free — there was no county data to
+preserve, so the "more work and more correct" option cost nothing. Pinned to 2024 for
+county, tract and boundaries alike, operator-ratified. Note that no two tools agree on
+a default: `cmd/pdi fetch --year` is 2023, `ingest/Makefile` is 2024. Pass it explicitly.
+
+### Nothing registered indicator_meta
+`indicators.variable_id` references `indicator_meta`, which references
+`indicator_sources`. Migrations 009-011 hand-wrote meta for three sources that have
+never loaded a row; the four sources that actually carry data had no registration path
+anywhere in the repo. A fetch against a fresh database died on a foreign-key violation
+that reads as a broken fetcher. Added `Store.RegisterSource`, deriving both rows from
+the adapter's own `Schema()` so a new adapter registers itself.
+
+### PutIndicators could not write reliability
+The staging table declares `reliability TEXT`; the column is the `reliability_level`
+enum, and Postgres will not implicitly cast. Only writes leaving the field empty ever
+succeeded — which is exactly what the store tests do, so 15 integration tests at 77.5%
+coverage were silent about it.
+
+### indicators_latest never exposed cv/reliability
+Migration 003 defined the view; 007 added the columns and never rebuilt it. Every read
+path that does not pin a vintage has been blind to the uncertainty columns since.
+Migration 014 rebuilds it — this was the stated blocker under ADR-014 D8.
+
+### A source that loads nothing reported "ok"
+`--sources cdc-places --year 2024` printed `cdc-places  0  936ms  ok`. CDC PLACES
+publishes 2023 and 2022 for Wisconsin, not 2024; the year filter matched nothing.
+Second instance of the class (fcc-broadband was the first, 572c342), so it was fixed at
+the reporting layer to cover every adapter rather than one. Same fetch at `--year 2023`
+loaded 12,200 rows.
+
+### Loaded
+| Source | Level | Rows | Notes |
+|---|---|---|---|
+| acs-5yr | county | 1,368 | 19 vars × 72 counties, 100% non-null, **1,368/1,368 with MOE** |
+| cdc-places | tract | 12,200 | 8 vars × 1,525 tracts, CDC-PLACES-2023 |
+| cdc-svi | county | 360 | 5 themes × 72 |
+| cdc-svi | tract | 7,640 | 5 themes × 1,528 |
+| **usda-food** | — | **0** | blocked, see below |
+
+Geographies: 1,614 (72 counties + 1,542 tracts) from TIGERweb `tigerWMS_ACS2024` —
+matches the CLAUDE.md benchmarks exactly. `indicators_latest` refreshed to 21,568 rows.
+
+### USDA blocked on a tract-vintage mismatch
+USDA FARA 2019 is keyed to **2010** census tracts; the platform is on **2020**. Measured
+against TIGERweb: WI has 1,409 tracts at 2010 vs 1,542 at 2020, and 127 (9.0%) of the
+2010 GEOIDs have no 2020 counterpart — they fail the FK outright, which is how this was
+found. The other 91% match by identifier only; a tract that kept its code through a
+boundary revision would load silently and wrongly. Recorded as ADR-014 open question 6,
+awaiting an operator decision.
+
+### Also
+- Python ingest never read the repo's `.env`. Three files each carried their own
+  `PDI_DATABASE_URL` default pointing at port **5432** — which on this machine is a
+  different project's Postgres. A loader pointed there does not fail; it writes
+  Wisconsin tracts into somebody else's database and reports success. `.env` is now
+  applied once at `ingest/lib` package import, and `get_conn()` refuses a target with
+  no `geographies` table. The same gap left `CENSUS_API_KEY` empty, which surfaces as a
+  JSON parse error rather than an auth error (the Census API 302s keyless requests to
+  an HTML page).
+- `/v1/policy/sources` now serves `sources_with_data` (3) beside `sources_loaded` (6)
+  and `total` (9). The `/explorer` hero badge, which reads "data sources" next to a map
+  of real county data, was rendering 9.
+- USDA adapter renamed `usda-foodaccess` → `usda-food`, the only identifier disagreeing
+  with the seed file, ADR-014 and the handoff. Cosmetic until `RegisterSource` started
+  deriving `indicator_sources` from the adapter — then it would have created a second
+  row for a source that already had one.
+
+Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅ ·
+`node scripts/layout-check.mjs` 88/88 across 11 page-states ✅
+
 ## 2026-07-29 — two blank pages, the narrative title, and two stale doc claims
 
 Frontend usability pass toward the operator's 4/10 → 8/10 target (PIP-116). Everything below was measured from rendered pixels in headless Chromium across 10 pages × 2 themes × 3 viewports, not inferred from CSS — per `pdi-verify-per-page-not-shared-layer`, this repo's page-scoped `<style>` blocks make shared-layer reasoning produce inverted conclusions.

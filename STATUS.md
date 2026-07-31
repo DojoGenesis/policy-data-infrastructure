@@ -1,7 +1,34 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-07-29 (frontend usability pass, 4 parallel tracks — PIP-116)
+> Last agent update: 2026-07-31 (data-layer reseed — handoff 2026-07-31_pdi-data-layer-buildout)
+
+## Data Layer (2026-07-31, reseed)
+
+Local Postgres was recreated empty 2026-07-30. Reseeded and pinned to **ACS 2020-2024
+5-Year** (resolves ADR-014 open question 2).
+
+| Table | Benchmark | Live |
+|---|---|---|
+| `geographies` county | 72 | **72** ✅ |
+| `geographies` tract | 1,542 | **1,542** ✅ |
+| `indicators` acs-5yr county | ~1,368 | **1,368** ✅ (19 vars × 72, 100% non-null, all with MOE) |
+| `indicators` cdc-places tract | ~12,200 | **12,200** ✅ |
+| `indicators` cdc-svi | — | **8,000** (360 county + 7,640 tract) |
+| `indicators` usda-food | ~8,009 | **0** ⛔ blocked — 2010 vs 2020 tract vintage |
+| `indicator_sources` | ≥4 | **14** |
+| `indicator_meta` | ≥20 | **41** |
+| `indicators_latest` | — | **21,568**, now carrying `cv`/`reliability` |
+
+Four defects fixed to make the reseed possible at all: no `indicator_meta` registration
+path existed for the four loaded sources; `PutIndicators` could not write the
+`reliability` enum; `indicators_latest` never exposed `cv`/`reliability` (ADR-014 D8's
+stated blocker); a zero-row fetch reported `ok`. See CHANGELOG 2026-07-31.
+
+**Blocked on operator:** USDA tract vintage (ADR-014 open question 6). FBI NIBRS needs
+`FBI_CDE_API_KEY`; FCC Broadband needs a source decision (WAF-blocked).
+
+Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅ · layout-check 88/88 ✅
 
 ## Frontend Usability Pass (2026-07-29, PIP-116)
 

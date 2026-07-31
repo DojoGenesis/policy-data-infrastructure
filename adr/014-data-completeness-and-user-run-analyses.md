@@ -399,12 +399,36 @@ analyses continue to describe different datasets.
 
 1. **Coverage threshold value.** What fraction of a county's tracts must report before
    an aggregate is publishable? 80%? 90%? Needs a defensible basis, not a round number.
-2. **Vintage alignment.** Pin the tract load to 2023 to match county, or upgrade county
-   to 2024 and reload both? The latter is more work and more correct.
-3. **`margin_of_error` discrepancy.** Recon measured 0 of 19 county ACS indicators
-   carrying MOE, against a documented claim of 1 of 19. One county was checked. Resolve
-   against the database before D8 leans on either number.
+2. ~~**Vintage alignment.**~~ **RESOLVED 2026-07-31 — pinned to 2024.** The local
+   Postgres was recreated empty on 2026-07-30, so there was no county data to preserve
+   and the "more work" half of the trade-off cost nothing. Reseeded at **ACS 2020-2024
+   5-Year** with TIGERweb geographies from the matching `tigerWMS_ACS2024` service
+   (72 counties, 1,542 tracts). Operator ratified. Applies to county, tract and
+   boundaries alike. Note the tooling does not agree on a default and must be passed
+   explicitly: `cmd/pdi fetch --year` defaults to 2023, `ingest/Makefile` to 2024.
+3. ~~**`margin_of_error` discrepancy.**~~ **RESOLVED 2026-07-31 — 19 of 19, and the
+   question was mis-framed.** Both prior figures (documented 1 of 19, measured 0 of 19)
+   described the state of a *load*, not a capability. A county load through the Go
+   adapter carries an MOE on every row: measured 1,368 of 1,368 after reseeding. The
+   0-of-19 reading came from a database whose ACS rows had been written by the Python
+   path, which hardcodes `margin_of_error: None` for 10 of its 11 indicators. So D8 can
+   lean on MOE being present at county level, and the real gap is D5's: the Python
+   tract path still needs MOE capture added.
 4. **Who may trigger a run** — fully open with a ceiling, or does an analysis run
    require identity? D10 sets the mechanism, not the policy.
 5. **`usda_lila` / `usda_urban_flag` framing** — "% of tracts" or "% of population"?
    Both are legitimate and they are different questions; the label must say which.
+6. **NEW — USDA is on 2010 tracts and the platform is on 2020 tracts.** Surfaced
+   2026-07-31 while reseeding. USDA FARA 2019 is the latest published release and is
+   keyed to **2010** census tract GEOIDs; the platform's geographies are **2020**
+   (per the D-2 resolution above). Measured against TIGERweb: Wisconsin has 1,409
+   tracts in the 2010 vintage and 1,542 in the 2020 vintage, and **127 of the 1,409
+   (9.0%) have no 2020 counterpart** — they fail the `indicators_geoid_fkey`
+   constraint outright, which is how this was found. The remaining 91% match *by
+   identifier*; whether they match *by geography* has not been verified, and a tract
+   that kept its code through a boundary revision would load silently and wrongly.
+   That silent case is the more dangerous of the two. Three options, none free:
+   load the 91% and record the 127 dropped; withhold USDA at tract until a proper
+   2010→2020 crosswalk (e.g. NHGIS) is wired in; or carry USDA at county level only,
+   aggregated within its own vintage. D2's logic — absent beats caveated-wrong —
+   argues against the first. **Operator decision required; USDA is unloaded until then.**
