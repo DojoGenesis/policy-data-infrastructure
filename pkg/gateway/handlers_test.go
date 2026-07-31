@@ -198,7 +198,7 @@ func (m *mockStore) PutEvidenceCards(_ context.Context, _ []store.EvidenceCard) 
 func (m *mockStore) QueryEvidenceCards(_ context.Context, _ store.EvidenceCardFilter) ([]store.EvidenceCard, error) {
 	return nil, nil
 }
-func (m *mockStore) SeedEvidenceCardsFromJSON(_ context.Context, _ []byte) error { return nil }
+func (m *mockStore) SeedEvidenceCardsFromJSON(_ context.Context, _ []byte) error    { return nil }
 func (m *mockStore) PutFactorScores(_ context.Context, _ []store.FactorScore) error { return nil }
 func (m *mockStore) QueryFactorScores(_ context.Context, geoid string) ([]store.FactorScore, error) {
 	if m.queryFactorsFn != nil {
@@ -283,6 +283,12 @@ func TestHealthEndpoint(t *testing.T) {
 
 // ── Test: GET /v1/sources ────────────────────────────────────────────────────
 
+// TestListSources pins the empty-DB contract against a bare, zero-value
+// mockStore{}: QueryVariables returns (nil, nil) on that mock — a
+// legitimate empty result, not an error — so sources_loaded must read 0
+// and sources_loaded_ok must read true. A later wave (homepage hydration)
+// depends on sources_loaded being present and numeric (never omitted,
+// never null) to tell "zero loaded" apart from "fetch failed".
 func TestListSources(t *testing.T) {
 	r := newTestRouter(&mockStore{})
 	w := httptest.NewRecorder()
@@ -306,6 +312,113 @@ func TestListSources(t *testing.T) {
 	sources, ok := body["sources"].([]interface{})
 	if !ok || len(sources) == 0 {
 		t.Errorf("expected non-empty sources array, got %v", body["sources"])
+	}
+
+	loadedRaw, present := body["sources_loaded"]
+	if !present {
+		t.Fatal("expected sources_loaded key to be present in the empty-DB response, was omitted")
+	}
+	loaded, ok := loadedRaw.(float64)
+	if !ok {
+		t.Fatalf("expected sources_loaded to be a JSON number, got %T(%v) — must never be null", loadedRaw, loadedRaw)
+	}
+	if loaded != 0 {
+		t.Errorf("expected sources_loaded=0 against an empty store, got %v", loaded)
+	}
+
+	okRaw, present := body["sources_loaded_ok"]
+	if !present {
+		t.Fatal("expected sources_loaded_ok key to be present, was omitted")
+	}
+	loadedOK, ok := okRaw.(bool)
+	if !ok {
+		t.Fatalf("expected sources_loaded_ok to be a JSON bool, got %T(%v)", okRaw, okRaw)
+	}
+	if !loadedOK {
+		t.Error("expected sources_loaded_ok=true for a successful (if empty) query — 0 here is a confirmed answer, not an unknown one")
+	}
+}
+
+// TestListSources_LoadedCount exercises the populated-DB case: distinct,
+// non-empty source_id values across the rows QueryVariables returns are
+// counted once each, and total/sources (the static adapter catalog) must
+// stay exactly as they were — additive only, never repurposed to the
+// DB-derived figure.
+func TestListSources_LoadedCount(t *testing.T) {
+	s := &mockStore{
+		variableMeta: []store.VariableMeta{
+			{VariableID: "v1", SourceID: "cdc-svi", SourceName: "CDC SVI"},
+			{VariableID: "v2", SourceID: "cdc-svi", SourceName: "CDC SVI"},
+			{VariableID: "v3", SourceID: "fbi-nibrs", SourceName: "FBI NIBRS"},
+			{VariableID: "v4", SourceID: "fcc-broadband", SourceName: "FCC Broadband"},
+			{VariableID: "v5", SourceID: "", SourceName: ""}, // defensively excluded, not counted as a source
+		},
+	}
+	r := newTestRouter(s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/sources", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d — body: %s", w.Code, w.Body.String())
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	loaded, ok := body["sources_loaded"].(float64)
+	if !ok || loaded != 3 {
+		t.Errorf("expected sources_loaded=3 (distinct non-empty source_id: cdc-svi, fbi-nibrs, fcc-broadband), got %v", body["sources_loaded"])
+	}
+	if okVal, _ := body["sources_loaded_ok"].(bool); !okVal {
+		t.Errorf("expected sources_loaded_ok=true, got %v", body["sources_loaded_ok"])
+	}
+
+	total, _ := body["total"].(float64)
+	if total != 9 {
+		t.Errorf("expected total to remain the static 9-adapter catalog regardless of DB contents, got %v", total)
+	}
+}
+
+// TestListSources_QueryError verifies that a failed loaded-count lookup
+// does not take the whole endpoint down: sources/total have no DB
+// dependency and must keep serving the out-of-manifest consumers that
+// read only those two fields, even while sources_loaded falls back to 0
+// and sources_loaded_ok flags that 0 as unknown rather than confirmed.
+func TestListSources_QueryError(t *testing.T) {
+	s := &mockStore{
+		queryVarsFn: func(_ context.Context) ([]store.VariableMeta, error) {
+			return nil, fmt.Errorf("connection refused")
+		},
+	}
+	r := newTestRouter(s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/sources", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 even when the loaded-count query fails, got %d — body: %s", w.Code, w.Body.String())
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	loaded, ok := body["sources_loaded"].(float64)
+	if !ok || loaded != 0 {
+		t.Errorf("expected sources_loaded=0 fallback on query error, got %v", body["sources_loaded"])
+	}
+	loadedOK, ok := body["sources_loaded_ok"].(bool)
+	if !ok || loadedOK {
+		t.Errorf("expected sources_loaded_ok=false to flag the fallback as unknown (not confirmed zero), got %v", body["sources_loaded_ok"])
+	}
+
+	total, _ := body["total"].(float64)
+	if total <= 0 {
+		t.Errorf("expected total to remain populated even when the loaded-count query fails, got %v", total)
 	}
 }
 

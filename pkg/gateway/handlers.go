@@ -813,6 +813,32 @@ func (p *PolicyPlugin) handleListAnalyses(c *gin.Context) {
 
 // handleListSources returns the registered data sources supported by this
 // deployment.
+//
+// "sources" and "total" describe the static catalog of source ADAPTERS this
+// binary ships — code that exists to fetch from census/tiger/hud/epa/hmda/
+// bls/fema/cdc/usda. That catalog does not depend on the database and is
+// non-zero even against a freshly migrated, empty DB; treat it as "adapters
+// supported", not "data available".
+//
+// "sources_loaded" is the DB-derived complement: the number of distinct,
+// non-empty source_id values among rows returned by a fresh
+// store.QueryVariables call this request (QueryVariables joins
+// indicator_meta to indicator_sources — see pkg/store/postgres.go — so this
+// counts distinct sources with at least one registered variable, which is
+// bounded by, and may be smaller than, the row count of indicator_sources
+// itself). It is always present and always a plain JSON number — 0 when
+// indicator_meta is legitimately empty, never null, never omitted — so a
+// caller can hydrate an honest "sources loaded" figure instead of the
+// static catalog size.
+//
+// "sources_loaded_ok" disambiguates that 0 from a failed lookup: true when
+// the QueryVariables call succeeded this request (0 may be a real,
+// confirmed answer), false when it errored (0 is only a fallback and the
+// real count is unknown). A failed loaded-count lookup deliberately does
+// NOT fail this endpoint — "sources"/"total" have no DB dependency and
+// must keep serving the three existing consumers of this payload
+// (explorer.html, about.html, index.html) that were reading it before
+// this field existed and do not read it.
 func (p *PolicyPlugin) handleListSources(c *gin.Context) {
 	sources := []SourceResponse{
 		{
@@ -879,7 +905,32 @@ func (p *PolicyPlugin) handleListSources(c *gin.Context) {
 			Description: "USDA Food Access Research Atlas",
 		},
 	}
-	c.JSON(http.StatusOK, gin.H{"sources": sources, "total": len(sources)})
+
+	// sources_loaded / sources_loaded_ok: a fresh per-request lookup, not
+	// p.varMeta — that map is populated once at boot (see NewPlugin) and
+	// stays empty forever if the DB was empty at startup, which would
+	// silently freeze this figure at 0 regardless of later loads.
+	sourcesLoaded := 0
+	sourcesLoadedOK := true
+	if vars, err := p.store.QueryVariables(c.Request.Context()); err != nil {
+		sourcesLoadedOK = false
+	} else {
+		distinct := make(map[string]struct{}, len(vars))
+		for _, v := range vars {
+			if v.SourceID == "" {
+				continue
+			}
+			distinct[v.SourceID] = struct{}{}
+		}
+		sourcesLoaded = len(distinct)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"sources":           sources,
+		"total":             len(sources),
+		"sources_loaded":    sourcesLoaded,
+		"sources_loaded_ok": sourcesLoadedOK,
+	})
 }
 
 // ── Narrative stub ──────────────────────────────────────────────────────────
@@ -1090,17 +1141,17 @@ func (p *PolicyPlugin) handleComposite(c *gin.Context) {
 	}
 	shift := -minZ + 1.0 // ensures all values are ≥ 1
 
-		// 5. Build weights map. Default to equal weights if not provided.
-		weights := make(map[string]float64, len(req.VariableIDs))
-		if len(req.Weights) > 0 {
-			for k, v := range req.Weights {
-				weights[k] = v
-			}
-		} else {
-			for _, varID := range req.VariableIDs {
-				weights[varID] = 1.0 / float64(len(req.VariableIDs))
-			}
+	// 5. Build weights map. Default to equal weights if not provided.
+	weights := make(map[string]float64, len(req.VariableIDs))
+	if len(req.Weights) > 0 {
+		for k, v := range req.Weights {
+			weights[k] = v
 		}
+	} else {
+		for _, varID := range req.VariableIDs {
+			weights[varID] = 1.0 / float64(len(req.VariableIDs))
+		}
+	}
 
 	// 6. Compute composite scores (geometric mean of shifted z-scores).
 	geoidInputs := make([]stats.CompositeInput, len(req.GEOIDs))
