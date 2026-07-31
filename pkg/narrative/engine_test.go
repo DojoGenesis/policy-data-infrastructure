@@ -255,6 +255,10 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier stri
 func (m *mockStore) PutIndicatorsBatch(_ context.Context, _ []store.Indicator, _ int) error {
 	return nil
 }
+func (m *mockStore) RegisterSource(_ context.Context, _ store.SourceMeta, _ []store.VariableMeta) error {
+	return nil
+}
+
 func (m *mockStore) QueryVariables(_ context.Context) ([]store.VariableMeta, error) {
 	return nil, nil
 }

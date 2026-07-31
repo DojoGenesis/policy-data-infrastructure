@@ -22,6 +22,20 @@ type VariableMeta struct {
 	Direction   string
 }
 
+// SourceMeta describes a data source, one row of indicator_sources.
+//
+// URL and Description are richer in migrations/seed_sources.sql than anything a
+// DataSource adapter can report, so RegisterSource does not overwrite an
+// existing row with them — it only guarantees the row exists so the
+// indicator_meta foreign key can be satisfied.
+type SourceMeta struct {
+	SourceID    string
+	Name        string
+	Category    string
+	URL         string
+	Description string
+}
+
 // Indicator represents a single data point for a geography.
 type Indicator struct {
 	GEOID         string
@@ -262,6 +276,13 @@ type Store interface {
 
 	// Metadata operations
 	QueryVariables(ctx context.Context) ([]VariableMeta, error)
+
+	// RegisterSource upserts a source row and its variable definitions in one
+	// transaction, in FK order. Indicators reference indicator_meta, which
+	// references indicator_sources, so a fetch that writes indicators without
+	// this having run first fails on a constraint violation that reads like a
+	// broken fetcher rather than a missing registration.
+	RegisterSource(ctx context.Context, src SourceMeta, vars []VariableMeta) error
 
 	// Lifecycle
 	Ping(ctx context.Context) error

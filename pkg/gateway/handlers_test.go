@@ -175,6 +175,10 @@ func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID string, ti
 	return out, nil
 }
 
+func (m *mockStore) RegisterSource(_ context.Context, _ store.SourceMeta, _ []store.VariableMeta) error {
+	return nil
+}
+
 func (m *mockStore) QueryVariables(_ context.Context) ([]store.VariableMeta, error) {
 	if m.queryVarsFn != nil {
 		return m.queryVarsFn(context.Background())

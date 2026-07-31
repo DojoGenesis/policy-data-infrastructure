@@ -46,6 +46,10 @@ func (s *stubStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore
 func (s *stubStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil
 }
+func (s *stubStore) RegisterSource(_ context.Context, _ store.SourceMeta, _ []store.VariableMeta) error {
+	return nil
+}
+
 func (s *stubStore) QueryVariables(_ context.Context) ([]store.VariableMeta, error) {
 	return nil, nil
 }

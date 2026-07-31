@@ -145,6 +145,15 @@ func runFetchNational(ctx context.Context, toFetch []datasource.DataSource, s st
 	fmt.Fprintln(w, "SOURCE\tSTATES_OK\tSTATES_FAILED\tRECORDS\tDURATION")
 
 	for _, ds := range toFetch {
+		// Register before fetching: FetchNational writes indicators from inside
+		// its own worker goroutines, so there is no later point at which the
+		// parent rows can still be created in time.
+		if err := registerSource(ctx, s, ds); err != nil {
+			fmt.Fprintf(w, "%s\t-\t-\t0\tERROR (register): %v\n", ds.Name(), err)
+			_ = w.Flush()
+			return err
+		}
+
 		report, err := datasource.FetchNational(ctx, ds, s, parallel)
 		if err != nil {
 			fmt.Fprintf(w, "%s\t-\t-\t0\tERROR: %v\n", ds.Name(), err)
@@ -198,6 +207,10 @@ func runFetchScoped(ctx context.Context, toFetch []datasource.DataSource, s stor
 		}
 
 		if len(indicators) > 0 {
+			if regErr := registerSource(ctx, s, ds); regErr != nil {
+				fmt.Fprintf(w, "%s\t%d\t%s\tERROR (register): %v\n", ds.Name(), len(indicators), elapsed, regErr)
+				continue
+			}
 			if writeErr := s.PutIndicators(ctx, indicators); writeErr != nil {
 				fmt.Fprintf(w, "%s\t%d\t%s\tERROR (write): %v\n", ds.Name(), len(indicators), elapsed, writeErr)
 				continue
@@ -208,6 +221,35 @@ func runFetchScoped(ctx context.Context, toFetch []datasource.DataSource, s stor
 	}
 
 	return w.Flush()
+}
+
+// registerSource writes a source's row and variable definitions before any of
+// its indicators are stored.
+//
+// indicators.variable_id references indicator_meta, which references
+// indicator_sources. Nothing used to populate either from the adapters, so on a
+// database that had migrations but no hand-run seed, a fetch failed with a
+// foreign-key violation — which reads as a broken fetcher, not as missing
+// registration. The adapter's own Schema() is the authority here, so a new
+// adapter registers itself and cannot drift from a separate SQL seed file.
+func registerSource(ctx context.Context, s store.Store, ds datasource.DataSource) error {
+	schema := ds.Schema()
+	vars := make([]store.VariableMeta, 0, len(schema))
+	for _, v := range schema {
+		vars = append(vars, store.VariableMeta{
+			VariableID:  v.ID,
+			SourceID:    ds.Name(),
+			Name:        v.Name,
+			Description: v.Description,
+			Unit:        v.Unit,
+			Direction:   v.Direction,
+		})
+	}
+	return s.RegisterSource(ctx, store.SourceMeta{
+		SourceID: ds.Name(),
+		Name:     ds.Name(),
+		Category: ds.Category(),
+	}, vars)
 }
 
 // parseCSV splits a comma-separated string into trimmed, non-empty tokens.

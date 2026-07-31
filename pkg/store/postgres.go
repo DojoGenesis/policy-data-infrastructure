@@ -459,9 +459,16 @@ CREATE TEMP TABLE indicators_stage (
 		return fmt.Errorf("store: PutIndicators COPY: %w", err)
 	}
 
+	// reliability is an enum (reliability_level) in indicators but text in the
+	// staging table, and Postgres will not implicitly cast text to an enum — so
+	// this needs an explicit cast. Without it every write carrying a reliability
+	// value fails; only writes that leave it empty got through, which is why the
+	// existing tests never caught it. NULLIF keeps "" (Indicator.Reliability's
+	// zero value) out of the enum, where it is not a valid label.
 	_, err = tx.Exec(ctx, `
 INSERT INTO indicators (geoid, variable_id, vintage, value, margin_of_error, cv, reliability, raw_value)
-SELECT geoid, variable_id, vintage, value, margin_of_error, cv, reliability, raw_value
+SELECT geoid, variable_id, vintage, value, margin_of_error, cv,
+       NULLIF(reliability, '')::reliability_level, raw_value
 FROM indicators_stage
 ON CONFLICT (geoid, variable_id, vintage) DO UPDATE SET
     value           = EXCLUDED.value,
@@ -650,6 +657,62 @@ WHERE il.variable_id = $1
 
 // QueryVariables returns all indicator_meta rows joined with their source name.
 // Results are ordered by variable_id. An empty table returns an empty slice, not an error.
+// RegisterSource upserts one indicator_sources row and its indicator_meta rows
+// inside a single transaction, parent first.
+//
+// The source row is ON CONFLICT DO NOTHING: seed_sources.sql carries better
+// prose than an adapter can produce, and this must not clobber it. Variable
+// rows do update, because the adapter's Schema() is the authority on a
+// variable's name, unit and direction.
+func (s *PostgresStore) RegisterSource(ctx context.Context, src SourceMeta, vars []VariableMeta) error {
+	if src.SourceID == "" {
+		return fmt.Errorf("store: RegisterSource: empty source_id")
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("store: RegisterSource begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	if _, err := tx.Exec(ctx, `
+INSERT INTO indicator_sources (source_id, name, category, url, description)
+VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''))
+ON CONFLICT (source_id) DO NOTHING`,
+		src.SourceID, src.Name, src.Category, src.URL, src.Description,
+	); err != nil {
+		return fmt.Errorf("store: RegisterSource source %q: %w", src.SourceID, err)
+	}
+
+	for _, v := range vars {
+		if v.VariableID == "" {
+			return fmt.Errorf("store: RegisterSource %q: variable with empty id", src.SourceID)
+		}
+		sourceID := v.SourceID
+		if sourceID == "" {
+			sourceID = src.SourceID
+		}
+		if _, err := tx.Exec(ctx, `
+INSERT INTO indicator_meta (variable_id, source_id, name, description, unit, direction)
+VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''))
+ON CONFLICT (variable_id) DO UPDATE SET
+    source_id   = EXCLUDED.source_id,
+    name        = EXCLUDED.name,
+    description = EXCLUDED.description,
+    unit        = EXCLUDED.unit,
+    direction   = EXCLUDED.direction`,
+			v.VariableID, sourceID, v.Name, v.Description, v.Unit, v.Direction,
+		); err != nil {
+			return fmt.Errorf("store: RegisterSource variable %q: %w", v.VariableID, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("store: RegisterSource commit: %w", err)
+	}
+	return nil
+}
+
 func (s *PostgresStore) QueryVariables(ctx context.Context) ([]VariableMeta, error) {
 	const q = `
 SELECT im.variable_id, im.source_id, COALESCE(src.name, '') AS source_name,
