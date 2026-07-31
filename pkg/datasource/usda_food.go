@@ -218,8 +218,8 @@ func NewUSDAFoodSource(cfg USDAFoodConfig) *usdaFoodSource {
 	}
 }
 
-func (s *usdaFoodSource) Name() string     { return "usda-foodaccess" }
-func (s *usdaFoodSource) Category() string { return "food" }
+func (s *usdaFoodSource) Name() string     { return "usda-food" }
+func (s *usdaFoodSource) Category() string { return "food_access" }
 func (s *usdaFoodSource) Vintage() string  { return s.vintage }
 
 func (s *usdaFoodSource) Schema() []VariableDef {
@@ -234,10 +234,10 @@ func (s *usdaFoodSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS 
 	sf := sanitizeFIPS(stateFIPS)
 	cf := sanitizeFIPS(countyFIPS)
 	if len(sf) != 2 {
-		return nil, fmt.Errorf("usda-foodaccess: invalid state FIPS %q (must be 2 digits)", stateFIPS)
+		return nil, fmt.Errorf("usda-food: invalid state FIPS %q (must be 2 digits)", stateFIPS)
 	}
 	if len(cf) != 3 {
-		return nil, fmt.Errorf("usda-foodaccess: invalid county FIPS %q (must be 3 digits)", countyFIPS)
+		return nil, fmt.Errorf("usda-food: invalid county FIPS %q (must be 3 digits)", countyFIPS)
 	}
 
 	prefix := sf + cf // 5-digit county prefix
@@ -261,7 +261,7 @@ func (s *usdaFoodSource) FetchCounty(ctx context.Context, stateFIPS, countyFIPS 
 func (s *usdaFoodSource) FetchState(ctx context.Context, stateFIPS string) ([]store.Indicator, error) {
 	sf := sanitizeFIPS(stateFIPS)
 	if len(sf) != 2 {
-		return nil, fmt.Errorf("usda-foodaccess: invalid state FIPS %q (must be 2 digits)", stateFIPS)
+		return nil, fmt.Errorf("usda-food: invalid state FIPS %q (must be 2 digits)", stateFIPS)
 	}
 
 	byGEOID, err := s.loadAll(ctx)
@@ -305,27 +305,27 @@ func (s *usdaFoodSource) loadAll(ctx context.Context) (map[string]*tractRecord, 
 func (s *usdaFoodSource) downloadAndParse(ctx context.Context) (map[string]*tractRecord, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.cfg.DataURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("usda-foodaccess: build request: %w", err)
+		return nil, fmt.Errorf("usda-food: build request: %w", err)
 	}
 	req.Header.Set("User-Agent", "policy-data-infrastructure/1.0")
 	req.Header.Set("Accept", "application/zip,text/csv,application/octet-stream")
 
 	resp, err := s.cfg.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("usda-foodaccess: http get: %w", err)
+		return nil, fmt.Errorf("usda-food: http get: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return nil, fmt.Errorf("usda-foodaccess: api returned status %d: %s\n"+
+		return nil, fmt.Errorf("usda-food: api returned status %d: %s\n"+
 			"  Visit https://www.ers.usda.gov/data-products/food-access-research-atlas/ to find the current URL",
 			resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	rawBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("usda-foodaccess: read body: %w", err)
+		return nil, fmt.Errorf("usda-food: read body: %w", err)
 	}
 
 	// Courtesy delay after the download.
@@ -338,7 +338,7 @@ func (s *usdaFoodSource) downloadAndParse(ctx context.Context) (map[string]*trac
 	if isZIP {
 		csvBytes, err = extractLargestCSVFromZIP(rawBytes)
 		if err != nil {
-			return nil, fmt.Errorf("usda-foodaccess: extract ZIP: %w", err)
+			return nil, fmt.Errorf("usda-food: extract ZIP: %w", err)
 		}
 	} else {
 		csvBytes = rawBytes
@@ -347,7 +347,7 @@ func (s *usdaFoodSource) downloadAndParse(ctx context.Context) (map[string]*trac
 	// Decode: try UTF-8 with BOM, fall back to latin-1.
 	text, err := decodeCSVBytes(csvBytes)
 	if err != nil {
-		return nil, fmt.Errorf("usda-foodaccess: decode CSV: %w", err)
+		return nil, fmt.Errorf("usda-food: decode CSV: %w", err)
 	}
 
 	return parseUSDACSV(text)
@@ -447,7 +447,7 @@ func parseUSDACSV(text string) (map[string]*tractRecord, error) {
 		}
 	}
 	if geoidCol < 0 {
-		return nil, fmt.Errorf("usda-foodaccess: CSV missing GEOID column (expected CensusTract, GEOID, or similar); header: %v", header[:min(10, len(header))])
+		return nil, fmt.Errorf("usda-food: CSV missing GEOID column (expected CensusTract, GEOID, or similar); header: %v", header[:min(10, len(header))])
 	}
 
 	byGEOID := make(map[string]*tractRecord)

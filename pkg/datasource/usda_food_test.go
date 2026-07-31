@@ -76,11 +76,14 @@ func newUSDA404Server(t *testing.T) *httptest.Server {
 // TestNewUSDAFoodSource validates Name, Category, Vintage with year.
 func TestNewUSDAFoodSource(t *testing.T) {
 	s := NewUSDAFoodSource(USDAFoodConfig{Year: 2019})
-	if s.Name() != "usda-foodaccess" {
-		t.Errorf("Name(): want usda-foodaccess, got %q", s.Name())
+	if s.Name() != "usda-food" {
+		t.Errorf("Name(): want usda-food, got %q", s.Name())
 	}
-	if s.Category() != "food" {
-		t.Errorf("Category(): want food, got %q", s.Category())
+	// "food_access" matches the category in migrations/seed_sources.sql. The two
+	// have to agree now that RegisterSource writes indicator_sources from the
+	// adapter rather than from the seed file alone.
+	if s.Category() != "food_access" {
+		t.Errorf("Category(): want food_access, got %q", s.Category())
 	}
 	if s.Vintage() != "USDA-FARA-2019" {
 		t.Errorf("Vintage(): want USDA-FARA-2019, got %q", s.Vintage())

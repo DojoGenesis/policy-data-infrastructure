@@ -270,7 +270,7 @@ SOCRATA_APP_TOKEN — a different env var name, with no fallback to CDC_PLACES_A
 only one of the two leaves the other pipeline running unauthenticated (1 req/sec, no error).
 """
 
-[sources.usda-foodaccess]
+[sources.usda-food]
 name               = "USDA Food Access Research Atlas"
 category           = "food"
 url                = "https://www.ers.usda.gov/media/5627/food-access-research-atlas-data-download-2019.zip"

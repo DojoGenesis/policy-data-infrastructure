@@ -87,3 +87,7 @@ scratch/
 # Manim intermediate render cache — hash-named, fully regenerated on every render.
 # The final scene MP4s (media/videos/<scene>/<quality>/<Scene>.mp4) stay tracked.
 media/videos/**/partial_movie_files/
+
+# Ad-hoc dev tooling: scripts/layout-check.mjs needs playwright, installed
+# with `npm install --no-save playwright` rather than a tracked manifest.
+node_modules/

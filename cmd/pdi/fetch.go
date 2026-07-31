@@ -206,15 +206,25 @@ func runFetchScoped(ctx context.Context, toFetch []datasource.DataSource, s stor
 			continue
 		}
 
-		if len(indicators) > 0 {
-			if regErr := registerSource(ctx, s, ds); regErr != nil {
-				fmt.Fprintf(w, "%s\t%d\t%s\tERROR (register): %v\n", ds.Name(), len(indicators), elapsed, regErr)
-				continue
-			}
-			if writeErr := s.PutIndicators(ctx, indicators); writeErr != nil {
-				fmt.Fprintf(w, "%s\t%d\t%s\tERROR (write): %v\n", ds.Name(), len(indicators), elapsed, writeErr)
-				continue
-			}
+		// A source that returns nothing must not print "ok". An empty result is
+		// almost always a filter that matched no rows — a vintage the source
+		// does not publish, a geography outside its coverage — and reporting it
+		// as success is how fcc-broadband spent months "loading" zero rows. The
+		// run does not fail (a genuinely empty result is possible), but the
+		// status has to say what happened.
+		if len(indicators) == 0 {
+			fmt.Fprintf(w, "%s\t0\t%s\tNO RECORDS (check vintage/scope — nothing matched)\n",
+				ds.Name(), elapsed)
+			continue
+		}
+
+		if regErr := registerSource(ctx, s, ds); regErr != nil {
+			fmt.Fprintf(w, "%s\t%d\t%s\tERROR (register): %v\n", ds.Name(), len(indicators), elapsed, regErr)
+			continue
+		}
+		if writeErr := s.PutIndicators(ctx, indicators); writeErr != nil {
+			fmt.Fprintf(w, "%s\t%d\t%s\tERROR (write): %v\n", ds.Name(), len(indicators), elapsed, writeErr)
+			continue
 		}
 
 		fmt.Fprintf(w, "%s\t%d\t%s\tok\n", ds.Name(), len(indicators), elapsed)
