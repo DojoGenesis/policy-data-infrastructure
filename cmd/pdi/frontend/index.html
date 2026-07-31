@@ -801,6 +801,141 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
     <div class="thread-dot"></div>
   </div>
 
+  <!-- ── Derived Insights ───────────────────────────────────────
+       Every number in this section is COMPUTED at render time by
+       PDIAcs (lib/acs.js) from the embedded ACS snapshot. There is not
+       one hardcoded county name or figure in the markup below, and that
+       is deliberate: on 2026-07-30 a spike hand-transcribed these exact
+       comparisons into this file and named the wrong county the state
+       leader on both poverty and uninsured rate. The slots start at "—"
+       and are filled from the data, so a JS-off visitor reads labels and
+       dashes rather than a stale claim about a specific place — the same
+       "absent beats wrong" rule the featured card above follows. (The
+       hero scale strip deliberately does the opposite; see its comment.)
+
+       Direction is surfaced per card because "highest" is not
+       self-evidently bad: highest poverty is a burden, highest degree
+       attainment is not. -->
+  <style>
+    .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 22px; text-align: left; }
+    .insight-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .insight-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .insight-provenance { font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; opacity: .62; white-space: nowrap; }
+    .insight-title { font-size: 1rem; margin: 0; line-height: 1.3; }
+    .insight-dir { font-size: .72rem; opacity: .7; margin: -6px 0 0; }
+    .insight-rows { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; }
+    .insight-row { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 8px; }
+    .insight-row-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; opacity: .6; }
+    .insight-row-county { font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .insight-row-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .insight-row--gap { border-top: 1px solid currentColor; border-top-color: color-mix(in srgb, currentColor 14%, transparent); padding-top: 7px; margin-top: 2px; }
+    @media (max-width: 375px) { .insight-grid { grid-template-columns: 1fr; } .insight-card { padding: 15px 16px; } }
+  </style>
+
+  <section class="section-band reveal" id="insights">
+    <div class="section-band-inner">
+      <span class="section-tag" data-en="WHAT THE SNAPSHOT SHOWS" data-es="LO QUE MUESTRA LA INSTANTÁNEA">WHAT THE SNAPSHOT SHOWS</span>
+      <h2 class="section-band-heading" data-en="The spread between counties" data-es="La brecha entre condados">The spread between counties</h2>
+      <p class="section-band-subtitle" data-en="Wisconsin's counties are not one place. These gaps are computed live from the embedded ACS snapshot covering all 72 counties — no figure below is typed by hand." data-es="Los condados de Wisconsin no son un solo lugar. Estas brechas se calculan en vivo desde la instantánea ACS incorporada que cubre los 72 condados — ninguna cifra de abajo está escrita a mano.">Wisconsin's counties are not one place. These gaps are computed live from the embedded ACS snapshot covering all 72 counties — no figure below is typed by hand.</p>
+
+      <div class="insight-grid" id="insight-grid">
+        <article class="card insight-card reveal" style="--d:0" data-insight-field="poverty_rate">
+          <div class="insight-card-head">
+            <span class="section-tag" data-en="Poverty" data-es="Pobreza">Poverty</span>
+            <span class="insight-provenance" data-en="ACS snapshot" data-es="Instantánea ACS">ACS snapshot</span>
+          </div>
+          <h3 class="insight-title" data-en="Poverty rate" data-es="Tasa de pobreza">Poverty rate</h3>
+          <p class="insight-dir" data-en="Higher is worse" data-es="Más alto es peor">Higher is worse</p>
+          <div class="insight-rows">
+            <div class="insight-row"><span class="insight-row-label" data-en="Highest" data-es="Más alta">Highest</span><span class="insight-row-county" data-slot="max-name">—</span><span class="insight-row-val" data-slot="max-val">—</span></div>
+            <div class="insight-row"><span class="insight-row-label" data-en="Lowest" data-es="Más baja">Lowest</span><span class="insight-row-county" data-slot="min-name">—</span><span class="insight-row-val" data-slot="min-val">—</span></div>
+            <div class="insight-row insight-row--gap"><span class="insight-row-label" data-en="Gap" data-es="Brecha">Gap</span><span class="insight-row-county"></span><span class="insight-row-val" data-slot="ratio">—</span></div>
+          </div>
+        </article>
+
+        <article class="card insight-card reveal" style="--d:80" data-insight-field="uninsured_rate">
+          <div class="insight-card-head">
+            <span class="section-tag" data-en="Health coverage" data-es="Cobertura médica">Health coverage</span>
+            <span class="insight-provenance" data-en="ACS snapshot" data-es="Instantánea ACS">ACS snapshot</span>
+          </div>
+          <h3 class="insight-title" data-en="Uninsured rate" data-es="Tasa de personas sin seguro">Uninsured rate</h3>
+          <p class="insight-dir" data-en="Higher is worse" data-es="Más alto es peor">Higher is worse</p>
+          <div class="insight-rows">
+            <div class="insight-row"><span class="insight-row-label" data-en="Highest" data-es="Más alta">Highest</span><span class="insight-row-county" data-slot="max-name">—</span><span class="insight-row-val" data-slot="max-val">—</span></div>
+            <div class="insight-row"><span class="insight-row-label" data-en="Lowest" data-es="Más baja">Lowest</span><span class="insight-row-county" data-slot="min-name">—</span><span class="insight-row-val" data-slot="min-val">—</span></div>
+            <div class="insight-row insight-row--gap"><span class="insight-row-label" data-en="Gap" data-es="Brecha">Gap</span><span class="insight-row-county"></span><span class="insight-row-val" data-slot="ratio">—</span></div>
+          </div>
+        </article>
+
+        <article class="card insight-card reveal" style="--d:160" data-insight-field="pct_cost_burdened">
+          <div class="insight-card-head">
+            <span class="section-tag" data-en="Housing" data-es="Vivienda">Housing</span>
+            <span class="insight-provenance" data-en="ACS snapshot" data-es="Instantánea ACS">ACS snapshot</span>
+          </div>
+          <h3 class="insight-title" data-en="Cost-burdened households" data-es="Hogares con carga de costos">Cost-burdened households</h3>
+          <p class="insight-dir" data-en="Higher is worse" data-es="Más alto es peor">Higher is worse</p>
+          <div class="insight-rows">
+            <div class="insight-row"><span class="insight-row-label" data-en="Highest" data-es="Más alta">Highest</span><span class="insight-row-county" data-slot="max-name">—</span><span class="insight-row-val" data-slot="max-val">—</span></div>
+            <div class="insight-row"><span class="insight-row-label" data-en="Lowest" data-es="Más baja">Lowest</span><span class="insight-row-county" data-slot="min-name">—</span><span class="insight-row-val" data-slot="min-val">—</span></div>
+            <div class="insight-row insight-row--gap"><span class="insight-row-label" data-en="Gap" data-es="Brecha">Gap</span><span class="insight-row-county"></span><span class="insight-row-val" data-slot="ratio">—</span></div>
+          </div>
+        </article>
+
+        <article class="card insight-card reveal" style="--d:240" data-insight-field="pct_bachelors_or_higher">
+          <div class="insight-card-head">
+            <span class="section-tag" data-en="Education" data-es="Educación">Education</span>
+            <span class="insight-provenance" data-en="ACS snapshot" data-es="Instantánea ACS">ACS snapshot</span>
+          </div>
+          <h3 class="insight-title" data-en="Bachelor's degree or higher" data-es="Licenciatura o superior">Bachelor's degree or higher</h3>
+          <p class="insight-dir" data-en="Higher is better" data-es="Más alto es mejor">Higher is better</p>
+          <div class="insight-rows">
+            <div class="insight-row"><span class="insight-row-label" data-en="Highest" data-es="Más alta">Highest</span><span class="insight-row-county" data-slot="max-name">—</span><span class="insight-row-val" data-slot="max-val">—</span></div>
+            <div class="insight-row"><span class="insight-row-label" data-en="Lowest" data-es="Más baja">Lowest</span><span class="insight-row-county" data-slot="min-name">—</span><span class="insight-row-val" data-slot="min-val">—</span></div>
+            <div class="insight-row insight-row--gap"><span class="insight-row-label" data-en="Gap" data-es="Brecha">Gap</span><span class="insight-row-county"></span><span class="insight-row-val" data-slot="ratio">—</span></div>
+          </div>
+        </article>
+      </div>
+
+      <p class="section-band-subtitle" style="margin-top:18px;font-size:.82rem;opacity:.72" data-en="Source: American Community Survey 5-year estimates, embedded snapshot. Live platform indicators are shown on each county page." data-es="Fuente: estimaciones de 5 años de la American Community Survey, instantánea incorporada. Los indicadores en vivo de la plataforma se muestran en cada página de condado.">Source: American Community Survey 5-year estimates, embedded snapshot. Live platform indicators are shown on each county page.</p>
+    </div>
+  </section>
+
+  <script src="/static/lib/acs.js"></script>
+  <script>
+  /* Fills the insight cards above from PDIAcs. Runs synchronously right
+     after the markup so the nodes are in place before motion.js (defer)
+     takes its first reveal scan — the observer only sees what exists when
+     it boots, which is how 70 evidence cards once shipped invisible. The
+     re-scan below is the belt to that braces, and reveals() skips nodes it
+     already handled, so calling it twice is safe. */
+  (function () {
+    function fill() {
+      if (!window.PDIAcs) { return; }
+      var cards = document.querySelectorAll('[data-insight-field]');
+      for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        var field = card.getAttribute('data-insight-field');
+        var sp = window.PDIAcs.spread(field);
+        if (!sp) { continue; }
+        var set = function (slot, text) {
+          var el = card.querySelector('[data-slot="' + slot + '"]');
+          if (el) { el.textContent = text; }
+        };
+        set('max-name', sp.max.name);
+        set('max-val', window.PDIAcs.format(field, sp.max.value));
+        set('min-name', sp.min.name);
+        set('min-val', window.PDIAcs.format(field, sp.min.value));
+        set('ratio', sp.ratio ? sp.ratio.toFixed(1) + '\u00d7' : '\u2014');
+      }
+      if (window.TPMotion) { window.TPMotion.reveals('.reveal'); }
+    }
+    fill();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fill);
+    }
+  })();
+  </script>
+
   <!-- ── County Grid Section ────────────────────────────────────── -->
   <section class="section-band section-band--alt reveal" id="counties">
     <div class="section-band-inner">
