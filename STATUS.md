@@ -53,11 +53,12 @@ Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 packages ✅ · vendor
 
 | Item | Value |
 |------|-------|
-| HEAD | `c14cc0e` — frontend rebuild, committed + deployed 2026-07-28 |
-| Branch | `cruz/pip-115-pdi-frontend-rebuild` (pushed; **not yet merged to `main`**) |
-| Build | Clean (`go build` ✅ `go vet` ✅ `go test -short` 10/10 ✅) |
+| HEAD | `c3e0f90` — data-layer reseed, merged to `main` 2026-08-02 |
+| Branch | `main`. `fix/pdi-data-layer-reseed` fast-forwarded in and deleted (local + remote) |
+| Build | Clean (`go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅) — verified 2026-08-02 |
 | Tests | 380+ pass, 0 fail · smoke test 24/24 against live |
 | VPS | `5.161.84.125` — `pdi.service` active. Binary `/usr/local/bin/pdi` 59,234,392 bytes, deployed 2026-07-28 19:44 UTC |
+| ⚠ Deploy drift | **The live binary predates `main` by 14 commits.** Everything in the 2026-07-31 reseed — the four ingest/store fixes, migration 014, the `sources_with_data` endpoint — is merged but **not deployed**. Live behaviour still reflects `79cd188` |
 | Rollback | `/usr/local/bin/pdi.bak-20260728-194401` (47,403,170 bytes, the pre-rebuild binary) |
 | Deploy method | `scp` to `/tmp/pdi-new` → `systemctl stop` → `install -o dojo -g dojo -m 755` → `systemctl start`. SSH via the `dojo-gateway` alias (key `~/.ssh/hetzner_deploy_ed25519`); `root@5.161.84.125` direct does **not** authenticate |
 | Live API | `https://api.policydatainfrastructure.com` — all 11 routes 200 |
