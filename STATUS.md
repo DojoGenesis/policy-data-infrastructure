@@ -1,7 +1,7 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-08-08 (ADR-014 run/aggregation layer — handoff 2026-08-02_pdi-aggregation-and-runs)
+> Last agent update: 2026-08-08 evening (crosswalk + USDA + live-DB grounded chat; see CHANGELOG)
 
 ## Run & Aggregation Layer (2026-08-08)
 
@@ -36,12 +36,15 @@ Pinned to **ACS 2020-2024 5-Year** (vintage string `ACS-2024-5yr`).
 | `indicators` acs-5yr tract | 19 × 1,542 | **29,298** ✅ NEW — canonical vocabulary, MOE on 29,242/29,242 non-null |
 | `indicators` cdc-places tract | ~12,200 | **12,200** ✅ |
 | `indicators` cdc-svi | — | **9,528** (360 county + 9,168 tract; now incl. `svi_total_population` w/ MOE — the rollup denominator) |
-| `indicators` usda-food | ~8,009 | **0** ⛔ blocked — 2010 vs 2020 tract vintage (operator, ADR-014 OQ6) |
+| `indicators` usda-food | — | **6,438** ✅ (5 vars × county + 2020-tract, via the population-weighted 2010→2020 crosswalk; OQ6 resolved) |
 | `indicator_sources` / `indicator_meta` | ≥4 / ≥20 | **14 / 42** |
-| `indicators_latest` | — | **52,394** (was 21,568) |
+| `indicators_latest` | — | **58,832** local / **67,000+** prod |
 
-**Blocked on operator (unchanged):** USDA tract vintage (ADR-014 OQ6); FBI NIBRS
-`FBI_CDE_API_KEY`; FCC Broadband source decision (WAF-blocked).
+**Blocked on operator — all queued for Monday 2026-08-11 2pm** (handoff
+`2026-08-08_crime-sensitive-data-gathering` + calendar event): FBI NIBRS
+`FBI_CDE_API_KEY`, FCC BDC account token (broadband lane chosen 2026-08-08),
+IPUMS account (upgrades crosswalk weights to NHGIS TDW). USDA OQ6 is RESOLVED —
+loaded via the crosswalk above.
 
 Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅ (400+ tests; +17 this session)
 

@@ -3,6 +3,62 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-08 (evening) — the crosswalk, USDA, and the agent grounded in the live DB
+
+Continuing the original vision (operator directive): more data, real
+research, and the chat agent given access to all of it. Commits
+`08e7e0a` + `b1ebd17`, deployed to the VPS same evening.
+
+### 2010→2020 tract crosswalk — ADR-014 OQ6 resolved (`08e7e0a`)
+Operator chose the crosswalk over county-only or identifier-matching.
+`ingest/build_tract_crosswalk.py` derives population-weighted tract
+weights from the Census t10t20 block relationship file (291,335 WI
+intersections) + 2010 block populations (dec/sf1, 253,096 blocks).
+Gates all pass: exact 1,409→1,542 coverage, weights sum to 1 at machine
+epsilon, population conserved to the person — 5,686,986, the official
+2010 WI count, reproduced from raw blocks. Artifact committed at
+`data/crosswalks/wi_tract2010_tract2020.csv` (2,157 pairs) with
+provenance sidecar. NHGIS's refined TDW files turned out to sit behind
+an IPUMS login (the asset host serves an HTML shell with HTTP 200 for
+every unauthenticated path — caught by content-checking, the CDC-SVI
+trap's sibling); an IPUMS account joins Monday's signup list and swaps
+weights in place.
+
+### USDA FARA loaded at last — through the crosswalk (`08e7e0a`)
+`fetch_usda_food.py` rewritten: aliases pinned one-source-per-target to
+exact FARA 2019 columns (the old table let counts and shares race for
+the same output), counts allocate across the crosswalk, designation
+flags become population shares with metadata that says so, county rows
+computed boundary-stable. FARA's literal "NULL" strings now register as
+null — the audit had reported 0% on lapop10, an 85%-sparse-by-design
+rural measure. **Loaded local + VPS: 6,438 rows × both levels, every
+count conserved exactly; usda_food_population reconciles to 5,686,986
+through two independent paths.**
+
+### The agent grounded in the live database (`b1ebd17`)
+`grounding.LoadFromStore` builds the engine's Dataset from the store:
+every indicator with data, county + tract, per-indicator vintages,
+per-source citations, 5-minute-TTL snapshot behind an atomic engine
+swap. Two engine fixes riding along: citations carry the indicator's
+own vintage (four sources, four vintages — one dataset-wide claim would
+be fiction), and 0–1-scale measures render as decimals (0.87 previously
+displayed as "1"). `pdi serve` now mounts `/v1/policy/chat{,/query,/schema}`
+— the grounded engine's first appearance on the API at all; it was
+CLI-only, frozen at the 11-indicator atlas bundle. Verified on prod:
+45-indicator vocabulary, and `usda_food_desert` lookup answers
+Menominee County 0.68 with a full FARA citation.
+
+### Also
+Monday 2026-08-11 2pm session queued (handoff
+`2026-08-08_crime-sensitive-data-gathering` + calendar event): FBI
+api.data.gov key, FCC BDC token, IPUMS account, then the sensitive-data
+source ruling (cannabis arrests etc.) under pre-ratified guardrails.
+FCC broadband switched to the BDC API lane pending that token. Known
+prod quirks, unchanged: PLACES vintage label `2022` vs local
+`CDC-PLACES-2023`; the 127 superseded 2010 tracts on prod are not yet
+marked retired (migration 013's marker was never backfilled), so prod
+tract counts read 1,669.
+
 ## 2026-08-08 — ADR-014 lands: cross-level data, honest aggregation, queued runs
 
 Handoff `2026-08-02_pdi-aggregation-and-runs` executed end to end (commits
