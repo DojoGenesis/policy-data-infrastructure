@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-08-08T21:13:56.696194+00:00",
+  "method": "2010 block population allocated over Census t10t20 block intersections by AREALAND_INT share, aggregated to tract pairs",
+  "sources": {
+    "relationship_file": "https://www2.census.gov/geo/docs/maps-data/data/rel2020/t10t20/TAB2010_TAB2020_ST55.zip",
+    "block_population": "Census API 2010 dec/sf1 P001001, block level, per county"
+  },
+  "filters": {
+    "state_both_sides": "55",
+    "cross_state_rows_dropped": 14
+  },
+  "gates": {
+    "tract2010_count": 1409,
+    "tract2020_coverage": 1542,
+    "max_weight_sum_deviation": 7.771561172376096e-16,
+    "population_allocated": 5686986.0,
+    "population_source": 5686986,
+    "methods": {
+      "population": 1392,
+      "area": 17
+    },
+    "blocks_missing_population": 0
+  },
+  "upgrade_path": "swap weights for NHGIS TDW crosswalk when an IPUMS account is available; schema unchanged",
+  "rows": 2157
+}

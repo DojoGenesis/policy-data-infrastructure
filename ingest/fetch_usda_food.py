@@ -53,63 +53,35 @@ OUTPUT_COLUMNS = [
     "low_access_1mi",
     "low_access_10mi",
     "low_income_low_access",
-    "snap_flag",
+    "snap_count",
     "population",
-    "poverty_rate",
 ]
 
 # Mapping of USDA ERS source column names → our output column names.
-# The ERS renames columns between vintages; extend this dict as needed.
+#
+# ONE source column per target, pinned to the FARA 2019 release. The old
+# table aliased both counts (lapop10) and shares (lapop10share) into the
+# same target, so which semantics loaded depended on CSV column order —
+# the same silent-vocabulary failure class as ADR-014 F4. If ERS renames
+# a column in a future vintage, add the ONE new name deliberately and
+# remove the old, never both.
 COLUMN_ALIASES: dict[str, str] = {
-    # GEOID (tract)
+    # GEOID (2010-vintage tract — the whole reason the crosswalk exists)
     "CensusTract":        "geoid",
-    "census_tract":       "geoid",
-    "GEOID":              "geoid",
-    "geoid":              "geoid",
     # county name
     "County":             "county_name",
-    "county":             "county_name",
-    "County Name":        "county_name",
-    # urban flag
+    # urban designation flag (0/1)
     "Urban":              "urban_flag",
-    "urban":              "urban_flag",
-    "UrbanFlag":          "urban_flag",
-    # low access 1 mile
-    "LAPOP1_10":          "low_access_1mi",
-    "lapop1_10":          "low_access_1mi",
-    "LowAccess1Mi":       "low_access_1mi",
-    "LAPOP1":             "low_access_1mi",
-    # low access 10 mile — population share with low access at 10-mile threshold
-    "LAPOP10_10":         "low_access_10mi",
-    "lapop10_10":         "low_access_10mi",
-    "LowAccess10Mi":      "low_access_10mi",
-    "LAPOP10":            "low_access_10mi",
-    "lapop10":            "low_access_10mi",    # 2019 column name
-    "lapop10share":       "low_access_10mi",    # share version (2019)
-    # low income low access
+    # low-access population COUNT at 1 mile (urban) — people, not a share
+    "lapop1":             "low_access_1mi",
+    # low-access population COUNT at 10 miles (rural)
+    "lapop10":            "low_access_10mi",
+    # LILA designation flag (low income + low access at 1 and 10 miles)
     "LILATracts_1And10":  "low_income_low_access",
-    "lilatracts_1and10":  "low_income_low_access",
-    "LILATracts_halfAnd10": "low_income_low_access",
-    "LowIncomeLowAccess": "low_income_low_access",
-    # SNAP households with low access — share of SNAP-participant households
-    # with low access at 1-mile threshold; useful proxy for food-desert severity
-    "SNAP_1":             "snap_flag",
-    "snap_1":             "snap_flag",
-    "SNAPFlag":           "snap_flag",
-    "SNAP":               "snap_flag",
-    "lasnap1share":       "snap_flag",          # 2019 column name
-    "TractSNAP":          "snap_flag",          # SNAP store count (fallback)
-    # population
+    # SNAP-recipient household COUNT
+    "TractSNAP":          "snap_count",
+    # 2010 census tract population (FARA's own denominator)
     "Pop2010":            "population",
-    "pop2010":            "population",
-    "POP2010":            "population",
-    "Population":         "population",
-    "pop":                "population",
-    # poverty rate
-    "PovertyRate":        "poverty_rate",
-    "poverty_rate":       "poverty_rate",
-    "POVERTYRATE":        "poverty_rate",
-    "PovRate":            "poverty_rate",
 }
 
 # ERS CSV includes a State column for filtering
@@ -250,7 +222,11 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
         out: dict = {col: None for col in OUTPUT_COLUMNS}
         for src_col, target_col in col_map.items():
             raw = row.get(src_col, "").strip()
-            out[target_col] = raw if raw not in ("", "N/A", "-", ".") else None
+            # FARA writes the literal string "NULL" for missing values —
+            # a raw-string audit that misses it reports 0% null while the
+            # measure is genuinely sparse (lapop10 exists only for tracts
+            # measured at the rural threshold).
+            out[target_col] = raw if raw not in ("", "N/A", "-", ".", "NULL", "null") else None
 
         # Normalize geoid to 11 digits
         if out.get("geoid"):
@@ -282,51 +258,209 @@ def null_audit(records: list[dict]) -> None:
         print(f"  {col:<35} {null_count:>5} null  ({pct:.1f}%)")
 
 
+# ── crosswalk-aware load (ADR-014 OQ6, resolved 2026-08-08) ────────────────
+#
+# FARA 2019 is keyed to 2010 tracts; the platform's geographies are 2020.
+# Loading "by identifier" would drop 127 tracts loudly and mis-place an
+# unknown number silently. Instead every tract-level value crosses the
+# population-weighted crosswalk built by build_tract_crosswalk.py, under
+# per-class rules (the D7 discipline, applied to boundary translation):
+#
+#   count — allocate: value(t20) = Σ value(t10) × weight(t10→t20)
+#   flag  — population share: value(t20) = Σ alloc_pop×flag / Σ alloc_pop,
+#           i.e. "share of this 2020 tract's (2010-allocated) population
+#           living in tracts that carried the designation". A 0/1 becomes
+#           a 0..1 share and the metadata SAYS so — a translated flag
+#           presented as a crisp designation would be a caveated-wrong.
+#
+# County rows are computed straight from the 2010 tracts (WI county
+# boundaries are stable across the vintages), so they carry no crosswalk
+# error at all: counts sum; flags become population shares of the county.
+
+VINTAGE = "USDA-FARA-2019"
+CROSSWALK_FILE = os.path.join(
+    SCRIPT_DIR, "..", "data", "crosswalks", "wi_tract2010_tract2020.csv"
+)
+
+# variable_id → (output column, class). usda_food_desert keeps its
+# long-registered id; it is the LILA 1-and-10 designation.
+LOAD_PLAN: dict[str, tuple[str, str]] = {
+    "usda_food_low_access_1mi":  ("low_access_1mi", "count"),
+    "usda_food_low_access_10mi": ("low_access_10mi", "count"),
+    "usda_food_snap_count":      ("snap_count", "count"),
+    "usda_food_population":      ("population", "count"),
+    "usda_food_desert":          ("low_income_low_access", "flag"),
+}
+
+INDICATOR_META: dict[str, dict] = {
+    "usda_food_low_access_1mi": {
+        "source_id": "usda-food", "unit": "count", "direction": "lower_better",
+        "name": "Low-Access Population (1-Mile Urban)",
+        "description": "People beyond 1 mile (urban) from a supermarket, FARA 2019. Computed only for tracts FARA measures at the 1-mile threshold — absent elsewhere by design, not missing. Tract values crosswalked 2010→2020 boundaries by population-weighted allocation (see data/crosswalks/wi_tract2010_tract2020.meta.json); county values summed directly from source tracts.",
+    },
+    "usda_food_low_access_10mi": {
+        "source_id": "usda-food", "unit": "count", "direction": "lower_better",
+        "name": "Low-Access Population (10-Mile Rural)",
+        "description": "People beyond 10 miles (rural) from a supermarket, FARA 2019. Computed only for tracts FARA measures at the 10-mile (rural) threshold — sparse by design (279 of 1,542 WI 2020 tracts). Same crosswalk treatment as the 1-mile measure.",
+    },
+    "usda_food_snap_count": {
+        "source_id": "usda-food", "unit": "count", "direction": "neutral",
+        "name": "SNAP Recipients",
+        "description": "SNAP-recipient households (TractSNAP), FARA 2019, crosswalked 2010→2020 boundaries by population-weighted allocation.",
+    },
+    "usda_food_population": {
+        "source_id": "usda-food", "unit": "count", "direction": "neutral",
+        "name": "Population (FARA 2010 base)",
+        "description": "FARA's own 2010 census tract population (POP2010) — the denominator its access measures were computed against. Crosswalked to 2020 boundaries; kept so rates derived from FARA counts use FARA's denominator, not a mismatched vintage.",
+    },
+    "usda_food_desert": {
+        "source_id": "usda-food", "unit": "percent_share", "direction": "lower_better",
+        "name": "Food Desert Designation (population share)",
+        "description": "Share (0–1) of the geography's population living in tracts designated low-income-low-access at 1 and 10 miles (LILATracts_1And10, FARA 2019, 2010 boundaries). NOT a crisp 0/1 at 2020 boundaries: the designation was made on 2010 tracts, so the translated value is the population share under it.",
+    },
+}
+
+
+def _load_crosswalk() -> dict[str, list[tuple[str, float, float]]]:
+    """tract2010 → [(tract2020, weight, allocated_pop)]."""
+    if not os.path.exists(CROSSWALK_FILE):
+        print(
+            f"  ERROR: crosswalk missing at {CROSSWALK_FILE}\n"
+            f"  Run: python ingest/build_tract_crosswalk.py",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    xwalk: dict[str, list[tuple[str, float, float]]] = {}
+    with open(CROSSWALK_FILE, newline="") as f:
+        for row in csv.DictReader(f):
+            xwalk.setdefault(row["tract2010"], []).append(
+                (row["tract2020"], float(row["weight"]), float(row["allocated_pop2010"]))
+            )
+    return xwalk
+
+
+def _fnum(raw) -> float | None:
+    try:
+        return float(raw) if raw is not None else None
+    except (ValueError, TypeError):
+        return None
+
+
 def load_to_db(records: list[dict]) -> None:
-    """Load records to PostGIS via db.py."""
+    """Crosswalk tract values to 2020 boundaries, roll up counties, load both."""
     try:
         import sys as _sys
         _sys.path.insert(0, SCRIPT_DIR)
-        from lib.db import get_conn, bulk_load_indicators
+        from lib.db import get_conn, bulk_load_indicators, upsert_indicator_meta
     except ImportError as exc:
         print(f"  ERROR: Cannot import lib.db — {exc}", file=sys.stderr)
         sys.exit(1)
 
-    print("Connecting to database...")
-    conn = get_conn()
+    xwalk = _load_crosswalk()
+    unmatched = [r["geoid"] for r in records if r.get("geoid") and r["geoid"] not in xwalk]
+    if unmatched:
+        print(
+            f"  ERROR: {len(unmatched)} source tracts missing from the crosswalk "
+            f"(first: {unmatched[:3]}) — regenerate it before loading.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    numeric_cols = [
-        "urban_flag",
-        "low_access_1mi",
-        "low_access_10mi",
-        "low_income_low_access",
-        "snap_flag",
-        "population",
-        "poverty_rate",
-    ]
-    indicators = []
-    for rec in records:
-        geoid = rec.get("geoid")
-        if not geoid:
-            continue
-        for col in numeric_cols:
-            raw = rec.get(col)
-            try:
-                val = float(raw) if raw is not None else None
-            except (ValueError, TypeError):
-                val = None
+    indicators: list[dict] = []
+    conservation: dict[str, tuple[float, float, float]] = {}
+    pop_by_tract: dict[str, float] = {
+        r["geoid"]: (_fnum(r.get("population")) or 0.0)
+        for r in records if r.get("geoid")
+    }
+
+    for var_id, (col, cls) in LOAD_PLAN.items():
+        # Source values by 2010 tract.
+        src: dict[str, float | None] = {}
+        for rec in records:
+            g = rec.get("geoid")
+            if g:
+                src[g] = _fnum(rec.get(col))
+
+        # County rollup (boundary-stable, no crosswalk error).
+        county_num: dict[str, float] = {}
+        county_pop: dict[str, float] = {}
+        # 2020-tract translation.
+        t20_num: dict[str, float] = {}
+        t20_pop: dict[str, float] = {}
+
+        for t10, val in src.items():
+            county = t10[:5]
+            pop10 = pop_by_tract.get(t10, 0.0)
+            if val is not None:
+                if cls == "count":
+                    county_num[county] = county_num.get(county, 0.0) + val
+                else:  # flag → population share
+                    county_num[county] = county_num.get(county, 0.0) + pop10 * val
+                    county_pop[county] = county_pop.get(county, 0.0) + pop10
+                for t20, w, apop in xwalk[t10]:
+                    if cls == "count":
+                        t20_num[t20] = t20_num.get(t20, 0.0) + val * w
+                    else:
+                        t20_num[t20] = t20_num.get(t20, 0.0) + apop * val
+                        t20_pop[t20] = t20_pop.get(t20, 0.0) + apop
+            elif cls == "flag":
+                # A tract with an unknown flag still contributes population to
+                # nothing — its people are simply absent from the share, and
+                # the denominator must not pretend otherwise.
+                continue
+
+        source_total = sum(v for v in src.values() if v is not None)
+        rows = 0
+        for county, num in sorted(county_num.items()):
+            value = num if cls == "count" else (num / county_pop[county] if county_pop.get(county) else None)
+            if value is None:
+                continue
             indicators.append({
-                "geoid":          geoid,
-                "variable_id":    f"usda_food_{col}",
-                "vintage":        2019,
-                "value":          val,
-                "margin_of_error": None,
-                "raw_value":      str(raw or ""),
+                "geoid": county, "variable_id": var_id, "vintage": VINTAGE,
+                "value": value, "margin_of_error": None,
+                "raw_value": f"county_{'sum' if cls == 'count' else 'pop_share'}",
             })
+            rows += 1
+        for t20, num in sorted(t20_num.items()):
+            value = num if cls == "count" else (num / t20_pop[t20] if t20_pop.get(t20) else None)
+            if value is None:
+                continue
+            indicators.append({
+                "geoid": t20, "variable_id": var_id, "vintage": VINTAGE,
+                "value": value, "margin_of_error": None,
+                "raw_value": f"xwalk_{'alloc' if cls == 'count' else 'pop_share'}",
+            })
+            rows += 1
 
+        if cls == "count":
+            conservation[var_id] = (
+                source_total,
+                sum(county_num.values()),
+                sum(t20_num.values()),
+            )
+        print(f"  {var_id:<28} {cls:<5} → {rows} rows")
+
+    print("\nConservation (counts must survive both translations):")
+    ok = True
+    for var_id, (src_t, cty_t, t20_t) in conservation.items():
+        drift_cty = abs(cty_t - src_t)
+        drift_t20 = abs(t20_t - src_t)
+        flag = "ok" if drift_cty < 1.0 and drift_t20 < 1.0 else "FAIL"
+        if flag == "FAIL":
+            ok = False
+        print(f"  {var_id:<28} source {src_t:>12,.0f}  county {cty_t:>12,.0f}  tract20 {t20_t:>12,.0f}  [{flag}]")
+    if not ok:
+        print("  ABORT: counts were not conserved across translation.", file=sys.stderr)
+        sys.exit(1)
+
+    print("\nConnecting to database...")
+    conn = get_conn()
+    n_meta = upsert_indicator_meta(conn, INDICATOR_META)
+    print(f"  {n_meta} indicator_meta rows upserted")
     n = bulk_load_indicators(conn, indicators)
     conn.close()
     print(f"  {n} indicator rows written to database")
+    print("  Remember: REFRESH MATERIALIZED VIEW CONCURRENTLY indicators_latest;")
 
 
 def main() -> None:
