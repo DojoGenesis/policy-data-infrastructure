@@ -89,8 +89,23 @@ tests incl. 8 new run-endpoint, 6 new rollup/bootstrap, 3 new CLI tests).
 **Not done, deliberately:** USDA tract vintage (ADR-014 OQ6), FCC source
 choice, FBI NIBRS key — operator decisions, unchanged. LISA is still
 Python-only/off-DB. composite_index/correlation are not yet routed
-through the run API (CLI-only). **Not deployed** — the VPS binary now
-trails main by ~20 commits; deploy is the operator's call.
+through the run API (CLI-only).
+
+### Deployed to the VPS same day (operator-authorized)
+Binary `v0.1.0-152-gb0ea467` shipped (scp → sha256 verify → backup →
+stop → install → `migrate up` → start; /health + /readyz 200, public
+origin 200). Migrations 015-017 applied: production's duplicate
+analyses pair deduped (18→17, 0 dup groups), cache index + run queue
+live, state row already present (017 no-op'd as designed). Data legs
+via SSH tunnel from the Mac (no repo on the box): SVI tract 9,168 rows
+incl. the denominator, canonical ACS tract 29,298 rows, view refreshed
+— **prod DB 29,577 → 60,403 indicators**. `CENSUS_API_KEY` provisioned
+to `/etc/pdi/env` (piped, never in argv/transcript). Prod smoke
+matches local: Dane obesity rollup 33.12 CI [32.63, 33.57] 123/125;
+obesity×poverty ρ=0.503 CI [0.461, 0.545] n=1,524; cached re-POST hits.
+Noted: prod PLACES vintage label is `2022` vs local `CDC-PLACES-2023`
+(same release, different label era) — align at the next reconciliation.
+`PDI_RUN_TOKEN` left unset = open-with-a-ceiling (budget defaults).
 
 ## 2026-07-31 — the reseed, and the four defects that made it impossible
 
