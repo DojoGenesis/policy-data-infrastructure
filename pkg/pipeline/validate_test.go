@@ -47,6 +47,20 @@ func (m *mockValidateStore) PutAnalysis(_ context.Context, _ store.AnalysisResul
 func (m *mockValidateStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) CreateAnalysisRun(_ context.Context, _ store.AnalysisRun) (string, error) {
+	return "", nil
+}
+func (m *mockValidateStore) GetAnalysisRun(_ context.Context, _ string) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) ClaimNextAnalysisRun(_ context.Context) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) CompleteAnalysisRun(_ context.Context, _, _, _ string) error { return nil }
+func (m *mockValidateStore) CountActiveRuns(_ context.Context) (int, error)              { return 0, nil }
+func (m *mockValidateStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
+	return "", nil
+}
 func (m *mockValidateStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error {
 	return nil
 }

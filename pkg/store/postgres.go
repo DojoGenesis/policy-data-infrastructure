@@ -851,6 +851,131 @@ FROM analyses WHERE id = $1`
 	return &r, nil
 }
 
+// --- Run queue operations (ADR-014 D3) ---
+
+// analysisRunColumns is the shared SELECT list for AnalysisRun scans.
+const analysisRunColumns = `
+    id::text, run_type,
+    COALESCE(scope_geoid, ''), COALESCE(scope_level::text, ''),
+    COALESCE(vintage, ''), COALESCE(parameters, '{}'::jsonb),
+    status, COALESCE(error, ''), COALESCE(analysis_id::text, ''),
+    COALESCE(client_key, ''), requested_at::text,
+    COALESCE(started_at::text, ''), COALESCE(finished_at::text, '')`
+
+func scanAnalysisRun(row pgx.Row) (*AnalysisRun, error) {
+	var r AnalysisRun
+	var paramsJSON []byte
+	if err := row.Scan(
+		&r.ID, &r.RunType, &r.ScopeGEOID, &r.ScopeLevel,
+		&r.Vintage, &paramsJSON, &r.Status, &r.Error, &r.AnalysisID,
+		&r.ClientKey, &r.RequestedAt, &r.StartedAt, &r.FinishedAt,
+	); err != nil {
+		return nil, err
+	}
+	r.Parameters = unmarshalJSONB(paramsJSON)
+	return &r, nil
+}
+
+// CreateAnalysisRun enqueues a run (status=queued) and returns its id.
+func (s *PostgresStore) CreateAnalysisRun(ctx context.Context, run AnalysisRun) (string, error) {
+	const q = `
+INSERT INTO analysis_runs (run_type, scope_geoid, scope_level, vintage, parameters, client_key)
+VALUES ($1, NULLIF($2,''), NULLIF($3,'')::geo_level, NULLIF($4,''), COALESCE($5, '{}'::jsonb), NULLIF($6,''))
+RETURNING id::text`
+
+	var id string
+	err := s.pool.QueryRow(ctx, q,
+		run.RunType, run.ScopeGEOID, run.ScopeLevel, run.Vintage,
+		marshalJSONB(run.Parameters), run.ClientKey,
+	).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("store: CreateAnalysisRun: %w", err)
+	}
+	return id, nil
+}
+
+// GetAnalysisRun retrieves one run by id.
+func (s *PostgresStore) GetAnalysisRun(ctx context.Context, id string) (*AnalysisRun, error) {
+	q := `SELECT` + analysisRunColumns + ` FROM analysis_runs WHERE id = $1`
+	r, err := scanAnalysisRun(s.pool.QueryRow(ctx, q, id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("store: GetAnalysisRun: id %q not found", id)
+		}
+		return nil, fmt.Errorf("store: GetAnalysisRun: %w", err)
+	}
+	return r, nil
+}
+
+// ClaimNextAnalysisRun atomically claims the oldest queued run, marking it
+// running. Returns (nil, nil) when the queue is empty. FOR UPDATE SKIP LOCKED
+// makes concurrent workers claim disjoint rows.
+func (s *PostgresStore) ClaimNextAnalysisRun(ctx context.Context) (*AnalysisRun, error) {
+	q := `
+UPDATE analysis_runs SET status = 'running', started_at = now()
+WHERE id = (
+    SELECT id FROM analysis_runs
+    WHERE status = 'queued'
+    ORDER BY requested_at
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED)
+RETURNING` + analysisRunColumns
+
+	r, err := scanAnalysisRun(s.pool.QueryRow(ctx, q))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("store: ClaimNextAnalysisRun: %w", err)
+	}
+	return r, nil
+}
+
+// CompleteAnalysisRun finishes a run: done when errMsg is empty, failed
+// otherwise. analysisID may be empty (failed runs have no cache entry).
+func (s *PostgresStore) CompleteAnalysisRun(ctx context.Context, id, analysisID, errMsg string) error {
+	const q = `
+UPDATE analysis_runs
+SET status      = CASE WHEN $2 = '' THEN 'done' ELSE 'failed' END,
+    error       = NULLIF($2, ''),
+    analysis_id = NULLIF($3, '')::uuid,
+    finished_at = now()
+WHERE id = $1`
+
+	tag, err := s.pool.Exec(ctx, q, id, errMsg, analysisID)
+	if err != nil {
+		return fmt.Errorf("store: CompleteAnalysisRun: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("store: CompleteAnalysisRun: id %q not found", id)
+	}
+	return nil
+}
+
+// CountActiveRuns counts queued and running rows, for queue-depth admission.
+func (s *PostgresStore) CountActiveRuns(ctx context.Context) (int, error) {
+	const q = `SELECT count(*) FROM analysis_runs WHERE status IN ('queued', 'running')`
+	var n int
+	if err := s.pool.QueryRow(ctx, q).Scan(&n); err != nil {
+		return 0, fmt.Errorf("store: CountActiveRuns: %w", err)
+	}
+	return n, nil
+}
+
+// LatestVintageForVariable resolves the newest vintage carrying data for a
+// variable ("" when the variable has no rows). Used at enqueue time so an
+// omitted request vintage becomes a CONCRETE vintage in the cache key —
+// "latest" is resolved once, never stored (ADR-014 D9: a key without a
+// pinned vintage is the stale-value failure class).
+func (s *PostgresStore) LatestVintageForVariable(ctx context.Context, variableID string) (string, error) {
+	const q = `SELECT COALESCE(MAX(vintage), '') FROM indicators WHERE variable_id = $1`
+	var v string
+	if err := s.pool.QueryRow(ctx, q, variableID).Scan(&v); err != nil {
+		return "", fmt.Errorf("store: LatestVintageForVariable: %w", err)
+	}
+	return v, nil
+}
+
 // PutAnalysisScores bulk-upserts AnalysisScore records using a pgx Batch.
 // ON CONFLICT (analysis_id, geoid) DO UPDATE refreshes all mutable columns.
 func (s *PostgresStore) PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error {

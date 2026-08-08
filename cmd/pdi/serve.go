@@ -53,6 +53,8 @@ func runServe(port int) error {
 	defer s.Close()
 
 	plugin := gateway.NewPlugin(s)
+	// Drain the queued-analysis runs (ADR-014 D3) for the server's lifetime.
+	plugin.StartRunner(ctx)
 
 	// Seed evidence cards from embedded JSON on first startup.
 	if seedFS, err := fs.Sub(frontendFS, "frontend"); err == nil {

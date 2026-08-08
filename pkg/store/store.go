@@ -102,6 +102,25 @@ type AnalysisScore struct {
 	Details    map[string]interface{}
 }
 
+// AnalysisRun is one row of the DB-backed run queue (ADR-014 D3). Status
+// moves queued → running → done|failed; AnalysisID points at the cache entry
+// once the run completes.
+type AnalysisRun struct {
+	ID          string
+	RunType     string
+	ScopeGEOID  string
+	ScopeLevel  string
+	Vintage     string
+	Parameters  map[string]interface{}
+	Status      string
+	Error       string
+	AnalysisID  string
+	ClientKey   string
+	RequestedAt string
+	StartedAt   string
+	FinishedAt  string
+}
+
 // GeoQuery filters geographies.
 //
 // Retirement filtering (migration 013): geographies carry an explicit
@@ -272,6 +291,20 @@ type Store interface {
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)
 	ListAnalyses(ctx context.Context) ([]AnalysisSummary, error)
+
+	// Run queue operations (ADR-014 D3). CreateAnalysisRun enqueues and
+	// returns the run id. ClaimNextAnalysisRun atomically claims the oldest
+	// queued run (nil, nil when the queue is empty). CompleteAnalysisRun
+	// marks done when errMsg is empty, failed otherwise. CountActiveRuns
+	// counts queued+running rows for queue-depth admission.
+	CreateAnalysisRun(ctx context.Context, run AnalysisRun) (string, error)
+	GetAnalysisRun(ctx context.Context, id string) (*AnalysisRun, error)
+	ClaimNextAnalysisRun(ctx context.Context) (*AnalysisRun, error)
+	CompleteAnalysisRun(ctx context.Context, id, analysisID, errMsg string) error
+	CountActiveRuns(ctx context.Context) (int, error)
+	// LatestVintageForVariable resolves "latest" to a concrete vintage at
+	// enqueue time ("" when the variable has no data).
+	LatestVintageForVariable(ctx context.Context, variableID string) (string, error)
 
 	// Factor & validated feature operations
 	PutFactorScores(ctx context.Context, scores []FactorScore) error

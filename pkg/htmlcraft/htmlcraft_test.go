@@ -45,6 +45,20 @@ func (s *stubStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (stri
 func (s *stubStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (s *stubStore) CreateAnalysisRun(_ context.Context, _ store.AnalysisRun) (string, error) {
+	return "", nil
+}
+func (s *stubStore) GetAnalysisRun(_ context.Context, _ string) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (s *stubStore) ClaimNextAnalysisRun(_ context.Context) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (s *stubStore) CompleteAnalysisRun(_ context.Context, _, _, _ string) error { return nil }
+func (s *stubStore) CountActiveRuns(_ context.Context) (int, error)              { return 0, nil }
+func (s *stubStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
+	return "", nil
+}
 func (s *stubStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (s *stubStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil

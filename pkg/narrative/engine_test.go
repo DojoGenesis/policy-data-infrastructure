@@ -241,6 +241,20 @@ func (m *mockStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (stri
 func (m *mockStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
 	return nil, nil
 }
+func (m *mockStore) CreateAnalysisRun(_ context.Context, _ store.AnalysisRun) (string, error) {
+	return "", nil
+}
+func (m *mockStore) GetAnalysisRun(_ context.Context, _ string) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (m *mockStore) ClaimNextAnalysisRun(_ context.Context) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (m *mockStore) CompleteAnalysisRun(_ context.Context, _, _, _ string) error { return nil }
+func (m *mockStore) CountActiveRuns(_ context.Context) (int, error)              { return 0, nil }
+func (m *mockStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
+	return "", nil
+}
 func (m *mockStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier string) ([]store.AnalysisScore, error) {
 	var out []store.AnalysisScore

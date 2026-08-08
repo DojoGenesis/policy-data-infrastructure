@@ -34,6 +34,13 @@ type mockStore struct {
 	// Optionally override behaviour per-test.
 	getGeographyFn func(ctx context.Context, geoid string) (*geo.Geography, error)
 
+	// Run-queue test hooks (POST /analyses + GET /analyses/runs/:id).
+	findAnalysisByKeyFn func(key store.AnalysisKey) (*store.AnalysisSummary, error)
+	getAnalysisRunFn    func(id string) (*store.AnalysisRun, error)
+	createdRuns         []store.AnalysisRun
+	activeRuns          int
+	latestVintages      map[string]string
+
 	// Factor scores and variables for testing newer handlers.
 	factorScores   []store.FactorScore
 	variableMeta   []store.VariableMeta
@@ -155,8 +162,32 @@ func (m *mockStore) Aggregate(_ context.Context, _ store.AggregateQuery) (*store
 func (m *mockStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (string, error) {
 	return "mock-analysis-id", nil
 }
-func (m *mockStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
+func (m *mockStore) FindAnalysisByKey(_ context.Context, key store.AnalysisKey) (*store.AnalysisSummary, error) {
+	if m.findAnalysisByKeyFn != nil {
+		return m.findAnalysisByKeyFn(key)
+	}
 	return nil, nil
+}
+func (m *mockStore) CreateAnalysisRun(_ context.Context, run store.AnalysisRun) (string, error) {
+	m.createdRuns = append(m.createdRuns, run)
+	return "run-id-1", nil
+}
+func (m *mockStore) GetAnalysisRun(_ context.Context, id string) (*store.AnalysisRun, error) {
+	if m.getAnalysisRunFn != nil {
+		return m.getAnalysisRunFn(id)
+	}
+	return nil, fmt.Errorf("store: GetAnalysisRun: id %q not found", id)
+}
+func (m *mockStore) ClaimNextAnalysisRun(_ context.Context) (*store.AnalysisRun, error) {
+	return nil, nil
+}
+func (m *mockStore) CompleteAnalysisRun(_ context.Context, _, _, _ string) error { return nil }
+func (m *mockStore) CountActiveRuns(_ context.Context) (int, error)              { return m.activeRuns, nil }
+func (m *mockStore) LatestVintageForVariable(_ context.Context, variableID string) (string, error) {
+	if m.latestVintages != nil {
+		return m.latestVintages[variableID], nil
+	}
+	return "", nil
 }
 
 func (m *mockStore) PutAnalysisScores(_ context.Context, scores []store.AnalysisScore) error {

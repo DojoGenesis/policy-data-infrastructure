@@ -7,6 +7,9 @@ package gateway
 
 import (
 	"context"
+	"log"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -20,6 +23,12 @@ import (
 type PolicyPlugin struct {
 	store   store.Store
 	varMeta map[string]store.VariableMeta // variable_id -> metadata, populated at startup
+
+	// Queued-run surface (ADR-014 D3/D10). runToken empty = open access
+	// with the budget as the only gate.
+	runBudget *RunBudget
+	runner    *AnalysisRunner
+	runToken  string
 }
 
 // NewPlugin creates a PolicyPlugin backed by the given Store. It pre-loads
@@ -33,7 +42,21 @@ func NewPlugin(s store.Store) *PolicyPlugin {
 			p.varMeta[v.VariableID] = v
 		}
 	}
+
+	runCfg, warnings := RunBudgetConfigFromEnv()
+	for _, w := range warnings {
+		log.Printf("run budget config: %s", w)
+	}
+	p.runBudget = NewRunBudget(runCfg)
+	p.runner = NewAnalysisRunner(s, 2*time.Second)
+	p.runToken = os.Getenv(envRunToken)
 	return p
+}
+
+// StartRunner launches the queued-run worker for the server's lifetime.
+// Serve calls it once; tests may skip it and drive the runner directly.
+func (p *PolicyPlugin) StartRunner(ctx context.Context) {
+	go p.runner.Start(ctx)
 }
 
 // Name returns the plugin identifier.
@@ -73,8 +96,12 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	// Variable metadata catalog.
 	group.GET("/variables", p.handleListVariables)
 
-	// Analysis runs + detail + scores.
+	// Analysis runs + detail + scores. The POST is the queued-run surface:
+	// auth (when configured) and the run budget gate it BEFORE the endpoint
+	// does any work (ADR-014 D10).
 	group.GET("/analyses", p.handleListAnalyses)
+	group.POST("/analyses", runAuthMiddleware(p.runToken), p.handleCreateAnalysisRun)
+	group.GET("/analyses/runs/:id", p.handleGetAnalysisRun)
 	group.GET("/analyses/:id", p.handleGetAnalysis)
 	group.GET("/analyses/:id/scores", p.handleGetAnalysisScores)
 

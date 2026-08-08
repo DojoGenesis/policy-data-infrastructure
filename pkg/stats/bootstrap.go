@@ -88,3 +88,86 @@ func Bootstrap(fn func([]float64) float64, data []float64, nBoot int, alpha floa
 		PointEstimate: pointEstimate,
 	}
 }
+
+// BootstrapPairs computes a bootstrap confidence interval for a statistic of
+// paired samples — weighted means (value, weight), correlations (x, y) — by
+// resampling INDICES, so each resample keeps its pairs intact. Resampling
+// the two slices independently would break exactly the pairing the
+// statistic measures.
+//
+// xs and ys must be the same length; fn receives aligned resamples. The
+// percentile method and worker layout mirror Bootstrap.
+func BootstrapPairs(fn func(xs, ys []float64) float64, xs, ys []float64, nBoot int, alpha float64) ConfidenceInterval {
+	if len(xs) != len(ys) {
+		// A length mismatch is a caller bug; surface it as a degenerate
+		// interval around NaN rather than guessing an alignment.
+		nan := math.NaN()
+		return ConfidenceInterval{Lower: nan, Upper: nan, PointEstimate: nan}
+	}
+
+	pointEstimate := fn(xs, ys)
+	if nBoot <= 0 || len(xs) == 0 {
+		return ConfidenceInterval{
+			Lower:         pointEstimate,
+			Upper:         pointEstimate,
+			PointEstimate: pointEstimate,
+		}
+	}
+
+	nWorkers := runtime.GOMAXPROCS(0)
+	if nWorkers > nBoot {
+		nWorkers = nBoot
+	}
+
+	bootStats := make([]float64, nBoot)
+	var wg sync.WaitGroup
+	chunkSize := (nBoot + nWorkers - 1) / nWorkers
+
+	for w := 0; w < nWorkers; w++ {
+		start := w * chunkSize
+		end := start + chunkSize
+		if end > nBoot {
+			end = nBoot
+		}
+		if start >= end {
+			break
+		}
+		wg.Add(1)
+		go func(start, end int, seed int64) {
+			defer wg.Done()
+			rng := rand.New(rand.NewSource(seed))
+			n := len(xs)
+			rx := make([]float64, n)
+			ry := make([]float64, n)
+			for i := start; i < end; i++ {
+				for j := 0; j < n; j++ {
+					k := rng.Intn(n)
+					rx[j] = xs[k]
+					ry[j] = ys[k]
+				}
+				bootStats[i] = fn(rx, ry)
+			}
+		}(start, end, int64(w+1)*7919)
+	}
+	wg.Wait()
+
+	sort.Float64s(bootStats)
+
+	loIdx := int(math.Floor(float64(nBoot) * alpha / 2))
+	hiIdx := int(math.Ceil(float64(nBoot)*(1-alpha/2))) - 1
+	if loIdx < 0 {
+		loIdx = 0
+	}
+	if hiIdx >= nBoot {
+		hiIdx = nBoot - 1
+	}
+	if loIdx > hiIdx {
+		loIdx, hiIdx = hiIdx, loIdx
+	}
+
+	return ConfidenceInterval{
+		Lower:         bootStats[loIdx],
+		Upper:         bootStats[hiIdx],
+		PointEstimate: pointEstimate,
+	}
+}
