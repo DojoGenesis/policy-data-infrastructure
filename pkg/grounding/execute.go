@@ -120,7 +120,11 @@ func Execute(in *Intent, ds *Dataset) (*Result, error) {
 			})
 		}
 		res.ScalarKind = "time_series_note"
-		note := "The static atlas has one vintage (" + ds.Vintage + "). Multi-vintage time-series data is available via the API endpoint with ?vintage=YYYY,YYYY parameter. The current value shown is the latest available."
+		vint := ind.Vintage
+		if vint == "" {
+			vint = ds.Vintage
+		}
+		note := "This dataset carries one vintage per indicator (" + ind.ID + ": " + vint + "). Multi-vintage time-series data is available via the API endpoint with ?vintage=YYYY,YYYY parameter. The current value shown is the latest available."
 		res.Facts = renderFacts(in, ds, ind, res) + "\n\n" + note
 		return res, nil
 
@@ -245,19 +249,28 @@ func (ds *Dataset) collect(level Level, indicator string) []Value {
 }
 
 func (ds *Dataset) citation(ind IndicatorMeta, level Level) Citation {
-	src := "U.S. Census Bureau, American Community Survey 5-Year Estimates"
-	for _, s := range ds.Sources {
-		if strings.Contains(strings.ToLower(s.UsedFor), "indicator") && s.Name != "" {
-			src = s.Name
-			if s.Publisher != "" {
-				src = s.Publisher + ", " + s.Name
+	// The indicator's own provenance wins; the dataset-wide values are the
+	// single-vintage atlas bundle's fallback.
+	src := ind.SourceName
+	if src == "" {
+		src = "U.S. Census Bureau, American Community Survey 5-Year Estimates"
+		for _, s := range ds.Sources {
+			if strings.Contains(strings.ToLower(s.UsedFor), "indicator") && s.Name != "" {
+				src = s.Name
+				if s.Publisher != "" {
+					src = s.Publisher + ", " + s.Name
+				}
+				break
 			}
-			break
 		}
+	}
+	vintage := ind.Vintage
+	if vintage == "" {
+		vintage = ds.Vintage
 	}
 	return Citation{
 		Indicator: ind.ID, IndicatorLabel: ind.Label, Unit: ind.Unit,
-		Level: string(level), Vintage: ds.Vintage, Source: src, Table: ind.Table,
+		Level: string(level), Vintage: vintage, Source: src, Table: ind.Table,
 		Definition: ind.Description,
 	}
 }

@@ -128,6 +128,19 @@ func runServe(port int) error {
 	policyGroup := v1.Group("/policy")
 	plugin.RegisterRoutes(policyGroup)
 
+	// Grounded chat over the LIVE database (2026-08-08): every indicator
+	// with data, both levels, per-indicator vintages, snapshot refreshed on
+	// a TTL. Previously this engine existed only behind the offline CLI,
+	// grounded on the 11-indicator atlas bundle — the API had no grounded
+	// chat at all. A failed initial snapshot degrades to not mounting the
+	// routes rather than failing the whole server.
+	if chatPlugin, err := gateway.NewChatPluginFromStore(ctx, s, 0); err != nil {
+		fmt.Printf("  grounded-chat: snapshot unavailable (%v) — /v1/policy/chat not mounted\n", err)
+	} else {
+		chatPlugin.RegisterRoutes(policyGroup)
+		fmt.Println("  grounded-chat: mounted at /v1/policy/chat — live-DB snapshot, 5m TTL")
+	}
+
 	// Liveness check — always returns 200.
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

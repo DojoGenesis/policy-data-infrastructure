@@ -42,6 +42,15 @@ type IndicatorMeta struct {
 	// is a dataset fact, and a draft that explains the definition would
 	// otherwise be rejected for quoting it.
 	Description string `json:"descriptionEn"`
+	// Vintage is this indicator's own data vintage. The store-backed dataset
+	// spans sources whose vintages differ (ACS-2024-5yr beside 2022 beside
+	// USDA-FARA-2019); a citation that named one dataset-wide vintage for all
+	// of them would be provenance-shaped fiction. Empty means "use the
+	// dataset-wide vintage" (the atlas bundle's single-vintage world).
+	Vintage string `json:"vintage,omitempty"`
+	// SourceName names the publishing source for citations. Empty falls back
+	// to the dataset-wide source heuristic.
+	SourceName string `json:"source,omitempty"`
 }
 
 // SourceMeta is a citable provenance record.

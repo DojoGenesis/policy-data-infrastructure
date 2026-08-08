@@ -174,11 +174,15 @@ func unitSuffix(ind IndicatorMeta) string {
 // formatValue renders a number at the precision the indicator actually has.
 // Percentages carry one decimal because that is what the ACS publishes; counts
 // and dollars carry none, because a fractional person or cent is a precision
-// claim the source does not make.
+// claim the source does not make. "decimal" covers 0–1-scale measures
+// (percentile ranks, population shares): two decimals, no thousands
+// grouping — rendering 0.87 as a rounded integer would display "1".
 func formatValue(v float64, ind IndicatorMeta) string {
 	switch ind.Format {
 	case "percent":
 		return strconv.FormatFloat(v, 'f', 1, 64)
+	case "decimal":
+		return strconv.FormatFloat(v, 'f', 2, 64)
 	default:
 		return addThousands(strconv.FormatFloat(v, 'f', 0, 64))
 	}

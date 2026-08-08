@@ -1,39 +1,50 @@
 package gateway
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/grounding"
 )
 
-// ChatPlugin serves grounded question-answering over the Atlas bundle.
+// ChatPlugin serves grounded question-answering.
 //
-// It is a separate plugin from PolicyPlugin on purpose: it reads the shipped
-// static bundle rather than PostGIS, so it answers from exactly the dataset a
-// reader sees on the Atlas pages. Two sources of truth for the same numbers is
-// how a chat ends up contradicting the map next to it.
+// Two grounding modes share one engine:
+//
+//   - Store-backed (NewChatPluginFromStore, what `pdi serve` mounts): the
+//     dataset is a snapshot of the live database — every indicator with
+//     data, both levels, per-indicator vintages — refreshed on a TTL. The
+//     original bundle-only design existed so chat could never answer from a
+//     different dataset than the map; drawing both from the one database
+//     honors that principle without freezing the agent at 11 indicators
+//     while the platform grows past 40 (the 2026-08-08 directive).
+//   - Bundle-backed (NewChatPlugin, the offline CLI): the shipped atlas
+//     bundle, unchanged.
+//
+// The engine pointer is swapped atomically on refresh; a request in flight
+// keeps the snapshot it started with.
 type ChatPlugin struct {
-	engine *grounding.Engine
+	engine atomic.Pointer[grounding.Engine]
+
+	// Store-mode refresh state; src is nil in bundle mode.
+	src        grounding.StoreSource
+	ttl        time.Duration
+	loadedAt   atomic.Int64 // unix seconds of the current snapshot
+	refreshing atomic.Bool
 }
 
-// NewChatPlugin loads the Atlas bundle from dir and wires whichever model lanes
-// are configured. It returns an error only if the bundle itself is unreadable —
-// a missing model lane is a degraded mode, not a failure: structured queries
-// still work, and questions get an honest "no planner configured".
-func NewChatPlugin(dir string) (*ChatPlugin, error) {
-	ds, err := grounding.Load(dir)
-	if err != nil {
-		return nil, err
-	}
+// buildEngine wires the model lanes around a dataset. OpenRouter for
+// quality, Ollama for cost, per PIP-92: whichever is configured wins; if
+// both are, OpenRouter plans and Ollama composes, since composing is the
+// easier job and its output is verified anyway.
+func buildEngine(ds *grounding.Dataset) *grounding.Engine {
 	e := &grounding.Engine{Dataset: ds, MaxPlanAttempts: 2}
-
-	// OpenRouter for quality, Ollama for cost, per PIP-92. Whichever is
-	// configured wins; if both are, OpenRouter plans and Ollama is available as
-	// the cheaper composer, since composing is the easier of the two jobs and
-	// its output is verified anyway.
 	or := grounding.OpenRouterFromEnv()
 	ol := grounding.OllamaFromEnv()
 	switch {
@@ -48,8 +59,65 @@ func NewChatPlugin(dir string) (*ChatPlugin, error) {
 		e.Planner = ol
 		e.Composer = ol
 	}
+	return e
+}
 
-	return &ChatPlugin{engine: e}, nil
+// NewChatPlugin loads the Atlas bundle from dir and wires whichever model
+// lanes are configured. It returns an error only if the bundle itself is
+// unreadable — a missing model lane is a degraded mode, not a failure:
+// structured queries still work, and questions get an honest "no planner
+// configured".
+func NewChatPlugin(dir string) (*ChatPlugin, error) {
+	ds, err := grounding.Load(dir)
+	if err != nil {
+		return nil, err
+	}
+	p := &ChatPlugin{}
+	p.engine.Store(buildEngine(ds))
+	p.loadedAt.Store(time.Now().Unix())
+	return p, nil
+}
+
+// NewChatPluginFromStore grounds the agent in the live database, refreshing
+// its snapshot every ttl (0 means a 5-minute default). Construction fails
+// only if the initial snapshot cannot be built — after that, a failed
+// refresh keeps serving the previous snapshot and logs, because a stale
+// honest dataset beats a dead endpoint.
+func NewChatPluginFromStore(ctx context.Context, src grounding.StoreSource, ttl time.Duration) (*ChatPlugin, error) {
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	ds, err := grounding.LoadFromStore(ctx, src)
+	if err != nil {
+		return nil, err
+	}
+	p := &ChatPlugin{src: src, ttl: ttl}
+	p.engine.Store(buildEngine(ds))
+	p.loadedAt.Store(time.Now().Unix())
+	return p, nil
+}
+
+// eng returns the current engine, kicking an async refresh first when the
+// store-backed snapshot has aged past its TTL. Requests never wait on a
+// rebuild; they use the snapshot that exists.
+func (p *ChatPlugin) eng() *grounding.Engine {
+	if p.src != nil && time.Now().Unix()-p.loadedAt.Load() > int64(p.ttl.Seconds()) {
+		if p.refreshing.CompareAndSwap(false, true) {
+			go func() {
+				defer p.refreshing.Store(false)
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				ds, err := grounding.LoadFromStore(ctx, p.src)
+				if err != nil {
+					log.Printf("chat: snapshot refresh failed (serving previous): %v", err)
+					return
+				}
+				p.engine.Store(buildEngine(ds))
+				p.loadedAt.Store(time.Now().Unix())
+			}()
+		}
+	}
+	return p.engine.Load()
 }
 
 // Name returns the plugin identifier.
@@ -83,7 +151,7 @@ func (p *ChatPlugin) handleChat(c *gin.Context) {
 		return
 	}
 
-	ans, err := p.engine.Answer(c.Request.Context(), req.Query)
+	ans, err := p.eng().Answer(c.Request.Context(), req.Query)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
@@ -100,7 +168,7 @@ func (p *ChatPlugin) handleStructuredQuery(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "body must be a JSON Intent: " + err.Error()})
 		return
 	}
-	ans, err := p.engine.AnswerIntent(c.Request.Context(), "", &in)
+	ans, err := p.eng().AnswerIntent(c.Request.Context(), "", &in)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
@@ -112,7 +180,7 @@ func (p *ChatPlugin) handleStructuredQuery(c *gin.Context) {
 // shown. Exposing it means a caller can build a valid Intent without guessing,
 // and an agent can discover the surface instead of probing it.
 func (p *ChatPlugin) handleSchema(c *gin.Context) {
-	ds := p.engine.Dataset
+	ds := p.eng().Dataset
 	c.JSON(http.StatusOK, gin.H{
 		"operations": grounding.AllOperations,
 		"levels":     []string{string(grounding.LevelCounty), string(grounding.LevelTract)},
