@@ -3,6 +3,63 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-08 (night) — the county explorer tells the truth
+
+Operator directive: validate and fix the explorer page — dashboard wiring,
+segregation/reliability, a clearer factor chart, spatial cache at launch.
+Every defect audited in the rendered page against live data before any fix
+(commits `9253b79` + `44f5aa8`).
+
+### Indicator Dashboard (`9253b79`)
+- State Rank was literally `return 50` — every row rendered 50%. New
+  `GET /geographies/:geoid/ranks` computes percent_rank over same-level
+  peers in one window query; absent ranks render "—", never a number.
+- Reliability badges were "—" everywhere while the data sat in both
+  tables: QueryIndicators' latest-view branch still hardcoded cv=NULL /
+  reliability='' from before migration 014 gave the view those columns.
+  Plus read-time derivation for MOE-only rows (all Python loads), from
+  pkg/stats' one tested CV formula.
+- "±-555,555,555" in the MOE column: Census annotation sentinels stored
+  raw by the Go adapter — parseValue now drops the whole family;
+  migration 018 repairs stored rows AND the cv/reliability that had been
+  derived FROM sentinels (a LOW badge with no margin = garbage laundered
+  into a badge); display keeps a belt.
+- The header's source list was hand-written fiction (named EPA EJScreen:
+  zero rows; omitted CDC SVI). Now derived from what actually loaded.
+
+### Segregation + reliability panel (`44f5aa8`)
+New `dissimilarity` run type (Massey & Denton D per county over tracts,
+paired-bootstrap CI, <3-tract counties withheld). The panel's loader had
+read analyses[0] and guessed pairs by score order — both pairs rendered
+the same D; it now matches strictly on details.group_pair across all
+dissimilarity analyses. Verified: Dane B-W 0.503 / H-W 0.373, in line
+with published Madison-metro values. Reliability Distribution chart
+lights up from the now-real badges (16 High / 13 Unknown for Dane).
+
+### Factor Profile (`44f5aa8`)
+Vertical diverging z-score columns (shared zero line, |z| capped at 3,
+score above / percentile below each column). The permanent empty state
+had a root cause: factor_analysis_db.py's feature lists named ids that
+never existed (usda_lila, usda_snap_authorized, cdc_phlth) — the source
+intersection was always empty. Rewired to the live vocabulary (USDA
+counts as shares of FARA's own population); EFA yields two interpretable
+factors — health-access deprivation, cardiovascular-metabolic — and
+2,470 tract scores are loaded. County-level factor scores stay
+deliberately absent (averaging tract factors is the D6 sin); the empty
+state says so. Migration 018 also deleted prod's 144 naive county factor
+rows — the deleted SQL script's persisted output, still serving.
+
+### Launch-time analyses warm (`44f5aa8`)
+WarmAnalysesCache at serve boot: both dissimilarity pairs + tract_rollups
+for the 8 CDC PLACES variables resolve vintages fresh and enqueue on
+cache miss. Advanced data → new key → recompute; unchanged → hit, free.
+PDI_WARM_CACHE=off disables. LISA stays Python-only (TODO; Monday).
+
+Gates: build/vet/test 11/11 ✓ · layout-check pending at write time (see
+STATUS) · zero console errors on the county page · verified in the
+rendered page: real varied ranks, badges with margins, distinct D pairs,
+vertical factor columns at exact heights (z=2.75 → 91.6% of half-track).
+
 ## 2026-08-08 (evening) — the crosswalk, USDA, and the agent grounded in the live DB
 
 Continuing the original vision (operator directive): more data, real

@@ -1,7 +1,7 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-08-08 evening (crosswalk + USDA + live-DB grounded chat; see CHANGELOG)
+> Last agent update: 2026-08-08 night (county explorer truth pass: ranks/reliability/segregation/factor columns/launch warm; see CHANGELOG)
 
 ## Run & Aggregation Layer (2026-08-08)
 

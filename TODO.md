@@ -3,6 +3,23 @@
 > Updated: 2026-08-08 | Last audit: 2026-07-28 (frontend rebuild, 4 parallel tracks, PIP-115)
 > Update this file after every work session. Move completed items to CHANGELOG.md.
 
+## P1 — Follow-ups from the 2026-08-08 explorer truth pass
+
+- [ ] **County-level factor scores need a defensible method ruling.** Tract EFA is live
+  (2,470 scores, two interpretable factors); the county Factor Profile deliberately
+  shows its empty state because averaging tract factor scores is the D6 sin. Options:
+  county-level EFA over county indicators (needs PLACES rollups exposed as indicator
+  rows), population-weighted rollup THROUGH the run API with CI (D8-compliant), or
+  distribution display (min/median/max of the county's tract scores). Operator call
+  [source: explorer pass 2026-08-08]
+- [ ] **County page time-series fetch requests bare-year vintages** (`vintage=2023,2022,...`)
+  which match nothing since vintage strings became `ACS-2024-5yr`-style — the sparkline
+  section has been silently empty and stays so. Wire it to real vintage strings or drop
+  it until multi-vintage data exists [source: network audit 2026-08-08]
+- [ ] **LISA into the run queue** — still Python-only, off-DB (also listed below); the
+  launch warm covers everything queue-borne EXCEPT it. Candidate: a Python worker
+  consuming `analysis_runs` rows of type `lisa` [source: warm design]
+
 ## P1 — Follow-ups from the 2026-08-08 run-layer build (handoff 2026-08-02)
 
 - [ ] **Route `composite_index` and `correlation` through POST /analyses.** The queued-run
