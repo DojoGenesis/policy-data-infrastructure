@@ -5,11 +5,10 @@
 
 ## P1 — Follow-ups from the 2026-08-08 explorer truth pass
 
-- [x] ~~**County-level factor scores need a defensible method ruling.**~~ — BUILT
-  2026-08-08 as ADR-015 (Proposed): population-weighted rollup through the run queue,
-  CI + coverage recorded, withheld under threshold, '-popw' vintage rows. **Awaiting
-  operator ratification** — if method 1 or 3 is preferred instead, the executor and
-  rows are cleanly removable [source: `10cb81f`]
+- [x] ~~**County-level factor scores need a defensible method ruling.**~~ — RESOLVED:
+  ADR-015 **ratified by operator 2026-08-08**. Population-weighted rollup through the
+  run queue (CI + coverage recorded, withheld under threshold, '-popw' vintage rows)
+  is the standing method [source: `10cb81f`]
 - [ ] **County page time-series fetch requests bare-year vintages** (`vintage=2023,2022,...`)
   which match nothing since vintage strings became `ACS-2024-5yr`-style — the sparkline
   section has been silently empty and stays so. Wire it to real vintage strings or drop

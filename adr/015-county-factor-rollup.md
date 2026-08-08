@@ -1,6 +1,6 @@
 # ADR-015: County Factor Profiles Are Population-Weighted Rollups of Tract Factor Scores
 
-**Status:** Proposed — implemented behind the run queue, awaiting operator ratification
+**Status:** Accepted — ratified by operator 2026-08-08
 **Date:** 2026-08-08
 **Deciders:** Cruz Morales
 **Depends on:** ADR-014 (D2 withholding, D6 naive-aggregation removal, D7 class rules, D8 uncertainty, D9 cache key)
@@ -61,5 +61,6 @@ intervals are what make an aggregate a measurement instead of an artifact.
   as rollups, with uncertainty attached in the data.
 - A county whose tract coverage fails the threshold shows the empty state,
   and that is the feature working.
-- Ratification pending: if the operator prefers method 1 or 3, the executor
-  and the `-popw` rows are cleanly removable (delete by vintage suffix).
+- Ratified 2026-08-08: the population-weighted rollup is the standing
+  method for county factor profiles. Methods 1 and 3 remain documented
+  alternatives should the decision ever be revisited.
