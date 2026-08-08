@@ -862,9 +862,72 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <!-- Key finding -->
             <div class="key-finding-block" x-text="card.key_finding"></div>
 
+            <!-- Loading strip for the live enrichment layers -->
+            <div class="detail-section" x-show="cardExtras[card.policy_id] && cardExtras[card.policy_id].loading" style="display:none">
+              <div style="font-size:0.78rem;color:var(--muted);" data-en="Loading live data, the campaign's position, and related analyses…" data-es="Cargando datos en vivo, la posición de la campaña y análisis relacionados…">Loading live data, the campaign's position, and related analyses…</div>
+            </div>
+
+            <!-- LAYER: The campaign's claim -->
+            <div class="detail-section" x-show="cardExtras[card.policy_id] && cardExtras[card.policy_id].policy" style="display:none">
+              <div class="detail-heading" data-en="The Campaign's Position" data-es="La Posición de la Campaña">The Campaign's Position</div>
+              <template x-if="cardExtras[card.policy_id] && cardExtras[card.policy_id].policy">
+                <div class="methodology-note" style="border-left:3px solid var(--accent);padding-left:12px;">
+                  <div style="font-weight:600;" x-text="cardExtras[card.policy_id].policy.title"></div>
+                  <div style="font-size:0.8rem;margin:4px 0;" x-text="cardExtras[card.policy_id].policy.description"></div>
+                  <div style="font-size:0.72rem;color:var(--muted);">
+                    <span x-text="cardExtras[card.policy_id].policy.candidate"></span> ·
+                    <span x-text="cardExtras[card.policy_id].policy.office"></span> ·
+                    <span x-text="cardExtras[card.policy_id].policy.category"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- LAYER: Live data now -->
+            <div class="detail-section" x-show="cardExtras[card.policy_id] && Object.keys(cardExtras[card.policy_id].live || {}).length" style="display:none">
+              <div class="detail-heading" data-en="The Data Right Now" data-es="Los Datos en Este Momento">The Data Right Now</div>
+              <p style="font-size:0.74rem;color:var(--muted);margin-bottom:0.8em;" data-en="County-level statistics queried live from the database at this moment — compare against the as-generated values below." data-es="Estadísticas a nivel de condado consultadas en vivo desde la base de datos en este momento — compárese con los valores generados abajo.">County-level statistics queried live from the database at this moment — compare against the as-generated values below.</p>
+              <div class="detail-stats">
+                <template x-for="(v, ind) in (cardExtras[card.policy_id] ? cardExtras[card.policy_id].live : {})" :key="'live-'+ind">
+                  <div class="detail-stat">
+                    <div class="detail-stat-val" x-text="fmtNum(v.avg)"></div>
+                    <div class="detail-stat-label" x-text="fmtLabel(ind) + ' · mean of ' + v.count + ' counties (range ' + fmtNum(v.min) + '–' + fmtNum(v.max) + ')'"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- LAYER: Layered analyses -->
+            <div class="detail-section" x-show="cardExtras[card.policy_id] && cardExtras[card.policy_id].analyses && cardExtras[card.policy_id].analyses.length" style="display:none">
+              <div class="detail-heading" data-en="Our Layered Analyses" data-es="Nuestros Análisis por Capas">Our Layered Analyses</div>
+              <p style="font-size:0.74rem;color:var(--muted);margin-bottom:0.8em;" data-en="Computed analyses on this card's indicators — rollups with confidence intervals, correlations, segregation indices — from the shared analyses cache." data-es="Análisis calculados sobre los indicadores de esta tarjeta — agregaciones con intervalos de confianza, correlaciones, índices de segregación — desde la caché compartida de análisis.">Computed analyses on this card's indicators — rollups with confidence intervals, correlations, segregation indices — from the shared analyses cache.</p>
+              <div class="table-wrapper" style="overflow-x:auto;">
+                <table class="county-mini-table">
+                  <thead>
+                    <tr>
+                      <th data-en="Analysis" data-es="Análisis">Analysis</th>
+                      <th data-en="Scope" data-es="Alcance">Scope</th>
+                      <th data-en="Vintage" data-es="Vintage">Vintage</th>
+                      <th class="county-val" data-en="Scores" data-es="Puntajes">Scores</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="a in (cardExtras[card.policy_id] ? cardExtras[card.policy_id].analyses : [])" :key="a.id">
+                      <tr>
+                        <td style="font-weight:500;" x-text="fmtAnalysisLabel(a)"></td>
+                        <td x-text="(a.scope_level || '') + ' ' + (a.scope_geoid || '')"></td>
+                        <td x-text="a.vintage"></td>
+                        <td class="county-val" x-text="a.score_count || '—'"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- Statewide context -->
             <div class="detail-section" x-show="Object.keys(card.statewide_context || {}).length">
-              <div class="detail-heading" data-en="Statewide Indicator Values" data-es="Valores de Indicadores Estatales">Statewide Indicator Values</div>
+              <div class="detail-heading" data-en="Statewide Indicator Values (as generated)" data-es="Valores de Indicadores Estatales (al generar)">Statewide Indicator Values (as generated)</div>
               <div class="detail-stats">
                 <template x-for="(stats, indicator) in card.statewide_context" :key="indicator">
                   <div class="detail-stat">
@@ -964,7 +1027,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             <div class="detail-section">
               <div class="detail-heading" data-en="Methodology &amp; Citations" data-es="Metodología y Citas">Methodology &amp; Citations</div>
               <div class="methodology-note">
-                <strong data-en="Data source:" data-es="Fuente de datos:">Data source:</strong> <span data-en="PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas." data-es="Plataforma PDI — indicadores obtenidos de las estimaciones quinquenales del Census ACS (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen y USDA Food Access Research Atlas.">PDI platform — indicators sourced from Census ACS 5-year estimates (2019–2023), BLS LAUS, CDC PLACES, EPA EJScreen, and USDA Food Access Research Atlas.</span><br>
+                <strong data-en="Data source:" data-es="Fuente de datos:">Data source:</strong> <span data-en="PDI platform — the live sources and vintages for each indicator are listed in the platform's variable catalog, and every value in the Data Right Now section is queried from the database at view time." data-es="Plataforma PDI — las fuentes y vintages en vivo de cada indicador aparecen en el catálogo de variables de la plataforma, y cada valor de la sección Los Datos en Este Momento se consulta de la base de datos al momento de ver.">PDI platform — the live sources and vintages for each indicator are listed in the platform's variable catalog, and every value in the Data Right Now section is queried from the database at view time.</span><br>
                 <strong data-en="Methodology:" data-es="Metodología:">Methodology:</strong> <span data-en="County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate)." data-es="La variación a nivel de condado se analiza en los 72 condados de Wisconsin. Los indicadores clave están vinculados a cada posición de política a través de la tabla de correspondencia de dimensiones de equidad. Las clasificaciones de necesidad usan valores brutos de indicadores, ordenados según la relevancia de la política (ascendente para métricas positivas como el ingreso, descendente para métricas de carga como la tasa de pobreza).">County-level variation analyzed across all 72 Wisconsin counties. Key indicators are linked to each policy position via the equity dimension crosswalk. Need rankings use raw indicator values sorted by policy relevance (ascending for positive metrics like income, descending for burden metrics like poverty rate).</span><br>
                 <strong data-en="Data quality:" data-es="Calidad de los datos:">Data quality:</strong>
                 <span x-text="card.data_quality"></span> —
@@ -1139,6 +1202,97 @@ function evidenceGallery() {
       // Don't toggle if clicking inside the expanded detail (allow text selection)
       if (event && event.target.closest('.expand-detail')) return;
       this.expandedCard = (this.expandedCard === policyId) ? null : policyId;
+      if (this.expandedCard === policyId && !this.cardExtras[policyId]) {
+        this.loadCardExtras(policyId);
+      }
+    },
+
+    /* ── Holistic card extras (2026-08-08): the expanded card combines
+       FOUR evidence layers — the literature findings and generation-time
+       statistics it always carried, plus three fetched live on first
+       expand: the campaign's actual position (policies table), current
+       statewide statistics straight from the database, and the layered
+       analyses (rollups, segregation, correlations, composites) whose
+       variables overlap the card's. Fetches are lazy, cached per card,
+       and every failure degrades to hiding its section — a card must
+       never look broken because one enrichment lane is down. ─────── */
+    cardExtras: {},
+    _analysesDetails: null,
+
+    async _loadAnalysesDetails() {
+      // Page-level cache: the analyses list plus per-analysis parameters
+      // (the list endpoint carries summaries only), newest 16.
+      if (this._analysesDetails) return this._analysesDetails;
+      try {
+        const list = await fetch('/v1/policy/analyses').then(r => r.json());
+        const recent = (list.analyses || []).slice(0, 16);
+        const details = await Promise.all(recent.map(a =>
+          fetch('/v1/policy/analyses/' + a.id).then(r => r.ok ? r.json() : null).catch(() => null)));
+        this._analysesDetails = details.filter(Boolean).map((d, i) => ({...recent[i], ...d}));
+      } catch (e) {
+        this._analysesDetails = [];
+      }
+      return this._analysesDetails;
+    },
+
+    async loadCardExtras(policyId) {
+      const card = this.allCards.find(c => c.policy_id === policyId);
+      if (!card) return;
+      this.cardExtras[policyId] = { loading: true, policy: null, live: {}, analyses: [] };
+      const ex = this.cardExtras[policyId];
+      const cardVars = Object.keys(card.statewide_context || {});
+      try {
+        // 1. The campaign's claim.
+        const policyP = fetch('/v1/policy/policies/' + encodeURIComponent(policyId))
+          .then(r => r.ok ? r.json() : null).catch(() => null);
+
+        // 2. Live statewide statistics per linked indicator (county level).
+        const liveP = Promise.all(cardVars.slice(0, 3).map(async v => {
+          const agg = fn => fetch('/v1/policy/aggregate', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({variable_id: v, level: 'county', function: fn}),
+          }).then(r => r.ok ? r.json() : null).catch(() => null);
+          const [avg, mn, mx] = await Promise.all([agg('avg'), agg('min'), agg('max')]);
+          if (avg && avg.count > 0) {
+            ex.live[v] = { avg: avg.value, min: mn && mn.value, max: mx && mx.value, count: avg.count };
+          }
+        }));
+
+        // 3. Layered analyses whose variables overlap this card's.
+        const analysesP = this._loadAnalysesDetails().then(all => {
+          const vs = new Set(cardVars);
+          const racial = (card.equity_dimension || '').includes('racial');
+          ex.analyses = all.filter(a => {
+            const p = a.parameters || {};
+            if (Array.isArray(p.variables) && p.variables.some(v => vs.has(v))) return true;
+            if (p.variable_id && vs.has(p.variable_id)) return true;
+            if (a.type === 'dissimilarity' && racial) return true;
+            return false;
+          }).slice(0, 4);
+        });
+
+        const pol = await policyP;
+        ex.policy = pol && (pol.policy || pol);
+        if (ex.policy && ex.policy.error) ex.policy = null;
+        await Promise.all([liveP, analysesP]);
+      } catch (e) {
+        /* sections hide themselves; the card stays intact */
+      } finally {
+        ex.loading = false;
+        this.$nextTick(() => { if (window.LangToggle) window.LangToggle.refresh(); });
+      }
+    },
+
+    fmtAnalysisLabel(a) {
+      const names = {
+        tract_rollup: 'County rollup', dissimilarity: 'Segregation index',
+        correlation_matrix: 'Correlation matrix', composite_index: 'Composite index',
+        spearman: 'Rank correlation', factor_rollup: 'County factor rollup',
+        lisa: 'LISA spatial clusters', ols_regression: 'OLS regression',
+      };
+      const p = a.parameters || {};
+      const subject = p.variable_id || (Array.isArray(p.variables) ? p.variables.join(', ') : (p.group_pair || ''));
+      return (names[a.type] || a.type) + (subject ? ' — ' + subject : '');
     },
 
     /* ── Filters ──────────────────────────────────────────────── */

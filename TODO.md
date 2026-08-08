@@ -3,6 +3,18 @@
 > Updated: 2026-08-08 | Last audit: 2026-07-28 (frontend rebuild, 4 parallel tracks, PIP-115)
 > Update this file after every work session. Move completed items to CHANGELOG.md.
 
+## P0 — Reported by operator 2026-08-08 (late)
+
+- [ ] **Chat page returns 502 with an HTML error body.** Question 'Which policies
+  target the highest-burden counties?' → HTTP 502; the body is an HTML page with IE
+  conditional comments (a Cloudflare/proxy error page passed through as if it were a
+  chat answer envelope). The /chat page rides the /v1/chat Dojo-Gateway proxy lane —
+  suspects: the DOJO_GATEWAY_URL upstream down or rejecting, and the proxy forwarding
+  the upstream's HTML instead of mapping it to a JSON error. Also consider: data
+  questions like this one are exactly what the NEW grounded /v1/policy/chat answers
+  deterministically — the page may want to route dataset questions there and keep the
+  gateway lane for open-ended prose [source: operator report, session 2026-08-08]
+
 ## P1 — Follow-ups from the 2026-08-08 explorer truth pass
 
 - [x] ~~**County-level factor scores need a defensible method ruling.**~~ — RESOLVED:
@@ -19,10 +31,18 @@
 
 ## P1 — Follow-ups from the 2026-08-08 run-layer build (handoff 2026-08-02)
 
-- [ ] **Route `composite_index` and `correlation` through POST /analyses.** The queued-run
-  API ships with six types; the two the CLI already computes still require shell access,
-  which is the exact gap ADR-014 §"Analyses cannot be created through the API" describes.
-  The executor registry makes this mechanical now (reuse analyze.go's logic) [source: run-layer build]
+- [x] ~~**Route `composite_index` and `correlation` through POST /analyses.**~~ — DONE
+  2026-08-08 (`0f6bf9e`): both routed with the CLI's exact statistics, loud weight
+  contract, per-variable vintages, and complete-case n per correlation pair. Verified
+  local + prod (r(poverty,obesity)=0.489 n=1,524 identical) [source: run-layer build]
+- [ ] **Regenerate evidence cards under the canonical vocabulary.** Card JSONB
+  (statewide_context etc.) is keyed to the extinct derived-percent ids — e.g.
+  `median_hh_income` — so the new live-data and layered-analyses sections correctly
+  hide on those cards (F4's third vocabulary, frozen at generation time). Update
+  `analysis/evidence_cards.py`'s DIMENSION_CONFIG to canonical ids (raw counts need a
+  derivation decision for pct_* dimensions) and re-run; cards keyed to canonical ids
+  (poverty_rate, uninsured_rate) light all four layers today [source: evidence
+  treatment 2026-08-08]
 - [ ] **LISA remains Python-only and reads a static GeoJSON, not the DB** (ADR-014 D11's
   last clause). Until it moves onto Postgres through `store.Store`, the map's analyses
   describe a different dataset than the API's. Larger lift: needs spatial weights in Go
