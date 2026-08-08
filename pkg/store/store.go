@@ -305,6 +305,9 @@ type Store interface {
 	// LatestVintageForVariable resolves "latest" to a concrete vintage at
 	// enqueue time ("" when the variable has no data).
 	LatestVintageForVariable(ctx context.Context, variableID string) (string, error)
+	// QueryStateRanks returns one geography's percentile rank (0–100) per
+	// variable among same-level peers.
+	QueryStateRanks(ctx context.Context, geoid string) (map[string]float64, error)
 
 	// Factor & validated feature operations
 	PutFactorScores(ctx context.Context, scores []FactorScore) error

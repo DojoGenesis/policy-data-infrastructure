@@ -79,6 +79,7 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/geographies/:geoid", geoidMW, p.handleGetGeography)
 	group.GET("/geographies/:geoid/children", geoidMW, p.handleGetChildren)
 	group.GET("/geographies/:geoid/indicators", geoidMW, p.handleGetIndicators)
+	group.GET("/geographies/:geoid/ranks", geoidMW, p.handleGetRanks)
 
 	// Query & comparison.
 	group.POST("/query", p.handleQuery)

@@ -557,9 +557,12 @@ func (s *PostgresStore) QueryIndicators(ctx context.Context, q IndicatorQuery) (
 	cvExpr := "cv"
 	reliabilityExpr := "COALESCE(reliability::text, '')"
 	if table == "indicators_latest" {
-		rawValueExpr = "''" // indicators_latest materialized view has no raw_value column
-		cvExpr = "NULL::double precision"
-		reliabilityExpr = "''"
+		// The view has no raw_value column; cv and reliability it HAS since
+		// migration 014. This branch used to null them out too — a leftover
+		// from the pre-014 view that silently stripped reliability from every
+		// latest-vintage read, which is why the dashboard's badges showed "—"
+		// while the data sat present in both tables (found 2026-08-08).
+		rawValueExpr = "''"
 	}
 	sql := fmt.Sprintf(`
 SELECT geoid, variable_id, vintage, value, margin_of_error, %s, %s, %s
@@ -960,6 +963,43 @@ func (s *PostgresStore) CountActiveRuns(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("store: CountActiveRuns: %w", err)
 	}
 	return n, nil
+}
+
+// QueryStateRanks returns, for one geography, each variable's percentile
+// rank (0–100, value-ascending) among all same-level geographies in
+// indicators_latest. This replaces the dashboard's hardcoded 50% stub with
+// the real statewide position, computed by the database in one window pass
+// rather than by a JS reimplementation shipping every peer's value to the
+// client (TODO's distribution-endpoint recommendation, narrowed to ranks).
+func (s *PostgresStore) QueryStateRanks(ctx context.Context, geoid string) (map[string]float64, error) {
+	const q = `
+SELECT variable_id, pct FROM (
+    SELECT geoid, variable_id,
+           percent_rank() OVER (PARTITION BY variable_id ORDER BY value) AS pct
+    FROM indicators_latest
+    WHERE length(geoid) = length($1) AND value IS NOT NULL
+) ranked
+WHERE geoid = $1`
+
+	rows, err := s.pool.Query(ctx, q, geoid)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryStateRanks: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]float64{}
+	for rows.Next() {
+		var v string
+		var pct float64
+		if err := rows.Scan(&v, &pct); err != nil {
+			return nil, fmt.Errorf("store: QueryStateRanks scan: %w", err)
+		}
+		out[v] = pct * 100
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryStateRanks rows: %w", err)
+	}
+	return out, nil
 }
 
 // LatestVintageForVariable resolves the newest vintage carrying data for a

@@ -1297,7 +1297,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
                     </td>
                     <td class="num" x-text="fmtValue(ind.value)"></td>
                     <td style="text-align:center;">
-                      <span style="font-size:0.7rem;color:var(--quiet);" x-text="getPercentile(ind).toFixed(0)+'%'"></span>
+                      <span style="font-size:0.7rem;color:var(--quiet);" x-text="fmtRank(getPercentile(ind))"></span>
                     </td>
                     <td style="text-align:center;">
                       <span class="badge" :class="'badge-'+(ind.reliability||'unknown')" x-text="ind.reliability || '—'"></span>
@@ -1950,6 +1950,7 @@ function countyProfile() {
     iceError: '',
     dissimBW: null,
     dissimHW: null,
+    stateRanks: {},
     dissimError: '',
 
     // Factors
@@ -2073,6 +2074,18 @@ function countyProfile() {
       return stats;
     },
 
+    // Distinct publishing sources for the indicators ACTUALLY loaded on this
+    // page — derived, never enumerated by hand. The hand-written list this
+    // replaces named EPA EJScreen (zero rows anywhere) and omitted CDC SVI:
+    // hardcoded source claims rot the moment a load lands or fails.
+    liveSourceNames() {
+      const names = new Set();
+      for (const ind of this.indicators) {
+        const m = this.indicatorMeta[ind.variable_id];
+        if (m && m.source) names.add(m.source.split(':')[0].trim());
+      }
+      return [...names].sort();
+    },
     get layer1Context() {
       const es = this.lang === 'es';
       const name = this.geo ? this.geo.name : (es ? 'este condado' : 'this county');
@@ -2083,15 +2096,18 @@ function countyProfile() {
           ? 'Los datos de indicadores se están cargando para <strong>' + name + '</strong>…'
           : 'Indicator data is loading for <strong>' + name + '</strong>…';
       }
+      const srcs = this.liveSourceNames();
+      const srcListEn = srcs.join(', ');
+      const srcListEs = srcs.join(', ');
       if (es) {
-        return 'Esto es lo que el Censo nos dice sobre <strong>' + name + '</strong>. ' +
-          indCount + ' indicadores en ' + catCount + ' categorías — ' +
-          'estimaciones de 5 años de la ACS más fuentes complementarias de CDC PLACES, EPA EJScreen y USDA Food Access. ' +
+        return 'Esto es lo que los datos nos dicen sobre <strong>' + name + '</strong>. ' +
+          indCount + ' indicadores en ' + catCount + ' categorías, de ' +
+          srcs.length + ' fuentes: ' + srcListEs + '. ' +
           'Cada valor lleva una insignia de confiabilidad.';
       }
-      return 'Here\'s what the Census tells us about <strong>' + name + '</strong>. ' +
-        indCount + ' indicators across ' + catCount + ' categories — ' +
-        'ACS 5-year estimates plus supplementary sources from CDC PLACES, EPA EJScreen, and USDA Food Access. ' +
+      return 'Here\'s what the data tells us about <strong>' + name + '</strong>. ' +
+        indCount + ' indicators across ' + catCount + ' categories, from ' +
+        srcs.length + ' sources: ' + srcListEn + '. ' +
         'Each value carries a reliability badge.';
     },
 
@@ -2454,14 +2470,19 @@ function countyProfile() {
       this.loading = true;
       this.error = '';
       try {
-        const [geoData, indData, varData] = await Promise.all([
+        const [geoData, indData, varData, rankData] = await Promise.all([
           this.api('/geographies/' + this.geoid),
           this.api('/geographies/' + this.geoid + '/indicators'),
           this.api('/variables'),
+          // State Rank column — real percentile ranks computed by the DB
+          // (percent_rank over same-level peers). A failed call degrades to
+          // "—" cells, never to an invented number.
+          this.api('/geographies/' + this.geoid + '/ranks').catch(() => ({ranks: {}})),
         ]);
 
         this.geo = geoData;
         this.indicators = indData.indicators || [];
+        this.stateRanks = (rankData && rankData.ranks) || {};
 
         // Tell the chat adapter which county we're viewing
         if (window.ChatAdapter) {
@@ -2476,6 +2497,7 @@ function countyProfile() {
               unit: v.unit,
               direction: v.direction,
               description: v.description,
+              source: v.source_name || v.source_id || '',
               category: this.inferCategory(v.id, v.name || '', v.source_id || ''),
             };
           }
@@ -2636,7 +2658,10 @@ function countyProfile() {
       return v;
     },
     fmtICE(v) { return v != null ? v.toFixed(3) : '—'; },
-    fmtMOE(v) { return v != null ? '±' + Math.round(v).toLocaleString() : ''; },
+    // Census annotation sentinels (≤ -111111111) are missing data, not
+    // margins; migration 018 repaired stored rows and the adapter now drops
+    // them at ingest — this is the display-layer belt.
+    fmtMOE(v) { return (v != null && v > -111111111) ? '±' + Math.round(v).toLocaleString() : ''; },
 
     landAreaLabel() {
       if (!this.geo || !this.geo.land_area_m2) return '';
@@ -2645,8 +2670,14 @@ function countyProfile() {
     },
 
     getPercentile(ind) {
-      if (!ind.value && ind.value !== 0) return 50;
-      return 50;
+      // Real statewide percentile from /ranks (percent_rank over same-level
+      // peers, value-ascending). null when the variable has no rank — the
+      // cell renders "—" rather than the old hardcoded 50%.
+      const r = this.stateRanks ? this.stateRanks[ind.variable_id] : null;
+      return (r === undefined || r === null) ? null : r;
+    },
+    fmtRank(r) {
+      return r === null ? '—' : r.toFixed(0) + '%';
     },
 
     // ── ICE ─────────────────────────────────────────────────

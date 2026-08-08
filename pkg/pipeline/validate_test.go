@@ -61,6 +61,9 @@ func (m *mockValidateStore) CountActiveRuns(_ context.Context) (int, error)     
 func (m *mockValidateStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
+func (m *mockValidateStore) QueryStateRanks(_ context.Context, _ string) (map[string]float64, error) {
+	return nil, nil
+}
 func (m *mockValidateStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error {
 	return nil
 }

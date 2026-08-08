@@ -275,6 +275,20 @@ func (p *PolicyPlugin) handleGetIndicators(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"geoid": geoid, "indicators": items, "total": len(items)})
 }
 
+// ── GET /geographies/:geoid/ranks ────────────────────────────────────────
+
+// handleGetRanks returns the geography's percentile rank per variable among
+// same-level peers — the dashboard's State Rank column, computed for real.
+func (p *PolicyPlugin) handleGetRanks(c *gin.Context) {
+	geoid := c.Param("geoid")
+	ranks, err := p.store.QueryStateRanks(c.Request.Context(), geoid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "rank query failed", Detail: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"geoid": geoid, "ranks": ranks, "total": len(ranks)})
+}
+
 // ── GET /geographies/:geoid/factors ──────────────────────────────────────
 
 // handleGetFactors returns factor scores for a single geography.
@@ -1267,6 +1281,16 @@ func (p *PolicyPlugin) indicatorToResponse(ind store.Indicator) IndicatorRespons
 		CV:            ind.CV,
 		Reliability:   ind.Reliability,
 		RawValue:      ind.RawValue,
+	}
+	// Derive reliability at read time when ingest didn't precompute it. The
+	// Go ACS path stores cv/reliability; the Python loaders store only the
+	// MOE — deriving here means every row with an MOE carries a badge, and
+	// the CV formula lives in exactly one tested place (pkg/stats).
+	if resp.CV == nil && resp.Reliability == "" && ind.MarginOfError != nil && ind.Value != nil && *ind.Value != 0 {
+		if cv := stats.CoefficientOfVariation(ind.Value, ind.MarginOfError); cv != nil {
+			resp.CV = cv
+			resp.Reliability = stats.ReliabilityLevel(cv)
+		}
 	}
 	if meta, ok := p.varMeta[ind.VariableID]; ok {
 		resp.Name = meta.Name

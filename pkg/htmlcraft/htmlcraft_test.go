@@ -59,6 +59,9 @@ func (s *stubStore) CountActiveRuns(_ context.Context) (int, error)             
 func (s *stubStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
+func (s *stubStore) QueryStateRanks(_ context.Context, _ string) (map[string]float64, error) {
+	return nil, nil
+}
 func (s *stubStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (s *stubStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil

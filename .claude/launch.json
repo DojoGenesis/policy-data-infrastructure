@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pdi",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "PDI_DATABASE_URL='postgres://pdi:pdi@localhost:5434/pdi?sslmode=disable' go run ./cmd/pdi serve --port 8340"
+      ],
+      "port": 8340
+    }
+  ]
+}

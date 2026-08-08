@@ -723,8 +723,13 @@ func parseValue(raw string) (*float64, *float64) {
 	if err != nil {
 		return nil, nil
 	}
-	// Census API uses -666666666 as a sentinel for suppressed/missing data.
-	if f == -666666666 {
+	// The Census API family of annotation sentinels: -666666666 (suppressed)
+	// plus -555555555 (controlled), -888888888 (not applicable), -333333333 /
+	// -222222222 (annotation codes) — MOE columns carry the latter for
+	// controlled estimates. All are impossible as real values; treating any
+	// of them as data is how the dashboard once rendered "±-555,555,555"
+	// (migration 018 repaired the stored rows).
+	if f <= -111111111 {
 		return nil, nil
 	}
 	return &f, nil

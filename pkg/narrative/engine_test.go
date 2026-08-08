@@ -255,6 +255,9 @@ func (m *mockStore) CountActiveRuns(_ context.Context) (int, error)             
 func (m *mockStore) LatestVintageForVariable(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
+func (m *mockStore) QueryStateRanks(_ context.Context, _ string) (map[string]float64, error) {
+	return nil, nil
+}
 func (m *mockStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (m *mockStore) QueryAnalysisScores(_ context.Context, analysisID, tier string) ([]store.AnalysisScore, error) {
 	var out []store.AnalysisScore

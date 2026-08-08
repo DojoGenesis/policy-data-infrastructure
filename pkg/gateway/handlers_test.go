@@ -189,6 +189,9 @@ func (m *mockStore) LatestVintageForVariable(_ context.Context, variableID strin
 	}
 	return "", nil
 }
+func (m *mockStore) QueryStateRanks(_ context.Context, _ string) (map[string]float64, error) {
+	return map[string]float64{"poverty_rate": 12.5}, nil
+}
 
 func (m *mockStore) PutAnalysisScores(_ context.Context, scores []store.AnalysisScore) error {
 	m.scores = append(m.scores, scores...)
