@@ -462,6 +462,14 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 
   /* ── Responsive ─────────────────────────────────────────────── */
+  /* Single-column gallery (operator call 2026-08-08): one card per row at
+     every width. Overrides styles.css's auto-fill multi-column base — a
+     page-scoped rule, because other pages keep the shared grid. The full
+     row width is what the four-layer expanded treatment wants anyway. */
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
   @media (max-width: 700px) {
     .filter-bar {
       flex-direction: column;
