@@ -57,8 +57,13 @@ def bulk_load_indicators(conn: psycopg.Connection, indicators: list[dict]) -> in
 
     Each dict in ``indicators`` must contain:
       geoid        (str)  — 11-digit tract GEOID (or other level)
-      variable_id  (str)  — snake_case indicator identifier, e.g. "median_hh_income"
-      vintage      (int)  — ACS end year, e.g. 2023
+      variable_id  (str)  — snake_case indicator identifier, e.g. "poverty_rate"
+      vintage      (str | int) — vintage STRING as stored ("ACS-2024-5yr",
+                     "CDC-PLACES-2023", or a bare year like 2022). The
+                     indicators.vintage column is text; this loader used to
+                     force int() here, which both crashed on real vintage
+                     strings and quietly minted bare-year vintages that never
+                     match their cross-level counterparts (ADR-014 F4/D5).
       value        (float | None) — computed indicator value; None = missing/suppressed
       margin_of_error (float | None) — MOE at 90% CI; None if not applicable
       raw_value    (str)  — original Census API string (preserved for audit)
@@ -78,7 +83,7 @@ def bulk_load_indicators(conn: psycopg.Connection, indicators: list[dict]) -> in
             CREATE TEMP TABLE _ind_staging (
                 geoid           text,
                 variable_id     text,
-                vintage         integer,
+                vintage         text,
                 value           double precision,
                 margin_of_error double precision,
                 raw_value       text
@@ -92,7 +97,7 @@ def bulk_load_indicators(conn: psycopg.Connection, indicators: list[dict]) -> in
                 copy.write_row((
                     ind["geoid"],
                     ind["variable_id"],
-                    int(ind["vintage"]),
+                    str(ind["vintage"]),
                     ind.get("value"),           # None → NULL
                     ind.get("margin_of_error"),  # None → NULL
                     str(ind.get("raw_value", "") or ""),
