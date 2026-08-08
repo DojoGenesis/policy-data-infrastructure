@@ -300,40 +300,74 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
     return records
 
 
+# Block-group population column, when present in the source extract. The
+# current OUTPUT_COLUMNS extract does NOT carry one — EJScreen's ACSTOTPOP
+# is not among the mapped columns — so tract aggregation is refused until a
+# population join lands (ADR-014 D2: an absent value is honest; a
+# caveated-wrong one travels without its footnote).
+POPULATION_COL = "population"
+
+
 def aggregate_to_tract(records: list[dict]) -> list[dict]:
     """
-    Population-weighted average aggregation of block group records to tract level.
-    Since EJScreen doesn't include population in the main file, we use simple
-    averaging as an approximation.  For production use, join ACS population
-    before aggregating.
+    Population-weighted aggregation of block-group records to tract level.
+
+    Refuses to run without a per-block-group population weight: the previous
+    implementation documented itself as population-weighted while computing a
+    plain mean (ADR-014 F1), which silently mis-states any tract whose block
+    groups differ in population. Per ADR-014 D2/D6/D7 an unweightable rate is
+    withheld, not approximated.
     """
     from collections import defaultdict
+
+    have_weights = any(rec.get(POPULATION_COL) not in (None, "") for rec in records)
+    if not have_weights:
+        print(
+            "ERROR: tract aggregation requires a block-group population weight, and\n"
+            f"       the extract carries no {POPULATION_COL!r} column. A plain mean of\n"
+            "       block-group values is not a tract value (ADR-014 D2/D6/D7).\n"
+            "       Fix: add EJScreen's ACSTOTPOP to COLUMN_ALIASES/OUTPUT_COLUMNS\n"
+            "       (or join ACS B01001_001E at block-group level), then re-run.\n"
+            "       Block-group output (without --tract) remains available.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     tract_groups: dict[str, list[dict]] = defaultdict(list)
     for rec in records:
         geoid = rec.get("geoid", "")
         if len(geoid) >= 11:
-            tract_geoid = geoid[:11]
-            tract_groups[tract_geoid].append(rec)
+            tract_groups[geoid[:11]].append(rec)
 
-    numeric_cols = [c for c in OUTPUT_COLUMNS if c != "geoid"]
+    numeric_cols = [c for c in OUTPUT_COLUMNS if c not in ("geoid", POPULATION_COL)]
     tract_records: list[dict] = []
 
     for tract_geoid, bg_recs in sorted(tract_groups.items()):
         out: dict = {"geoid": tract_geoid}
         for col in numeric_cols:
-            vals = []
+            num = 0.0   # sum of value * weight
+            den = 0.0   # sum of weights, counted only where the value exists
             for r in bg_recs:
                 raw = r.get(col)
-                if raw is not None:
-                    try:
-                        vals.append(float(raw))
-                    except (ValueError, TypeError):
-                        pass
-            if vals:
-                out[col] = str(round(sum(vals) / len(vals), 4))
-            else:
-                out[col] = None
+                w_raw = r.get(POPULATION_COL)
+                if raw is None or w_raw in (None, ""):
+                    continue
+                try:
+                    val = float(raw)
+                    w = float(w_raw)
+                except (ValueError, TypeError):
+                    continue
+                if w <= 0:
+                    continue
+                num += val * w
+                den += w
+            out[col] = str(round(num / den, 4)) if den > 0 else None
+        # Carry the summed population so downstream loads can weight further.
+        pop_total = sum(
+            float(r[POPULATION_COL]) for r in bg_recs
+            if r.get(POPULATION_COL) not in (None, "")
+        )
+        out[POPULATION_COL] = str(int(pop_total)) if pop_total > 0 else None
         tract_records.append(out)
 
     return tract_records
@@ -418,7 +452,8 @@ def main() -> None:
     parser.add_argument(
         "--tract",
         action="store_true",
-        help="Aggregate block group records to tract level (simple average)",
+        help="Aggregate block group records to tract level (population-weighted; "
+             "refuses without a population column — see aggregate_to_tract)",
     )
     parser.add_argument(
         "--load",

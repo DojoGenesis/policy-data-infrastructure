@@ -1335,11 +1335,14 @@ ON CONFLICT (geoid, factor_name, analysis_vintage) DO UPDATE SET
 // QueryFactorScores returns all factor scores for a single geography,
 // ordered by factor_name. An empty result set returns an empty slice.
 //
-// For county-level GEOIDs (5 characters, e.g. "55025") where no direct
-// match exists, the method auto-aggregates tract-level factor scores by
-// averaging per (county_geoid, factor_name, analysis_vintage).
+// Exact-match only. A county GEOID with no stored county-level scores
+// returns empty rather than an on-the-fly tract average: the unweighted
+// fallback this method used to carry had no minimum-N check (a county with
+// 1 of 40 tracts reporting produced a "county" value from n=1) and no
+// defensible weighting, so per ADR-014 D2/D6 the value is absent, not
+// approximated. County factor scores must be written by an explicit,
+// weighted, coverage-checked aggregation (the tract_rollup analysis type).
 func (s *PostgresStore) QueryFactorScores(ctx context.Context, geoid string) ([]FactorScore, error) {
-	// 1. Try exact match first.
 	const eq = `
 SELECT geoid, factor_name, factor_score, factor_percentile,
        COALESCE(loadings_json::text, ''), COALESCE(analysis_vintage, '')
@@ -1367,48 +1370,6 @@ ORDER BY factor_name`
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("store: QueryFactorScores rows: %w", err)
-	}
-
-	if len(result) > 0 {
-		return result, nil
-	}
-
-	// 2. If no exact match and GEOID is 5 characters (county level), aggregate from tracts.
-	if len(geoid) == 5 {
-		const agg = `
-SELECT
-    LEFT(fs.geoid, 5) AS county_geoid,
-    fs.factor_name,
-    AVG(fs.factor_score) AS factor_score,
-    NULL::double precision AS factor_percentile,
-    ''::text AS loadings_json,
-    COALESCE(fs.analysis_vintage, '') AS analysis_vintage
-FROM factor_scores fs
-WHERE LENGTH(fs.geoid) = 11
-  AND LEFT(fs.geoid, 5) = $1
-GROUP BY LEFT(fs.geoid, 5), fs.factor_name, fs.analysis_vintage
-ORDER BY fs.factor_name`
-
-		rows2, err := s.pool.Query(ctx, agg, geoid)
-		if err != nil {
-			return nil, fmt.Errorf("store: QueryFactorScores aggregate: %w", err)
-		}
-		defer rows2.Close()
-
-		for rows2.Next() {
-			var fs FactorScore
-			if err := rows2.Scan(
-				&fs.GEOID, &fs.FactorName, &fs.FactorScore, &fs.FactorPercentile,
-				&fs.LoadingsJSON, &fs.AnalysisVintage,
-			); err != nil {
-				return nil, fmt.Errorf("store: QueryFactorScores scan: %w", err)
-			}
-			result = append(result, fs)
-		}
-		if err := rows2.Err(); err != nil {
-			return nil, fmt.Errorf("store: QueryFactorScores rows: %w", err)
-		}
-		return result, nil
 	}
 
 	return result, nil
