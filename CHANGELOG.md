@@ -3,6 +3,32 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-08 (late) — one PLACES set, one label, county factor profiles live
+
+### PLACES alignment (`10cb81f`, migration 020)
+Local and prod had drifted to different measure subsets (local BINGE-not-
+PHLTH, prod the inverse) with different vintage labels ('CDC-PLACES-2023'
+vs bare '2022') — same release, two load-day histories. Canonical set is
+now the 9-measure union under the cdc_* vocabulary and one label; the
+loader's cdc_places_* id scheme (a third vocabulary in waiting) and the
+bogus SMOKING measureid (silently fetched zero rows) are gone. Both
+environments verified 13,725 rows at CDC-PLACES-2023; spot check
+identical to the decimal (tract 55025000100 cdc_binge = 21.3 both).
+
+### County Factor Profiles (`10cb81f`, ADR-015 Proposed)
+factor_rollup run type: population-weighted rollups of tract factor
+scores, CI + coverage in loadings_json, withheld under threshold,
+'-popw' vintage suffix, one live generation enforced, re-established by
+the launch warm. Forced model v2 en route: the v1 feature set's 1-mile
+low-access share exists only for FARA's urban universe — complete-case
+cost 290 tracts and withheld Dane at 79.2% coverage. v2 drops the
+structurally-holed feature (1,525 tracts scored, was 1,235) and bumps
+the vintage BECAUSE the rollup cache key carries it — an unbumped model
+revision would cache-hit forever. Dane publishes: cardiovascular-
+metabolic −1.26 (p0 — healthiest county statewide), mental-health &
+health-access −0.28 (p21), identical numbers on prod. Warm on prod:
+2 current, 9 queued, 0 skipped — the binge rollup no longer skips.
+
 ## 2026-08-08 (night) — the county explorer tells the truth
 
 Operator directive: validate and fix the explorer page — dashboard wiring,

@@ -5,13 +5,11 @@
 
 ## P1 — Follow-ups from the 2026-08-08 explorer truth pass
 
-- [ ] **County-level factor scores need a defensible method ruling.** Tract EFA is live
-  (2,470 scores, two interpretable factors); the county Factor Profile deliberately
-  shows its empty state because averaging tract factor scores is the D6 sin. Options:
-  county-level EFA over county indicators (needs PLACES rollups exposed as indicator
-  rows), population-weighted rollup THROUGH the run API with CI (D8-compliant), or
-  distribution display (min/median/max of the county's tract scores). Operator call
-  [source: explorer pass 2026-08-08]
+- [x] ~~**County-level factor scores need a defensible method ruling.**~~ — BUILT
+  2026-08-08 as ADR-015 (Proposed): population-weighted rollup through the run queue,
+  CI + coverage recorded, withheld under threshold, '-popw' vintage rows. **Awaiting
+  operator ratification** — if method 1 or 3 is preferred instead, the executor and
+  rows are cleanly removable [source: `10cb81f`]
 - [ ] **County page time-series fetch requests bare-year vintages** (`vintage=2023,2022,...`)
   which match nothing since vintage strings became `ACS-2024-5yr`-style — the sparkline
   section has been silently empty and stays so. Wire it to real vintage strings or drop
