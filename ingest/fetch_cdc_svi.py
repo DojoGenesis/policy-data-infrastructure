@@ -103,15 +103,22 @@ VARIABLE_MAP = {
     "RPL_THEME3":  "cdc_svi_racial_ethnic",
     "RPL_THEME4":  "cdc_svi_housing_transport",
     "RPL_THEMES":  "cdc_svi_overall",
+    # Estimate columns (not percentiles)
+    "E_TOTPOP":    "svi_total_population",
 }
 
-# The five canonical PDI variable IDs for CDC SVI.
+# The canonical PDI variable IDs for CDC SVI: five percentile-rank themes
+# plus the tract population estimate. The population is why this source can
+# serve as the tract→county weighting denominator — E_TOTPOP shares its 2022
+# vintage with CDC PLACES rates, which is exactly the same-vintage
+# denominator ADR-014 F3 found missing (handoff 2026-08-02 item 3).
 PDI_VARIABLES: list[str] = [
     "cdc_svi_overall",
     "cdc_svi_socioeconomic",
     "cdc_svi_household",
     "cdc_svi_racial_ethnic",
     "cdc_svi_housing_transport",
+    "svi_total_population",
 ]
 
 # CDC SVI column name → PDI variable ID mapping (canonical columns for each year).
@@ -123,6 +130,14 @@ COLUMN_MAP = {
     "RPL_THEME2": "cdc_svi_household",
     "RPL_THEME3": "cdc_svi_racial_ethnic",
     "RPL_THEME4": "cdc_svi_housing_transport",
+    "E_TOTPOP":   "svi_total_population",
+}
+
+# Margin-of-error companions: source column → the PDI variable whose
+# margin_of_error it fills. Parsed alongside COLUMN_MAP, stored in the
+# indicators.margin_of_error column (never as separate variables).
+MOE_COLUMN_MAP = {
+    "M_TOTPOP": "svi_total_population",
 }
 
 # GEOID column varies by geography level:
@@ -235,8 +250,8 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
 
             try:
                 val = float(raw_val)
-                # CDC SVI values are 0.0–1.0 percentiles. Occasionally there are
-                # sentinel values (-999) or out-of-range artifacts.
+                # Percentile columns are 0.0–1.0; E_TOTPOP is a raw count.
+                # Either way the only invalid values are the -999 sentinels.
                 if val < -0.001:
                     record[pdi_var] = None
                     skipped_value += 1
@@ -245,6 +260,19 @@ def fetch_data(args: argparse.Namespace) -> list[dict]:
             except (ValueError, TypeError):
                 record[pdi_var] = None
                 skipped_value += 1
+
+        # Margin-of-error companions (kept beside, not among, the variables).
+        for src_col, pdi_var in MOE_COLUMN_MAP.items():
+            raw_val = row.get(src_col, "").strip()
+            moe_key = pdi_var + "__moe"
+            record[moe_key] = None
+            if raw_val and raw_val != "-999" and raw_val.lower() not in ("null", "none", "na", "n/a"):
+                try:
+                    moe = float(raw_val)
+                    if moe >= 0:
+                        record[moe_key] = moe
+                except (ValueError, TypeError):
+                    pass
 
         records.append(record)
 
@@ -266,7 +294,7 @@ def write_csv(records: list[dict], args: argparse.Namespace) -> str:
     filename = f"svi_{args.year}_{args.level}.csv"
     filepath = os.path.join(OUTPUT_DIR, filename)
 
-    fieldnames = ["geoid"] + PDI_VARIABLES
+    fieldnames = ["geoid"] + PDI_VARIABLES + [v + "__moe" for v in MOE_COLUMN_MAP.values()]
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -352,6 +380,13 @@ def load_to_db(records: list[dict], args: argparse.Namespace) -> None:
         "unit":        "percentile",
         "direction":   "lower_better",
     }
+    meta["svi_total_population"] = {
+        "source_id":   "cdc-svi",
+        "name":        "Total Population (CDC SVI E_TOTPOP)",
+        "description": "ACS total population estimate carried in the CDC SVI file (E_TOTPOP, with M_TOTPOP margin of error). Same 2022 vintage as CDC PLACES — the tract→county weighting denominator (ADR-014 D7).",
+        "unit":        "count",
+        "direction":   "neutral",
+    }
     n_meta = upsert_indicator_meta(conn, meta)
     print(f"  {n_meta} indicator_meta rows upserted")
 
@@ -368,7 +403,7 @@ def load_to_db(records: list[dict], args: argparse.Namespace) -> None:
                 "variable_id":    var,
                 "vintage":        int(year_val),
                 "value":          float(val) if val is not None else None,
-                "margin_of_error": None,
+                "margin_of_error": rec.get(var + "__moe"),
                 "raw_value":      str(val) if val is not None else "",
             })
 
