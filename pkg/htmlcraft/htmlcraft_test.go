@@ -42,6 +42,9 @@ func (s *stubStore) Aggregate(_ context.Context, _ store.AggregateQuery) (*store
 func (s *stubStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (string, error) {
 	return "stub-id", nil
 }
+func (s *stubStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
+	return nil, nil
+}
 func (s *stubStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error { return nil }
 func (s *stubStore) QueryAnalysisScores(_ context.Context, _ string, _ string) ([]store.AnalysisScore, error) {
 	return nil, nil

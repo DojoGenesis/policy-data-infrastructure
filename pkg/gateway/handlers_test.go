@@ -155,6 +155,9 @@ func (m *mockStore) Aggregate(_ context.Context, _ store.AggregateQuery) (*store
 func (m *mockStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (string, error) {
 	return "mock-analysis-id", nil
 }
+func (m *mockStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
+	return nil, nil
+}
 
 func (m *mockStore) PutAnalysisScores(_ context.Context, scores []store.AnalysisScore) error {
 	m.scores = append(m.scores, scores...)

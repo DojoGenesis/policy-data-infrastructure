@@ -44,6 +44,9 @@ func (m *mockValidateStore) Aggregate(_ context.Context, _ store.AggregateQuery)
 func (m *mockValidateStore) PutAnalysis(_ context.Context, _ store.AnalysisResult) (string, error) {
 	return "", nil
 }
+func (m *mockValidateStore) FindAnalysisByKey(_ context.Context, _ store.AnalysisKey) (*store.AnalysisSummary, error) {
+	return nil, nil
+}
 func (m *mockValidateStore) PutAnalysisScores(_ context.Context, _ []store.AnalysisScore) error {
 	return nil
 }

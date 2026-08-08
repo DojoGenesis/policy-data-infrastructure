@@ -79,6 +79,18 @@ type AnalysisResult struct {
 	Vintage    string
 }
 
+// AnalysisKey is the ADR-014 D9 cache identity of an analysis:
+// (type, scope_geoid, scope_level, vintage, parameters). Vintage is part of
+// the key, never metadata — two runs over different vintages are different
+// analyses. Empty ScopeGEOID/ScopeLevel denote NULL scope columns.
+type AnalysisKey struct {
+	Type       string
+	ScopeGEOID string
+	ScopeLevel string
+	Vintage    string
+	Parameters map[string]interface{}
+}
+
 // AnalysisScore is a per-geography score from an analysis.
 type AnalysisScore struct {
 	AnalysisID string
@@ -249,8 +261,13 @@ type Store interface {
 	Aggregate(ctx context.Context, q AggregateQuery) (*AggregateResult, error)
 
 	// Analysis operations
-	// PutAnalysis persists an AnalysisResult and returns the database-generated UUID.
+	// PutAnalysis persists an AnalysisResult and returns its UUID. Identity
+	// is the AnalysisKey tuple (ADR-014 D9): an identical re-run refreshes
+	// the existing row and returns the same UUID rather than duplicating.
 	PutAnalysis(ctx context.Context, result AnalysisResult) (string, error)
+	// FindAnalysisByKey returns the analysis with exactly this cache key, or
+	// nil (with nil error) when none exists.
+	FindAnalysisByKey(ctx context.Context, key AnalysisKey) (*AnalysisSummary, error)
 	GetAnalysis(ctx context.Context, id string) (*AnalysisResult, error)
 	PutAnalysisScores(ctx context.Context, scores []AnalysisScore) error
 	QueryAnalysisScores(ctx context.Context, analysisID string, tier string) ([]AnalysisScore, error)

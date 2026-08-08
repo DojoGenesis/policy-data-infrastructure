@@ -763,13 +763,21 @@ ORDER BY im.variable_id`
 
 // --- Analysis operations ---
 
-// PutAnalysis persists an AnalysisResult record to the analyses table and
-// returns the database-generated UUID. Callers must use this UUID (not any
-// caller-generated ID) as the analysis_id in PutAnalysisScores.
+// PutAnalysis persists an AnalysisResult and returns its UUID. Identity is
+// the ADR-014 D9 cache key — (type, scope_geoid, scope_level, vintage,
+// parameters) — enforced by uq_analyses_cache_key (migration 015): re-running
+// an identical analysis refreshes results/computed_at on the existing row and
+// returns the SAME id instead of minting a duplicate. result.ID is ignored on
+// write; callers must use the returned UUID as the analysis_id in
+// PutAnalysisScores. Existing scores for a refreshed analysis remain until
+// the caller upserts replacements (PutAnalysisScores upserts by
+// (analysis_id, geoid)).
 func (s *PostgresStore) PutAnalysis(ctx context.Context, result AnalysisResult) (string, error) {
 	const q = `
 INSERT INTO analyses (type, scope_geoid, scope_level, parameters, results, vintage)
 VALUES ($1, NULLIF($2,''), NULLIF($3,'')::geo_level, $4, $5, $6)
+ON CONFLICT (type, scope_geoid, scope_level, vintage, parameters)
+DO UPDATE SET results = EXCLUDED.results, computed_at = now()
 RETURNING id`
 
 	var id string
@@ -785,6 +793,38 @@ RETURNING id`
 		return "", fmt.Errorf("store: PutAnalysis: %w", err)
 	}
 	return id, nil
+}
+
+// FindAnalysisByKey returns the analysis matching the exact ADR-014 D9 cache
+// key, or nil (no error) when none exists. Empty ScopeGEOID/ScopeLevel match
+// rows whose columns are NULL, mirroring how PutAnalysis stores them.
+func (s *PostgresStore) FindAnalysisByKey(ctx context.Context, key AnalysisKey) (*AnalysisSummary, error) {
+	const q = `
+SELECT a.id, a.type,
+       COALESCE(a.scope_geoid, ''), COALESCE(a.scope_level::text, ''),
+       COALESCE(a.vintage, ''), a.computed_at::text,
+       (SELECT COUNT(*) FROM analysis_scores sc WHERE sc.analysis_id = a.id)
+FROM analyses a
+WHERE a.type = $1
+  AND a.scope_geoid IS NOT DISTINCT FROM NULLIF($2, '')
+  AND a.scope_level IS NOT DISTINCT FROM NULLIF($3, '')::geo_level
+  AND a.vintage IS NOT DISTINCT FROM $4
+  AND a.parameters IS NOT DISTINCT FROM $5
+LIMIT 1`
+
+	var as AnalysisSummary
+	err := s.pool.QueryRow(ctx, q,
+		key.Type, key.ScopeGEOID, key.ScopeLevel, key.Vintage,
+		marshalJSONB(key.Parameters),
+	).Scan(&as.ID, &as.Type, &as.ScopeGEOID, &as.ScopeLevel,
+		&as.Vintage, &as.ComputedAt, &as.ScoreCount)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("store: FindAnalysisByKey: %w", err)
+	}
+	return &as, nil
 }
 
 // GetAnalysis retrieves a single analysis by ID.
