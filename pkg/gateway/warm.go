@@ -47,6 +47,8 @@ func defaultWarmSet() []warmIntent {
 			"group_variable": "pop_hispanic_latino", "reference_variable": "pop_white_non_hispanic",
 			"group_pair": "hispanic_white",
 		}},
+		// ADR-015: county factor profiles re-derive from the tract model.
+		{"factor_rollup", "state", "55", map[string]interface{}{}},
 	}
 	rollupVars := []string{
 		// CDC PLACES (tract-only source; county values exist only as rollups)

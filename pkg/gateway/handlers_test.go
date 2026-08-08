@@ -257,6 +257,12 @@ func (m *mockStore) QueryFactorScores(_ context.Context, geoid string) ([]store.
 	}
 	return out, nil
 }
+func (m *mockStore) QueryFactorScoresAtLevel(_ context.Context, _ int) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (m *mockStore) DeleteFactorScoresAtLevel(_ context.Context, _ int, _ string) (int64, error) {
+	return 0, nil
+}
 func (m *mockStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
 	return nil, nil
 }

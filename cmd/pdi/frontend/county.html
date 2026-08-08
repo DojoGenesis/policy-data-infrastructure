@@ -1599,7 +1599,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <button class="btn btn-ghost" @click="loadFactors()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
         <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" style="display:none">
-          <span data-en="Factor scores exist at tract level (EFA with oblimin rotation over health-access and food-access features). County-level scores are deliberately absent: averaging tract factor scores without a defensible weighting is exactly the aggregation this platform refuses (ADR-014 D2/D6). Open a tract profile to see its factor columns." data-es="Los puntajes de factores existen a nivel de tracto (AFE con rotación oblimin sobre características de acceso a salud y alimentos). Los puntajes a nivel de condado están ausentes deliberadamente: promediar puntajes de tractos sin una ponderación defendible es exactamente la agregación que esta plataforma rechaza (ADR-014 D2/D6). Abre el perfil de un tracto para ver sus columnas de factores.">Factor scores exist at tract level (EFA with oblimin rotation over health-access and food-access features). County-level scores are deliberately absent: averaging tract factor scores without a defensible weighting is exactly the aggregation this platform refuses (ADR-014 D2/D6). Open a tract profile to see its factor columns.</span>
+          <span data-en="No published factor scores for this geography. County scores are population-weighted rollups of the tract factor model, published only when tract coverage clears the recorded threshold with a bootstrap interval (ADR-015) — a county shown empty was withheld, not forgotten." data-es="No hay puntajes de factores publicados para esta geografía. Los puntajes de condado son agregaciones ponderadas por población del modelo de factores por tracto, publicadas solo cuando la cobertura de tractos supera el umbral registrado con un intervalo bootstrap (ADR-015) — un condado vacío fue retenido, no olvidado.">No published factor scores for this geography. County scores are population-weighted rollups of the tract factor model, published only when tract coverage clears the recorded threshold with a bootstrap interval (ADR-015) — a county shown empty was withheld, not forgotten.</span>
         </div>
 
         <div x-show="!factorsLoading && !factorsError && factors.length > 0" style="display:none" class="card card-spectral">
@@ -1622,6 +1622,7 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
             </template>
           </div>
           <p class="chart-note" data-en="Each column is a z-score against the state average: the shared line is 0, columns rising above it are above average, columns hanging below are below. The signed score sits above every column and the state percentile beneath it; heights cap at |z| = 3." data-es="Cada columna es un puntaje z frente al promedio estatal: la línea compartida es 0, las columnas que suben están por encima del promedio y las que cuelgan por debajo están por debajo. El puntaje con signo aparece sobre cada columna y el percentil estatal debajo; la altura se limita a |z| = 3.">Each column is a z-score against the state average: the shared line is 0, columns rising above it are above average, columns hanging below are below. The signed score sits above every column and the state percentile beneath it; heights cap at |z| = 3.</p>
+          <p class="chart-note" x-show="factors.some(f => (f.analysis_vintage || '').endsWith('-popw'))" style="display:none" data-en="These county columns are population-weighted rollups of the tract factor model (ADR-015): each value is the county population's average tract score, published with a bootstrap interval and coverage recorded in the data." data-es="Estas columnas de condado son agregaciones ponderadas por población del modelo de factores por tracto (ADR-015): cada valor es el puntaje promedio de los tractos ponderado por población, publicado con un intervalo bootstrap y cobertura registrada en los datos.">These county columns are population-weighted rollups of the tract factor model (ADR-015): each value is the county population's average tract score, published with a bootstrap interval and coverage recorded in the data.</p>
 
           <!-- DATAVIZ-RULES rule 4: identical data, non-visual path. The bars
                themselves stay hand-rolled on purpose — see the report: they are a
@@ -2425,6 +2426,7 @@ function countyProfile() {
         'labor_market': 'Fortaleza del Mercado Laboral',
         'cardiovascular_metabolic': 'Cardiovascular y Metabólico',
         'mental_health_economic_deprivation': 'Salud Mental y Privación Económica',
+        'mental_health_health_access': 'Salud Mental y Acceso a Salud',
       } : {
         'economic_distress': 'Economic Distress',
         'housing_stress': 'Housing Stress',
@@ -2438,6 +2440,7 @@ function countyProfile() {
         'labor_market': 'Labor Market Strength',
         'cardiovascular_metabolic': 'Cardiovascular & Metabolic',
         'mental_health_economic_deprivation': 'Mental Health & Economic Deprivation',
+        'mental_health_health_access': 'Mental Health & Health Access',
       };
       return this.factors.map(f => ({...f, label: labelMap[f.factor_name] || f.factor_name}));
     },

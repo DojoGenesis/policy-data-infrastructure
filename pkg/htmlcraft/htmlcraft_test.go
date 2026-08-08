@@ -99,6 +99,12 @@ func (s *stubStore) PutFactorScores(_ context.Context, _ []store.FactorScore) er
 func (s *stubStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
 	return nil, nil
 }
+func (s *stubStore) QueryFactorScoresAtLevel(_ context.Context, _ int) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (s *stubStore) DeleteFactorScoresAtLevel(_ context.Context, _ int, _ string) (int64, error) {
+	return 0, nil
+}
 func (s *stubStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
 	return nil, nil
 }

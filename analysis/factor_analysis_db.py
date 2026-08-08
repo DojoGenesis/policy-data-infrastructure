@@ -70,10 +70,19 @@ CDC_FEATURES = [
 # USDA features enter as SHARES of FARA's own population base, derived in
 # fetch_usda below. Raw counts in an EFA load on population size and the
 # first factor becomes "how many people live here"; shares measure access.
+#
+# LOW_ACCESS_SHARE (lapop1) was removed in model v2: FARA computes the
+# 1-mile measure only for its urban-threshold universe (~79% of tracts),
+# and a feature with a STRUCTURAL hole cost every outside-universe tract
+# its factor score under complete-case — 99/125 Dane tracts scored, 79.2%
+# county coverage, withheld by 0.8 points. A variable defined for part of
+# the universe does not belong in a population-wide factor model (its
+# loadings were 0.35/-0.26 — modest). Model revisions BUMP THE VINTAGE:
+# the county rollup's cache key carries model_vintage, and an unbumped
+# revision would cache-hit against the old model's rollup forever.
 USDA_FEATURES = [
-    ("usda_food_desert",   "FOOD_DESERT_SHARE"),   # already a 0–1 share
-    ("_derived_snap_share",      "SNAP_SHARE"),
-    ("_derived_low_access_share", "LOW_ACCESS_SHARE"),
+    ("usda_food_desert",    "FOOD_DESERT_SHARE"),   # already a 0–1 share
+    ("_derived_snap_share", "SNAP_SHARE"),
 ]
 
 # Output CSVs
@@ -367,14 +376,18 @@ def load_to_db(conn, geoids: list[str], factor_names: list[str],
     a bare upsert would leave the old names' rows beside the new ones and
     every profile would show both models at once.
     """
-    vintage = "2023-efa-v1"
+    vintage = "2023-efa-v2"
     count = 0
     with conn.cursor() as cur:
+        # Clear ALL tract EFA generations, not just this vintage's rows: a
+        # model revision renames factors and changes coverage, and rows from
+        # a previous generation lingering beside the new one would serve two
+        # models at once from the same endpoint.
         cur.execute(
-            "DELETE FROM factor_scores WHERE analysis_vintage = %s AND LENGTH(geoid) = 11",
-            (vintage,),
+            "DELETE FROM factor_scores WHERE analysis_vintage LIKE '%%-efa-v%%' "
+            "AND analysis_vintage NOT LIKE '%%-popw' AND LENGTH(geoid) = 11",
         )
-        print(f"  cleared {cur.rowcount} prior tract rows for vintage {vintage}")
+        print(f"  cleared {cur.rowcount} prior tract EFA rows (all generations)")
         for i, geoid in enumerate(geoids):
             for j, fname in enumerate(factor_names):
                 cur.execute("""

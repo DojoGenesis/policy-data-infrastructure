@@ -312,6 +312,11 @@ type Store interface {
 	// Factor & validated feature operations
 	PutFactorScores(ctx context.Context, scores []FactorScore) error
 	QueryFactorScores(ctx context.Context, geoid string) ([]FactorScore, error)
+	// QueryFactorScoresAtLevel bulk-reads factor scores by GEOID length
+	// (11 = tract, 5 = county) for the county rollup (ADR-015).
+	QueryFactorScoresAtLevel(ctx context.Context, geoidLen int) ([]FactorScore, error)
+	// DeleteFactorScoresAtLevel clears rollup generations by vintage suffix.
+	DeleteFactorScoresAtLevel(ctx context.Context, geoidLen int, vintageSuffix string) (int64, error)
 	QueryValidatedFeatures(ctx context.Context, scopeGEOID string) ([]ValidatedFeature, error)
 
 	// Policy operations

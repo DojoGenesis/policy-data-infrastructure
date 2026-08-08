@@ -1537,6 +1537,56 @@ ON CONFLICT (geoid, factor_name, analysis_vintage) DO UPDATE SET
 	return nil
 }
 
+// DeleteFactorScoresAtLevel removes factor scores at one GEOID length whose
+// analysis_vintage ends with the given suffix — the factor_rollup
+// executor's generation hygiene: factor names and coverage change between
+// model revisions, so exactly one rollup generation may be live at a time.
+func (s *PostgresStore) DeleteFactorScoresAtLevel(ctx context.Context, geoidLen int, vintageSuffix string) (int64, error) {
+	const q = `
+DELETE FROM factor_scores
+WHERE LENGTH(geoid) = $1 AND analysis_vintage LIKE '%' || $2`
+
+	tag, err := s.pool.Exec(ctx, q, geoidLen, vintageSuffix)
+	if err != nil {
+		return 0, fmt.Errorf("store: DeleteFactorScoresAtLevel: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+// QueryFactorScoresAtLevel returns every factor score whose GEOID has the
+// given length (11 = tract, 5 = county), across all geographies — the bulk
+// read the factor_rollup executor aggregates from.
+func (s *PostgresStore) QueryFactorScoresAtLevel(ctx context.Context, geoidLen int) ([]FactorScore, error) {
+	const q = `
+SELECT geoid, factor_name, factor_score, factor_percentile,
+       COALESCE(loadings_json::text, ''), COALESCE(analysis_vintage, '')
+FROM factor_scores
+WHERE LENGTH(geoid) = $1
+ORDER BY geoid, factor_name`
+
+	rows, err := s.pool.Query(ctx, q, geoidLen)
+	if err != nil {
+		return nil, fmt.Errorf("store: QueryFactorScoresAtLevel: %w", err)
+	}
+	defer rows.Close()
+
+	var result []FactorScore
+	for rows.Next() {
+		var fs FactorScore
+		if err := rows.Scan(
+			&fs.GEOID, &fs.FactorName, &fs.FactorScore, &fs.FactorPercentile,
+			&fs.LoadingsJSON, &fs.AnalysisVintage,
+		); err != nil {
+			return nil, fmt.Errorf("store: QueryFactorScoresAtLevel scan: %w", err)
+		}
+		result = append(result, fs)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: QueryFactorScoresAtLevel rows: %w", err)
+	}
+	return result, nil
+}
+
 // QueryFactorScores returns all factor scores for a single geography,
 // ordered by factor_name. An empty result set returns an empty slice.
 //

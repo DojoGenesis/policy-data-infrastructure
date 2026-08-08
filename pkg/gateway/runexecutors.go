@@ -17,6 +17,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -168,6 +169,25 @@ var runExecutors = map[string]runExecutor{
 			return stringParam(p, "outcome_variable", "")
 		},
 		execute: executeInteractionOLS,
+	},
+	"factor_rollup": {
+		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"model_vintage":           stringParam(p, "model_vintage", "2023-efa-v2"),
+				"denominator_variable_id": stringParam(p, "denominator_variable_id", defaultRollupDenominator),
+				"coverage_threshold":      floatParam(p, "coverage_threshold", defaultCoverageThreshold),
+				"n_boot":                  intParam(p, "n_boot", defaultNBoot),
+				"alpha":                   floatParam(p, "alpha", defaultAlpha),
+			}, nil
+		},
+		primaryVariable: func(p map[string]interface{}) string {
+			// The run's vintage key resolves from the DENOMINATOR's data —
+			// the model vintage lives in parameters, so a model revision
+			// changes the cache key through params and a denominator
+			// refresh changes it through vintage. Either way: recompute.
+			return stringParam(p, "denominator_variable_id", defaultRollupDenominator)
+		},
+		execute: executeFactorRollup,
 	},
 	"dissimilarity": {
 		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
@@ -690,6 +710,176 @@ func executeInteractionOLS(ctx context.Context, s store.Store, run *store.Analys
 			// Predictions/residuals are deliberately not persisted: they are
 			// n-length vectors that bloat the cache row without being part
 			// of the finding.
+		},
+	}
+	return result, nil, nil
+}
+
+// executeFactorRollup implements ADR-015: county factor scores as
+// population-weighted rollups of tract factor scores, published only with a
+// bootstrap interval and coverage above the recorded threshold. Published
+// rows are written to factor_scores under '<model_vintage>-popw' — the
+// suffix marks a rollup as a rollup forever — with CI/coverage/method in
+// loadings_json. The analyses row is the D9 cache identity; the launch
+// warm re-establishes the rollup at boot.
+func executeFactorRollup(ctx context.Context, s store.Store, run *store.AnalysisRun) (store.AnalysisResult, []store.AnalysisScore, error) {
+	var zero store.AnalysisResult
+	p := run.Parameters
+	modelVintage := stringParam(p, "model_vintage", "2023-efa-v2")
+	denomID := stringParam(p, "denominator_variable_id", defaultRollupDenominator)
+	threshold := floatParam(p, "coverage_threshold", defaultCoverageThreshold)
+	nBoot := intParam(p, "n_boot", defaultNBoot)
+	alpha := floatParam(p, "alpha", defaultAlpha)
+	outVintage := modelVintage + "-popw"
+
+	tractScores, err := s.QueryFactorScoresAtLevel(ctx, 11)
+	if err != nil {
+		return zero, nil, err
+	}
+	inScope := map[string]bool{}
+	tracts, err := childTracts(ctx, s, run.ScopeLevel, run.ScopeGEOID)
+	if err != nil {
+		return zero, nil, err
+	}
+	for _, t := range tracts {
+		inScope[t] = true
+	}
+	weights, denomVintage, err := indicatorVector(ctx, s, tracts, denomID, "")
+	if err != nil {
+		return zero, nil, err
+	}
+
+	// factor -> county -> inputs; track each county's total tract count for
+	// coverage against the county's FULL tract universe, not just scored ones.
+	tractsPerCounty := map[string]int{}
+	for _, t := range tracts {
+		tractsPerCounty[t[:5]]++
+	}
+	type fc struct{ factor, county string }
+	inputs := map[fc][]stats.RollupInput{}
+	factorSet := map[string]bool{}
+	for _, ts := range tractScores {
+		if ts.AnalysisVintage != modelVintage || !inScope[ts.GEOID] {
+			continue
+		}
+		factorSet[ts.FactorName] = true
+		key := fc{ts.FactorName, ts.GEOID[:5]}
+		inputs[key] = append(inputs[key], stats.RollupInput{
+			GEOID:  ts.GEOID,
+			Value:  ts.FactorScore,
+			Weight: weights[ts.GEOID],
+		})
+	}
+	if len(factorSet) == 0 {
+		return zero, nil, fmt.Errorf("no tract factor scores at model vintage %q in scope", modelVintage)
+	}
+
+	published := 0
+	withheld := map[string]interface{}{}
+	type outRow struct {
+		county, factor string
+		res            *stats.RollupResult
+	}
+	var outs []outRow
+	factors := make([]string, 0, len(factorSet))
+	for f := range factorSet {
+		factors = append(factors, f)
+	}
+	sort.Strings(factors)
+	counties := make([]string, 0, len(tractsPerCounty))
+	for c := range tractsPerCounty {
+		counties = append(counties, c)
+	}
+	sort.Strings(counties)
+
+	for _, f := range factors {
+		for _, county := range counties {
+			ins := inputs[fc{f, county}]
+			// Pad coverage accounting with the county's unscored tracts.
+			total := tractsPerCounty[county]
+			for len(ins) < total {
+				ins = append(ins, stats.RollupInput{})
+			}
+			res, reason := stats.RollupChildren(stats.AggWeightedMean, ins, threshold, nBoot, alpha)
+			if res == nil {
+				withheld[county+"/"+f] = reason
+				continue
+			}
+			published++
+			outs = append(outs, outRow{county, f, res})
+		}
+	}
+
+	// State percentile per factor across published counties.
+	byFactorVals := map[string][]float64{}
+	for _, o := range outs {
+		byFactorVals[o.factor] = append(byFactorVals[o.factor], o.res.Value)
+	}
+	pctOf := func(f string, v float64) float64 {
+		vals := byFactorVals[f]
+		if len(vals) <= 1 {
+			return 50
+		}
+		below := 0
+		for _, x := range vals {
+			if x < v {
+				below++
+			}
+		}
+		return float64(below) / float64(len(vals)-1) * 100
+	}
+
+	fsRows := make([]store.FactorScore, 0, len(outs))
+	for _, o := range outs {
+		score := o.res.Value
+		pct := pctOf(o.factor, score)
+		prov, _ := json.Marshal(map[string]interface{}{
+			"method":              "population_weighted_rollup_of_tract_factor_scores",
+			"adr":                 "015",
+			"ci_lower":            o.res.CI.Lower,
+			"ci_upper":            o.res.CI.Upper,
+			"n_tracts":            o.res.N,
+			"of_tracts":           o.res.Total,
+			"coverage":            o.res.Coverage,
+			"coverage_threshold":  threshold,
+			"denominator":         denomID,
+			"denominator_vintage": denomVintage,
+			"model_vintage":       modelVintage,
+		})
+		sc, pf := score, pct
+		fsRows = append(fsRows, store.FactorScore{
+			GEOID:            o.county,
+			FactorName:       o.factor,
+			FactorScore:      &sc,
+			FactorPercentile: &pf,
+			LoadingsJSON:     string(prov),
+			AnalysisVintage:  outVintage,
+		})
+	}
+	// Generation hygiene: exactly one live rollup generation. Factor names
+	// and coverage change between model revisions; without this, v1-popw
+	// rows would sit beside v2-popw and the endpoint would serve two models.
+	if _, err := s.DeleteFactorScoresAtLevel(ctx, 5, "-popw"); err != nil {
+		return zero, nil, fmt.Errorf("clear prior rollup generation: %w", err)
+	}
+	if err := s.PutFactorScores(ctx, fsRows); err != nil {
+		return zero, nil, fmt.Errorf("persist county factor rollups: %w", err)
+	}
+
+	result := store.AnalysisResult{
+		Type:       run.RunType,
+		ScopeGEOID: run.ScopeGEOID,
+		ScopeLevel: run.ScopeLevel,
+		Vintage:    run.Vintage,
+		Parameters: run.Parameters,
+		Results: map[string]interface{}{
+			"model_vintage":       modelVintage,
+			"output_vintage":      outVintage,
+			"factors":             factors,
+			"published":           published,
+			"withheld":            withheld,
+			"denominator":         denomID,
+			"denominator_vintage": denomVintage,
 		},
 	}
 	return result, nil, nil

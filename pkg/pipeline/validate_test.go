@@ -109,6 +109,12 @@ func (m *mockValidateStore) PutFactorScores(_ context.Context, _ []store.FactorS
 func (m *mockValidateStore) QueryFactorScores(_ context.Context, _ string) ([]store.FactorScore, error) {
 	return nil, nil
 }
+func (m *mockValidateStore) QueryFactorScoresAtLevel(_ context.Context, _ int) ([]store.FactorScore, error) {
+	return nil, nil
+}
+func (m *mockValidateStore) DeleteFactorScoresAtLevel(_ context.Context, _ int, _ string) (int64, error) {
+	return 0, nil
+}
 func (m *mockValidateStore) QueryValidatedFeatures(_ context.Context, _ string) ([]store.ValidatedFeature, error) {
 	return nil, nil
 }

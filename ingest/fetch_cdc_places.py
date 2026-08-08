@@ -41,18 +41,46 @@ SOCRATA_APP_TOKEN = os.environ.get("SOCRATA_APP_TOKEN", "")
 
 WI_STATE_ABBR = "WI"
 
-# Measures to fetch (CrudePrev = crude prevalence estimate)
+# Measures to fetch (CrudePrev = crude prevalence estimate).
+#
+# This is the CANONICAL PLACES set (aligned 2026-08-08): local and prod had
+# drifted to different subsets (local carried BINGE but not PHLTH, prod the
+# inverse) because different load days ran different versions of this list —
+# and a factor model over per-environment feature sets is not one model.
+# The old list also contained "SMOKING", which is not a PLACES measureid
+# (CSMOKING is current smoking); it silently fetched zero rows.
 TARGET_MEASURES = [
-    "OBESITY",
-    "DIABETES",
-    "BPHIGH",
-    "MHLTH",
-    "PHLTH",
     "ACCESS2",
+    "BINGE",
+    "BPHIGH",
     "CASTHMA",
-    "SMOKING",
     "CSMOKING",
+    "DIABETES",
+    "MHLTH",
+    "OBESITY",
+    "PHLTH",
 ]
+
+# Vintage label for stored rows. data.cdc.gov/resource/cwsq-ngmh is the
+# PLACES 2023 release; the Go adapter labels the same release
+# "CDC-PLACES-2023". This script used to write the bare int 2022, which is
+# how prod ended up with a different vintage string than local for the same
+# data (the reconciliation migration 020 retires those rows).
+VINTAGE = "CDC-PLACES-2023"
+
+# indicator_meta for every measure this script loads — names identical to
+# the rows the Go adapter registered, so the upsert is drift-free.
+INDICATOR_META = {
+    "cdc_access2":  {"source_id": "cdc-places", "name": "No Health Insurance Coverage", "unit": "percent", "direction": "lower_better"},
+    "cdc_binge":    {"source_id": "cdc-places", "name": "Binge Drinking Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_bphigh":   {"source_id": "cdc-places", "name": "High Blood Pressure Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_casthma":  {"source_id": "cdc-places", "name": "Current Asthma Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_csmoking": {"source_id": "cdc-places", "name": "Current Smoking Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_diabetes": {"source_id": "cdc-places", "name": "Diagnosed Diabetes Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_mhlth":    {"source_id": "cdc-places", "name": "Poor Mental Health Days", "unit": "percent", "direction": "lower_better"},
+    "cdc_obesity":  {"source_id": "cdc-places", "name": "Obesity Prevalence", "unit": "percent", "direction": "lower_better"},
+    "cdc_phlth":    {"source_id": "cdc-places", "name": "Poor Physical Health Days", "unit": "percent", "direction": "lower_better"},
+}
 
 # Socrata page size (max 50,000 per request)
 PAGE_SIZE = 5000
@@ -242,16 +270,23 @@ def load_to_db(records: list[dict]) -> None:
 
         indicators.append({
             "geoid":          geoid,
-            "variable_id":    f"cdc_places_{measure.lower()}",
-            "vintage":        2022,
+            # cdc_{measure} — the id scheme the live data uses. The old
+            # cdc_places_{measure} scheme here would have minted a third
+            # PLACES vocabulary beside the registered cdc_* rows (F4).
+            "variable_id":    f"cdc_{measure.lower()}",
+            "vintage":        VINTAGE,
             "value":          val,
             "margin_of_error": moe,
             "raw_value":      str(raw or ""),
         })
 
+    from lib.db import upsert_indicator_meta
+    n_meta = upsert_indicator_meta(conn, INDICATOR_META)
+    print(f"  {n_meta} indicator_meta rows upserted")
     n = bulk_load_indicators(conn, indicators)
     conn.close()
     print(f"  {n} indicator rows written to database")
+    print("  Remember: REFRESH MATERIALIZED VIEW CONCURRENTLY indicators_latest;")
 
 
 def main() -> None:
