@@ -169,6 +169,36 @@ var runExecutors = map[string]runExecutor{
 		},
 		execute: executeInteractionOLS,
 	},
+	"dissimilarity": {
+		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
+			g, err := requireStringParam(p, "group_variable")
+			if err != nil {
+				return nil, err
+			}
+			ref, err := requireStringParam(p, "reference_variable")
+			if err != nil {
+				return nil, err
+			}
+			if g == ref {
+				return nil, fmt.Errorf("group_variable and reference_variable must differ")
+			}
+			pair, err := requireStringParam(p, "group_pair")
+			if err != nil {
+				return nil, err
+			}
+			return map[string]interface{}{
+				"group_variable":     g,
+				"reference_variable": ref,
+				"group_pair":         pair,
+				"n_boot":             intParam(p, "n_boot", defaultNBoot),
+				"alpha":              floatParam(p, "alpha", defaultAlpha),
+			}, nil
+		},
+		primaryVariable: func(p map[string]interface{}) string {
+			return stringParam(p, "group_variable", "")
+		},
+		execute: executeDissimilarity,
+	},
 	"bootstrap_mean": {
 		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
 			varID, err := requireStringParam(p, "variable_id")
@@ -663,6 +693,105 @@ func executeInteractionOLS(ctx context.Context, s store.Store, run *store.Analys
 		},
 	}
 	return result, nil, nil
+}
+
+// executeDissimilarity computes Massey & Denton's D per county between two
+// group-count variables over the county's tracts, with a paired-bootstrap
+// interval. The county page's "Segregation index" panel reads exactly this
+// shape: a statewide 'dissimilarity' analysis whose per-county scores carry
+// details.group_pair. Counties with fewer than 3 tracts holding both counts
+// are withheld — D over one or two tracts is an artifact, not a measure.
+func executeDissimilarity(ctx context.Context, s store.Store, run *store.AnalysisRun) (store.AnalysisResult, []store.AnalysisScore, error) {
+	var zero store.AnalysisResult
+	p := run.Parameters
+	groupVar := stringParam(p, "group_variable", "")
+	refVar := stringParam(p, "reference_variable", "")
+	pair := stringParam(p, "group_pair", "")
+	nBoot := intParam(p, "n_boot", defaultNBoot)
+	alpha := floatParam(p, "alpha", defaultAlpha)
+
+	tracts, err := childTracts(ctx, s, run.ScopeLevel, run.ScopeGEOID)
+	if err != nil {
+		return zero, nil, err
+	}
+	groups, gVint, err := indicatorVector(ctx, s, tracts, groupVar, run.Vintage)
+	if err != nil {
+		return zero, nil, err
+	}
+	refs, rVint, err := indicatorVector(ctx, s, tracts, refVar, "")
+	if err != nil {
+		return zero, nil, err
+	}
+
+	byCounty := make(map[string][]string)
+	for _, t := range tracts {
+		byCounty[t[:5]] = append(byCounty[t[:5]], t)
+	}
+	counties := make([]string, 0, len(byCounty))
+	for c := range byCounty {
+		counties = append(counties, c)
+	}
+	sort.Strings(counties)
+
+	const minTracts = 3
+	scores := make([]store.AnalysisScore, 0, len(counties))
+	withheld := map[string]interface{}{}
+	dOf := func(gs, rs []float64) float64 {
+		pg := make([]*float64, len(gs))
+		pr := make([]*float64, len(rs))
+		for i := range gs {
+			pg[i] = &gs[i]
+			pr[i] = &rs[i]
+		}
+		d, err := stats.DissimilarityIndex(pg, pr)
+		if err != nil || d == nil {
+			return 0
+		}
+		return *d
+	}
+
+	for _, county := range counties {
+		var gs, rs []float64
+		for _, t := range byCounty[county] {
+			gv, rv := groups[t], refs[t]
+			if gv != nil && rv != nil {
+				gs = append(gs, *gv)
+				rs = append(rs, *rv)
+			}
+		}
+		if len(gs) < minTracts {
+			withheld[county] = fmt.Sprintf("only %d tracts carry both counts (need %d)", len(gs), minTracts)
+			continue
+		}
+		d := dOf(gs, rs)
+		ci := stats.BootstrapPairs(dOf, gs, rs, nBoot, alpha)
+		scores = append(scores, store.AnalysisScore{
+			GEOID: county,
+			Score: d,
+			Details: map[string]interface{}{
+				"group_pair": pair,
+				"n_tracts":   len(gs),
+				"ci_lower":   ci.Lower,
+				"ci_upper":   ci.Upper,
+			},
+		})
+	}
+
+	result := store.AnalysisResult{
+		Type:       run.RunType,
+		ScopeGEOID: run.ScopeGEOID,
+		ScopeLevel: run.ScopeLevel,
+		Vintage:    run.Vintage,
+		Parameters: run.Parameters,
+		Results: map[string]interface{}{
+			"group_pair":        pair,
+			"published":         len(scores),
+			"withheld_counties": withheld,
+			"group_vintage":     gVint,
+			"reference_vintage": rVint,
+		},
+	}
+	return result, scores, nil
 }
 
 // executeBootstrapMean routes stats.Bootstrap directly: a CI on the mean of

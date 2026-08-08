@@ -45,21 +45,30 @@ OUTPUT_DIR = os.path.join(SCRIPT_DIR, "output")
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "ingest"))
 
 # Feature definitions: (variable_id_in_db, feature_name_for_matrix)
+# Live variable ids as registered in indicator_meta (2026-08-08). The
+# previous lists named ids that never existed in this database
+# (usda_lila, usda_snap_authorized, usda_poverty_rate) plus the unloaded
+# cdc_phlth — the source intersection was permanently empty, which is why
+# factor_scores stayed unpopulated and every Factor Profile rendered its
+# empty state.
 CDC_FEATURES = [
     ("cdc_access2",  "ACCESS2"),
+    ("cdc_binge",    "BINGE"),
     ("cdc_bphigh",   "BPHIGH"),
     ("cdc_casthma",  "CASTHMA"),
     ("cdc_csmoking", "CSMOKING"),
     ("cdc_diabetes", "DIABETES"),
     ("cdc_mhlth",    "MHLTH"),
     ("cdc_obesity",  "OBESITY"),
-    ("cdc_phlth",    "PHLTH"),
 ]
 
+# USDA features enter as SHARES of FARA's own population base, derived in
+# fetch_usda below. Raw counts in an EFA load on population size and the
+# first factor becomes "how many people live here"; shares measure access.
 USDA_FEATURES = [
-    ("usda_lila",            "low_income_low_access"),
-    ("usda_snap_authorized", "snap_flag"),
-    ("usda_poverty_rate",    "poverty_rate"),
+    ("usda_food_desert",   "FOOD_DESERT_SHARE"),   # already a 0–1 share
+    ("_derived_snap_share",      "SNAP_SHARE"),
+    ("_derived_low_access_share", "LOW_ACCESS_SHARE"),
 ]
 
 # Output CSVs
@@ -94,9 +103,19 @@ def fetch_cdc(conn) -> dict[str, dict[str, float]]:
 
 
 def fetch_usda(conn) -> dict[str, dict[str, float]]:
-    """Pull USDA food access data from indicators, pivot to wide."""
-    placeholders = ",".join(["%s"] * len(USDA_FEATURES))
-    var_ids = [f[0] for f in USDA_FEATURES]
+    """Pull USDA food access data and derive per-population shares.
+
+    Raw ids fetched: usda_food_desert (a 0–1 share as loaded),
+    usda_food_snap_count, usda_food_low_access_1mi, usda_food_population.
+    Emitted per tract: usda_food_desert, _derived_snap_share,
+    _derived_low_access_share — the latter two divided by FARA's own
+    population base so the denominator matches the source's vintage.
+    """
+    raw_ids = [
+        "usda_food_desert", "usda_food_snap_count",
+        "usda_food_low_access_1mi", "usda_food_population",
+    ]
+    placeholders = ",".join(["%s"] * len(raw_ids))
     with conn.cursor() as cur:
         cur.execute(f"""
             SELECT geoid, variable_id, value
@@ -105,12 +124,24 @@ def fetch_usda(conn) -> dict[str, dict[str, float]]:
               AND geoid LIKE '55%%'
               AND LENGTH(geoid) = 11
               AND value IS NOT NULL
-        """, var_ids)
+        """, raw_ids)
         rows = cur.fetchall()
 
-    data: dict[str, dict[str, float]] = defaultdict(dict)
+    raw: dict[str, dict[str, float]] = defaultdict(dict)
     for geoid, var_id, val in rows:
-        data[geoid][var_id] = float(val)
+        raw[geoid][var_id] = float(val)
+
+    data: dict[str, dict[str, float]] = defaultdict(dict)
+    for geoid, vals in raw.items():
+        pop = vals.get("usda_food_population")
+        desert = vals.get("usda_food_desert")
+        if desert is not None:
+            data[geoid]["usda_food_desert"] = desert
+        if pop and pop > 0:
+            if (snap := vals.get("usda_food_snap_count")) is not None:
+                data[geoid]["_derived_snap_share"] = snap / pop
+            if (la := vals.get("usda_food_low_access_1mi")) is not None:
+                data[geoid]["_derived_low_access_share"] = la / pop
     return dict(data)
 
 

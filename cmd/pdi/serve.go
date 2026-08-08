@@ -53,8 +53,12 @@ func runServe(port int) error {
 	defer s.Close()
 
 	plugin := gateway.NewPlugin(s)
-	// Drain the queued-analysis runs (ADR-014 D3) for the server's lifetime.
+	// Drain the queued-analysis runs (ADR-014 D3) for the server's lifetime,
+	// and re-establish the launch analyses cache: intents whose data vintage
+	// advanced since the last boot miss their cache key and recompute; the
+	// rest hit and cost nothing. PDI_WARM_CACHE=off disables.
 	plugin.StartRunner(ctx)
+	go plugin.WarmAnalysesCache(ctx)
 
 	// Seed evidence cards from embedded JSON on first startup.
 	if seedFS, err := fs.Sub(frontendFS, "frontend"); err == nil {

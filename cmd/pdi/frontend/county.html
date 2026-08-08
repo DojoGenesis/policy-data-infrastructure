@@ -582,40 +582,67 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
   }
 
   /* Factor bar rows */
-  .factor-bar-row {
+  /* Factor Profile — vertical diverging z-score columns (2026-08-08).
+     Vertical suits the z scale: columns rise above the shared zero line for
+     above-state-average scores and hang below it for negative ones, which
+     the old horizontal center-out bars only implied. Height clamps at |z|=3. */
+  .factor-cols {
     display: flex;
+    align-items: stretch;
+    justify-content: space-evenly;
+    gap: clamp(10px, 3vw, 28px);
+    padding: 14px 4px 4px;
+  }
+  .factor-col {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .factor-bar-row:last-child { border-bottom: none; }
-  .factor-bar-name {
-    font-weight: 600;
-    font-size: 0.85rem;
-    min-width: clamp(140px, 22%, 200px);
-    color: var(--text);
-  }
-  .factor-bar-wrap {
     flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    min-width: 0;
+    max-width: 190px;
   }
-  .factor-bar-score {
+  .factor-col-score {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    min-width: 52px;
-    text-align: right;
     color: var(--text);
+    margin-bottom: 6px;
   }
-  .factor-bar-pct {
+  .factor-col-track {
+    width: clamp(34px, 6vw, 56px);
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+  }
+  .factor-col-half { flex: 1; position: relative; }
+  .factor-col-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+  }
+  .factor-col-half--up .factor-col-fill { bottom: 0; }
+  .factor-col-half--down .factor-col-fill {
+    top: 0;
+    background: var(--gated);
+    border-radius: 0 0 3px 3px;
+  }
+  .factor-col-zero { height: 2px; background: var(--border); }
+  .factor-col-name {
+    margin-top: 8px;
+    font-weight: 600;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .factor-col-pct {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     color: var(--muted);
-    min-width: 44px;
-    text-align: right;
+    margin-top: 2px;
   }
   .chart-bar-fill--neg { background: var(--gated); }
 
@@ -1572,23 +1599,29 @@ window.__tpMotionFailsafe=setTimeout(function(){r.classList.add('motion-failed')
           <button class="btn btn-ghost" @click="loadFactors()" data-en="Retry" data-es="Reintentar">Retry</button>
         </div>
         <div x-show="!factorsLoading && !factorsError && factors.length === 0" class="state-empty" style="display:none">
-          <span data-en="Factor analysis has not been computed for this geography. Run " data-es="El análisis factorial no se ha calculado para esta geografía. Ejecuta ">Factor analysis has not been computed for this geography. Run </span><code style="font-family:var(--font-mono);color:var(--accent);">factor_analysis.py</code><span data-en=" to generate scores." data-es=" para generar puntajes."> to generate scores.</span>
+          <span data-en="Factor scores exist at tract level (EFA with oblimin rotation over health-access and food-access features). County-level scores are deliberately absent: averaging tract factor scores without a defensible weighting is exactly the aggregation this platform refuses (ADR-014 D2/D6). Open a tract profile to see its factor columns." data-es="Los puntajes de factores existen a nivel de tracto (AFE con rotación oblimin sobre características de acceso a salud y alimentos). Los puntajes a nivel de condado están ausentes deliberadamente: promediar puntajes de tractos sin una ponderación defendible es exactamente la agregación que esta plataforma rechaza (ADR-014 D2/D6). Abre el perfil de un tracto para ver sus columnas de factores.">Factor scores exist at tract level (EFA with oblimin rotation over health-access and food-access features). County-level scores are deliberately absent: averaging tract factor scores without a defensible weighting is exactly the aggregation this platform refuses (ADR-014 D2/D6). Open a tract profile to see its factor columns.</span>
         </div>
 
         <div x-show="!factorsLoading && !factorsError && factors.length > 0" style="display:none" class="card card-spectral">
-          <template x-for="f in factorList" :key="f.factor_name">
-            <div class="factor-bar-row">
-              <span class="factor-bar-name" x-text="f.label || f.factor_name"></span>
-              <div class="factor-bar-wrap">
-                <div class="chart-bar-track" style="flex:1;">
-                  <div class="chart-bar-fill" :class="{'chart-bar-fill--neg': f.factor_score != null && f.factor_score < 0}" :style="'width:' + factorBarWidth(f) + '%'"></div>
+          <div class="factor-cols">
+            <template x-for="f in factorList" :key="f.factor_name">
+              <div class="factor-col">
+                <span class="factor-col-score" x-text="f.factor_score != null ? f.factor_score.toFixed(2) : '—'"></span>
+                <div class="factor-col-track" aria-hidden="true">
+                  <div class="factor-col-half factor-col-half--up">
+                    <div class="factor-col-fill" :style="'height:' + (f.factor_score != null && f.factor_score > 0 ? factorColHeight(f) : 0) + '%'"></div>
+                  </div>
+                  <div class="factor-col-zero"></div>
+                  <div class="factor-col-half factor-col-half--down">
+                    <div class="factor-col-fill" :style="'height:' + (f.factor_score != null && f.factor_score < 0 ? factorColHeight(f) : 0) + '%'"></div>
+                  </div>
                 </div>
-                <span class="factor-bar-score" x-text="f.factor_score != null ? f.factor_score.toFixed(2) : '—'"></span>
-                <span class="factor-bar-pct" x-text="f.factor_percentile != null ? 'p'+f.factor_percentile.toFixed(0) : ''"></span>
+                <span class="factor-col-name" x-text="f.label || f.factor_name"></span>
+                <span class="factor-col-pct" x-text="f.factor_percentile != null ? 'p'+f.factor_percentile.toFixed(0) : ''"></span>
               </div>
-            </div>
-          </template>
-          <p class="chart-note" data-en="Each bar is centred on the state average: the midpoint is a z-score of 0, left is below average, right is above. The signed score and the state percentile are printed beside every bar." data-es="Cada barra está centrada en el promedio estatal: el punto medio es un puntaje z de 0, la izquierda está por debajo del promedio y la derecha por encima. El puntaje con signo y el percentil estatal se imprimen junto a cada barra.">Each bar is centred on the state average: the midpoint is a z-score of 0, left is below average, right is above. The signed score and the state percentile are printed beside every bar.</p>
+            </template>
+          </div>
+          <p class="chart-note" data-en="Each column is a z-score against the state average: the shared line is 0, columns rising above it are above average, columns hanging below are below. The signed score sits above every column and the state percentile beneath it; heights cap at |z| = 3." data-es="Cada columna es un puntaje z frente al promedio estatal: la línea compartida es 0, las columnas que suben están por encima del promedio y las que cuelgan por debajo están por debajo. El puntaje con signo aparece sobre cada columna y el percentil estatal debajo; la altura se limita a |z| = 3.">Each column is a z-score against the state average: the shared line is 0, columns rising above it are above average, columns hanging below are below. The signed score sits above every column and the state percentile beneath it; heights cap at |z| = 3.</p>
 
           <!-- DATAVIZ-RULES rule 4: identical data, non-visual path. The bars
                themselves stay hand-rolled on purpose — see the report: they are a
@@ -2747,24 +2780,24 @@ function countyProfile() {
     // ── Dissimilarity ───────────────────────────────────────
 
     async loadDissimilarity() {
+      // One dissimilarity analysis per group pair (that is the cache key
+      // shape) — read them ALL and match this county's score by
+      // details.group_pair. The old code read analyses[0] only and then
+      // guessed by score order, which rendered the same D for both pairs.
+      // No positional fallback: an unlabeled score stays unshown rather
+      // than being assigned to whichever pair happens to be null.
       try {
         const data = await this.api('/analyses');
         const dissimAnalyses = (data.analyses || []).filter(a => a.type === 'dissimilarity');
         if (dissimAnalyses.length === 0) return;
-        const a = dissimAnalyses[0];
-        const scores = await this.api('/analyses/' + a.id + '/scores');
-        const items = scores.scores || [];
-        const countyScores = items.filter(s => s.geoid === this.geoid);
-        for (const s of countyScores) {
-          if (s.details) {
-            if (s.details.group_pair === 'black_white' || (s.details.variable_id || '').includes('bw'))
-              this.dissimBW = s.score;
-            if (s.details.group_pair === 'hispanic_white' || (s.details.variable_id || '').includes('hw'))
-              this.dissimHW = s.score;
+        for (const a of dissimAnalyses) {
+          const scores = await this.api('/analyses/' + a.id + '/scores');
+          for (const s of (scores.scores || [])) {
+            if (s.geoid !== this.geoid || !s.details) continue;
+            if (s.details.group_pair === 'black_white' && this.dissimBW === null) this.dissimBW = s.score;
+            if (s.details.group_pair === 'hispanic_white' && this.dissimHW === null) this.dissimHW = s.score;
           }
         }
-        if (countyScores.length >= 1 && this.dissimBW === null) this.dissimBW = countyScores[0].score;
-        if (countyScores.length >= 2 && this.dissimHW === null) this.dissimHW = countyScores[1].score;
       } catch (e) { this.dissimError = e.message; }
     },
 
@@ -2800,9 +2833,10 @@ function countyProfile() {
       this.factorsLoading = false;
     },
 
-    factorBarWidth(f) {
+    // Column height as % of the half-track: |z| against a ±3 ceiling.
+    factorColHeight(f) {
       if (f.factor_score == null) return 0;
-      return Math.max(0, Math.min(100, ((f.factor_score + 3) / 6) * 100));
+      return Math.min(100, (Math.abs(f.factor_score) / 3) * 100);
     },
 
     // ── Children ────────────────────────────────────────────
