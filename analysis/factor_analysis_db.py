@@ -51,9 +51,14 @@ sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "ingest"))
 # cdc_phlth — the source intersection was permanently empty, which is why
 # factor_scores stayed unpopulated and every Factor Profile rendered its
 # empty state.
+# Restricted to the PLACES variables present in EVERY environment: local
+# carries cdc_binge but not cdc_phlth, prod the inverse (different load
+# days picked different measure subsets — align them someday, TODO). A
+# factor model must be the SAME model everywhere or its scores are not
+# comparable, so the features are the 7-variable intersection, not
+# whichever superset one database happens to hold.
 CDC_FEATURES = [
     ("cdc_access2",  "ACCESS2"),
-    ("cdc_binge",    "BINGE"),
     ("cdc_bphigh",   "BPHIGH"),
     ("cdc_casthma",  "CASTHMA"),
     ("cdc_csmoking", "CSMOKING"),
@@ -157,6 +162,15 @@ def build_feature_matrix(conn) -> tuple[list[str], list[str], np.ndarray]:
     # Intersect geoids across both sources
     all_geoids = sorted(set(cdc.keys()) & set(usda.keys()))
     print(f"  Intersection: {len(all_geoids)} tracts")
+    if not all_geoids:
+        print(
+            "ERROR: source intersection is empty — a feature id in "
+            "CDC_FEATURES/USDA_FEATURES does not exist in this database. "
+            "Check `SELECT variable_id, count(*) FROM indicators ... GROUP BY 1` "
+            "against the lists at the top of this script.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     geoids: list[str] = []
     rows: list[list[float]] = []
@@ -346,10 +360,21 @@ def write_scores(geoids: list[str], factor_names: list[str],
 
 def load_to_db(conn, geoids: list[str], factor_names: list[str],
                scores: np.ndarray) -> None:
-    """Write factor scores to the factor_scores table."""
+    """Write factor scores to the factor_scores table.
+
+    Clears the vintage's tract rows first: factor NAMES derive from the
+    loadings, so a re-run with a revised feature set can rename factors —
+    a bare upsert would leave the old names' rows beside the new ones and
+    every profile would show both models at once.
+    """
     vintage = "2023-efa-v1"
     count = 0
     with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM factor_scores WHERE analysis_vintage = %s AND LENGTH(geoid) = 11",
+            (vintage,),
+        )
+        print(f"  cleared {cur.rowcount} prior tract rows for vintage {vintage}")
         for i, geoid in enumerate(geoids):
             for j, fname in enumerate(factor_names):
                 cur.execute("""
