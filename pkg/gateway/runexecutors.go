@@ -170,6 +170,81 @@ var runExecutors = map[string]runExecutor{
 		},
 		execute: executeInteractionOLS,
 	},
+	"composite_index": {
+		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
+			vars, err := requireStringSliceParam(p, "variables")
+			if err != nil {
+				return nil, err
+			}
+			if len(vars) < 2 {
+				return nil, fmt.Errorf("a composite needs at least 2 variables")
+			}
+			out := map[string]interface{}{"variables": toIfaceSlice(vars)}
+			// Weights, when given, must cover the variable list exactly —
+			// the same loud contract the CLI enforces (an unlisted variable
+			// used to be silently weighted 0). Explicit 0 remains a
+			// deliberate exclusion.
+			if raw, ok := p["weights"]; ok && raw != nil {
+				wm, ok := raw.(map[string]interface{})
+				if !ok {
+					return nil, fmt.Errorf("weights must be an object of {variable_id: weight}")
+				}
+				varSet := map[string]bool{}
+				for _, v := range vars {
+					varSet[v] = true
+				}
+				weights := map[string]interface{}{}
+				for k, v := range wm {
+					if !varSet[k] {
+						return nil, fmt.Errorf("weights names %q, which is not in variables", k)
+					}
+					f, ok := v.(float64)
+					if !ok {
+						return nil, fmt.Errorf("weight for %q must be a number", k)
+					}
+					weights[k] = f
+				}
+				for _, v := range vars {
+					if _, ok := weights[v]; !ok {
+						return nil, fmt.Errorf("weights must cover every variable; missing %q (pass an explicit 0 to exclude)", v)
+					}
+				}
+				out["weights"] = weights
+				out["method"] = "weighted_zscore"
+			} else {
+				out["method"] = "equal_percentile"
+			}
+			return out, nil
+		},
+		primaryVariable: func(p map[string]interface{}) string {
+			vars := stringSliceParam(p, "variables")
+			if len(vars) > 0 {
+				return vars[0]
+			}
+			return ""
+		},
+		execute: executeCompositeIndex,
+	},
+	"correlation_matrix": {
+		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
+			vars, err := requireStringSliceParam(p, "variables")
+			if err != nil {
+				return nil, err
+			}
+			if len(vars) < 2 {
+				return nil, fmt.Errorf("a correlation matrix needs at least 2 variables")
+			}
+			return map[string]interface{}{"variables": toIfaceSlice(vars)}, nil
+		},
+		primaryVariable: func(p map[string]interface{}) string {
+			vars := stringSliceParam(p, "variables")
+			if len(vars) > 0 {
+				return vars[0]
+			}
+			return ""
+		},
+		execute: executeCorrelationMatrix,
+	},
 	"factor_rollup": {
 		canon: func(p map[string]interface{}) (map[string]interface{}, error) {
 			return map[string]interface{}{
@@ -710,6 +785,192 @@ func executeInteractionOLS(ctx context.Context, s store.Store, run *store.Analys
 			// Predictions/residuals are deliberately not persisted: they are
 			// n-length vectors that bloat the cache row without being part
 			// of the finding.
+		},
+	}
+	return result, nil, nil
+}
+
+// buildScopeMatrix fetches a variables × tracts value matrix for the scope.
+// The primary (first) variable is pinned to the run's vintage — it keys the
+// cache — and the rest resolve to their own latest, because cross-domain
+// analyses span sources whose vintages legitimately differ. Every variable
+// must have at least one row in scope: an analysis quietly computed over an
+// all-nil column looks like success while measuring nothing.
+func buildScopeMatrix(ctx context.Context, s store.Store, tracts, varIDs []string, primaryVintage string) ([][]*float64, map[string]string, error) {
+	matrix := make([][]*float64, len(varIDs))
+	vintages := map[string]string{}
+	for k, varID := range varIDs {
+		vintage := ""
+		if k == 0 {
+			vintage = primaryVintage
+		}
+		vec, observed, err := indicatorVector(ctx, s, tracts, varID, vintage)
+		if err != nil {
+			return nil, nil, err
+		}
+		col := make([]*float64, len(tracts))
+		nonNil := 0
+		for i, t := range tracts {
+			col[i] = vec[t]
+			if col[i] != nil {
+				nonNil++
+			}
+		}
+		if nonNil == 0 {
+			return nil, nil, fmt.Errorf("variable %q has no values in scope", varID)
+		}
+		matrix[k] = col
+		vintages[varID] = observed
+	}
+	return matrix, vintages, nil
+}
+
+// compositeTiers is the CLI's standard 5-tier assignment, shared verbatim.
+var compositeTiers = []stats.TierDef{
+	{Name: "very_high", MinPercentile: 0.80, MaxPercentile: 1.01},
+	{Name: "high", MinPercentile: 0.60, MaxPercentile: 0.80},
+	{Name: "moderate", MinPercentile: 0.40, MaxPercentile: 0.60},
+	{Name: "low", MinPercentile: 0.20, MaxPercentile: 0.40},
+	{Name: "minimal", MinPercentile: 0.00, MaxPercentile: 0.20},
+}
+
+// executeCompositeIndex routes the CLI's composite through the run queue —
+// the ADR-014 gap in its own words: "analyses cannot be created through the
+// API... every visitor recomputes from scratch and no one inherits anyone
+// else's work." Same statistics (stats.CompositeIndex), same tiers, same
+// score shape as `pdi analyze --type composite`; the D9 upsert makes the
+// result shared instead of per-visitor.
+func executeCompositeIndex(ctx context.Context, s store.Store, run *store.AnalysisRun) (store.AnalysisResult, []store.AnalysisScore, error) {
+	var zero store.AnalysisResult
+	p := run.Parameters
+	varIDs := stringSliceParam(p, "variables")
+	method := stringParam(p, "method", "equal_percentile")
+
+	wslice := make([]float64, len(varIDs))
+	if method == "weighted_zscore" {
+		wm, _ := p["weights"].(map[string]interface{})
+		for k, v := range varIDs {
+			w, _ := wm[v].(float64)
+			wslice[k] = w
+		}
+	}
+
+	tracts, err := childTracts(ctx, s, run.ScopeLevel, run.ScopeGEOID)
+	if err != nil {
+		return zero, nil, err
+	}
+	matrix, vintages, err := buildScopeMatrix(ctx, s, tracts, varIDs, run.Vintage)
+	if err != nil {
+		return zero, nil, err
+	}
+
+	scores, err := stats.CompositeIndex(matrix, wslice, method)
+	if err != nil {
+		return zero, nil, err
+	}
+	tiers := stats.AssignTiers(scores, compositeTiers)
+
+	type ranked struct {
+		geoid string
+		score float64
+		tier  string
+	}
+	var rows []ranked
+	missing := 0
+	for i, g := range tracts {
+		if scores[i] == nil {
+			missing++
+			continue
+		}
+		rows = append(rows, ranked{g, *scores[i], tiers[i]})
+	}
+	if len(rows) == 0 {
+		return zero, nil, fmt.Errorf("composite produced no scores in scope")
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].score > rows[j].score })
+
+	out := make([]store.AnalysisScore, 0, len(rows))
+	for i, r := range rows {
+		rank := i + 1
+		out = append(out, store.AnalysisScore{
+			GEOID:      r.geoid,
+			Score:      r.score,
+			Rank:       &rank,
+			Percentile: r.score,
+			Tier:       r.tier,
+		})
+	}
+
+	result := store.AnalysisResult{
+		Type:       run.RunType,
+		ScopeGEOID: run.ScopeGEOID,
+		ScopeLevel: run.ScopeLevel,
+		Vintage:    run.Vintage,
+		Parameters: run.Parameters,
+		Results: map[string]interface{}{
+			"method":            method,
+			"tract_count":       len(rows),
+			"missing_tracts":    missing,
+			"variable_vintages": vintages,
+		},
+	}
+	return result, out, nil
+}
+
+// executeCorrelationMatrix routes the CLI's pairwise Pearson matrix through
+// the run queue: upper-triangle correlations with complete-case counts per
+// pair (the CLI omitted n — a correlation without its n hides how little
+// data produced it).
+func executeCorrelationMatrix(ctx context.Context, s store.Store, run *store.AnalysisRun) (store.AnalysisResult, []store.AnalysisScore, error) {
+	var zero store.AnalysisResult
+	varIDs := stringSliceParam(run.Parameters, "variables")
+
+	tracts, err := childTracts(ctx, s, run.ScopeLevel, run.ScopeGEOID)
+	if err != nil {
+		return zero, nil, err
+	}
+	matrix, vintages, err := buildScopeMatrix(ctx, s, tracts, varIDs, run.Vintage)
+	if err != nil {
+		return zero, nil, err
+	}
+
+	corrMap := map[string]interface{}{}
+	pairN := map[string]interface{}{}
+	pairs := 0
+	for i, a := range varIDs {
+		for j, b := range varIDs {
+			if j <= i {
+				continue
+			}
+			r := stats.PearsonR(matrix[i], matrix[j])
+			row, ok := corrMap[a].(map[string]interface{})
+			if !ok {
+				row = map[string]interface{}{}
+				corrMap[a] = row
+			}
+			row[b] = r
+			n := 0
+			for k := range tracts {
+				if matrix[i][k] != nil && matrix[j][k] != nil {
+					n++
+				}
+			}
+			pairN[a+"|"+b] = n
+			pairs++
+		}
+	}
+
+	result := store.AnalysisResult{
+		Type:       run.RunType,
+		ScopeGEOID: run.ScopeGEOID,
+		ScopeLevel: run.ScopeLevel,
+		Vintage:    run.Vintage,
+		Parameters: run.Parameters,
+		Results: map[string]interface{}{
+			"correlations":      corrMap,
+			"pair_count":        pairs,
+			"pair_n":            pairN,
+			"variable_vintages": vintages,
 		},
 	}
 	return result, nil, nil
