@@ -29,6 +29,7 @@ func newAnalyzeCmd() *cobra.Command {
 		analysisType string
 		weights    string
 		vintage    string
+		outcome    string
 	)
 
 	cmd := &cobra.Command{
@@ -46,7 +47,7 @@ Results are written to the analyses and analysis_scores tables.
 Scope format: "level:geoid"  (e.g. county:55025, state:55)
 Weights format: "variable_id:weight,..."  (e.g. "poverty_rate:0.3,median_hh_income:0.2")`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAnalyze(scope, analysisType, weights, vintage)
+			return runAnalyze(scope, analysisType, weights, vintage, outcome)
 		},
 	}
 
@@ -54,13 +55,14 @@ Weights format: "variable_id:weight,..."  (e.g. "poverty_rate:0.3,median_hh_inco
 	cmd.Flags().StringVar(&analysisType, "type", "composite", "Analysis type: composite, ols, or correlation")
 	cmd.Flags().StringVar(&weights, "weights", "", "Variable weights for composite analysis (e.g. poverty_rate:0.3,median_hh_income:0.2)")
 	cmd.Flags().StringVar(&vintage, "vintage", "", "Vintage string to filter indicators (e.g. ACS-2023-5yr; empty = latest)")
+	cmd.Flags().StringVar(&outcome, "outcome", "", "Outcome (dependent) variable_id for --type ols [required for ols]")
 
 	_ = cmd.MarkFlagRequired("scope")
 
 	return cmd
 }
 
-func runAnalyze(scope, analysisType, weightsFlag, vintage string) error {
+func runAnalyze(scope, analysisType, weightsFlag, vintage, outcome string) error {
 	// Parse --scope  (format: "level:geoid")
 	level, scopeGEOID, err := parseScope(scope)
 	if err != nil {
@@ -116,6 +118,28 @@ func runAnalyze(scope, analysisType, weightsFlag, vintage string) error {
 		varSet[ind.VariableID] = true
 	}
 	varIDs := sortedKeys(varSet)
+
+	// The OLS outcome is an explicit choice, never an artifact of sort order:
+	// varIDs is alphabetical, so "first variable = outcome" meant adding any
+	// earlier-sorting indicator silently changed the regression target.
+	if analysisType == "ols" {
+		if outcome == "" {
+			return fmt.Errorf("analyze: --outcome is required for --type ols. Variables in scope: %s",
+				strings.Join(varIDs, ", "))
+		}
+		if !varSet[outcome] {
+			return fmt.Errorf("analyze: --outcome %q has no indicator rows in scope %q. Variables in scope: %s",
+				outcome, scope, strings.Join(varIDs, ", "))
+		}
+		reordered := make([]string, 0, len(varIDs))
+		reordered = append(reordered, outcome)
+		for _, v := range varIDs {
+			if v != outcome {
+				reordered = append(reordered, v)
+			}
+		}
+		varIDs = reordered
+	}
 
 	// Build the indicator matrix: varIDs × geoids.
 	type ikey struct{ geoid, variableID string }
@@ -180,12 +204,36 @@ func runCompositeAnalysis(
 	wslice := make([]float64, len(varIDs))
 	hasWeights := len(wmap) > 0
 	if hasWeights {
-		for k, varID := range varIDs {
-			if w, ok := wmap[varID]; ok {
-				wslice[k] = w
-			} else {
-				wslice[k] = 0
+		// Weights must cover the matrix exactly. An unlisted variable used to
+		// get weight 0 silently; an explicit 0 is still allowed as a
+		// deliberate exclusion.
+		inScope := make(map[string]bool, len(varIDs))
+		for _, v := range varIDs {
+			inScope[v] = true
+		}
+		var unknown, unweighted []string
+		for varID := range wmap {
+			if !inScope[varID] {
+				unknown = append(unknown, varID)
 			}
+		}
+		for _, varID := range varIDs {
+			if _, ok := wmap[varID]; !ok {
+				unweighted = append(unweighted, varID)
+			}
+		}
+		sort.Strings(unknown)
+		sort.Strings(unweighted)
+		if len(unknown) > 0 {
+			return "", fmt.Errorf("composite: --weights names variables with no indicator rows in scope: %s",
+				strings.Join(unknown, ", "))
+		}
+		if len(unweighted) > 0 {
+			return "", fmt.Errorf("composite: --weights must cover every variable in scope; missing: %s (pass an explicit 0 to exclude a variable)",
+				strings.Join(unweighted, ", "))
+		}
+		for k, varID := range varIDs {
+			wslice[k] = wmap[varID]
 		}
 	}
 
@@ -263,8 +311,9 @@ func runCompositeAnalysis(
 	return dbID, nil
 }
 
-// runOLSAnalysis runs OLS regression using the first variable as the outcome
-// and the remaining variables as predictors.
+// runOLSAnalysis runs OLS regression using varIDs[0] as the outcome and the
+// remaining variables as predictors. runAnalyze places the caller's explicit
+// --outcome at position 0 — position is a contract here, not sort order.
 func runOLSAnalysis(
 	ctx context.Context,
 	s store.Store,
