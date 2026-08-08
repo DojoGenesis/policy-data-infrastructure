@@ -1,34 +1,49 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-07-31 (data-layer reseed — handoff 2026-07-31_pdi-data-layer-buildout)
+> Last agent update: 2026-08-08 (ADR-014 run/aggregation layer — handoff 2026-08-02_pdi-aggregation-and-runs)
 
-## Data Layer (2026-07-31, reseed)
+## Run & Aggregation Layer (2026-08-08)
 
-Local Postgres was recreated empty 2026-07-30. Reseeded and pinned to **ACS 2020-2024
-5-Year** (resolves ADR-014 open question 2).
+ADR-014 executed: D1 (both load directions), D4/D5 (canonical vocabulary + MOE), D6
+(naive aggregations removed), D7/D8 (weighted, coverage-thresholded, CI-carrying
+rollup), D9 (cache key with vintage), D10 (budget + optional token BEFORE the
+endpoint), D11 (five zero-caller statistics routed). New surface:
+
+- `POST /v1/policy/analyses` — queued runs (202 + run handle), cache-first (identical
+  re-run → 200 `cached:true`, no budget spent). Types: `tract_rollup`, `spearman`,
+  `isolation_index`, `blinder_oaxaca`, `interaction_ols`, `bootstrap_mean`.
+- `GET /v1/policy/analyses/runs/:id` — status → `analysis_id` when done.
+- Env: `PDI_RUN_GLOBAL_DAILY` / `PDI_RUN_CLIENT_DAILY` / `PDI_RUN_QUEUE_DEPTH` /
+  `PDI_RUN_TOKEN` (empty token = open-with-a-ceiling).
+- Migrations 015 (analyses cache-key unique index + dedupe), 016 (analysis_runs
+  queue), 017 (WI state geography row — state-scope FK).
+
+Verified live on local: Dane obesity rollup 33.12 CI [32.66, 33.60] (123/125 tracts);
+statewide 71/72 published, Iron County withheld `coverage_below_threshold`; SVI rollup
+withheld everywhere (`percentile_ranks_never_average`); **obesity×poverty ρ=0.503
+CI [0.459, 0.546] n=1,524 — the cross-domain analysis that was structurally impossible
+before the tract loads.**
+
+## Data Layer (2026-08-08 — tract loads landed on the 2026-07-31 reseed)
+
+Pinned to **ACS 2020-2024 5-Year** (vintage string `ACS-2024-5yr`).
 
 | Table | Benchmark | Live |
 |---|---|---|
-| `geographies` county | 72 | **72** ✅ |
-| `geographies` tract | 1,542 | **1,542** ✅ |
-| `indicators` acs-5yr county | ~1,368 | **1,368** ✅ (19 vars × 72, 100% non-null, all with MOE) |
+| `geographies` county / tract / state | 72 / 1,542 / 1 | **72 / 1,542 / 1** ✅ (state row: migration 017) |
+| `indicators` acs-5yr county | ~1,368 | **1,368** ✅ (19 vars × 72, all with MOE) |
+| `indicators` acs-5yr tract | 19 × 1,542 | **29,298** ✅ NEW — canonical vocabulary, MOE on 29,242/29,242 non-null |
 | `indicators` cdc-places tract | ~12,200 | **12,200** ✅ |
-| `indicators` cdc-svi | — | **8,000** (360 county + 7,640 tract) |
-| `indicators` usda-food | ~8,009 | **0** ⛔ blocked — 2010 vs 2020 tract vintage |
-| `indicator_sources` | ≥4 | **14** |
-| `indicator_meta` | ≥20 | **41** |
-| `indicators_latest` | — | **21,568**, now carrying `cv`/`reliability` |
+| `indicators` cdc-svi | — | **9,528** (360 county + 9,168 tract; now incl. `svi_total_population` w/ MOE — the rollup denominator) |
+| `indicators` usda-food | ~8,009 | **0** ⛔ blocked — 2010 vs 2020 tract vintage (operator, ADR-014 OQ6) |
+| `indicator_sources` / `indicator_meta` | ≥4 / ≥20 | **14 / 42** |
+| `indicators_latest` | — | **52,394** (was 21,568) |
 
-Four defects fixed to make the reseed possible at all: no `indicator_meta` registration
-path existed for the four loaded sources; `PutIndicators` could not write the
-`reliability` enum; `indicators_latest` never exposed `cv`/`reliability` (ADR-014 D8's
-stated blocker); a zero-row fetch reported `ok`. See CHANGELOG 2026-07-31.
+**Blocked on operator (unchanged):** USDA tract vintage (ADR-014 OQ6); FBI NIBRS
+`FBI_CDE_API_KEY`; FCC Broadband source decision (WAF-blocked).
 
-**Blocked on operator:** USDA tract vintage (ADR-014 open question 6). FBI NIBRS needs
-`FBI_CDE_API_KEY`; FCC Broadband needs a source decision (WAF-blocked).
-
-Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅ · layout-check 88/88 ✅
+Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅ (400+ tests; +17 this session)
 
 ## Frontend Usability Pass (2026-07-29, PIP-116)
 
@@ -53,12 +68,12 @@ Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 packages ✅ · vendor
 
 | Item | Value |
 |------|-------|
-| HEAD | `c3e0f90` — data-layer reseed, merged to `main` 2026-08-02 |
-| Branch | `main`. `fix/pdi-data-layer-reseed` fast-forwarded in and deleted (local + remote) |
-| Build | Clean (`go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅) — verified 2026-08-02 |
-| Tests | 380+ pass, 0 fail · smoke test 24/24 against live |
+| HEAD | see `git log` — ADR-014 run/aggregation layer, 2026-08-08 (6 commits on top of `c3e0f90`) |
+| Branch | `main` |
+| Build | Clean (`go build` ✅ `go vet` ✅ `go test -short` 11/11 ✅) — verified 2026-08-08 |
+| Tests | 400+ pass, 0 fail · smoke test 24/24 against live |
 | VPS | `5.161.84.125` — `pdi.service` active. Binary `/usr/local/bin/pdi` 59,234,392 bytes, deployed 2026-07-28 19:44 UTC |
-| ⚠ Deploy drift | **The live binary predates `main` by 14 commits.** Everything in the 2026-07-31 reseed — the four ingest/store fixes, migration 014, the `sources_with_data` endpoint — is merged but **not deployed**. Live behaviour still reflects `79cd188` |
+| ⚠ Deploy drift | **The live binary now predates `main` by ~20 commits.** The 2026-07-31 reseed fixes AND the entire 2026-08-08 run/aggregation layer (migrations 015-017, POST /analyses, canonical tract loads) are merged but **not deployed**. Live behaviour still reflects `79cd188`. Deploying also requires the VPS DATA steps: migrations run automatically, but the SVI+ACS tract loads (`fetch_cdc_svi.py --level tract --load`, `fetch_acs.py --geo-level tract --load` + `CENSUS_API_KEY` in `/etc/pdi/env`) and a `REFRESH MATERIALIZED VIEW CONCURRENTLY indicators_latest` are operator-run |
 | Rollback | `/usr/local/bin/pdi.bak-20260728-194401` (47,403,170 bytes, the pre-rebuild binary) |
 | Deploy method | `scp` to `/tmp/pdi-new` → `systemctl stop` → `install -o dojo -g dojo -m 755` → `systemctl start`. SSH via the `dojo-gateway` alias (key `~/.ssh/hetzner_deploy_ed25519`); `root@5.161.84.125` direct does **not** authenticate |
 | Live API | `https://api.policydatainfrastructure.com` — all 11 routes 200 |

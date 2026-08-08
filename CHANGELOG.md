@@ -3,6 +3,95 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-08 — ADR-014 lands: cross-level data, honest aggregation, queued runs
+
+Handoff `2026-08-02_pdi-aggregation-and-runs` executed end to end (commits
+`ed4e7c4`..`cb69697` + docs). The composite headline: **the cross-domain,
+cross-level analysis ADR-014 opened by calling structurally impossible now
+runs through the API** — obesity (CDC PLACES) × poverty (ACS) over 1,524
+tracts returns ρ=0.503, CI [0.459, 0.546], in seconds, with both vintages
+recorded.
+
+### The three shipped naive aggregations are gone (D6) — `ed4e7c4`
+`QueryFactorScores` no longer invents county values from an unweighted
+tract AVG with no minimum-N (a 1-of-40-tracts county produced a "county"
+value from n=1); counties return empty until a weighted rollup writes real
+rows. `scripts/aggregate_factor_scores_county.sql` deleted — same formula,
+upserted. `fetch_epa_ejscreen.py` was documented population-weighted while
+computing a plain mean; it now weights for real and REFUSES to aggregate
+without a population column rather than approximating (D2).
+
+### analyze CLI: silent defaults made loud — `a9f1af0`
+`--type ols` requires an explicit `--outcome` (the outcome was whichever
+variable_id sorted first alphabetically — adding an earlier-sorting
+indicator silently changed the regression target). `composite --weights`
+must cover every variable in scope; unlisted variables were silently
+weighted 0 (explicit 0 remains a deliberate exclusion).
+
+### Analysis identity = the D9 cache key — `1795587` (migration 015)
+`analyses` gains `uq_analyses_cache_key` UNIQUE (type, scope_geoid,
+scope_level, vintage, parameters) NULLS NOT DISTINCT, after deduping
+(newest wins; the production twins — identical composite rows 11.6s apart
+— become impossible). `PutAnalysis` upserts on the key and returns the
+SAME id for an identical re-run; new `FindAnalysisByKey` gives cache-hit
+lookups without a write.
+
+### POST /v1/policy/analyses — queued runs behind budget + optional auth — `77bf5c9` (migration 016)
+D3/D10/D11: `analysis_runs` is a DB-backed queue (FOR UPDATE SKIP LOCKED),
+drained by an in-process runner. Admission: RunBudget (global daily cap,
+per-client sub-cap, CF-Connecting-IP identity, queue-depth bound; env
+PDI_RUN_GLOBAL_DAILY / PDI_RUN_CLIENT_DAILY / PDI_RUN_QUEUE_DEPTH) plus an
+optional bearer token (PDI_RUN_TOKEN; empty = open-with-a-ceiling). The
+handler is cache-first — an identical prior analysis returns 200
+cached:true and costs nobody budget — and resolves an omitted vintage to a
+CONCRETE one at enqueue, so "latest" never enters the cache key. Run
+types: tract_rollup, spearman, isolation_index, blinder_oaxaca,
+interaction_ols, bootstrap_mean — the five finished, previously
+zero-caller statistics are now reachable (D11). pkg/stats gains
+BootstrapPairs (index-paired resampling) and rollup.go (the D7 class
+rules + coverage-thresholded, CI-carrying rollup; percentile ranks and
+medians never aggregate).
+
+### CDC SVI ingest carries the denominator — `d3f882d` (migration 017)
+`fetch_cdc_svi.py` now loads `svi_total_population` (E_TOTPOP, with
+M_TOTPOP as margin_of_error) beside the five themes. **Loaded: 1,528 WI
+tracts, 0% null, full MOE, state total 5.88M.** This is the same-
+2022-vintage denominator that unblocks weighted CDC PLACES rollups
+(ADR-014 F3). Migration 017 seeds the Wisconsin state geography row —
+state-scoped runs violated the scope_geoid FK because only county+tract
+rows ever existed (caught by the first live state-scope POST; mocks cross
+no FKs).
+
+Verified live: Dane obesity rollup 33.12 weighted, CI [32.66, 33.60],
+123/125 tracts; statewide 71/72 counties published with CIs, Iron County
+withheld `coverage_below_threshold`; `cdc_svi_overall` rollup withheld
+everywhere `percentile_ranks_never_average` (D2 refusing, not
+approximating); obesity×SVI ρ=0.565 CI [0.527, 0.598] n=1,523.
+
+### ACS tract data in the canonical vocabulary — `cb69697`
+`fetch_acs.py` rewritten per D4/D5: emits exactly the Go adapter's 19
+variable IDs (raw estimates, no derived percents), fetches every MOE
+companion, writes the `ACS-2024-5yr` vintage string, refuses to run if the
+canonical registry is missing, and gates on a per-variable null audit.
+Statewide = 2 Census calls for all 1,542 tracts. **Loaded: 29,298 rows
+(19 × 1,542), MOE on 29,242/29,242 non-null values, nulls ≤1.3%
+(median income/rates only — the suppression pattern, as expected).**
+`lib/db.py` no longer coerces vintage to int — that crash-or-mint-a-
+bare-year behavior is how cross-level vintage mismatches were born.
+
+Database after this session: **52,394 indicator rows** (was 21,568) —
+ACS county 1,368 + ACS tract 29,298 + CDC PLACES 12,200 + CDC SVI county
+360 + CDC SVI tract 9,168. `indicators_latest` refreshed to 52,394.
+
+Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 packages ✅ (400+
+tests incl. 8 new run-endpoint, 6 new rollup/bootstrap, 3 new CLI tests).
+
+**Not done, deliberately:** USDA tract vintage (ADR-014 OQ6), FCC source
+choice, FBI NIBRS key — operator decisions, unchanged. LISA is still
+Python-only/off-DB. composite_index/correlation are not yet routed
+through the run API (CLI-only). **Not deployed** — the VPS binary now
+trails main by ~20 commits; deploy is the operator's call.
+
 ## 2026-07-31 — the reseed, and the four defects that made it impossible
 
 The local Postgres was recreated empty on 2026-07-30 (schema, no data). Reseeding it

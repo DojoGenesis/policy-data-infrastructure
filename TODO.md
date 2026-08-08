@@ -1,7 +1,26 @@
 # TODO — policy-data-infrastructure
 
-> Updated: 2026-07-28 | Last audit: 2026-07-28 (frontend rebuild, 4 parallel tracks, PIP-115)
+> Updated: 2026-08-08 | Last audit: 2026-07-28 (frontend rebuild, 4 parallel tracks, PIP-115)
 > Update this file after every work session. Move completed items to CHANGELOG.md.
+
+## P1 — Follow-ups from the 2026-08-08 run-layer build (handoff 2026-08-02)
+
+- [ ] **Route `composite_index` and `correlation` through POST /analyses.** The queued-run
+  API ships with six types; the two the CLI already computes still require shell access,
+  which is the exact gap ADR-014 §"Analyses cannot be created through the API" describes.
+  The executor registry makes this mechanical now (reuse analyze.go's logic) [source: run-layer build]
+- [ ] **LISA remains Python-only and reads a static GeoJSON, not the DB** (ADR-014 D11's
+  last clause). Until it moves onto Postgres through `store.Store`, the map's analyses
+  describe a different dataset than the API's. Larger lift: needs spatial weights in Go
+  or a Python worker consuming the run queue [source: ADR-014 F5]
+- [ ] **Crashed-run recovery is deliberately manual.** A worker that dies mid-run leaves
+  its row 'running' forever; the runner never re-claims it (re-executing a half-written
+  analysis would double-write scores). Add an operator query/runbook line, or a
+  stale-running sweep with an explicit age threshold [source: runner design]
+- [ ] **Frontend surfaces nothing from the run API yet.** The composites page could offer
+  "compute county rollup" against POST /analyses and render the CI + coverage that
+  tract_rollup returns — the D8 uncertainty display exists in the API and nowhere else
+  [source: run-layer build]
 
 ## P0 — Blocking correctness (found 2026-07-28)
 
@@ -96,7 +115,7 @@
 - [ ] ~~superseded~~ **about.html body prose remains English.** Headings, eyebrows, section intros, tables and the Funding/License sections are bilingual; the Overview paragraphs, all 5 Architecture layer blocks, and all 6 Methodology method-cards are not — deliberately deferred as the highest mistranslation-risk, lowest-first-scroll-visibility content. This is the bulk of the file's word count [source: Wave 2B]
 
 - [ ] **`data/sources.toml` is 12 sources out of date.** It lists 5 (tiger, hmda, osm, hrsa, gtfs) against **17 Go adapters** and **12 Python ingest scripts** on disk. Missing: acs, bls_laus, cdc_places, cdc_svi, epa_ejscreen, epa_tri, fbi_nibrs, fcc_broadband, hud_chas, hud_pit, usda_food, wi_dpi. The repo's own "add a new source" checklist and the `api_key_env` lookup both treat this file as authoritative — it describes ~30% of reality. Blocks map-data-source expansion [source: orchestrator]
-- [ ] **Emit ACS margins of error for all ACS-derived indicators.** Only `median_household_income` carries `margin_of_error` today (1 of 19). ACS publishes MOEs for `poverty_rate`, `uninsured_rate` and the B25xxx counts, but ingest drops them. Highest-value single fix for the new Compare page — turns materiality from a descriptive convention into a real uncertainty test on 18 more rows [source: Track D]
+- [x] ~~**Emit ACS margins of error for all ACS-derived indicators.**~~ — DONE 2026-08-08. The Go county path already carried 19/19 after the reseed; the Python path was the gap, and `fetch_acs.py` was rewritten to the canonical vocabulary with an MOE companion for every variable (ADR-014 D4/D5). Tract load verified: 29,242 of 29,242 non-null values carry an MOE [source: handoff 2026-08-02, `cb69697`]
 - [ ] **Add `direction` + `unit` to the `differences[]` array** in the compare API response. It currently omits both, so any client trusting that array alone will colour deltas without polarity — exactly what ADR-013 §2A calls misleading [source: Track D]
 - [ ] **Verify polarity on `owner_/renter_cost_burden_30pct_1..5`.** All carry `lower_is_better` with an *empty* description, but the values look like ACS bracket components/denominators rather than outcome rates (Dane `renter_cost_burden_30pct_1` = 104,037 against 245,736 total housing units). They occupy 10 of 13 scoreboard slots and therefore dominate the Compare headline. Either document them or re-mark the components `neutral` [source: Track D]
 
