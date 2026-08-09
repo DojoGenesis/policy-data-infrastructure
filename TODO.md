@@ -19,6 +19,19 @@
   blocks (dial retries bridge the restart gap; they cannot replay a streaming
   request, which is why the server fix was the real one)
 
+## P1 — Follow-ups from the 2026-08-09 chat routing
+
+- [ ] **No planner on prod, so natural-language data questions still fall to the
+  Gateway.** The structured lane covers rank/lookup/compare/threshold/aggregate
+  with no model, but anything phrased outside those shapes needs a planner. Set
+  `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL`) or `OLLAMA_BASE_URL` in
+  `/etc/pdi/env`; `/chat/schema`'s `planner_configured` flips to true and the
+  client starts using the NL grounded lane automatically [source: chat routing 2026-08-09]
+- [ ] **Widen the client matcher as real questions arrive.** It declines rather
+  than guesses, so misses are silent (they just go to prose). `ChatAdapter._lastLane`
+  records which lane answered — worth sampling real questions before adding
+  patterns, rather than inventing them [source: chat routing 2026-08-09]
+
 ## P1 — Follow-ups from the 2026-08-08 explorer truth pass
 
 - [x] ~~**County-level factor scores need a defensible method ruling.**~~ — RESOLVED:

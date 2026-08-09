@@ -3,6 +3,43 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-09 (cont.) — chat answers data questions from the dataset
+
+The chat page now tries the deterministic grounded engine BEFORE the
+Gateway prose lane. The Intent is built client-side from the vocabulary
+`/v1/policy/chat/schema` publishes and POSTed to `/chat/query`, which
+executes it against the live database and returns a cited answer whose
+every figure came out of a query — no model, no spend, no Gateway round
+trip, and it keeps answering when the Gateway does not. (The 502 that
+prompted this was a Gateway request severed by a deploy; "which county
+has the highest poverty rate" never needed that lane.)
+
+Matching is conservative by design — unrecognised shapes fall through to
+prose, because a confidently wrong Intent answers a question nobody
+asked. **"best" and "worst" are deliberately unmapped**: direction orders
+the VALUE, not its goodness (the highest poverty rate is the worst
+place), a distinction pkg/grounding/intent.go keeps out of the schema on
+purpose.
+
+Verified in the page and on prod: rank (Menominee 21.7%), rank+limit
+(top 5 uninsured — Clark 22.5%), lookup (Dane 10.6%), compare (Dane vs
+Milwaukee, +6.6%), threshold (above 15 → 4 counties), distinctive-token
+match ("highest obesity" → cdc_obesity), aggregate (median household
+income). Both declines correct: the policies question and "best county"
+route to the Gateway.
+
+Schema now publishes `planner_configured` so the NL grounded lane is
+only attempted where a planner exists. **Prod has none** — set
+`OPENROUTER_API_KEY` (or `OLLAMA_BASE_URL`) in `/etc/pdi/env` and
+natural-language data questions start being grounded too, with no code
+change. The structured lane above needs no model at all.
+
+Also fixed: `_emitAnswer` emits one chunk with no timers. Simulated
+typing is theatre for an answer already in hand, and background tabs
+clamp setTimeout to ~1/second, so a 33-chunk "stream" took 33 seconds
+unfocused — observed during verification and briefly mistaken for a
+truncation bug.
+
 ## 2026-08-09 — the chat 502, settled: a deploy was killing live requests
 
 Operator reported a chat 502 whose body was a Cloudflare HTML error page.
