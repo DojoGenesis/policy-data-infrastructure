@@ -278,15 +278,41 @@ func runServe(port int) error {
 	}
 
 	// Graceful shutdown.
+	//
+	// The drain must be WAITED ON, not merely started. ListenAndServe returns
+	// http.ErrServerClosed the instant Shutdown begins, so a fire-and-forget
+	// goroutine lets runServe return, main exit, and the process die with
+	// every in-flight request still open — measured at 0.2s, i.e. no drain at
+	// all. That is what severed a 36-second chat request mid-answer during a
+	// deploy on 2026-08-08: Caddy saw EOF from the upstream and returned the
+	// 502 whose Cloudflare error page the chat UI then reported. The `drained`
+	// channel below is the whole fix.
+	//
+	// The window is sized to real work, not to a round number: chat proxies
+	// to the Gateway have been measured at 12–36s, and the analysis runner's
+	// bootstrap passes are comparable. systemd's TimeoutStopSec on this unit
+	// is 90s, so 45s drains honestly and still exits well before SIGKILL. An
+	// idle server is unaffected — Shutdown returns as soon as connections are
+	// idle, so ordinary deploys stay as fast as they were.
+	const shutdownDrain = 45 * time.Second
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
+	drained := make(chan struct{})
 	go func() {
 		<-sigCh
-		fmt.Println("\nshutting down...")
-		shutCtx, shutCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		fmt.Printf("\nshutting down: draining in-flight requests (up to %s)...\n", shutdownDrain)
+		shutCtx, shutCancel := context.WithTimeout(context.Background(), shutdownDrain)
 		defer shutCancel()
-		_ = srv.Shutdown(shutCtx)
+		if err := srv.Shutdown(shutCtx); err != nil {
+			// Deadline hit: say so. A request cut here is a real cut, and an
+			// operator reading a 502 later deserves this line in the journal.
+			fmt.Printf("drain deadline reached after %s; closing remaining connections: %v\n", shutdownDrain, err)
+		} else {
+			fmt.Println("drain complete; no requests were interrupted")
+		}
+		close(drained)
 	}()
 
 	fmt.Printf("pdi serving on 0.0.0.0%s\n", addr)
@@ -296,6 +322,11 @@ func runServe(port int) error {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("serve: %w", err)
 	}
+	// ErrServerClosed means the signal goroutine called Shutdown, so it is
+	// running and will close this channel. Blocking here is what keeps the
+	// process — and the deferred store.Close() and context cancel below it —
+	// alive until the drain finishes.
+	<-drained
 	return nil
 }
 
