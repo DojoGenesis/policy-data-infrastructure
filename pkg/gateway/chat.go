@@ -187,6 +187,12 @@ func (p *ChatPlugin) handleSchema(c *gin.Context) {
 		"aggregates": []string{"median", "min", "max", "count"},
 		"indicators": ds.Indicators,
 		"vintage":    ds.Vintage,
+		// Whether natural-language questions can be planned here. False means
+		// only structured Intents (POST /chat/query) are answerable — which
+		// need no model at all. A caller that builds its own Intent from this
+		// schema works either way; this flag just tells it whether an NL
+		// attempt is worth a round trip.
+		"planner_configured": p.eng().Planner != nil,
 		"counts": gin.H{
 			"county": ds.Count(grounding.LevelCounty),
 			"tract":  ds.Count(grounding.LevelTract),

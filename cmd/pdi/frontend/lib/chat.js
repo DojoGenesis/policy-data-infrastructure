@@ -628,7 +628,231 @@ ${this._buildPageContextBlock()}`;
   // "answer". send() now makes exactly one attempt and reports what actually
   // happened.
 
+  // ── Grounded lane (2026-08-09) ──────────────────────────────────────────
+  //
+  // Data questions belong to the deterministic engine, not the prose model.
+  // POST /v1/policy/chat/query executes a checked Intent against the live
+  // database and returns an answer whose every figure came out of a query,
+  // with a citation — no model, no spend, no Gateway round trip, and it keeps
+  // answering when the Gateway does not. (A deploy severing a Gateway request
+  // is exactly what produced the 502 on 2026-08-08; "which county has the
+  // highest poverty rate" never needed that lane in the first place.)
+  //
+  // The Intent is built HERE from the vocabulary the server publishes at
+  // /chat/schema — that endpoint exists so a caller can construct a valid
+  // Intent without guessing. Matching is deliberately CONSERVATIVE: an
+  // unrecognised shape returns null and the question falls through to the
+  // Gateway, because a confidently wrong Intent would answer a question
+  // nobody asked. The server validates whatever arrives and refuses anything
+  // invalid, so the worst case of a bad match is a refusal we fall through on.
+  //
+  // Deliberately NOT mapped: "best" and "worst". Direction orders the VALUE,
+  // not the goodness of it — the highest poverty rate is the worst place, and
+  // pkg/grounding/intent.go keeps that distinction out of the schema on
+  // purpose. Those questions go to the prose lane rather than have this
+  // matcher decide what "best" means.
+
+  _grounded: { loaded: false, schema: null, places: [], distinctive: null },
+
+  async _loadGroundedVocab() {
+    if (this._grounded.loaded) return this._grounded;
+    this._grounded.loaded = true; // one attempt; a failure means "decline", not "retry forever"
+    try {
+      const [schema, geos] = await Promise.all([
+        fetch('/v1/policy/chat/schema').then(r => (r.ok ? r.json() : null)).catch(() => null),
+        fetch('/v1/policy/geographies?level=county&limit=500').then(r => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+      if (schema && Array.isArray(schema.indicators)) this._grounded.schema = schema;
+      const items = (geos && (geos.items || geos.geographies)) || [];
+      this._grounded.places = items.filter(g => g && g.name).map(g => ({ name: g.name }));
+
+      // Tokens that identify exactly ONE indicator. They let "highest obesity"
+      // match "Obesity Prevalence" without demanding the full label, while a
+      // token shared by several indicators (e.g. "population") stays ambiguous
+      // and is left to the stricter tiers.
+      if (this._grounded.schema) {
+        const counts = {};
+        for (const ind of this._grounded.schema.indicators) {
+          const toks = new Set(
+            ((ind.id || '') + ' ' + (ind.label || ''))
+              .toLowerCase().replace(/[^a-z0-9\s_]/g, ' ').replace(/_/g, ' ')
+              .split(/\s+/).filter(w => w.length >= 6));
+          for (const t of toks) counts[t] = (counts[t] || 0) + 1;
+        }
+        const distinctive = {};
+        for (const ind of this._grounded.schema.indicators) {
+          const toks = new Set(
+            ((ind.id || '') + ' ' + (ind.label || ''))
+              .toLowerCase().replace(/[^a-z0-9\s_]/g, ' ').replace(/_/g, ' ')
+              .split(/\s+/).filter(w => w.length >= 6));
+          for (const t of toks) if (counts[t] === 1) distinctive[t] = ind.id;
+        }
+        this._grounded.distinctive = distinctive;
+      }
+    } catch (_) { /* leaves schema null; the matcher declines */ }
+    return this._grounded;
+  },
+
+  _matchIndicator(q, vocab) {
+    let best = null, bestScore = 0;
+    for (const ind of vocab.schema.indicators) {
+      const id = String(ind.id || '').toLowerCase();
+      const label = String(ind.label || '').toLowerCase();
+      let score = 0;
+      const idPhrase = id.replace(/_/g, ' ');
+      if (idPhrase && q.indexOf(' ' + idPhrase + ' ') >= 0) score = 300 + idPhrase.length;
+      else if (label && q.indexOf(' ' + label + ' ') >= 0) score = 200 + label.length;
+      else if (label) {
+        const words = label.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 4);
+        if (words.length && words.every(w => q.indexOf(w) >= 0)) score = 100 + words.join('').length;
+      }
+      if (score > bestScore) { bestScore = score; best = ind.id; }
+    }
+    if (best) return best;
+    // Fall back to a token that names exactly one indicator.
+    const dist = vocab.distinctive || {};
+    for (const tok of Object.keys(dist)) {
+      if (q.indexOf(' ' + tok) >= 0) return dist[tok];
+    }
+    return null;
+  },
+
+  _matchPlaces(q, places) {
+    const found = [];
+    for (const p of places) {
+      const bare = String(p.name).replace(/\s+county$/i, '').toLowerCase();
+      if (bare.length < 4) continue;
+      const at = q.indexOf(' ' + bare + ' ');
+      if (at >= 0) found.push({ name: p.name, at: at });
+    }
+    found.sort((a, b) => a.at - b.at);
+    return found.map(f => f.name);
+  },
+
+  _matchIntent(question, vocab) {
+    if (!vocab || !vocab.schema) return null;
+    const q = ' ' + String(question || '').toLowerCase()
+      .replace(/[^a-z0-9%.\s-]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    if (q.trim().length < 3) return null;
+
+    const indicator = this._matchIndicator(q, vocab);
+    if (!indicator) return null;
+
+    const level = /\btracts?\b/.test(q) ? 'tract' : 'county';
+    const places = this._matchPlaces(q, vocab.places);
+
+    let limit = 0;
+    const mLimit = q.match(/\btop\s+(\d{1,2})\b/) ||
+                   q.match(/\b(\d{1,2})\s+(?:highest|lowest)\b/) ||
+                   q.match(/\b(?:highest|lowest)\s+(\d{1,2})\b/);
+    if (mLimit) limit = Math.max(1, Math.min(parseInt(mLimit[1], 10), 50));
+
+    const wantsHigh = /\b(highest|most|largest|greatest|biggest|top|maximum|max)\b/.test(q);
+    const wantsLow  = /\b(lowest|least|smallest|fewest|bottom|minimum|min)\b/.test(q);
+    const wantsAgg  = /\b(average|mean|median|typical|statewide|overall)\b/.test(q);
+    const asksCount = /\bhow many\b|\bnumber of\b|\bcount\b/.test(q);
+
+    const mThresh = q.match(/\b(above|over|more than|greater than|at least|below|under|less than|fewer than)\s+\$?([0-9][0-9,]*\.?[0-9]*)/);
+    if (mThresh) {
+      const above = /above|over|more than|greater than|at least/.test(mThresh[1]);
+      const value = parseFloat(mThresh[2].replace(/,/g, ''));
+      if (!isNaN(value)) {
+        return { operation: 'threshold', indicator: indicator, level: level,
+                 comparator: above ? 'above' : 'below', threshold: value };
+      }
+    }
+
+    if (places.length >= 2) {
+      return { operation: 'compare', indicator: indicator, level: level, places: places.slice(0, 4) };
+    }
+    if (places.length === 1) {
+      return { operation: 'lookup', indicator: indicator, level: level, places: places };
+    }
+    if (wantsHigh || wantsLow) {
+      const intent = { operation: 'rank', indicator: indicator, level: level,
+                       direction: (wantsLow && !wantsHigh) ? 'lowest' : 'highest' };
+      if (limit) intent.limit = limit;
+      return intent;
+    }
+    if (wantsAgg || asksCount) {
+      let aggregate = 'median';
+      if (asksCount && !wantsAgg) aggregate = 'count';
+      return { operation: 'aggregate', indicator: indicator, level: level, aggregate: aggregate };
+    }
+    return null;
+  },
+
+  // Emit an already-complete answer through the streaming contract the page
+  // expects — in ONE chunk, with no timers.
+  //
+  // The Gateway path paces itself with setTimeout to simulate typing, which
+  // makes sense while a remote model is the reason you are waiting. Here the
+  // answer is already in hand: the pacing would be pure theatre, and it has a
+  // real cost — background tabs clamp setTimeout to roughly once per second,
+  // so a 33-chunk "stream" takes 33 seconds to finish in an unfocused tab
+  // (observed while verifying this, and initially mistaken for a truncation
+  // bug). One chunk is instant, honest, and immune to that clamp.
+  _emitAnswer(text, onChunk, onDone) {
+    onChunk(text);
+    onDone();
+  },
+
+  // Returns true when the grounded engine answered and nothing further is needed.
+  async _tryGrounded(userMessage, onChunk, onDone) {
+    let vocab;
+    try { vocab = await this._loadGroundedVocab(); } catch (_) { return false; }
+    if (!vocab || !vocab.schema) return false;
+
+    // 1. Structured lane — no model anywhere in the path.
+    const intent = this._matchIntent(userMessage, vocab);
+    if (intent) {
+      const ans = await this._postGrounded('/v1/policy/chat/query', intent);
+      if (ans && ans.answered && ans.text) {
+        this._lastLane = 'grounded-structured';
+        this._emitAnswer(ans.text +
+          '\n\nAnswered from the dataset directly — no model produced these numbers.',
+          onChunk, onDone);
+        return true;
+      }
+    }
+
+    // 2. Natural-language grounded lane, only where a planner exists. Without
+    //    one the server refuses honestly, and asking anyway just burns a round
+    //    trip — so the schema's capability flag gates it. When a planner is
+    //    configured later, this starts working with no further change here.
+    if (vocab.schema.planner_configured) {
+      const ans = await this._postGrounded('/v1/policy/chat', { query: userMessage });
+      if (ans && ans.answered && ans.text) {
+        this._lastLane = 'grounded-nl';
+        this._emitAnswer(ans.text, onChunk, onDone);
+        return true;
+      }
+    }
+    return false;
+  },
+
+  async _postGrounded(path, payload) {
+    try {
+      const r = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) return null; // 422 = intent refused; fall through to the Gateway
+      return await r.json();
+    } catch (_) {
+      return null;
+    }
+  },
+
+  // Which lane answered last, for debugging. Never rendered.
+  _lastLane: null,
+
   async send(userMessage, onChunk, onDone) {
+    // Deterministic first, prose second. A question the dataset can answer
+    // exactly should never be paraphrased by a model.
+    if (await this._tryGrounded(userMessage, onChunk, onDone)) return;
+    this._lastLane = 'gateway';
     await this._sendToGateway(userMessage, onChunk, onDone);
   },
 
