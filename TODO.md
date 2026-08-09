@@ -5,15 +5,19 @@
 
 ## P0 — Reported by operator 2026-08-08 (late)
 
-- [ ] **Chat page returns 502 with an HTML error body.** Question 'Which policies
-  target the highest-burden counties?' → HTTP 502; the body is an HTML page with IE
-  conditional comments (a Cloudflare/proxy error page passed through as if it were a
-  chat answer envelope). The /chat page rides the /v1/chat Dojo-Gateway proxy lane —
-  suspects: the DOJO_GATEWAY_URL upstream down or rejecting, and the proxy forwarding
-  the upstream's HTML instead of mapping it to a JSON error. Also consider: data
-  questions like this one are exactly what the NEW grounded /v1/policy/chat answers
-  deterministically — the page may want to route dataset questions there and keep the
-  gateway lane for open-ended prose [source: operator report, session 2026-08-08]
+- [x] ~~**Chat page returns 502 with an HTML error body.**~~ — SETTLED 2026-08-08
+  (`f58b4d8`). Not a chat fault: Caddy's log holds exactly one 502 all night and it
+  is the operator's own request, killed at 23:30:17 by the composite/correlation
+  **deploy** (`caddy: EOF, 36.07s, reverseproxy.statusError`). PDI answered /v1/chat
+  200 twice that hour; the Gateway is healthy. Root cause: the graceful shutdown was
+  cosmetic — ListenAndServe returns ErrServerClosed the moment Shutdown starts, so
+  main exited and the process died in 0.2s (measured), severing everything in flight.
+  Fixed by waiting on the drain with a 45s window sized to real chat latency (12-36s);
+  re-measured 45.2s, and verified on prod through a live restart: complete 1.87MB
+  body, exit 0, journal "drain complete; no requests were interrupted". Paired edge
+  change: lb_try_duration 10s / lb_try_interval 500ms on both PDI reverse_proxy
+  blocks (dial retries bridge the restart gap; they cannot replay a streaming
+  request, which is why the server fix was the real one)
 
 ## P1 — Follow-ups from the 2026-08-08 explorer truth pass
 

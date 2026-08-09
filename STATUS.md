@@ -1,7 +1,7 @@
 # STATUS — policy-data-infrastructure
 
 > Auto-updated by agents. Human-verified dates in parentheses.
-> Last agent update: 2026-08-08 night (county explorer truth pass: ranks/reliability/segregation/factor columns/launch warm; see CHANGELOG)
+> Last agent update: 2026-08-09 (chat-502 settled: graceful drain was cosmetic; deploys no longer sever live requests. See CHANGELOG)
 
 ## Run & Aggregation Layer (2026-08-08)
 
@@ -78,7 +78,7 @@ Gates: `go build` ✅ `go vet` ✅ `go test -short` 11/11 packages ✅ · vendor
 | VPS | `5.161.84.125` — `pdi.service` active. Binary `/usr/local/bin/pdi` 47,816,866 bytes = `v0.1.0-152-gb0ea467`, **deployed 2026-08-08** (checksum-verified; prior binary backed up as `pdi.bak-20260808-*`) |
 | Deploy state | **Current with `main` (`b0ea467`).** Migrations 001-017 applied on deploy — the production duplicate analyses pair is deduped (18→17 rows, 0 dup groups), cache-key index live, run queue live. Data legs run the same day via SSH tunnel: SVI tract 9,168 rows (incl. `svi_total_population` w/ MOE), canonical ACS tract 29,298 rows, `indicators_latest` refreshed → **60,403 rows** (was 29,577). `CENSUS_API_KEY` provisioned to `/etc/pdi/env`. Prod smoke: Dane obesity rollup 33.12 CI [32.63, 33.57] (123/125 tracts); obesity×poverty ρ=0.503 CI [0.461, 0.545] n=1,524; cached re-POST returns the same analysis id. **Known env divergence:** prod PLACES rows carry vintage `2022` where the local reseed labeled them `CDC-PLACES-2023` — same underlying release; align labels at the next VPS data reconciliation. **`PDI_RUN_TOKEN` is SET (2026-08-08)** — POST /analyses is bearer-gated (verified: 401 bare + wrong-token, 200 with token, GETs stay open); the budget still applies behind the gate. The value lives ONLY in `/etc/pdi/env` on the VPS (generated on-box, never in git/transcripts); read it with `ssh dojo-gateway 'grep ^PDI_RUN_TOKEN= /etc/pdi/env'` |
 | Rollback | `/usr/local/bin/pdi.bak-20260728-194401` (47,403,170 bytes, the pre-rebuild binary) |
-| Deploy method | `scp` to `/tmp/pdi-new` → `systemctl stop` → `install -o dojo -g dojo -m 755` → `systemctl start`. SSH via the `dojo-gateway` alias (key `~/.ssh/hetzner_deploy_ed25519`); `root@5.161.84.125` direct does **not** authenticate |
+| Deploy method | `scp` to `/tmp/pdi-new` → `systemctl stop` → `install -o dojo -g dojo -m 755` → `systemctl start`. **Stopping now drains in-flight requests for up to 45s** (`f58b4d8`) — a deploy no longer 502s a live request; expect `systemctl stop` to block that long when work is in flight. Caddy retries dials for 10s (`lb_try_duration`) to bridge the listener gap; Caddyfile backups at `/etc/caddy/Caddyfile.bak-*`. SSH via the `dojo-gateway` alias (key `~/.ssh/hetzner_deploy_ed25519`); `root@5.161.84.125` direct does **not** authenticate |
 | Live API | `https://api.policydatainfrastructure.com` — all 11 routes 200 |
 | Live verification | All 10 pages byte-identical live vs local; every page has lang-toggle, theme-toggle, footer, and the 9-link nav |
 | Route form | **Extensionless**: `/county?geoid=`, `/map`, `/composite` (singular). `.html` paths 404 — do not test with them |

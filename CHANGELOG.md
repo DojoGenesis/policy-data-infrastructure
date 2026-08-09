@@ -3,6 +3,40 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-08-09 — the chat 502, settled: a deploy was killing live requests
+
+Operator reported a chat 502 whose body was a Cloudflare HTML error page.
+The chat backend was never at fault. Caddy's log holds exactly ONE 502 for
+the night and it is that request:
+
+    23:29:41  POST /v1/chat  (18,749-byte body, referer
+              /chat?q=Which policies target the highest-burden counties?)
+    23:30:17  systemd: Stopping pdi.service   <- the composite/correlation deploy
+    23:30:17  caddy: EOF, duration 36.07s, status 502
+
+PDI itself answered /v1/chat 200 twice that same hour (17.19s and 11.92s)
+and the Gateway returns 200 on :7340 — so the failure was mine, not the
+lane's. **Root cause (`f58b4d8`): the graceful shutdown was cosmetic.**
+ListenAndServe returns http.ErrServerClosed the instant Shutdown begins,
+so the fire-and-forget drain goroutine never mattered: runServe returned,
+main exited, and the process was gone **0.2 seconds** after SIGTERM with a
+request mid-response — client truncated at 865,208 of 1,874,791 bytes
+(curl exit 18). The 10s window in the source never existed at runtime.
+
+Fixed by waiting on the drain and sizing it to measured work (chat runs
+12-36s) — 45s, inside the unit's 90s TimeoutStopSec. An idle server still
+exits at once, so ordinary deploys stay fast. Same probe after: process
+lives 45.2s. **Verified on production through a live `systemctl restart`:
+client received the full 1,874,791 bytes, exit 0, journal reads "drain
+complete; no requests were interrupted."**
+
+Because Shutdown closes the listener first, a long drain widens the window
+where NEW connections are refused, so the edge got the complement:
+`lb_try_duration 10s` / `lb_try_interval 500ms` on both PDI reverse_proxy
+blocks (Caddyfile backed up, validated, reloaded — not restarted). Dial
+retries bridge the restart gap and cannot replay a streaming request,
+which is exactly why the server-side drain had to be the real fix.
+
 ## 2026-08-08 (late) — one PLACES set, one label, county factor profiles live
 
 ### PLACES alignment (`10cb81f`, migration 020)
