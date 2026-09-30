@@ -1122,11 +1122,11 @@
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
@@ -1138,10 +1138,10 @@
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -1149,67 +1149,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 70.0,
+        "metric_value": 52.5,
         "display_value": 17.2
-      },
-      {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 55.2,
-        "display_value": 10.6
-      },
-      {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 53.1,
-        "display_value": 12.4
-      },
-      {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 52.599999999999994,
-        "display_value": 11.8
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 50.0,
+        "metric_value": 48.5,
         "display_value": 21.7
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 41.9,
+        "display_value": 10.6
+      },
+      {
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 40.9,
+        "display_value": 14.1
+      },
+      {
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 40.6,
+        "display_value": 15.6
       }
     ],
     "bottom_need_counties": [
       {
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 26.1,
+        "display_value": 5.9
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 27.5,
+        "display_value": 6.3
+      },
+      {
         "geoid": "55037",
         "county_name": "Florence County",
-        "metric_value": 23.8,
+        "metric_value": 27.6,
         "display_value": 7.3
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 26.0,
+        "metric_value": 27.799999999999997,
         "display_value": 7.6
       },
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 27.0,
-        "display_value": 10.5
-      },
-      {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 27.3,
-        "display_value": 8.2
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 27.799999999999997,
-        "display_value": 5.9
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 28.6,
+        "display_value": 9.6
       }
     ],
-    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Dane — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
+    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Menominee — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
     "data_quality": "moderate"
   },
   {
@@ -1402,34 +1402,34 @@
     "statewide_context": {
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       },
       "pct_severely_cost_burdened": {
         "count": 72,
-        "mean": 7.14,
-        "median": 7.15,
-        "min": 4.7,
-        "max": 11.1,
-        "std": 1.29
+        "mean": 10.06,
+        "median": 9.8,
+        "min": 7.3,
+        "max": 17.0,
+        "std": 1.64
       }
     },
     "county_variation": {
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       },
       "pct_severely_cost_burdened": {
-        "min": 4.7,
-        "max": 11.1,
-        "range": 6.4,
-        "std": 1.29,
+        "min": 7.3,
+        "max": 17.0,
+        "range": 9.7,
+        "std": 1.64,
         "counties_with_data": 72
       }
     },
@@ -1437,67 +1437,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 52.8,
-        "display_value": 52.8
+        "metric_value": 35.3,
+        "display_value": 35.3
       },
       {
         "geoid": "55025",
         "county_name": "Dane County",
-        "metric_value": 44.6,
-        "display_value": 44.6
+        "metric_value": 31.3,
+        "display_value": 31.3
       },
       {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 40.8,
-        "display_value": 40.8
+        "geoid": "55059",
+        "county_name": "Kenosha County",
+        "metric_value": 28.2,
+        "display_value": 28.2
+      },
+      {
+        "geoid": "55053",
+        "county_name": "Jackson County",
+        "metric_value": 27.6,
+        "display_value": 27.6
       },
       {
         "geoid": "55063",
         "county_name": "La Crosse County",
-        "metric_value": 40.7,
-        "display_value": 40.7
-      },
-      {
-        "geoid": "55139",
-        "county_name": "Winnebago County",
-        "metric_value": 36.8,
-        "display_value": 36.8
+        "metric_value": 27.6,
+        "display_value": 27.6
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 19.0,
+        "display_value": 19.0
       },
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55075",
+        "county_name": "Marinette County",
+        "metric_value": 19.4,
+        "display_value": 19.4
+      },
+      {
+        "geoid": "55019",
+        "county_name": "Clark County",
+        "metric_value": 20.1,
+        "display_value": 20.1
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 18.4,
-        "display_value": 18.4
+        "metric_value": 20.2,
+        "display_value": 20.2
       },
       {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 19.1,
-        "display_value": 19.1
-      },
-      {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 20.0,
-        "display_value": 20.0
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 20.2,
+        "display_value": 20.2
       }
     ],
-    "key_finding": "Milwaukee, Dane lead Wisconsin with 52.8% of households cost-burdened (statewide mean: 28.2%), making them primary targets for affordable housing investment.",
+    "key_finding": "Milwaukee, Dane lead Wisconsin with 35.3% of households cost-burdened (statewide mean: 23.8%), making them primary targets for affordable housing investment.",
     "data_quality": "strong"
   },
   {
@@ -1508,34 +1508,34 @@
     "statewide_context": {
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       },
       "pct_severely_cost_burdened": {
         "count": 72,
-        "mean": 7.14,
-        "median": 7.15,
-        "min": 4.7,
-        "max": 11.1,
-        "std": 1.29
+        "mean": 10.06,
+        "median": 9.8,
+        "min": 7.3,
+        "max": 17.0,
+        "std": 1.64
       }
     },
     "county_variation": {
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       },
       "pct_severely_cost_burdened": {
-        "min": 4.7,
-        "max": 11.1,
-        "range": 6.4,
-        "std": 1.29,
+        "min": 7.3,
+        "max": 17.0,
+        "range": 9.7,
+        "std": 1.64,
         "counties_with_data": 72
       }
     },
@@ -1543,64 +1543,64 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 52.8,
-        "display_value": 52.8
+        "metric_value": 35.3,
+        "display_value": 35.3
       },
       {
         "geoid": "55025",
         "county_name": "Dane County",
-        "metric_value": 44.6,
-        "display_value": 44.6
+        "metric_value": 31.3,
+        "display_value": 31.3
       },
       {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 40.8,
-        "display_value": 40.8
+        "geoid": "55059",
+        "county_name": "Kenosha County",
+        "metric_value": 28.2,
+        "display_value": 28.2
+      },
+      {
+        "geoid": "55053",
+        "county_name": "Jackson County",
+        "metric_value": 27.6,
+        "display_value": 27.6
       },
       {
         "geoid": "55063",
         "county_name": "La Crosse County",
-        "metric_value": 40.7,
-        "display_value": 40.7
-      },
-      {
-        "geoid": "55139",
-        "county_name": "Winnebago County",
-        "metric_value": 36.8,
-        "display_value": 36.8
+        "metric_value": 27.6,
+        "display_value": 27.6
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 19.0,
+        "display_value": 19.0
       },
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55075",
+        "county_name": "Marinette County",
+        "metric_value": 19.4,
+        "display_value": 19.4
+      },
+      {
+        "geoid": "55019",
+        "county_name": "Clark County",
+        "metric_value": 20.1,
+        "display_value": 20.1
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 18.4,
-        "display_value": 18.4
+        "metric_value": 20.2,
+        "display_value": 20.2
       },
       {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 19.1,
-        "display_value": 19.1
-      },
-      {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 20.0,
-        "display_value": 20.0
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 20.2,
+        "display_value": 20.2
       }
     ],
     "key_finding": "Milwaukee, Dane show the highest need relevant to this policy based on ACS housing cost burden as supply shortage indicator (cost burden rises when supply is constrained).",
@@ -1614,34 +1614,34 @@
     "statewide_context": {
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       },
       "pct_severely_cost_burdened": {
         "count": 72,
-        "mean": 7.14,
-        "median": 7.15,
-        "min": 4.7,
-        "max": 11.1,
-        "std": 1.29
+        "mean": 10.06,
+        "median": 9.8,
+        "min": 7.3,
+        "max": 17.0,
+        "std": 1.64
       }
     },
     "county_variation": {
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       },
       "pct_severely_cost_burdened": {
-        "min": 4.7,
-        "max": 11.1,
-        "range": 6.4,
-        "std": 1.29,
+        "min": 7.3,
+        "max": 17.0,
+        "range": 9.7,
+        "std": 1.64,
         "counties_with_data": 72
       }
     },
@@ -1649,67 +1649,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 52.8,
-        "display_value": 52.8
+        "metric_value": 35.3,
+        "display_value": 35.3
       },
       {
         "geoid": "55025",
         "county_name": "Dane County",
-        "metric_value": 44.6,
-        "display_value": 44.6
+        "metric_value": 31.3,
+        "display_value": 31.3
       },
       {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 40.8,
-        "display_value": 40.8
+        "geoid": "55059",
+        "county_name": "Kenosha County",
+        "metric_value": 28.2,
+        "display_value": 28.2
+      },
+      {
+        "geoid": "55053",
+        "county_name": "Jackson County",
+        "metric_value": 27.6,
+        "display_value": 27.6
       },
       {
         "geoid": "55063",
         "county_name": "La Crosse County",
-        "metric_value": 40.7,
-        "display_value": 40.7
-      },
-      {
-        "geoid": "55139",
-        "county_name": "Winnebago County",
-        "metric_value": 36.8,
-        "display_value": 36.8
+        "metric_value": 27.6,
+        "display_value": 27.6
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 19.0,
+        "display_value": 19.0
       },
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 16.5,
-        "display_value": 16.5
+        "geoid": "55075",
+        "county_name": "Marinette County",
+        "metric_value": 19.4,
+        "display_value": 19.4
+      },
+      {
+        "geoid": "55019",
+        "county_name": "Clark County",
+        "metric_value": 20.1,
+        "display_value": 20.1
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 18.4,
-        "display_value": 18.4
+        "metric_value": 20.2,
+        "display_value": 20.2
       },
       {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 19.1,
-        "display_value": 19.1
-      },
-      {
-        "geoid": "55091",
-        "county_name": "Pepin County",
-        "metric_value": 20.0,
-        "display_value": 20.0
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 20.2,
+        "display_value": 20.2
       }
     ],
-    "key_finding": "Milwaukee, Dane lead Wisconsin with 52.8% of households cost-burdened (statewide mean: 28.2%), making them primary targets for affordable housing investment.",
+    "key_finding": "Milwaukee, Dane lead Wisconsin with 35.3% of households cost-burdened (statewide mean: 23.8%), making them primary targets for affordable housing investment.",
     "data_quality": "strong"
   },
   {
@@ -1720,34 +1720,34 @@
     "statewide_context": {
       "pct_severely_cost_burdened": {
         "count": 72,
-        "mean": 7.14,
-        "median": 7.15,
-        "min": 4.7,
-        "max": 11.1,
-        "std": 1.29
+        "mean": 10.06,
+        "median": 9.8,
+        "min": 7.3,
+        "max": 17.0,
+        "std": 1.64
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
       "pct_severely_cost_burdened": {
-        "min": 4.7,
-        "max": 11.1,
-        "range": 6.4,
-        "std": 1.29,
+        "min": 7.3,
+        "max": 17.0,
+        "range": 9.7,
+        "std": 1.64,
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -1755,67 +1755,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 11.1,
-        "display_value": 11.1
+        "metric_value": 17.0,
+        "display_value": 17.0
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 13.5,
+        "display_value": 13.5
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 10.9,
-        "display_value": 10.9
+        "metric_value": 13.3,
+        "display_value": 13.3
       },
       {
-        "geoid": "55067",
-        "county_name": "Langlade County",
-        "metric_value": 10.4,
-        "display_value": 10.4
+        "geoid": "55059",
+        "county_name": "Kenosha County",
+        "metric_value": 13.1,
+        "display_value": 13.1
       },
       {
-        "geoid": "55069",
-        "county_name": "Lincoln County",
-        "metric_value": 8.9,
-        "display_value": 8.9
-      },
-      {
-        "geoid": "55041",
-        "county_name": "Forest County",
-        "metric_value": 8.8,
-        "display_value": 8.8
+        "geoid": "55029",
+        "county_name": "Door County",
+        "metric_value": 12.7,
+        "display_value": 12.7
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55131",
-        "county_name": "Washington County",
-        "metric_value": 4.7,
-        "display_value": 4.7
+        "geoid": "55075",
+        "county_name": "Marinette County",
+        "metric_value": 7.3,
+        "display_value": 7.3
       },
       {
-        "geoid": "55109",
-        "county_name": "St. Croix County",
-        "metric_value": 5.0,
-        "display_value": 5.0
+        "geoid": "55061",
+        "county_name": "Kewaunee County",
+        "metric_value": 7.5,
+        "display_value": 7.5
       },
       {
-        "geoid": "55133",
-        "county_name": "Waukesha County",
-        "metric_value": 5.1,
-        "display_value": 5.1
+        "geoid": "55119",
+        "county_name": "Taylor County",
+        "metric_value": 7.6,
+        "display_value": 7.6
       },
       {
-        "geoid": "55093",
-        "county_name": "Pierce County",
-        "metric_value": 5.2,
-        "display_value": 5.2
+        "geoid": "55091",
+        "county_name": "Pepin County",
+        "metric_value": 7.7,
+        "display_value": 7.7
       },
       {
-        "geoid": "55125",
-        "county_name": "Vilas County",
-        "metric_value": 5.5,
-        "display_value": 5.5
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 7.8,
+        "display_value": 7.8
       }
     ],
-    "key_finding": "Milwaukee, Menominee have the highest rates of severe housing cost burden (11.1%), indicating the greatest risk of housing instability (statewide mean: 7.1%).",
+    "key_finding": "Milwaukee, Dane have the highest rates of severe housing cost burden (17.0%), indicating the greatest risk of housing instability (statewide mean: 10.1%).",
     "data_quality": "strong"
   },
   {
@@ -1826,11 +1826,11 @@
     "statewide_context": {
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       },
       "poverty_rate": {
         "count": 72,
@@ -1843,10 +1843,10 @@
     },
     "county_variation": {
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       },
       "poverty_rate": {
@@ -1861,64 +1861,64 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 9.0816,
-        "display_value": 52.8
+        "metric_value": 6.0716,
+        "display_value": 35.3
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 6.1411,
-        "display_value": 28.3
+        "metric_value": 5.8156,
+        "display_value": 26.8
       },
       {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 5.0468,
-        "display_value": 40.7
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 3.9,
+        "display_value": 25.0
       },
       {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 4.8144,
-        "display_value": 40.8
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 3.7788,
+        "display_value": 26.8
       },
       {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 4.7276,
-        "display_value": 44.6
+        "geoid": "55103",
+        "county_name": "Richland County",
+        "metric_value": 3.567,
+        "display_value": 24.6
       }
     ],
     "bottom_need_counties": [
       {
-        "geoid": "55037",
-        "county_name": "Florence County",
-        "metric_value": 1.2045,
-        "display_value": 16.5
-      },
-      {
         "geoid": "55015",
         "county_name": "Calumet County",
-        "metric_value": 1.2921,
-        "display_value": 21.9
+        "metric_value": 1.1918,
+        "display_value": 20.2
       },
       {
         "geoid": "55133",
         "county_name": "Waukesha County",
-        "metric_value": 1.3676,
-        "display_value": 26.3
+        "metric_value": 1.248,
+        "display_value": 24.0
       },
       {
-        "geoid": "55061",
-        "county_name": "Kewaunee County",
-        "metric_value": 1.3984,
-        "display_value": 18.4
+        "geoid": "55089",
+        "county_name": "Ozaukee County",
+        "metric_value": 1.33,
+        "display_value": 26.6
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 1.3356,
+        "display_value": 21.2
       },
       {
         "geoid": "55131",
         "county_name": "Washington County",
-        "metric_value": 1.4326,
-        "display_value": 24.7
+        "metric_value": 1.363,
+        "display_value": 23.5
       }
     ],
     "key_finding": "Counties combining high housing cost burden with high poverty — led by Milwaukee, Menominee — face the greatest eviction risk and would benefit most from right-to-counsel protections.",
@@ -1940,11 +1940,11 @@
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
@@ -1956,10 +1956,10 @@
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -1967,67 +1967,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 70.0,
+        "metric_value": 52.5,
         "display_value": 17.2
-      },
-      {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 55.2,
-        "display_value": 10.6
-      },
-      {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 53.1,
-        "display_value": 12.4
-      },
-      {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 52.599999999999994,
-        "display_value": 11.8
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 50.0,
+        "metric_value": 48.5,
         "display_value": 21.7
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 41.9,
+        "display_value": 10.6
+      },
+      {
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 40.9,
+        "display_value": 14.1
+      },
+      {
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 40.6,
+        "display_value": 15.6
       }
     ],
     "bottom_need_counties": [
       {
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 26.1,
+        "display_value": 5.9
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 27.5,
+        "display_value": 6.3
+      },
+      {
         "geoid": "55037",
         "county_name": "Florence County",
-        "metric_value": 23.8,
+        "metric_value": 27.6,
         "display_value": 7.3
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 26.0,
+        "metric_value": 27.799999999999997,
         "display_value": 7.6
       },
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 27.0,
-        "display_value": 10.5
-      },
-      {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 27.3,
-        "display_value": 8.2
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 27.799999999999997,
-        "display_value": 5.9
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 28.6,
+        "display_value": 9.6
       }
     ],
-    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Dane — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
+    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Menominee — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
     "data_quality": "moderate"
   },
   {
@@ -2348,11 +2348,11 @@
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
@@ -2364,10 +2364,10 @@
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -2375,67 +2375,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 70.0,
+        "metric_value": 52.5,
         "display_value": 17.2
-      },
-      {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 55.2,
-        "display_value": 10.6
-      },
-      {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 53.1,
-        "display_value": 12.4
-      },
-      {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 52.599999999999994,
-        "display_value": 11.8
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 50.0,
+        "metric_value": 48.5,
         "display_value": 21.7
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 41.9,
+        "display_value": 10.6
+      },
+      {
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 40.9,
+        "display_value": 14.1
+      },
+      {
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 40.6,
+        "display_value": 15.6
       }
     ],
     "bottom_need_counties": [
       {
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 26.1,
+        "display_value": 5.9
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 27.5,
+        "display_value": 6.3
+      },
+      {
         "geoid": "55037",
         "county_name": "Florence County",
-        "metric_value": 23.8,
+        "metric_value": 27.6,
         "display_value": 7.3
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 26.0,
+        "metric_value": 27.799999999999997,
         "display_value": 7.6
       },
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 27.0,
-        "display_value": 10.5
-      },
-      {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 27.3,
-        "display_value": 8.2
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 27.799999999999997,
-        "display_value": 5.9
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 28.6,
+        "display_value": 9.6
       }
     ],
-    "key_finding": "Milwaukee, Dane show the highest need relevant to this policy based on ACS poverty_rate + pct_cost_burdened composite as fiscal inequity measure.",
+    "key_finding": "Milwaukee, Menominee show the highest need relevant to this policy based on ACS poverty_rate + pct_cost_burdened composite as fiscal inequity measure.",
     "data_quality": "moderate"
   },
   {
@@ -5545,11 +5545,11 @@
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
@@ -5561,10 +5561,10 @@
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -5572,67 +5572,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 70.0,
+        "metric_value": 52.5,
         "display_value": 17.2
-      },
-      {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 55.2,
-        "display_value": 10.6
-      },
-      {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 53.1,
-        "display_value": 12.4
-      },
-      {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 52.599999999999994,
-        "display_value": 11.8
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 50.0,
+        "metric_value": 48.5,
         "display_value": 21.7
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 41.9,
+        "display_value": 10.6
+      },
+      {
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 40.9,
+        "display_value": 14.1
+      },
+      {
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 40.6,
+        "display_value": 15.6
       }
     ],
     "bottom_need_counties": [
       {
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 26.1,
+        "display_value": 5.9
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 27.5,
+        "display_value": 6.3
+      },
+      {
         "geoid": "55037",
         "county_name": "Florence County",
-        "metric_value": 23.8,
+        "metric_value": 27.6,
         "display_value": 7.3
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 26.0,
+        "metric_value": 27.799999999999997,
         "display_value": 7.6
       },
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 27.0,
-        "display_value": 10.5
-      },
-      {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 27.3,
-        "display_value": 8.2
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 27.799999999999997,
-        "display_value": 5.9
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 28.6,
+        "display_value": 9.6
       }
     ],
-    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Dane — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
+    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Menominee — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
     "data_quality": "moderate"
   },
   {
@@ -6712,11 +6712,11 @@
       },
       "pct_cost_burdened": {
         "count": 72,
-        "mean": 28.19,
-        "median": 27.65,
-        "min": 16.5,
-        "max": 52.8,
-        "std": 6.24
+        "mean": 23.77,
+        "median": 23.55,
+        "min": 19.0,
+        "max": 35.3,
+        "std": 2.67
       }
     },
     "county_variation": {
@@ -6728,10 +6728,10 @@
         "counties_with_data": 72
       },
       "pct_cost_burdened": {
-        "min": 16.5,
-        "max": 52.8,
-        "range": 36.3,
-        "std": 6.24,
+        "min": 19.0,
+        "max": 35.3,
+        "range": 16.3,
+        "std": 2.67,
         "counties_with_data": 72
       }
     },
@@ -6739,67 +6739,67 @@
       {
         "geoid": "55079",
         "county_name": "Milwaukee County",
-        "metric_value": 70.0,
+        "metric_value": 52.5,
         "display_value": 17.2
-      },
-      {
-        "geoid": "55025",
-        "county_name": "Dane County",
-        "metric_value": 55.2,
-        "display_value": 10.6
-      },
-      {
-        "geoid": "55063",
-        "county_name": "La Crosse County",
-        "metric_value": 53.1,
-        "display_value": 12.4
-      },
-      {
-        "geoid": "55035",
-        "county_name": "Eau Claire County",
-        "metric_value": 52.599999999999994,
-        "display_value": 11.8
       },
       {
         "geoid": "55078",
         "county_name": "Menominee County",
-        "metric_value": 50.0,
+        "metric_value": 48.5,
         "display_value": 21.7
+      },
+      {
+        "geoid": "55025",
+        "county_name": "Dane County",
+        "metric_value": 41.9,
+        "display_value": 10.6
+      },
+      {
+        "geoid": "55001",
+        "county_name": "Adams County",
+        "metric_value": 40.9,
+        "display_value": 14.1
+      },
+      {
+        "geoid": "55113",
+        "county_name": "Sawyer County",
+        "metric_value": 40.6,
+        "display_value": 15.6
       }
     ],
     "bottom_need_counties": [
       {
+        "geoid": "55015",
+        "county_name": "Calumet County",
+        "metric_value": 26.1,
+        "display_value": 5.9
+      },
+      {
+        "geoid": "55087",
+        "county_name": "Outagamie County",
+        "metric_value": 27.5,
+        "display_value": 6.3
+      },
+      {
         "geoid": "55037",
         "county_name": "Florence County",
-        "metric_value": 23.8,
+        "metric_value": 27.6,
         "display_value": 7.3
       },
       {
         "geoid": "55061",
         "county_name": "Kewaunee County",
-        "metric_value": 26.0,
+        "metric_value": 27.799999999999997,
         "display_value": 7.6
       },
       {
-        "geoid": "55051",
-        "county_name": "Iron County",
-        "metric_value": 27.0,
-        "display_value": 10.5
-      },
-      {
-        "geoid": "55083",
-        "county_name": "Oconto County",
-        "metric_value": 27.3,
-        "display_value": 8.2
-      },
-      {
-        "geoid": "55015",
-        "county_name": "Calumet County",
-        "metric_value": 27.799999999999997,
-        "display_value": 5.9
+        "geoid": "55071",
+        "county_name": "Manitowoc County",
+        "metric_value": 28.6,
+        "display_value": 9.6
       }
     ],
-    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Dane — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
+    "key_finding": "Counties with the highest combined poverty and housing cost burden — Milwaukee, Menominee — face the most acute economic disadvantage and stand to benefit most from structural economic equity reforms.",
     "data_quality": "moderate"
   }
 ]
