@@ -25,6 +25,7 @@ from lib.census import (
     build_geoid,
     require_api_key,
 )
+from lib.cost_burden import COST_BURDEN_VARS, compute_cost_burden
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -47,13 +48,9 @@ RACE_VARS = [
     "B03002_012E",  # Hispanic or Latino (any race)
 ]
 
-COST_BURDEN_VARS = [
-    "B25106_001E",  # Total occupied housing units
-    "B25106_006E",  # Owner: cost burdened (30%+)
-    "B25106_010E",  # Owner: severely cost burdened (50%+)
-    "B25106_024E",  # Renter: cost burdened
-    "B25106_028E",  # Renter: severely cost burdened
-]
+# Cost burden cells (B25106 30%+ by income bracket, B25070/B25091 50%+) are
+# named in exactly one place — ingest/lib/cost_burden.py — with each code pinned
+# to its official Census label. See that module for why (2026-09-30 fix).
 
 POP_VARS = ["B01001_001E"]
 
@@ -151,18 +148,10 @@ def merge_rows(
         pct_nhb = safe_pct(nhb, race_total)
         pct_hisp = safe_pct(hispanic, race_total)
 
-        # --- Housing cost burden ---
-        total_units = safe_int(row.get("B25106_001E"))
-        owner_burdened = safe_int(row.get("B25106_006E"))
-        owner_severe = safe_int(row.get("B25106_010E"))
-        renter_burdened = safe_int(row.get("B25106_024E"))
-        renter_severe = safe_int(row.get("B25106_028E"))
-
-        total_burdened = _safe_add(owner_burdened, renter_burdened)
-        total_severe = _safe_add(owner_severe, renter_severe)
-
-        pct_burdened = safe_pct(total_burdened, total_units)
-        pct_severe = safe_pct(total_severe, total_units)
+        # --- Housing cost burden (30%+ from B25106, 50%+ from B25070/B25091) ---
+        burden = compute_cost_burden({c: safe_int(row.get(c)) for c in COST_BURDEN_VARS})
+        pct_burdened = burden["pct_cost_burdened"]
+        pct_severe = burden["pct_severely_cost_burdened"]
 
         # --- Educational attainment ---
         educ_total = safe_int(row.get("B15003_001E"))

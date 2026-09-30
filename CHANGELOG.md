@@ -3,6 +3,30 @@
 > Format: `## YYYY-MM-DD` sections, newest first. Update after every work session.
 > Include row counts for data loads and root causes for fixes.
 
+## 2026-09-30 — housing cost burden read the wrong B25106 cells
+
+`fix:` **`pct_cost_burdened` was low-income burdened owners plus every renter household.**
+B25106 is split by income bracket; the code treated `_006/_010/_024/_028` as "owner
+burdened / owner severe / renter burdened / renter severe". Their real labels (verified
+against the 2023 and 2024 metadata endpoints) are owner <$20K 30%+, owner $20-35K 30%+,
+**the renter-occupied total**, and renter <$20K 30%+. So the indicator tracked renter share
+(Dane tract 32: 96.0% "burdened" = 96.0% renter-occupied), and "severe" was two unrelated
+bracket cells — B25106 has no 50% cut at all.
+
+- New `ingest/lib/cost_burden.py`: the one place the cells are named, each pinned to its
+  official label. 30%+ = all ten "30 percent or more" cells; denominator = households with a
+  computed ratio (B25106_001 minus _023/_045/_046). Severe (50%+) now from B25070_010 +
+  B25091_011/_022 over their computed totals. Cross-check: B25106's 30%+ count equals
+  B25070+B25091's exactly, same denominator, for WI/Dane/Milwaukee/Florence (2023 and 2024).
+- `analysis/fetch_wi_counties.py`, `fetch_wi_tracts.py` use it. Re-run at ACS 2024: only the two
+  burden columns changed (72/72 counties, 1,521/1,542 tracts; nulls unchanged at 18).
+  Dane 44.6 -> 31.3, Milwaukee 52.8 -> 35.3, Florence 16.5 -> 20.3; statewide 26.4.
+- `pkg/datasource/acs.go`, `ingest/fetch_acs.py`: renter slots 1-5 were `_024.._040` (slot 1 =
+  renter total, $75K+ cell missing); now `_028.._044`. `TestACSCostBurdenCells` pins them.
+- `ingest/tests/test_cost_burden.py`: label mapping offline + against the live metadata API.
+- Atlas bundle: severe indicator now cites `B25070+B25091`.
+- NOT done: prod DB still holds the old renter cells until the ACS source is re-run.
+
 ## 2026-08-09 (cont.) — chat answers data questions from the dataset
 
 The chat page now tries the deterministic grounded engine BEFORE the

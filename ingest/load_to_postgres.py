@@ -97,6 +97,9 @@ def handle_income_by_tract(data, vintage: int) -> list[dict]:
 def handle_cost_burden(data, vintage: int) -> list[dict]:
     """
     cost_burden.json — list of dicts with geoid, pct_cost_burdened, owner/renter counts.
+
+    Files written by CWD's fetch_new_census_layers.py before 2026-09-30 counted only
+    the <$20K income bracket (a large undercount); reload from a regenerated file.
     """
     records: list[dict] = []
     rows = data if isinstance(data, list) else []

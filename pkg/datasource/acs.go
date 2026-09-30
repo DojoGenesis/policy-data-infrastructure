@@ -28,17 +28,22 @@ package datasource
 //	S1701_C03_001E — Poverty rate (percent)
 //	B01001_001E — Total population
 //	S2701_C05_001E — Uninsured rate (percent)
-//	B25106_001E — Total housing units (cost burden table)
-//	B25106_006E — Owner-occupied, paying >30% of income (cost burden)
-//	B25106_010E — Owner-occupied, paying >30% (alt bracket)
-//	B25106_014E — Owner-occupied, paying >30% (alt bracket)
-//	B25106_018E — Owner-occupied, paying >30% (alt bracket)
-//	B25106_022E — Owner-occupied, paying >30% (alt bracket)
-//	B25106_024E — Renter-occupied, paying >30% of income
-//	B25106_028E — Renter-occupied, paying >30% (alt bracket)
-//	B25106_032E — Renter-occupied, paying >30% (alt bracket)
-//	B25106_036E — Renter-occupied, paying >30% (alt bracket)
-//	B25106_040E — Renter-occupied, paying >30% (alt bracket)
+//	B25106_001E — Total occupied housing units (tenure by housing cost %, table B25106)
+//	B25106_006E — Owner-occupied, income less than $20,000, costs 30 percent or more of income
+//	B25106_010E — Owner-occupied, income $20,000 to $34,999, costs 30 percent or more of income
+//	B25106_014E — Owner-occupied, income $35,000 to $49,999, costs 30 percent or more of income
+//	B25106_018E — Owner-occupied, income $50,000 to $74,999, costs 30 percent or more of income
+//	B25106_022E — Owner-occupied, income $75,000 or more, costs 30 percent or more of income
+//	B25106_028E — Renter-occupied, income less than $20,000, costs 30 percent or more of income
+//	B25106_032E — Renter-occupied, income $20,000 to $34,999, costs 30 percent or more of income
+//	B25106_036E — Renter-occupied, income $35,000 to $49,999, costs 30 percent or more of income
+//	B25106_040E — Renter-occupied, income $50,000 to $74,999, costs 30 percent or more of income
+//	B25106_044E — Renter-occupied, income $75,000 or more, costs 30 percent or more of income
+//
+//	B25106 is split by income bracket: summing the five owner and five renter
+//	cells gives all cost-burdened households. B25106_024E is the renter TOTAL
+//	(it was mis-read as "renter burdened" until 2026-09-30). B25106 has no 50%
+//	cut; severe burden comes from B25070/B25091 (see ingest/lib/cost_burden.py).
 
 import (
 	"context"
@@ -179,8 +184,8 @@ var acsVariables = []acsVariable{
 		moeCode: "B25106_006M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_1",
-			Name:        "Owner Cost Burden >30% (Bracket 1)",
-			Description: "Owner-occupied units paying more than 30% of income on housing costs (income bracket 1)",
+			Name:        "Owner Cost Burden 30%+ (Income less than $20,000)",
+			Description: "Owner-occupied households with income less than $20,000 spending 30 percent or more of income on housing costs (B25106_006E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_006E",
@@ -191,8 +196,8 @@ var acsVariables = []acsVariable{
 		moeCode: "B25106_010M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_2",
-			Name:        "Owner Cost Burden >30% (Bracket 2)",
-			Description: "Owner-occupied units paying more than 30% of income on housing costs (income bracket 2)",
+			Name:        "Owner Cost Burden 30%+ (Income $20,000 to $34,999)",
+			Description: "Owner-occupied households with income $20,000 to $34,999 spending 30 percent or more of income on housing costs (B25106_010E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_010E",
@@ -203,8 +208,8 @@ var acsVariables = []acsVariable{
 		moeCode: "B25106_014M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_3",
-			Name:        "Owner Cost Burden >30% (Bracket 3)",
-			Description: "Owner-occupied units paying more than 30% of income on housing costs (income bracket 3)",
+			Name:        "Owner Cost Burden 30%+ (Income $35,000 to $49,999)",
+			Description: "Owner-occupied households with income $35,000 to $49,999 spending 30 percent or more of income on housing costs (B25106_014E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_014E",
@@ -215,8 +220,8 @@ var acsVariables = []acsVariable{
 		moeCode: "B25106_018M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_4",
-			Name:        "Owner Cost Burden >30% (Bracket 4)",
-			Description: "Owner-occupied units paying more than 30% of income on housing costs (income bracket 4)",
+			Name:        "Owner Cost Burden 30%+ (Income $50,000 to $74,999)",
+			Description: "Owner-occupied households with income $50,000 to $74,999 spending 30 percent or more of income on housing costs (B25106_018E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_018E",
@@ -227,32 +232,20 @@ var acsVariables = []acsVariable{
 		moeCode: "B25106_022M",
 		varDef: VariableDef{
 			ID:          "owner_cost_burden_30pct_5",
-			Name:        "Owner Cost Burden >30% (Bracket 5)",
-			Description: "Owner-occupied units paying more than 30% of income on housing costs (income bracket 5)",
+			Name:        "Owner Cost Burden 30%+ (Income $75,000 or more)",
+			Description: "Owner-occupied households with income $75,000 or more spending 30 percent or more of income on housing costs (B25106_022E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_022E",
 		},
 	},
 	{
-		code:    "B25106_024E",
-		moeCode: "B25106_024M",
-		varDef: VariableDef{
-			ID:          "renter_cost_burden_30pct_1",
-			Name:        "Renter Cost Burden >30% (Bracket 1)",
-			Description: "Renter-occupied units paying more than 30% of income on housing costs (income bracket 1)",
-			Unit:        "count",
-			Direction:   "lower_better",
-			ACSTable:    "B25106_024E",
-		},
-	},
-	{
 		code:    "B25106_028E",
 		moeCode: "B25106_028M",
 		varDef: VariableDef{
-			ID:          "renter_cost_burden_30pct_2",
-			Name:        "Renter Cost Burden >30% (Bracket 2)",
-			Description: "Renter-occupied units paying more than 30% of income on housing costs (income bracket 2)",
+			ID:          "renter_cost_burden_30pct_1",
+			Name:        "Renter Cost Burden 30%+ (Income less than $20,000)",
+			Description: "Renter-occupied households with income less than $20,000 spending 30 percent or more of income on housing costs (B25106_028E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_028E",
@@ -262,9 +255,9 @@ var acsVariables = []acsVariable{
 		code:    "B25106_032E",
 		moeCode: "B25106_032M",
 		varDef: VariableDef{
-			ID:          "renter_cost_burden_30pct_3",
-			Name:        "Renter Cost Burden >30% (Bracket 3)",
-			Description: "Renter-occupied units paying more than 30% of income on housing costs (income bracket 3)",
+			ID:          "renter_cost_burden_30pct_2",
+			Name:        "Renter Cost Burden 30%+ (Income $20,000 to $34,999)",
+			Description: "Renter-occupied households with income $20,000 to $34,999 spending 30 percent or more of income on housing costs (B25106_032E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_032E",
@@ -274,9 +267,9 @@ var acsVariables = []acsVariable{
 		code:    "B25106_036E",
 		moeCode: "B25106_036M",
 		varDef: VariableDef{
-			ID:          "renter_cost_burden_30pct_4",
-			Name:        "Renter Cost Burden >30% (Bracket 4)",
-			Description: "Renter-occupied units paying more than 30% of income on housing costs (income bracket 4)",
+			ID:          "renter_cost_burden_30pct_3",
+			Name:        "Renter Cost Burden 30%+ (Income $35,000 to $49,999)",
+			Description: "Renter-occupied households with income $35,000 to $49,999 spending 30 percent or more of income on housing costs (B25106_036E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_036E",
@@ -286,12 +279,24 @@ var acsVariables = []acsVariable{
 		code:    "B25106_040E",
 		moeCode: "B25106_040M",
 		varDef: VariableDef{
-			ID:          "renter_cost_burden_30pct_5",
-			Name:        "Renter Cost Burden >30% (Bracket 5)",
-			Description: "Renter-occupied units paying more than 30% of income on housing costs (income bracket 5)",
+			ID:          "renter_cost_burden_30pct_4",
+			Name:        "Renter Cost Burden 30%+ (Income $50,000 to $74,999)",
+			Description: "Renter-occupied households with income $50,000 to $74,999 spending 30 percent or more of income on housing costs (B25106_040E)",
 			Unit:        "count",
 			Direction:   "lower_better",
 			ACSTable:    "B25106_040E",
+		},
+	},
+	{
+		code:    "B25106_044E",
+		moeCode: "B25106_044M",
+		varDef: VariableDef{
+			ID:          "renter_cost_burden_30pct_5",
+			Name:        "Renter Cost Burden 30%+ (Income $75,000 or more)",
+			Description: "Renter-occupied households with income $75,000 or more spending 30 percent or more of income on housing costs (B25106_044E)",
+			Unit:        "count",
+			Direction:   "lower_better",
+			ACSTable:    "B25106_044E",
 		},
 	},
 }

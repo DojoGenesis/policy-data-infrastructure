@@ -72,11 +72,14 @@ CANONICAL_VARS: list[tuple[str, str, str, bool]] = [
     ("owner_cost_burden_30pct_3",  "B25106_014E",    "B25106_014M",    False),
     ("owner_cost_burden_30pct_4",  "B25106_018E",    "B25106_018M",    False),
     ("owner_cost_burden_30pct_5",  "B25106_022E",    "B25106_022M",    False),
-    ("renter_cost_burden_30pct_1", "B25106_024E",    "B25106_024M",    False),
-    ("renter_cost_burden_30pct_2", "B25106_028E",    "B25106_028M",    False),
-    ("renter_cost_burden_30pct_3", "B25106_032E",    "B25106_032M",    False),
-    ("renter_cost_burden_30pct_4", "B25106_036E",    "B25106_036M",    False),
-    ("renter_cost_burden_30pct_5", "B25106_040E",    "B25106_040M",    False),
+    # B25106 cells are 30%+ by income bracket (<$20K, $20-35K, $35-50K,
+    # $50-75K, $75K+). _024E is the renter TOTAL, not a burden cell; it sat in
+    # renter slot 1 until 2026-09-30 and _044E ($75K+) was missing.
+    ("renter_cost_burden_30pct_1", "B25106_028E",    "B25106_028M",    False),
+    ("renter_cost_burden_30pct_2", "B25106_032E",    "B25106_032M",    False),
+    ("renter_cost_burden_30pct_3", "B25106_036E",    "B25106_036M",    False),
+    ("renter_cost_burden_30pct_4", "B25106_040E",    "B25106_040M",    False),
+    ("renter_cost_burden_30pct_5", "B25106_044E",    "B25106_044M",    False),
 ]
 
 DETAIL_CODES = [c for _, e, m, subj in CANONICAL_VARS if not subj for c in (e, m)]

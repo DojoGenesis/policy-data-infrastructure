@@ -92,7 +92,7 @@ INDICATORS: list[dict] = [
         "unitEs": "por ciento",
         "format": "percent",
         "direction": "lower_better",
-        "table": "B25106",
+        "table": "B25070+B25091",
         "descriptionEn": "Share of households spending 50% or more of income on housing.",
         "descriptionEs": "Proporción de hogares que gastan 50% o más de sus ingresos en vivienda.",
     },

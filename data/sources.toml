@@ -34,10 +34,14 @@ these two implementations are NOT identical, see below):
   S1701  - Poverty status in the past 12 months               (Go + Python, /acs5/subject dataset)
   B01001 - Sex by age (total population)                     (Go + Python)
   S2701  - Health insurance coverage                          (Go + Python, /acs5/subject dataset)
-  B25106 - Tenure by housing costs as a percentage of income  (Go + Python; Python uses only the
-                                                                 006/010/024/028 cost-burden cells,
-                                                                 Go additionally fetches 014/018/022/
-                                                                 032/036/040)
+  B25106 - Tenure by housing costs as a percentage of income  (Go + Python; the ten "30 percent or
+                                                                 more" cells by income bracket: owner
+                                                                 006/010/014/018/022, renter 028/032/
+                                                                 036/040/044. _024 is the renter TOTAL.
+                                                                 Fixed 2026-09-30 — see
+                                                                 ingest/lib/cost_burden.py)
+  B25070 - Gross rent as % of income (50%+ cell, renters)    (analysis/fetch_wi_*.py via
+  B25091 - Owner costs as % of income (50%+ cells, owners)    ingest/lib/cost_burden.py; severe burden)
   B15003 - Educational attainment (population 25+)            (ingest/fetch_acs.py ONLY — not in
                                                                  the Go adapter's acsVariables list)
   B19001 - Household income by race, for ICE computation       (ingest/fetch_acs_b19001.py, a

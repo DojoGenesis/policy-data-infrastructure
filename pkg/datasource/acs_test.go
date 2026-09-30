@@ -12,7 +12,7 @@ import (
 // censusFixture returns a Census-format JSON response with two tracts.
 // The first tract has a real income value; the second has a suppressed value.
 const censusFixture = `[
-  ["B19013_001E","B19013_001M","B03002_001E","B03002_003E","B03002_004E","B03002_012E","S1701_C03_001E","B01001_001E","S2701_C05_001E","B25106_001E","B25106_006E","B25106_010E","B25106_014E","B25106_018E","B25106_022E","B25106_024E","B25106_028E","B25106_032E","B25106_036E","B25106_040E","state","county","tract"],
+  ["B19013_001E","B19013_001M","B03002_001E","B03002_003E","B03002_004E","B03002_012E","S1701_C03_001E","B01001_001E","S2701_C05_001E","B25106_001E","B25106_006E","B25106_010E","B25106_014E","B25106_018E","B25106_022E","B25106_028E","B25106_032E","B25106_036E","B25106_040E","B25106_044E","state","county","tract"],
   ["52000","2500","4800","3200","900","400","18.5","4850","12.3","1900","45","30","20","10","5","80","60","40","25","15","55","025","000100"],
   ["*","*","3100","2000","500","350","*","3200","8.7","1200","20","15","10","5","3","50","40","30","20","10","55","025","000201"]
 ]`
@@ -314,5 +314,47 @@ func TestRegistry_All(t *testing.T) {
 	all := r.All()
 	if len(all) != 1 {
 		t.Errorf("All() len: want 1, got %d", len(all))
+	}
+}
+
+// TestACSCostBurdenCells pins the B25106 variables to the "30 percent or more"
+// cells, by income bracket. Until 2026-09-30 renter slot 1 was B25106_024E —
+// the renter-occupied TOTAL — so every renter household was counted as
+// burdened, and the $75K+ renter cell (B25106_044E) was never fetched.
+// Labels verified against api.census.gov/data/{2023,2024}/acs/acs5/groups/B25106.json.
+func TestACSCostBurdenCells(t *testing.T) {
+	want := map[string]string{
+		"owner_cost_burden_30pct_1":  "B25106_006E", // <$20K
+		"owner_cost_burden_30pct_2":  "B25106_010E", // $20K-$34,999
+		"owner_cost_burden_30pct_3":  "B25106_014E", // $35K-$49,999
+		"owner_cost_burden_30pct_4":  "B25106_018E", // $50K-$74,999
+		"owner_cost_burden_30pct_5":  "B25106_022E", // $75K+
+		"renter_cost_burden_30pct_1": "B25106_028E", // <$20K
+		"renter_cost_burden_30pct_2": "B25106_032E", // $20K-$34,999
+		"renter_cost_burden_30pct_3": "B25106_036E", // $35K-$49,999
+		"renter_cost_burden_30pct_4": "B25106_040E", // $50K-$74,999
+		"renter_cost_burden_30pct_5": "B25106_044E", // $75K+
+	}
+	got := map[string]string{}
+	for _, v := range acsVariables {
+		if strings.Contains(v.varDef.ID, "cost_burden_30pct") {
+			got[v.varDef.ID] = v.code
+			if want := strings.TrimSuffix(v.code, "E") + "M"; v.moeCode != want {
+				t.Errorf("%s: moeCode %q, want %q", v.varDef.ID, v.moeCode, want)
+			}
+		}
+		for _, total := range []string{"B25106_002E", "B25106_024E"} {
+			if v.code == total {
+				t.Errorf("%s fetches %s, a tenure total, not a burden cell", v.varDef.ID, total)
+			}
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d cost-burden cells, want %d: %v", len(got), len(want), got)
+	}
+	for id, code := range want {
+		if got[id] != code {
+			t.Errorf("%s = %s, want %s", id, got[id], code)
+		}
 	}
 }

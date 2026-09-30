@@ -49,6 +49,7 @@ from lib.census import (  # noqa: E402
     safe_pct,
     require_api_key,
 )
+from lib.cost_burden import COST_BURDEN_VARS, compute_cost_burden  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -71,13 +72,9 @@ RACE_VARS = [
     "B03002_012E",  # Hispanic or Latino (any race)
 ]
 
-COST_BURDEN_VARS = [
-    "B25106_001E",  # Total occupied housing units
-    "B25106_006E",  # Owner: cost burdened (30%+)
-    "B25106_010E",  # Owner: severely cost burdened (50%+)
-    "B25106_024E",  # Renter: cost burdened
-    "B25106_028E",  # Renter: severely cost burdened
-]
+# Cost burden cells (B25106 30%+ by income bracket, B25070/B25091 50%+) are
+# named in exactly one place — ingest/lib/cost_burden.py — with each code pinned
+# to its official Census label. See that module for why (2026-09-30 fix).
 
 POP_VARS = ["B01001_001E"]
 
@@ -280,11 +277,7 @@ def merge_rows(detail_rows, poverty_rows, insurance_rows) -> list[dict]:
         if race_total is not None and nhw is not None:
             pct_poc = safe_pct(race_total - nhw, race_total)
 
-        total_units = safe_int(row.get("B25106_001E"))
-        total_burdened = _safe_add(safe_int(row.get("B25106_006E")),
-                                   safe_int(row.get("B25106_024E")))
-        total_severe = _safe_add(safe_int(row.get("B25106_010E")),
-                                 safe_int(row.get("B25106_028E")))
+        burden = compute_cost_burden({c: safe_int(row.get(c)) for c in COST_BURDEN_VARS})
 
         tenure_total = safe_int(row.get("B25003_001E"))
         renter_units = safe_int(row.get("B25003_003E"))
@@ -313,8 +306,8 @@ def merge_rows(detail_rows, poverty_rows, insurance_rows) -> list[dict]:
             "pct_poc": pct_poc,
             "pct_non_hispanic_black": safe_pct(nhb, race_total),
             "pct_hispanic": safe_pct(hispanic, race_total),
-            "pct_cost_burdened": safe_pct(total_burdened, total_units),
-            "pct_severely_cost_burdened": safe_pct(total_severe, total_units),
+            "pct_cost_burdened": burden["pct_cost_burdened"],
+            "pct_severely_cost_burdened": burden["pct_severely_cost_burdened"],
             "pct_renter_occupied": safe_pct(renter_units, tenure_total),
             "pct_bachelors_or_higher": safe_pct(ba_plus, educ_total),
         })
