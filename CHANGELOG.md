@@ -25,7 +25,22 @@ bracket cells — B25106 has no 50% cut at all.
   renter total, $75K+ cell missing); now `_028.._044`. `TestACSCostBurdenCells` pins them.
 - `ingest/tests/test_cost_burden.py`: label mapping offline + against the live metadata API.
 - Atlas bundle: severe indicator now cites `B25070+B25091`.
-- NOT done: prod DB still holds the old renter cells until the ACS source is re-run.
+- Deployed to prod: binary `v0.1.0-173-g3ddac10` on `dojo-gateway` (previous build kept as
+  `/usr/local/bin/pdi.bak-20260930-183624`). Homepage cost-burden card verified live (Milwaukee 35.3%).
+- `data:` **Prod ACS re-ingest** with the fixed adapter (`pdi fetch --sources acs-5yr`, env from
+  `/etc/pdi/env`): WI counties at ACS-2024-5yr (1,368 rows) and ACS-2023-5yr (1,368 rows), and
+  WI tracts at ACS-2024-5yr, county by county (29,298 rows, 72/72 counties, 0 failures). All
+  32,034 ACS rows rewritten in place, none added or lost; tract MOEs 29,242 (unchanged); the 2023
+  county rows gained MOEs. Indicator metadata now names each income bracket. Checked via the API:
+  Dane `renter_cost_burden_30pct_1` 107,847 -> 14,263; tracts 1 / 14.05 / 24.02 sum to 428 / 750 /
+  412 burdened households, matching data.census.gov. A CSV backup of every pre-change ACS row was
+  taken first (session-local, not in the repo).
+- Removed the orphan prod variables `cost_burdened` and `severely_cost_burdened` from
+  `indicator_meta` (no producer in this repo or its history; zero indicator rows, checked inside
+  the deleting transaction).
+- `docs/index.html` (April report): the FH-HSG-001/003 cards recomputed at ACS 2019-2023
+  (Milwaukee 35.2, Dane 30.2, county mean 23.5). Pages builds it, but the custom domain routes to
+  the Go app, so that copy is not publicly served.
 
 ## 2026-08-09 (cont.) — chat answers data questions from the dataset
 
