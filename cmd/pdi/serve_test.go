@@ -438,3 +438,26 @@ func TestOversizedRequestRefused(t *testing.T) {
 		t.Fatal("an oversized body was forwarded upstream")
 	}
 }
+
+func TestHealthReportsVersionAndCommit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/health", healthHandler)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["status"] != "ok" {
+		t.Errorf("status = %v, want ok", body["status"])
+	}
+	for _, k := range []string{"version", "commit"} {
+		if s, _ := body[k].(string); s == "" {
+			t.Errorf("%s missing or empty in %v", k, body)
+		}
+	}
+}

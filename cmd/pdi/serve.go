@@ -19,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
+	"github.com/DojoGenesis/policy-data-infrastructure/internal/version"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/gateway"
 	"github.com/DojoGenesis/policy-data-infrastructure/pkg/store"
 )
@@ -146,9 +147,7 @@ func runServe(port int) error {
 	}
 
 	// Liveness check — always returns 200.
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	r.GET("/health", healthHandler)
 
 	// Readiness check — verifies database connectivity.
 	r.GET("/readyz", func(c *gin.Context) {
@@ -500,4 +499,15 @@ func newChatProxyHandler(gwTarget, gwToken string, client *http.Client, budget *
 
 		c.DataFromReader(resp.StatusCode, int64(len(respBody)), contentType, bytes.NewReader(respBody), extraHeaders)
 	}
+}
+
+// healthHandler is the liveness response. "status" stays "ok" for existing
+// monitors; version/commit (injected via -ldflags, "dev"/"unknown" otherwise)
+// let deploy claims be verified from outside.
+func healthHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"version": version.Version,
+		"commit":  version.Commit,
+	})
 }
