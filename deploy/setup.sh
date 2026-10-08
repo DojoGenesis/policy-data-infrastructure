@@ -1,4 +1,10 @@
 #!/bin/bash
+# NOTE: This Docker+nginx path does NOT feed api.policydatainfrastructure.com.
+# Production runs via deploy/pdi.service (systemd unit -> pdi serve --port 8340,
+# EnvironmentFile=/etc/pdi/env), installed directly on the VPS -- no Docker, no
+# nginx. This script is an unused/alternate lane; treat it as such, not as a
+# description of how the live API is actually deployed.
+#
 # One-time VPS setup script for policy-data-infrastructure
 # Usage: ssh user@vps 'bash -s' < deploy/setup.sh
 set -euo pipefail

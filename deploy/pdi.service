@@ -7,6 +7,11 @@ Wants=network-online.target
 Type=simple
 User=dojo
 Group=dojo
+# modelsDir/evidenceDir (pkg/gateway/briefs.go) are relative paths resolved
+# from the process cwd, not the binary's location. Default systemd cwd is
+# "/", which has no data/policies/ tree. This must be the directory that
+# contains data/policies/models/ and data/policies/evidence/ on this box.
+WorkingDirectory=/opt/pdi
 ExecStart=/usr/local/bin/pdi serve --port 8340
 EnvironmentFile=/etc/pdi/env
 Restart=on-failure

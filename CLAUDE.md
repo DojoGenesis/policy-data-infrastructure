@@ -39,7 +39,9 @@ analysis/         Python analysis scripts (evidence cards, county fetching)
 analysis/output/  Generated CSVs, JSON, HTML (DO NOT commit — in .gitignore)
 data/             Static manifests: sources.toml, crosswalks, policy CSVs
 schemas/          JSON Schema definitions for core data types
-deploy/           VPS deployment scripts (setup.sh, backup.sh)
+deploy/           pdi.service = production (systemd unit; pdi serve --port 8340,
+                  EnvironmentFile=/etc/pdi/env). setup.sh/nginx.conf = unused
+                  Docker+nginx lane -- do NOT feed api.policydatainfrastructure.com
 research/         Research notes and methodology documentation
 ```
 

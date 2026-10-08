@@ -155,7 +155,9 @@ analysis/         Python analysis scripts (factor analysis, evidence cards)
 research/         Statistical methodology research (30 peer-reviewed sources)
 data/             Static manifests: sources.toml, crosswalks, policy CSVs
 schemas/          JSON Schema definitions for core data types
-deploy/           VPS deployment scripts (setup.sh, backup.sh, nginx.conf)
+deploy/           pdi.service = production (systemd unit; pdi serve --port 8340,
+                  EnvironmentFile=/etc/pdi/env). setup.sh/nginx.conf = unused
+                  Docker+nginx lane -- do NOT feed api.policydatainfrastructure.com
 ```
 
 ## Requirements
