@@ -1,0 +1,159 @@
+{
+  "schema_version": "1",
+  "policy_id": "FH-TRANSIT-008",
+  "model_version": "1",
+  "geo_levels": ["county"],
+  "default_geoid": "55105",
+  "title_key": "pex.model.fh_transit_008.title",
+  "summary_key": "pex.model.fh_transit_008.summary",
+  "params": [
+    {
+      "id": "num_stores",
+      "label_key": "pex.param.num_stores.label",
+      "help_key": "pex.param.num_stores.help",
+      "unit": "count",
+      "min": 0,
+      "max": 12,
+      "step": 1,
+      "default": 1,
+      "default_source_key": "pex.param.num_stores.default_source",
+      "precision": 0
+    },
+    {
+      "id": "capital_cost_per_store",
+      "label_key": "pex.param.capital_cost_per_store.label",
+      "help_key": "pex.param.capital_cost_per_store.help",
+      "unit": "usd",
+      "min": 0,
+      "max": 5000000,
+      "step": 50000,
+      "default": 1500000,
+      "default_source_key": "pex.param.capital_cost_per_store.default_source",
+      "precision": 0
+    },
+    {
+      "id": "annual_operating_subsidy_per_store",
+      "label_key": "pex.param.annual_operating_subsidy_per_store.label",
+      "help_key": "pex.param.annual_operating_subsidy_per_store.help",
+      "unit": "usd_per_year",
+      "min": 0,
+      "max": 1000000,
+      "step": 10000,
+      "default": 200000,
+      "default_source_key": "pex.param.annual_operating_subsidy_per_store.default_source",
+      "precision": 0
+    },
+    {
+      "id": "target_population_share_served",
+      "label_key": "pex.param.target_population_share_served.label",
+      "help_key": "pex.param.target_population_share_served.help",
+      "unit": "share",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.25,
+      "default_source_key": "pex.param.target_population_share_served.default_source",
+      "precision": 2
+    },
+    {
+      "id": "planning_horizon_years",
+      "label_key": "pex.param.planning_horizon_years.label",
+      "help_key": "pex.param.planning_horizon_years.help",
+      "unit": "count",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "default": 5,
+      "default_source_key": "pex.param.planning_horizon_years.default_source",
+      "precision": 0
+    }
+  ],
+  "outputs": [
+    {
+      "id": "total_capital_cost",
+      "label_key": "pex.output.total_capital_cost.label",
+      "unit": "usd",
+      "precision": 0,
+      "register": "public",
+      "expr": {
+        "op": "mul",
+        "terms": [
+          { "expr": { "op": "ref", "ref": "param:num_stores" }, "label_key": "pex.term.num_stores" },
+          { "expr": { "op": "ref", "ref": "param:capital_cost_per_store" }, "label_key": "pex.term.capital_cost_per_store" }
+        ]
+      }
+    },
+    {
+      "id": "total_annual_operating_subsidy",
+      "label_key": "pex.output.total_annual_operating_subsidy.label",
+      "unit": "usd_per_year",
+      "precision": 0,
+      "register": "public",
+      "expr": {
+        "op": "mul",
+        "terms": [
+          { "expr": { "op": "ref", "ref": "param:num_stores" }, "label_key": "pex.term.num_stores" },
+          { "expr": { "op": "ref", "ref": "param:annual_operating_subsidy_per_store" }, "label_key": "pex.term.annual_operating_subsidy_per_store" }
+        ]
+      }
+    },
+    {
+      "id": "total_public_cost_over_horizon",
+      "label_key": "pex.output.total_public_cost_over_horizon.label",
+      "unit": "usd",
+      "precision": 0,
+      "register": "public",
+      "expr": {
+        "op": "add",
+        "terms": [
+          { "expr": { "op": "ref", "ref": "output:total_capital_cost" }, "label_key": "pex.term.total_capital_cost" },
+          {
+            "expr": {
+              "op": "mul",
+              "terms": [
+                { "expr": { "op": "ref", "ref": "output:total_annual_operating_subsidy" }, "label_key": "pex.term.total_annual_operating_subsidy" },
+                { "expr": { "op": "ref", "ref": "param:planning_horizon_years" }, "label_key": "pex.term.planning_horizon_years" }
+              ]
+            },
+            "label_key": "pex.term.operating_cost_over_horizon"
+          }
+        ]
+      }
+    },
+    {
+      "id": "population_potentially_served",
+      "label_key": "pex.output.population_potentially_served.label",
+      "unit": "people",
+      "precision": 0,
+      "register": "public",
+      "expr": {
+        "op": "mul",
+        "terms": [
+          { "expr": { "op": "ref", "ref": "param:target_population_share_served" }, "label_key": "pex.term.target_population_share_served" },
+          {
+            "expr": {
+              "op": "mul",
+              "terms": [
+                { "expr": { "op": "ref", "ref": "indicator:usda_food_desert" }, "label_key": "pex.term.usda_food_desert" },
+                { "expr": { "op": "ref", "ref": "indicator:usda_food_population" }, "label_key": "pex.term.usda_food_population" }
+              ]
+            },
+            "label_key": "pex.term.lila_designated_population"
+          }
+        ]
+      }
+    }
+  ],
+  "refusal_keys": [
+    "pex.refusal.no_causal_claim",
+    "pex.refusal.no_time_series",
+    "pex.refusal.no_siting_simulation",
+    "pex.refusal.assumption_not_recommendation"
+  ],
+  "caveat_keys": [
+    "pex.caveat.vintage_collision_county_rollup"
+  ],
+  "authored_by": "PDI build agent (Sonnet), pilot tier-2 model track, 2026-08-13",
+  "reviewed_by": "UNREVIEWED -- pending operator sign-off",
+  "reviewed_date": "2026-08-13"
+}

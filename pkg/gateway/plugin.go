@@ -130,4 +130,33 @@ func (p *PolicyPlugin) RegisterRoutes(group *gin.RouterGroup) {
 
 	// Personalized video captions.
 	group.GET("/videos/:name", p.handleGetVideoCaptions)
+
+	// Policy experiment page (ADR-016, docs/contracts/experiment-contract.md).
+	//
+	// GET /briefs/:policy_id is read-only and cache-friendly (contract §3) —
+	// no geoidMW, because its geoid is an OPTIONAL query parameter with its
+	// own default chain (resolveBriefGeoid, contract S4), not the required
+	// URL path param geoidMW validates; and no run token, for the same
+	// reason POST /simulate has none (below).
+	group.GET("/briefs/:policy_id", p.handleGetPolicyBrief)
+
+	// POST /simulate is deliberately NOT behind runAuthMiddleware, unlike
+	// POST /analyses. Contract §4/S20 is explicit and this integrator agrees
+	// with the reasoning: it is a pure function over numbers the brief
+	// already published — no DB write, no run row, no cache row, no budget
+	// reservation — so gating it behind the run token would gate the page's
+	// entire interactive layer behind a secret meant for the queued-analysis
+	// surface. It is rate-limited by CF-Connecting-IP at the edge instead,
+	// the same mechanism as the other read endpoints on this group. Every
+	// other route registered above that touches the experiment package
+	// (this one) is equally read-only/pure, so this is consistent with how
+	// the rest of RegisterRoutes already splits GET/cheap-POST (no
+	// middleware) from POST /analyses (runAuthMiddleware) by cost and
+	// side-effect, not by HTTP verb alone.
+	simHandler := NewSimulateHandler(
+		p.store,
+		newFileModelLoader(modelsDir),
+		newStoreEvaluator(p.store, p.varMeta),
+	)
+	group.POST("/simulate", simHandler.Handle)
 }

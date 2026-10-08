@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/DojoGenesis/policy-data-infrastructure/schemas/policy-model.schema.json",
+  "title": "PolicyModel",
+  "description": "A per-policy tier-2 experiment model: the assumptions a reader may set and the deterministic arithmetic PDI performs over real denominators. One file per policy at data/policies/models/<policy_id>.json. A policy with no such file has no tier 2, which is the normal state and is not an error. Every output of this file is a projection, never a finding, and never evidence that the policy caused anything.",
+  "type": "object",
+  "required": ["schema_version", "policy_id", "model_version", "geo_levels", "default_geoid", "title_key", "summary_key", "params", "outputs", "refusal_keys", "authored_by", "reviewed_by", "reviewed_date"],
+  "additionalProperties": false,
+  "$defs": {
+    "unit": {
+      "type": "string",
+      "enum": ["count", "people", "households", "usd", "usd_per_year", "percent_points", "share", "miles", "days", "ratio"],
+      "description": "Closed unit vocabulary. percent_points is 0-100 and share is 0-1; they are separate members because a factor-of-100 error is invisible in a payload and obvious on a page only after someone has screenshotted it."
+    },
+    "precision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2,
+      "description": "Decimal places for display. Capped at 2 because pkg/grounding.Verify registers result values at 0, 1 and 2 decimals; a figure rendered at 3 would be rejected as unsupported in generated prose that quoted the page correctly."
+    },
+    "i18n_key": {
+      "type": "string",
+      "pattern": "^pex\\.[a-z0-9_]+(\\.[a-z0-9_]+)*$",
+      "description": "An i18n key in this page's namespace, e.g. pex.param.snap_uptake.label. The model file carries keys, never display prose, so a Spanish reader is never shown an English string a backend author happened to write."
+    },
+    "expr": {
+      "type": "object",
+      "description": "One node of the model's arithmetic. The operation set is closed and no string is ever evaluated: the tree is the program. A closed set is what lets an unrepresentable model be refused instead of approximated, and it is what makes the projection taint provably total.",
+      "required": ["op"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["ref", "const", "add", "sub", "mul", "div", "min", "max"],
+          "description": "Node shape. ref and const are leaves; every other operation carries terms. sub subtracts every term after the first from the first; div divides the first by every term after it."
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^(param|indicator|reach|output):[a-z][a-z0-9_]*$",
+          "description": "A namespaced input reference. param:<id> resolves to a reader-set assumption (kind assumed); indicator:<variable_id> and reach:<field_id> resolve to loaded measured values; output:<id> resolves to an output declared EARLIER in this file. Forward and cyclic references are refused at load, not resolved at evaluation. Required when op is ref."
+        },
+        "const": {
+          "type": "number",
+          "description": "A literal value. Required when op is const."
+        },
+        "const_kind": {
+          "type": "string",
+          "enum": ["measured", "assumed"],
+          "default": "assumed",
+          "description": "Classifies a literal. Defaults to assumed when omitted, which is the safe direction: an unclassified number typed into a JSON file is an assumption until a source says otherwise, and the failure mode of the other default is a projection that presents as a measurement. measured requires const_source."
+        },
+        "const_source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Citation for a measured literal: publisher, document, figure. Required when const_kind is measured, because a published constant with nowhere to check it is an assumption wearing a source's clothes."
+        },
+        "terms": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Child terms. Required and non-empty for add, sub, mul, div, min and max; absent for ref and const.",
+          "items": { "$ref": "#/$defs/term" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "op": { "const": "ref" } }, "required": ["op"] },
+          "then": { "required": ["ref"] }
+        },
+        {
+          "if": { "properties": { "op": { "const": "const" } }, "required": ["op"] },
+          "then": { "required": ["const"] }
+        },
+        {
+          "if": { "properties": { "const_kind": { "const": "measured" } }, "required": ["const_kind"] },
+          "then": { "required": ["const_source"] }
+        },
+        {
+          "if": { "properties": { "op": { "enum": ["add", "sub", "mul", "div", "min", "max"] } }, "required": ["op"] },
+          "then": { "required": ["terms"] }
+        }
+      ]
+    },
+    "term": {
+      "type": "object",
+      "description": "A child of an operation, with the label the analyst register uses to show the arithmetic as a sentence a reader can check by hand. The trace is the argument: a projection with a hidden derivation asks for trust, one with a visible derivation asks for disagreement, which is the only useful thing a reader can do with an assumption.",
+      "required": ["expr"],
+      "additionalProperties": false,
+      "properties": {
+        "expr": { "$ref": "#/$defs/expr" },
+        "label_key": {
+          "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+          "description": "i18n key naming this term in the arithmetic trace. Omitted means the term is rendered by its referent's own label."
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Model-file format version. A file declaring anything else is refused rather than best-effort parsed: the cost of a misread coefficient is a wrong number on a public page."
+    },
+    "policy_id": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,4}-[A-Z]{2,10}-\\d{3}$",
+      "description": "Must match a record id in data/policies/*.csv AND the filename stem, so a mismatch is a load-time refusal rather than a file that quietly models the wrong policy."
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Bumped whenever any expression, parameter bound or default changes. It travels in every evaluation result and every share link, so a link produced before a revision cannot silently render different numbers after one."
+    },
+    "geo_levels": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Geographic levels this model may be evaluated at. A request for any other level yields missing_reason geo_level_unsupported rather than an evaluation at a level the denominators do not support.",
+      "items": {
+        "type": "string",
+        "enum": ["state", "county", "tract"],
+        "description": "A supported geographic level."
+      }
+    },
+    "default_geoid": {
+      "type": "string",
+      "pattern": "^\\d{2}$|^\\d{5}$|^\\d{11}$",
+      "description": "Geography used when the request carries none. The response always reports which geography it used and why, so a reader is never shown a default place they believe they asked for."
+    },
+    "title_key": {
+      "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+      "description": "i18n key for this model's own name, as shown above the controls."
+    },
+    "summary_key": {
+      "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+      "description": "i18n key for one sentence saying what this arithmetic is and is not."
+    },
+    "params": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The assumptions a reader sets, in display order. This is the only place a number enters the arithmetic that did not come from a dataset.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label_key", "help_key", "unit", "min", "max", "step", "default", "default_source_key", "precision"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Stable, unique within this model. Also the linking key in comparison mode: two policies whose models declare the same id and the same unit are driven by one shared control."
+          },
+          "label_key": {
+            "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+            "description": "i18n key for the control's label."
+          },
+          "help_key": {
+            "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+            "description": "i18n key for the one-sentence explanation of what the reader is being asked to decide."
+          },
+          "unit": { "$ref": "#/$defs/unit" },
+          "min": {
+            "type": "number",
+            "description": "Lower bound. A submitted value below this is rejected with HTTP 400, never clamped: clamping silently substitutes a different assumption than the reader made and then attributes the result to them."
+          },
+          "max": {
+            "type": "number",
+            "description": "Upper bound. A submitted value above this is rejected with HTTP 400, never clamped."
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Control granularity, and the grid a submitted value is canonicalised onto before it enters a cache key or a share link."
+          },
+          "default": {
+            "type": "number",
+            "description": "The position the control opens at. Authored by a human in this file; never derived from data and never proposed by a language model."
+          },
+          "default_source_key": {
+            "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+            "description": "i18n key stating where the default came from: a published figure, or an explicitly arbitrary starting point. A default with no stated basis is a recommendation the page is making without admitting it."
+          },
+          "precision": { "$ref": "#/$defs/precision" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The numbers this model produces, in declaration and evaluation order. An output:<id> reference may only name an earlier entry in this array.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label_key", "unit", "precision", "register", "expr"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Stable, unique within this model. Also the target of an output:<id> reference."
+          },
+          "label_key": {
+            "allOf": [{ "$ref": "#/$defs/i18n_key" }],
+            "description": "i18n key for the output's label."
+          },
+          "unit": {
+            "allOf": [{ "$ref": "#/$defs/unit" }],
+            "description": "Declared, never inferred. The evaluator does no unit algebra: dividing dollars by people does not silently become usd_per_person. A mismatch between a declared unit and the arithmetic is caught by model lint at author time, where a person can fix it, rather than papered over at runtime where nobody sees it."
+          },
+          "precision": { "$ref": "#/$defs/precision" },
+          "register": {
+            "type": "string",
+            "enum": ["public", "analyst"],
+            "description": "Disclosure layer this output first appears in. Public outputs are the two or three numbers the page is actually about; intermediate quantities belong in the analyst register. The analyst register is strictly additive: no figure changes value when a reader expands it."
+          },
+          "expr": { "$ref": "#/$defs/expr" }
+        }
+      }
+    },
+    "refusal_keys": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "i18n keys for the specific things this model may not be read as saying - the sentences a reader would otherwise supply for themselves. Required and non-empty: a model that cannot name what it does not show has not been thought through.",
+      "items": { "$ref": "#/$defs/i18n_key" }
+    },
+    "caveat_keys": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "i18n keys for standing caveats on this model's inputs, such as a vintage collision between a designation and a population count.",
+      "items": { "$ref": "#/$defs/i18n_key" }
+    },
+    "authored_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Who wrote the assumptions and the arithmetic."
+    },
+    "reviewed_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Who checked them. A model with no reviewer does not ship: the arithmetic is easy and the assumptions are the whole argument."
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO 8601 date of review."
+    }
+  }
+}

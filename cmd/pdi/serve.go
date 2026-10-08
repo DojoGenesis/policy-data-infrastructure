@@ -228,6 +228,7 @@ func runServe(port int) error {
 
 	// Clean URL routing: /page → page.html (no .html extension in URL).
 	htmlPages := []struct{ route, file string }{
+		{"/policy", "policy.html"},
 		{"/county", "county.html"},
 		{"/compare", "compare.html"},
 		{"/evidence", "evidence.html"},

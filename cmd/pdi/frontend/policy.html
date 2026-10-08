@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>(function(d){var r=d.documentElement;r.classList.add('js');
+try{var t=localStorage.getItem('tp-theme');if(t==='light'||t==='dark'){r.setAttribute('data-theme',t);}}catch(e){}
+})(document);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Policy Data Infrastructure</title>
+<meta name="description" content="One page, three tiers: who a policy reaches, what your own assumptions add up to, and what happened where it was tried.">
+<meta name="theme-color" content="#0a0a14">
+<link rel="apple-touch-icon" href="/static/pdi-icon.svg">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/leaflet/leaflet.css">
+<!-- Language toggle MUST load before any inline script that registers page
+     strings via LangToggle.addStrings (policy-app.js does this at parse
+     time, in its own module scope) — see county.html's head comment for
+     the full ordering rationale. This page loads no Alpine, so the
+     alpine:init ordering constraint that comment also covers does not
+     apply here; lang-toggle.js's own DOMContentLoaded init is the only
+     ordering this page depends on, and policy-app.js listens for
+     tp:langchange rather than needing to run before Alpine's first pass. -->
+<script src="/static/lang-toggle.js"></script>
+<!-- Leaflet before policy-app.js so window.L exists when the map builder
+     runs (same ordering reason map.html documents for its own load). -->
+<script defer src="/static/leaflet/leaflet.js"></script>
+<!-- choropleth.js is read-only reuse: this page borrows its
+     sequentialColor()/pickForeground() color-math helpers (window.
+     CasaDatosChoropleth) for the reach map's fill, rather than
+     duplicating that math. Its buildChoropleth() synthetic-grid renderer
+     is unused here — this page draws real tract geometry through
+     Leaflet instead. -->
+<script defer src="/static/choropleth.js"></script>
+<script defer src="/static/policy-app.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   /policy — page-scoped styles. Loads AFTER styles.css at equal
+   specificity per this repo's convention (never edit styles.css/
+   tokens.css to "fix" a colour here — everything below is additive).
+
+   Colour discipline (ADR-016 D11): the Rainbow categorical scale
+   (--tp-cat-4 emerald "positive", --tp-cat-5 red "negative") is NEVER
+   applied to a tier-2 (experiment/projection) value anywhere in this
+   file. Tier-2 gets one identity colour — --pex-projection, a violet
+   pulled from this stack's existing gradient palette (#8b5cf6, already
+   used elsewhere in tokens.css for the "software" gradient stop) — used
+   the same way regardless of whether a number is big or small, so it
+   carries no judgment. Tier-1 and tier-3 use neutral/info tones too,
+   deliberately more conservative than ADR-013 strictly requires: an
+   evidence row's "direction" (increase/decrease) describes what the
+   SOURCE measured, not a verdict on the policy, so it is never colored
+   red/green here either — see policy-app.js's renderEvidenceCard.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --pex-projection: #8b5cf6;
+  --pex-projection-soft: rgba(139,92,246,0.12);
+  --pex-measured: var(--info, #60a5fa);
+  --pex-measured-soft: rgba(96,165,250,0.12);
+}
+
+.pex-wrap { max-width: var(--wrap, 1120px); margin: 0 auto; padding: 0 clamp(16px,3vw,32px); }
+
+/* ── header / lede ── */
+.pex-back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:0.85rem; margin:20px 0 8px; }
+.pex-back-link:hover { color:var(--text); }
+.pex-h1 { font-size:clamp(1.5rem,4vw,2.4rem); font-weight:700; letter-spacing:-0.01em; margin:0 0 10px; line-height:1.15; }
+.pex-lede { margin: 0 0 20px; max-width: 72ch; }
+.pex-lede-desc { color:var(--muted); font-size:1rem; line-height:1.5; }
+.pex-original-en-note { font-size:0.75rem; color:var(--subtle); font-style:italic; margin:0 0 4px; }
+.pex-callout-info { background: var(--pex-measured-soft); border:1px solid color-mix(in srgb, var(--pex-measured) 30%, transparent); border-radius:var(--r-badge); padding:0.6em 0.9em; font-size:0.85rem; color:var(--text); margin:0 0 12px; }
+.pex-comparison-note { background: color-mix(in srgb, var(--gated) 12%, transparent); border:1px solid color-mix(in srgb, var(--gated) 35%, transparent); color:var(--gated); border-radius:var(--r-badge); padding:0.6em 0.9em; font-size:0.85rem; margin:0 0 16px; }
+
+/* ── global controls bar ── */
+.pex-controlbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 24px; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.pex-controlbar .btn { font-size:0.8rem; padding:0.5em 1em; }
+
+/* ── panel shell ── */
+.pex-panel { margin: 0 0 40px; }
+.pex-panel h2 { font-size:clamp(1.15rem,2.6vw,1.5rem); font-weight:700; margin:0 0 6px; }
+.pex-panel-sub { color:var(--muted); font-size:0.9rem; margin:0 0 18px; max-width:70ch; }
+.pex-subheading { font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:16px 0 8px; }
+
+/* ── reach panel ── */
+.pex-rule-box { background:var(--pex-measured-soft); border-left:3px solid var(--pex-measured); border-radius:0 var(--r-badge) var(--r-badge) 0; padding:14px 16px; margin:0 0 18px; }
+.pex-rule-statement { font-size:1.02rem; line-height:1.45; margin:0 0 6px; }
+.pex-rule-authority { font-size:0.8rem; color:var(--muted); margin:0; }
+
+/* auto-fit + minmax(Npx,1fr) overflows when the CONTAINER is narrower than
+   Npx: grid items default to min-width:auto, so an item whose content can't
+   shrink below Npx forces its track to Npx regardless of available space —
+   verified live at 375px (a 343px-wide container laid out two 362px tracks,
+   754px total, 379px past the viewport). min(190px,100%) caps the track's
+   floor at the container's own width so it can never demand more than it
+   has; min-width:0 on the item removes its own min-content floor so long
+   unbreakable strings (a GEOID, a source vintage) wrap instead of pushing
+   the track wider. Both are needed — either alone still overflowed in
+   testing. Same fix applied to every auto-fit grid on this page below. */
+.pex-reach-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(190px,100%),1fr)); gap:14px; margin:0 0 20px; }
+.pex-stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:16px; min-width:0; }
+.pex-stat-sentence { font-size:0.78rem; color:var(--muted); line-height:1.35; margin:0 0 8px; min-height:2.5em; }
+.pex-stat-value { font-size:clamp(1.5rem,4vw,2rem); font-weight:700; letter-spacing:-0.01em; }
+
+.pex-reach-map { margin: 0 0 10px; }
+.pex-leaflet-host { height:min(50vh, 420px); min-height:280px; border-radius:var(--r-card); overflow:hidden; border:1px solid var(--border); background:var(--surface); }
+.pex-map-legend { font-size:0.8rem; color:var(--muted); margin:8px 0 0; max-width:60ch; }
+
+.pex-table-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:var(--r-card); }
+.pex-scroll-table { min-width:480px; }
+.pex-designated-ids { margin-top:14px; }
+.pex-mono-list { font-family:var(--font-mono); font-size:0.75rem; color:var(--muted); word-break:break-all; line-height:1.6; }
+
+/* ── badges ── */
+.pex-badge { display:inline-flex; align-items:center; padding:0.18em 0.55em; font-size:0.65rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; border-radius:var(--r-badge); white-space:nowrap; }
+.pex-badge-projection { color:var(--pex-projection); background:var(--pex-projection-soft); }
+.pex-badge-measured { color:var(--pex-measured); background:var(--pex-measured-soft); }
+.pex-badge-neutral { color:var(--muted); background:color-mix(in srgb, var(--subtle) 14%, transparent); }
+.pex-badge-info { color:var(--info); background:color-mix(in srgb, var(--info) 12%, transparent); }
+/* Reliability (S7) is a full plain-language SENTENCE in the public
+   register, not a short chip label — it must NOT be a .pex-badge (which is
+   deliberately display:inline-flex + white-space:nowrap for short tags like
+   PROJECTION/MEASURED). Reusing the badge pill for a sentence is what
+   pushed "ESTA CIFRA NO TIENE MARGEN DE ERROR PUBLICADO." 165px past the
+   375px viewport in testing — nowrap text simply cannot shrink. This is a
+   plain wrapping line instead, colour-coded only. */
+.pex-reliability-note { display:block; font-size:0.72rem; line-height:1.35; margin-top:4px; }
+.pex-rel-high { color:var(--live); }
+.pex-rel-medium { color:var(--gated); }
+.pex-rel-low { color:var(--gated); }
+.pex-rel-unknown { color:var(--quiet, var(--muted)); }
+
+/* ── value line primitive (reused by reach areas / evidence analyst blocks) ── */
+.pex-vline { padding:10px 0; border-bottom:1px solid var(--border); }
+.pex-vline:last-child { border-bottom:none; }
+.pex-vline-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.pex-vline-label { font-size:0.85rem; color:var(--text); }
+.pex-vline-num { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
+.pex-vline-reliability { min-width:0; flex-basis:100%; }
+.pex-vline-value { font-size:1.1rem; font-weight:700; }
+.pex-vline-big .pex-vline-value { font-size:1.6rem; }
+.pex-missing-dash { font-size:1.1rem; font-weight:700; color:var(--subtle); }
+.pex-missing-note { font-size:0.75rem; color:var(--subtle); font-style:italic; }
+
+/* ── analyst register ── */
+.pex-analyst-block { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); font-size:0.8rem; }
+.pex-meta-line { display:flex; gap:6px; color:var(--muted); }
+.pex-meta-label { font-weight:600; }
+.pex-meta-val { color:var(--text); word-break:break-word; }
+.pex-meta-inline { color:var(--subtle); font-size:0.75rem; }
+[data-pex-register="analyst"] { display: none; }
+html.pex-analyst-open [data-pex-register="analyst"] { display: block; }
+
+/* ── experiment panel — visually its own zone, purple identity, never
+   the Rainbow good/bad tokens (D11) ── */
+.pex-experiment-panel { border:1px solid color-mix(in srgb, var(--pex-projection) 30%, var(--border)); border-radius:var(--r-card); padding:clamp(16px,3vw,28px); background:linear-gradient(180deg, var(--pex-projection-soft), transparent 140px); }
+.pex-experiment-summary { color:var(--muted); font-size:0.95rem; max-width:68ch; margin:0 0 20px; }
+.pex-experiment-disclaimer { display:flex; gap:8px; align-items:flex-start; background:var(--pex-projection-soft); border:1px solid color-mix(in srgb, var(--pex-projection) 35%, transparent); border-radius:var(--r-badge); padding:10px 14px; font-size:0.82rem; color:var(--text); margin:0 0 20px; }
+.pex-experiment-disclaimer::before { content:"◆"; color:var(--pex-projection); flex-shrink:0; }
+
+.pex-experiment-controls { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px,100%),1fr)); gap:18px; margin:0 0 20px; }
+.pex-param { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-badge); padding:14px; min-width:0; }
+.pex-param-label-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:4px; }
+.pex-param-label { font-size:0.85rem; font-weight:600; }
+.pex-param-readout { font-family:var(--font-mono); font-size:0.85rem; font-weight:700; color:var(--pex-projection); }
+.pex-param-help { font-size:0.75rem; color:var(--muted); margin:0 0 10px; line-height:1.35; }
+.pex-param-input-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.pex-param-range { flex:1; accent-color: var(--pex-projection); height:6px; }
+.pex-param-number { width:6.5em; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3em 0.4em; font:inherit; font-size:0.8rem; }
+.pex-param-source { font-size:0.7rem; color:var(--subtle); margin:0; font-style:italic; }
+
+.pex-experiment-actions { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 20px; }
+
+.pex-output-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(220px,100%),1fr)); gap:14px; margin:0 0 16px; }
+.pex-output-card { background:var(--surface); border:1px solid color-mix(in srgb, var(--pex-projection) 24%, var(--border)); border-radius:var(--r-card); padding:16px; position:relative; min-width:0; }
+.pex-output-label { font-size:0.82rem; color:var(--muted); margin:8px 0 6px; line-height:1.3; }
+.pex-output-value { font-size:clamp(1.4rem,3.6vw,1.9rem); font-weight:700; color:var(--text); }
+
+.pex-trace-group { margin:0 0 14px; }
+.pex-trace-heading { font-size:0.8rem; font-weight:700; margin:0 0 6px; }
+.pex-step { font-family:var(--font-mono); font-size:0.75rem; color:var(--muted); padding:4px 0; line-height:1.5; }
+
+/* ── evidence panel ── */
+.pex-evidence-list { display:grid; gap:16px; }
+.pex-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:18px; }
+.pex-evidence-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 8px; }
+.pex-evidence-jurisdiction { font-weight:700; font-size:0.95rem; }
+.pex-evidence-period { font-size:0.75rem; color:var(--subtle); margin-left:auto; }
+.pex-evidence-intervention { font-size:0.85rem; color:var(--muted); margin:0 0 10px; line-height:1.4; }
+.pex-evidence-finding { display:flex; gap:10px; align-items:flex-start; margin:0 0 6px; }
+.pex-evidence-finding-text { font-size:0.9rem; line-height:1.45; margin:0; }
+.pex-evidence-effect { font-family:var(--font-mono); font-size:0.78rem; color:var(--muted); margin:0 0 10px; }
+.pex-transfer-note { background:color-mix(in srgb, var(--gated) 8%, transparent); border-left:3px solid var(--gated); border-radius:0 var(--r-badge) var(--r-badge) 0; padding:10px 12px; margin:10px 0; }
+.pex-transfer-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--gated); margin:0 0 4px; }
+.pex-transfer-note p { font-size:0.82rem; line-height:1.4; margin:0; color:var(--text); }
+.pex-evidence-source { font-size:0.8rem; margin:0; }
+.pex-evidence-source a { color:var(--pex-measured); }
+
+/* ── claim check ── */
+.pex-claim-label { font-size:0.8rem; font-weight:700; color:var(--muted); margin:0 0 6px; }
+.pex-claim-text { border-left:3px solid var(--accent); margin:0 0 14px; padding:8px 14px; font-size:1rem; font-style:italic; }
+
+/* ── refusals ── */
+.pex-list { margin:0; padding-left:1.3em; font-size:0.88rem; line-height:1.6; color:var(--text); }
+.pex-list li { margin-bottom:6px; }
+
+/* ── provenance ── */
+.pex-attribution-line { font-size:0.85rem; margin:0 0 4px; }
+.pex-attribution-bill { font-size:0.8rem; color:var(--muted); margin:0 0 14px; }
+.pex-sources { display:grid; gap:14px; margin:0 0 14px; }
+.pex-source-row { border:1px solid var(--border); border-radius:var(--r-badge); padding:12px 14px; }
+.pex-source-name { font-weight:600; font-size:0.9rem; margin:0 0 4px; }
+.pex-source-name a { color:var(--pex-measured); }
+.pex-source-method { font-size:0.8rem; color:var(--muted); margin:6px 0 0; }
+.pex-generated-at { font-size:0.75rem; color:var(--subtle); }
+
+/* ── chooser (S2) ── */
+.pex-chooser-controls { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 24px; }
+.pex-chooser-controls input, .pex-chooser-controls select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:var(--r-badge); padding:0.5em 0.8em; font:inherit; font-size:0.85rem; }
+.pex-chooser-controls input { flex:1; min-width:220px; }
+.pex-chooser-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(280px,100%),1fr)); gap:16px; margin-bottom:60px; }
+.pex-chooser-card { display:block; text-decoration:none; color:inherit; transition:border-color 150ms ease, transform 150ms ease; min-width:0; }
+.pex-chooser-card:hover { border-color:var(--pex-measured); transform:translateY(-2px); }
+.pex-chooser-card-title { font-weight:700; font-size:1rem; margin:0 0 6px; }
+.pex-chooser-card-desc { font-size:0.82rem; color:var(--muted); line-height:1.4; margin:0 0 12px; }
+.pex-chooser-card-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.pex-chooser-card-cand { font-size:0.75rem; color:var(--subtle); }
+
+/* ── print (S12): public register + refusals + provenance always;
+   analyst only if the class is present at print time, i.e. was left
+   expanded — no extra JS needed since print captures the live DOM. ── */
+@media print {
+  .site-header, .pex-controlbar, .pex-experiment-actions, .pex-param-range,
+  .pex-back-link { display:none !important; }
+  .pex-leaflet-host { break-inside: avoid; }
+  body { background:#fff; color:#111; }
+}
+
+/* ── responsive ── */
+@media (max-width: 640px) {
+  .pex-experiment-controls { grid-template-columns:1fr; }
+  .pex-output-grid { grid-template-columns:1fr; }
+  .pex-reach-stats { grid-template-columns:repeat(2,1fr); }
+  .pex-evidence-period { margin-left:0; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link visually-hidden" href="#main" data-en="Skip to content" data-es="Saltar al contenido">Skip to content</a>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-logo">
+      <span class="site-logo-accent">PDI</span> Policy Data Infrastructure
+    </a>
+    <nav class="site-nav" aria-label="Main navigation" data-en-aria-label="Main navigation" data-es-aria-label="Navegación principal">
+      <a href="/policy" aria-current="page" data-en="Policy" data-es="Política">Policy</a>
+      <a href="/county?geoid=55105" data-en="County" data-es="Condado">County</a>
+      <a href="/map" data-en="Map" data-es="Mapa">Map</a>
+      <a href="/chat" data-en="Chat" data-es="Chat">Chat</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="pex-wrap">
+
+  <!-- ══════════════════ CHOOSER (bare /policy — contract S2) ══════════════════ -->
+  <div id="pex-chooser-view" hidden>
+    <h1 class="pex-h1" data-en="Policy positions" data-es="Posiciones de política">Policy positions</h1>
+    <p class="pex-lede-desc" data-en="Pick a position to see who it reaches, what your own numbers say, and what happened where it was tried."
+       data-es="Elige una posición para ver a quién llega, qué dicen tus propios números y qué pasó donde se intentó.">
+      Pick a position to see who it reaches, what your own numbers say, and what happened where it was tried.
+    </p>
+    <div class="pex-chooser-controls">
+      <input id="pex-chooser-search" type="search"
+             data-en-placeholder="Search policy positions…" data-es-placeholder="Buscar posiciones de política…"
+             placeholder="Search policy positions…">
+      <select id="pex-chooser-candidate"></select>
+      <select id="pex-chooser-category"></select>
+    </div>
+    <div id="pex-chooser-grid" class="pex-chooser-grid"></div>
+  </div>
+
+  <!-- ══════════════════ BRIEF VIEW (?id=...) ══════════════════ -->
+  <div id="pex-brief-view" hidden>
+
+    <a id="pex-back-link" class="pex-back-link" href="/policy" data-en="← All policy positions" data-es="← Todas las posiciones de política">← All policy positions</a>
+
+    <p id="pex-comparison-note" class="pex-comparison-note" hidden></p>
+
+    <div id="pex-brief-error" class="state-error" hidden></div>
+
+    <div id="pex-brief-loading" class="state-empty" data-en="Loading…" data-es="Cargando…" hidden>Loading…</div>
+
+    <div id="pex-brief-content" hidden>
+
+      <!-- The question, in the reader's words -->
+      <h1 id="pex-h1" class="pex-h1"></h1>
+      <div id="pex-lede" class="pex-lede"></div>
+      <div id="pex-geo-source-note"></div>
+
+      <div class="pex-controlbar">
+        <button id="pex-analyst-toggle" type="button" class="btn btn-ghost" aria-pressed="false"></button>
+        <button id="pex-print-btn" type="button" class="btn btn-ghost" data-en="Print / save this brief" data-es="Imprimir / guardar este informe">Print / save this brief</button>
+        <button id="pex-copy-link-btn" type="button" class="btn btn-ghost" data-en="Copy link to these numbers" data-es="Copiar enlace a estos números">Copy link to these numbers</button>
+      </div>
+
+      <!-- TIER 1 — REACH -->
+      <section id="pex-reach" class="pex-panel">
+        <h2 data-en="Does this reach my block?" data-es="¿Esto llega a mi cuadra?">Does this reach my block?</h2>
+        <div id="pex-reach-rule" class="pex-rule-box"></div>
+        <div id="pex-reach-stats" class="pex-reach-stats"></div>
+        <div id="pex-reach-map" class="pex-reach-map"></div>
+        <div id="pex-reach-areas"></div>
+      </section>
+
+      <!-- TIER 2 — EXPERIMENT -->
+      <section id="pex-experiment" class="pex-panel">
+        <div class="pex-experiment-panel">
+          <h2 id="pex-experiment-title" data-en="Try your own numbers" data-es="Prueba tus propios números">Try your own numbers</h2>
+          <p id="pex-experiment-summary" class="pex-experiment-summary"></p>
+          <p id="pex-experiment-disclaimer" class="pex-experiment-disclaimer"></p>
+          <div id="pex-experiment-controls" class="pex-experiment-controls"></div>
+          <div class="pex-experiment-actions">
+            <button id="pex-recalc-btn" type="button" class="btn" data-en="Recalculate" data-es="Recalcular">Recalculate</button>
+            <button id="pex-reset-btn" type="button" class="btn btn-ghost" data-en="Back to the starting numbers" data-es="Volver a los números iniciales">Back to the starting numbers</button>
+          </div>
+          <div id="pex-experiment-outputs"></div>
+        </div>
+      </section>
+
+      <!-- TIER 3 — EVIDENCE -->
+      <section id="pex-evidence" class="pex-panel">
+        <h2 data-en="Where this has been tried" data-es="Dónde se ha intentado esto">Where this has been tried</h2>
+        <div id="pex-evidence-list" class="pex-evidence-list"></div>
+      </section>
+
+      <!-- CLAIM CHECK -->
+      <section id="pex-claimcheck" class="pex-panel">
+        <h2 data-en="Checking the candidate’s claim" data-es="Verificando la afirmación del candidato">Checking the candidate’s claim</h2>
+        <div id="pex-claimcheck-body" class="pex-card"></div>
+      </section>
+
+      <!-- WHAT WE CANNOT TELL YOU -->
+      <section id="pex-refusals" class="pex-panel">
+        <h2 data-en="What we cannot tell you" data-es="Lo que no podemos decirte">What we cannot tell you</h2>
+        <div id="pex-absences"></div>
+        <div id="pex-refusal-list"></div>
+      </section>
+
+      <!-- PROVENANCE -->
+      <section id="pex-provenance" class="pex-panel">
+        <h2 data-en="Where every number came from" data-es="De dónde viene cada número">Where every number came from</h2>
+        <div id="pex-attribution"></div>
+        <div id="pex-sources" class="pex-sources"></div>
+        <p id="pex-generated-at" class="pex-generated-at"></p>
+      </section>
+
+    </div>
+  </div>
+
+</div>
+</main>
+
+<script src="/static/theme-toggle.js" defer></script>
+
+</body>
+</html>

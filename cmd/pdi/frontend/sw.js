@@ -80,7 +80,7 @@ function isHTMLPage(url) {
   const path = new URL(url).pathname;
   // Clean URLs served by PDI: /, /county, /compare, etc.
   if (path === '/' || path === '') return true;
-  const pages = ['/county', '/compare', '/evidence', '/candidates',
+  const pages = ['/policy', '/county', '/compare', '/evidence', '/candidates',
                  '/map', '/narrative', '/about', '/composite', '/chat'];
   // Also match /es/<page>
   const cleanPath = path.replace(/\/$/, '');
