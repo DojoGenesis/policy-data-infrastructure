@@ -1,6 +1,6 @@
 # Policy Data Infrastructure
 
-Open-source national policy data platform. Ingests census, health, housing, environmental, and education data at the census tract level for all 85,000+ US tracts. Runs validated statistical analyses grounded in peer-reviewed methodology. Generates data-driven narratives and single-file HTML deliverables for policy audiences.
+Open-source policy data platform built for national scale. Ingests census, health, housing, environmental, and education data at the census tract level. It can fetch all 50 states and DC (85,000+ tracts), but the public instance currently holds Wisconsin only: 1,542 tracts, checked 2026-10-23. `GET /v1/policy/geographies?level=state` lists what is loaded. Runs validated statistical analyses grounded in peer-reviewed methodology. Generates data-driven narratives and single-file HTML deliverables for policy audiences.
 
 **Raw data is the foundation and a complex viewer is the deliverable: live at policydatainfrastructure.com and api.policydatainfrastructure.com!**
 
